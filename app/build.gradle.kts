@@ -25,8 +25,8 @@ android {
         applicationId = "dev.pfeed"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.10.0"
+        versionCode = 12
+        versionName = "1.11.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API source adapter configuration (see SOURCES.md). Empty = adapter stays disabled.

@@ -48,7 +48,6 @@ class BooruAdapter @Inject constructor(
 
     override suspend fun entries(): List<String> =
         settings.get().booruFeeds
-            .filterNot { keys.missing(it.host) }
             .map { json.encodeToString(BooruFeed.serializer(), it) }
 
     /**
@@ -78,7 +77,6 @@ class BooruAdapter @Inject constructor(
         val tag = toTag(query)
         if (tag.isEmpty()) return@cachedSearch emptyList()
         val hosts = settings.get().booruFeeds.map { BooruFamily.bareHost(it.host) }.distinct()
-            .filterNot { keys.missing(it) }
         // "rough sex" → the tag rough_sex, and also rough + sex as two tags (boards AND them;
         // Danbooru allows two tags for anonymous users, so at most two words).
         val words = query.trim().lowercase().removePrefix("#").split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -99,19 +97,52 @@ class BooruAdapter @Inject constructor(
         merged
     }
 
+    /**
+     * Fetch posts from one board. Strategy:
+     * 1. If the user saved an API key, use it (higher rate limits, reliable).
+     * 2. Otherwise try the API without a key (works on many boards, and some gelbooru-engine boards
+     *    allow limited anonymous access).
+     * 3. If the keyless API call gets a non-JSON response (how rule34/gelbooru say "need a key"),
+     *    fall back to scraping the public HTML search page, which doesn't need auth.
+     */
     private suspend fun fetchPosts(host: String, tags: String?, page: Int): List<MediaItem> {
         val bare = BooruFamily.bareHost(host)
-        val url = postsUrl(bare, tags, page) + credentialParams(bare)
-        val root = try {
-            http.get(id, url)
+        val creds = credentialParams(bare)
+        val url = postsUrl(bare, tags, page) + creds
+
+        return try {
+            BooruParser.parse(http.get(id, url), bare)
         } catch (e: SourceException) {
-            // These boards answer a missing/wrong key with a plain-text error instead of JSON or a 401.
-            if (bare in BooruKeys.NEEDS_KEY && (e.isAuthError || e.message?.contains("non-JSON") == true)) {
+            // API refused (non-JSON error or 403) and we had no key → try the HTML fallback.
+            val isAuthIssue = e.isAuthError || e.message?.contains("non-JSON") == true
+            if (isAuthIssue && creds.isEmpty() && BooruFamily.of(bare) == BooruFamily.GELBOORU) {
+                fetchPostsHtml(bare, tags, page)
+            } else if (isAuthIssue && creds.isNotEmpty()) {
                 throw SourceException(id, "$bare rejected the API key. Check it in Settings → Sources.", isAuthError = true, cause = e)
+            } else {
+                throw e
             }
+        }
+    }
+
+    /**
+     * HTML fallback for gelbooru-engine boards (rule34.xxx, gelbooru.com) that reject keyless API
+     * calls. Parses the public search page to extract thumbnail URLs and post IDs, then fetches
+     * the full-size image URL from each post's HTML page in the background. Only the thumbnail is
+     * available immediately; the full image resolves on play.
+     */
+    private suspend fun fetchPostsHtml(host: String, tags: String?, page: Int): List<MediaItem> {
+        val base = "https://$host"
+        val enc = tags?.trim().orEmpty().let { if (it.isEmpty()) "" else URLEncoder.encode(it, "UTF-8") }
+        val tagsParam = if (enc.isEmpty()) "" else "&tags=$enc"
+        val url = "$base/index.php?page=post&s=list&pid=${page * 42}$tagsParam"
+
+        val html = try {
+            http.getRaw(id, url)
+        } catch (e: SourceException) {
             throw e
         }
-        return BooruParser.parse(root, bare)
+        return parseHtmlThumbnails(html, host)
     }
 
     private suspend fun credentialParams(host: String): String {
@@ -145,6 +176,53 @@ class BooruAdapter @Inject constructor(
             BooruFamily.SANKAKU -> "$base/posts/keyset?limit=40&page=${page + 1}$tagsParam"
             BooruFamily.DANBOORU -> "$base/posts.json?limit=40&page=${page + 1}$tagsParam"
         }
+    }
+
+    /**
+     * Parses post thumbnails from a gelbooru-engine HTML listing page. The thumbnails live in
+     * `<span class="thumb">` blocks, each containing an `<a href>` (post page link) and an
+     * `<img src>` (thumbnail URL). From these we build a MediaItem whose `extras["media"]` points
+     * to the thumbnail initially; the full-size URL resolves on play via the post page.
+     *
+     * This is the fallback when the JSON API needs a key the user hasn't provided. It's less data
+     * than the API (no tags, no full-size URL until play time) but it gets content on screen.
+     */
+    private fun parseHtmlThumbnails(html: String, host: String): List<MediaItem> {
+        val items = ArrayList<MediaItem>()
+        // Pattern: <span ...class="thumb"...><a id="p{id}" href="index.php?page=post&s=view&id={id}"><img ...src="{thumb}"...></a></span>
+        val thumbRegex = Regex(
+            """<span[^>]*class="thumb"[^>]*>.*?<a[^>]*href="[^"]*[?&]id=(\d+)[^"]*"[^>]*>.*?<img[^>]*src="([^"]+)"[^>]*>""",
+            RegexOption.DOT_MATCHES_ALL,
+        )
+        val tagRegex = Regex("""alt="[^"]*\btags=([^"&]+)""")
+        val titleRegex = Regex("""title="([^"]+)"""")
+        for (m in thumbRegex.findAll(html)) {
+            val postId = m.groupValues[1]
+            val thumbUrl = m.groupValues[2].let {
+                if (it.startsWith("//")) "https:$it" else it
+            }
+            // Try to extract tags from alt/title attributes in the same <span> block
+            val block = m.value
+            val tagsRaw = tagRegex.find(block)?.groupValues?.get(1)
+                ?: titleRegex.find(block)?.groupValues?.get(1)
+            val tags = tagsRaw?.split(Regex("[\\s+]+"))?.filter { it.isNotBlank() }?.take(50).orEmpty()
+
+            val type = dev.pfeed.source.parse.MediaTypes.classify(thumbUrl) ?: dev.pfeed.domain.model.MediaType.IMAGE
+            items += MediaItem(
+                id = "$host/$postId",
+                sourceId = BooruParser.SOURCE_ID,
+                type = type,
+                title = null,
+                creator = null,
+                tags = tags,
+                durationSec = null,
+                thumbnailUrl = thumbUrl,
+                pageUrl = BooruFamily.postPage(host, postId),
+                publishedAt = null,
+                extras = mapOf("media" to thumbUrl), // thumbnail for now; full-size resolves on tap
+            )
+        }
+        return items
     }
 
     companion object {

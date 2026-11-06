@@ -416,9 +416,9 @@ private fun Entry(kind: String, label: String, onDelete: () -> Unit) {
 private fun BoardKeys(vm: SettingsViewModel, configured: Set<String>) {
     val context = LocalContext.current
     Text(
-        "rule34.xxx and gelbooru.com need a free account key before their feeds load. Make an account, " +
-            "open its options page, tick \"Generate New Key\", save, then copy the line that looks like " +
-            "&api_key=…&user_id=… and paste it here.",
+        "rule34.xxx and gelbooru.com work out of the box. For faster loading and more results, " +
+            "add a free API key: make an account, open its options page, tick \"Generate New Key\", " +
+            "save, then paste the &api_key=…&user_id=… line here.",
         style = MaterialTheme.typography.bodySmall,
         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
     )
@@ -428,7 +428,7 @@ private fun BoardKeys(vm: SettingsViewModel, configured: Set<String>) {
         Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
             Column(Modifier.padding(12.dp)) {
                 Text(host, style = MaterialTheme.typography.titleMedium)
-                Text(if (has) "Key saved, feeds on" else "No key, feeds skipped", style = MaterialTheme.typography.bodySmall)
+                Text(if (has) "Key saved — faster API access" else "No key — using public pages (slower)", style = MaterialTheme.typography.bodySmall)
                 if (has) {
                     TextButton(onClick = { vm.clearBooruKey(host) }) { Text("Remove key") }
                 } else {

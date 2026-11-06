@@ -3,7 +3,6 @@ package dev.pfeed.source.discovery
 import dev.pfeed.data.settings.AppSettings
 import dev.pfeed.data.settings.BooruFeed
 import dev.pfeed.data.settings.MastodonFeed
-import dev.pfeed.data.repo.BooruKeys
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.source.net.HttpJson
 import dev.pfeed.source.parse.JsonPath
@@ -30,7 +29,6 @@ data class DiscoveredSource(
 class SourceDiscovery @Inject constructor(
     private val http: HttpJson,
     private val settings: SettingsRepository,
-    private val booruKeys: BooruKeys,
 ) {
     companion object {
         private const val SRC = "discovery"
@@ -168,10 +166,8 @@ class SourceDiscovery @Inject constructor(
             listOf(tag) // fallback: just use the query directly
         }
 
-        // Skip boards that need an API key unless the user has set one up.
-        val hosts = BOORU_HOSTS.filter { !booruKeys.missing(it) }
         tagNames.flatMap { t ->
-            hosts.map { host ->
+            BOORU_HOSTS.map { host ->
                 DiscoveredSource(
                     type = "booru",
                     label = "$host · $t",

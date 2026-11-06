@@ -67,6 +67,30 @@ class HttpJson @Inject constructor(
         }
     }
 
+    /** GET that returns raw text (for HTML pages). Same error handling as [get]. */
+    suspend fun getRaw(sourceId: String, url: String): String {
+        val parsed = url.toHttpUrlOrNull() ?: throw SourceException(sourceId, "Invalid URL: $url")
+        val builder = Request.Builder().url(parsed).header("Accept", "text/html")
+        val call = http.newCall(builder.build())
+        val (code, body) = try {
+            call.await()
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: SocketTimeoutException) {
+            throw SourceException(sourceId, "${parsed.host} timed out", cause = e)
+        } catch (e: IOException) {
+            throw SourceException(sourceId, "Network error from ${parsed.host}: ${e.message ?: e.javaClass.simpleName}", cause = e)
+        }
+        if (code !in 200..299) {
+            throw SourceException(
+                sourceId,
+                if (code == 429) "${parsed.host} is rate-limiting, backing off" else "HTTP $code from ${parsed.host}",
+                isAuthError = code in 401..403,
+            )
+        }
+        return body
+    }
+
     private suspend fun Call.await(): Pair<Int, String> = suspendCancellableCoroutine { cont ->
         cont.invokeOnCancellation { runCatching { cancel() } }
         enqueue(object : Callback {

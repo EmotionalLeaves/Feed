@@ -32,7 +32,7 @@ class BooruKeys @Inject constructor(
 
     suspend fun get(host: String): BooruKey? = load()[keyHost(host)]
 
-    /** True when the board needs a key and none is saved, so its feeds should be skipped. */
+    /** True when the board's API benefits from a key and none is saved (feeds still work via HTML fallback). */
     suspend fun missing(host: String): Boolean {
         val k = keyHost(host)
         return k in NEEDS_KEY && load()[k] == null
