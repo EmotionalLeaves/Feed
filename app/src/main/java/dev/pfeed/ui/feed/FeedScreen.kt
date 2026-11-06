@@ -49,6 +49,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -94,7 +96,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         if (items.isNotEmpty()) {
             VerticalPager(
                 state = pagerState,
-                beyondViewportPageCount = 1,
+                beyondViewportPageCount = 2,
                 key = { index -> items.getOrNull(index)?.key ?: index },
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
@@ -206,6 +208,7 @@ private fun FeedPage(
     onMenu: () -> Unit,
 ) {
     var paused by remember(item.key) { mutableStateOf(!vm.autoplayAllowed()) }
+    val haptic = LocalHapticFeedback.current
     var heartAt by remember { mutableStateOf<Offset?>(null) }
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
@@ -219,6 +222,7 @@ private fun FeedPage(
                     onDoubleTap = { offset ->
                         heartAt = offset
                         heartTick++
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         vm.like(item)
                     },
                     onLongPress = { onMenu() },
@@ -345,11 +349,11 @@ private fun Overlay(
                 }
             }
             item.title?.let {
-                Text(it, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                Text(it, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
             }
             if (item.tags.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    item.tags.take(12).forEach { tag ->
+                    item.tags.filter { it.length in 2..30 }.take(8).forEach { tag ->
                         Text(
                             "#$tag",
                             color = Color.White,

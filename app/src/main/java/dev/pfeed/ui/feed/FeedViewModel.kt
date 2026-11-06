@@ -166,7 +166,18 @@ class FeedViewModel @Inject constructor(
                 endReached = r.endReached
                 _hint.value = r.hint
                 r.errors.forEach { _messages.tryEmit(it) }
-                if (r.items.isEmpty() && !r.endReached && r.hint == null) scheduleRetry(s) else retryDelayMs = RETRY_MIN_MS
+                when {
+                    r.items.isEmpty() && !r.endReached && r.hint == null -> scheduleRetry(s)
+                    r.endReached && r.hint == null -> {
+                        // All sources ran dry; auto-restart after a short pause so the feed is truly endless.
+                        retryJob?.cancel()
+                        retryJob = viewModelScope.launch {
+                            delay(RESTART_DELAY_MS)
+                            if (s === session) restart()
+                        }
+                    }
+                    else -> retryDelayMs = RETRY_MIN_MS
+                }
             } finally {
                 _loading.value = false
             }
@@ -219,6 +230,11 @@ class FeedViewModel @Inject constructor(
         lastSettled = index
         val item = list.getOrNull(index) ?: return
         seen.mark(item.key)
+        // Free memory from items far behind — keep a window of 50 around the current position.
+        if (index > GC_BEHIND) {
+            val oldKeys = list.subList(0, (index - GC_BEHIND).coerceAtLeast(0)).map { it.key }.toSet()
+            oldKeys.forEach { streams.remove(it)?.cancel(); stats.remove(it) }
+        }
         if (item.key != currentItem?.key) {
             finishCurrent()
             currentItem = item
@@ -256,12 +272,12 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    /** Next two items: thumbnails always; for the one after next, also the first seconds of video. */
+    /** Next 4 items: thumbnails always; for the 2nd and 3rd, also the first ~1.5 MB of video. */
     private fun preloadAround(list: List<MediaItem>, index: Int) {
-        val ahead = (index + 1..index + 2).mapNotNull { list.getOrNull(it) }
+        val ahead = (index + 1..index + 4).mapNotNull { list.getOrNull(it) }
         ahead.forEach { preloader.thumbnail(it.thumbnailUrl) }
         if (autoplayAllowed()) {
-            list.getOrNull(index + 2)?.takeIf { it.type == MediaType.VIDEO }?.let { item ->
+            ahead.take(2).filter { it.type == MediaType.VIDEO }.forEach { item ->
                 viewModelScope.launch {
                     (resolve(item) as? StreamInfo.Direct)?.let { preloader.video(item.key, it.url) }
                 }
@@ -353,9 +369,11 @@ class FeedViewModel @Inject constructor(
     fun reportUrl(item: MediaItem): String? = registry.byId(item.sourceId)?.reportUrl(item)
 
     companion object {
-        private const val LOAD_AHEAD = 5
+        private const val LOAD_AHEAD = 8
         private const val RETRY_MIN_MS = 2_000L
         private const val RETRY_MAX_MS = 30_000L
+        private const val RESTART_DELAY_MS = 5_000L
+        private const val GC_BEHIND = 50
         private const val FAST_SKIP_MS = 2_000L
         private const val STILL_NOMINAL_MS = 6_000.0
     }

@@ -64,6 +64,6 @@ class Preloader @Inject constructor(
     }
 
     companion object {
-        private const val DEFAULT_BYTES = 1_500_000L
+        private const val DEFAULT_BYTES = 2_500_000L
     }
 }

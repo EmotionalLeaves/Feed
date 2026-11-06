@@ -35,7 +35,7 @@ class SourceDiscovery @Inject constructor(
 
         // Mastodon instances known to have active public timelines and media
         private val MASTODON_INSTANCES = listOf(
-            "mastodon.social", "switter.at", 
+            "mastodon.social", 
             "yiff.social", "lewd.town", "kinkies.com", "bdsmr.com",
             "femdom.social", "nsfwdone.social", "cum.salon", "ero.social",
             "lewdland.social", "latex.social", "rubber.social",

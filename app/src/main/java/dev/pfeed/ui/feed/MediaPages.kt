@@ -334,19 +334,19 @@ private class SandboxClient(private val host: String?) : WebViewClient() {
 @Composable
 fun HeartBurst(position: Offset?, tick: Int) {
     if (position == null || tick == 0) return
-    val scale = remember(tick) { Animatable(0.3f) }
+    val scale = remember(tick) { Animatable(0f) }
     val alpha = remember(tick) { Animatable(1f) }
     LaunchedEffect(tick) {
-        scale.animateTo(1.2f, spring(dampingRatio = 0.45f))
-        alpha.animateTo(0f, tween(durationMillis = 350))
+        scale.snapTo(0f)
+        alpha.snapTo(1f)
+        scale.animateTo(1.5f, spring(dampingRatio = 0.35f, stiffness = 800f))
+        scale.animateTo(1.2f, spring(dampingRatio = 0.5f))
+        alpha.animateTo(0f, tween(durationMillis = 400))
     }
-    val sizeDp = 110.dp
+    val sizeDp = 100.dp
     val half = with(LocalDensity.current) { (sizeDp / 2).roundToPx() }
-    Icon(
-        Icons.Filled.Favorite,
-        contentDescription = null,
-        tint = HeartRed,
-        modifier = Modifier
+    Box(
+        Modifier
             .offset { IntOffset(position.x.toInt() - half, position.y.toInt() - half) }
             .size(sizeDp)
             .graphicsLayer {
@@ -354,7 +354,22 @@ fun HeartBurst(position: Offset?, tick: Int) {
                 scaleY = scale.value
                 this.alpha = alpha.value
             },
-    )
+        contentAlignment = Alignment.Center,
+    ) {
+        // Glow behind the heart
+        Icon(
+            Icons.Filled.Favorite,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.5f),
+            modifier = Modifier.size(sizeDp).graphicsLayer { scaleX = 1.25f; scaleY = 1.25f },
+        )
+        Icon(
+            Icons.Filled.Favorite,
+            contentDescription = null,
+            tint = HeartRed,
+            modifier = Modifier.size(sizeDp),
+        )
+    }
 }
 
 private const val MIN_ZOOM = 1f

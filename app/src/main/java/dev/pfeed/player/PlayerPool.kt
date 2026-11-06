@@ -74,6 +74,6 @@ class PlayerPool @Inject constructor(
         .also { players[i] = it }
 
     companion object {
-        const val SIZE = 3
+        const val SIZE = 4
     }
 }

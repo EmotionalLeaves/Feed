@@ -172,7 +172,7 @@ class FeedSession(
             }.onFailure { e ->
                 val n = (failures[id] ?: 0) + 1
                 failures[id] = n
-                if (n >= MAX_SOURCE_FAILURES) exhausted += id else cooldownUntil[id] = loads + (1 shl n)
+                if (n >= MAX_SOURCE_FAILURES) exhausted += id else cooldownUntil[id] = loads + (1 shl n.coerceAtMost(6))  // cap back-off at ~64 rounds
                 // Only surface the first failure so a flaky source doesn't spam snackbars.
                 if (n == 1) errors += "${adapter?.displayName ?: id}: ${e.message ?: e.javaClass.simpleName}"
             }
