@@ -75,7 +75,7 @@ class AlgorithmSimulationTest {
     }
 
     @Test
-    fun `feed does not forget: stays locked on rather than drifting back to random`() {
+    fun `feed does not forget, it stays locked on rather than drifting back to random`() {
         val shares = (1..8).map { seed -> simulate("zz_rope", rounds = 12, seed = seed) }
         shares.forEach { s -> assertTrue("a run fell back to ${s.takeLast(4)}", s.takeLast(4).average() >= 0.5) }
     }
