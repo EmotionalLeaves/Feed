@@ -111,6 +111,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
 
         Header("Filtering & recommendations")
         NavRow("Blocklist", "Blocked tags, creators and hidden items") { nav.navigate(Routes.BLOCKLIST) }
+        NavRow("What For You has learned", "The tags, words and creators it thinks you like or skip") { nav.navigate(Routes.INTERESTS) }
         NavRow("Recommendation weights (advanced)", null) { nav.navigate(Routes.ADVANCED) }
         NavRow("Reset recommendations", "Forget all likes/skips used for For You") { dialog = PendingDialog.ConfirmReset }
 

@@ -20,7 +20,7 @@ data class RankWeights(
 )
 
 /**
- * score = w_tag·tagAffinity + w_creator·creatorAffinity + w_fresh·freshness + w_div·sourceDiversity,
+ * score = w_tag·taste(features) + w_creator·creatorAffinity + w_fresh·freshness + w_div·sourceDiversity,
  * with an ε-greedy exploration slot. Affinities are squashed with tanh so no single signal dominates.
  */
 class Ranker(
@@ -33,11 +33,7 @@ class Ranker(
         creatorAffinity: Map<String, Double>,
         now: Instant,
     ): Double {
-        val tags = item.tags.map(Blocklist::normalize).distinct()
-        val tagScore = if (tags.isEmpty()) 0.0 else {
-            val values = tags.map { squash(tagAffinity[it] ?: 0.0) }
-            0.5 * values.max() + 0.5 * values.average()
-        }
+        val tagScore = TasteModel.score(Features.of(item), tagAffinity)
         val creatorScore = item.creator
             ?.let { squash(creatorAffinity[Blocklist.normalize(it)] ?: 0.0) } ?: 0.0
         val freshness = item.publishedAt?.let {

@@ -7,6 +7,7 @@ import dev.pfeed.domain.model.FeedPrefs
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.Page
 import dev.pfeed.domain.reco.Deduplicator
+import dev.pfeed.domain.reco.Features
 import dev.pfeed.domain.reco.Ranker
 import dev.pfeed.source.SourceAdapter
 import dev.pfeed.source.SourceException
@@ -180,7 +181,8 @@ class FeedSession(
 
         val blocklist = blocks.current()
         var items = incoming.filter { it.key !in shown && it.key !in candidateKeys && !seen.isSeen(it.key) && blocklist.allows(it) }
-        if (tag != null) items = items.filter { item -> item.tags.any { Blocklist.normalize(it) == tag } }
+        // Tag feeds come from per-source searches, which match on titles and related tags too; keep
+        // those, but put exact tag matches first when ranking (see takeBatch).
         if (mode == FeedMode.FOLLOWING) {
             items = items.filter { item ->
                 item.creator?.let { Blocklist.normalize(it) in follows.creators } == true ||
@@ -193,8 +195,13 @@ class FeedSession(
         return errors
     }
 
+    /**
+     * Main feeds read each source's stream. A tag feed (any tag the user taps or types) asks every
+     * source to *search* for that tag, so it isn't limited to whatever the main feed happened to load.
+     */
     private suspend fun fetch(a: SourceAdapter, cursor: String?, prefs: FeedPrefs): Result<Page<MediaItem>> = try {
-        Result.success(a.fetchFeed(cursor, prefs))
+        val tag = (spec as? FeedSpec.Tag)?.tag
+        Result.success(if (tag != null) a.search(tag.replace('_', ' '), cursor) else a.fetchFeed(cursor, prefs))
     } catch (e: CancellationException) {
         throw e
     } catch (e: SourceException) {
@@ -230,6 +237,12 @@ class FeedSession(
                 keep.forEach { candidates += it; candidateKeys += it.key }
             }
             picked
+        } else if (spec is FeedSpec.Tag) {
+            val t = Features.normalizeTag(spec.tag)
+            candidates.sortedWith(
+                compareByDescending<MediaItem> { item -> item.tags.any { Features.normalizeTag(it) == t } }
+                    .thenByDescending { it.publishedAt ?: Instant.EPOCH },
+            ).take(BATCH)
         } else {
             candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }.take(BATCH)
         }

@@ -63,6 +63,8 @@ data class AppSettings(
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),
     val disguise: Disguise = Disguise.NONE,
+    /** Version of the taste model the stored affinities were learned with; see SignalRepository. */
+    val tasteModelVersion: Int = 0,
 )
 
 /**

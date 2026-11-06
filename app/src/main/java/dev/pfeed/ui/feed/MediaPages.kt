@@ -68,7 +68,13 @@ fun Thumbnail(item: MediaItem, modifier: Modifier = Modifier) {
 
 @OptIn(UnstableApi::class)
 @Composable
-fun VideoPage(item: MediaItem, play: Boolean, muted: Boolean, vm: FeedViewModel) {
+fun VideoPage(
+    item: MediaItem,
+    play: Boolean,
+    muted: Boolean,
+    vm: FeedViewModel,
+    onPlayer: (androidx.media3.exoplayer.ExoPlayer?) -> Unit = {},
+) {
     val pool = vm.playerPool
     val version by pool.changes.collectAsState()
     val player = remember(item.key, version) { pool.acquire(item.key) }
@@ -80,6 +86,8 @@ fun VideoPage(item: MediaItem, play: Boolean, muted: Boolean, vm: FeedViewModel)
     DisposableEffect(item.key) {
         onDispose { pool.release(item.key) }
     }
+    // Hand the player up only once it's showing this item, so the scrub bar never drives a stale one.
+    LaunchedEffect(player, stream, firstFrame) { onPlayer(if (firstFrame) player else null) }
 
     LaunchedEffect(player, stream) {
         val p = player ?: return@LaunchedEffect

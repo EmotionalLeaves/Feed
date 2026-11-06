@@ -9,12 +9,13 @@ import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.filter.Blocklist
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.reco.AffinityModel
+import dev.pfeed.domain.reco.Features
 import dev.pfeed.domain.reco.Signal
 import dev.pfeed.domain.reco.SignalWeights
+import dev.pfeed.domain.reco.TasteModel
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
-import kotlin.math.sqrt
 
 data class Affinities(val tags: Map<String, Double>, val creators: Map<String, Double>)
 
@@ -27,33 +28,50 @@ class SignalRepository @Inject constructor(
     private val signalDao = db.signalDao()
     private val affinityDao = db.affinityDao()
 
+    @Volatile private var modelChecked = false
+
+    /**
+     * Affinities learned before v2 used a rule that over-credited co-occurring tags and inflated every
+     * score; they'd mislead the new model, so start the learned part fresh once. Raw signals stay.
+     */
+    private suspend fun ensureModel() {
+        if (modelChecked) return
+        if (settings.get().tasteModelVersion < TASTE_MODEL_VERSION) {
+            db.withTransaction {
+                affinityDao.clearTags()
+                affinityDao.clearCreators()
+            }
+            settings.update { it.copy(tasteModelVersion = TASTE_MODEL_VERSION) }
+        }
+        modelChecked = true
+    }
+
     suspend fun record(item: MediaItem, signal: Signal) {
+        ensureModel()
         val now = System.currentTimeMillis()
         val model = AffinityModel(settings.get().halfLifeDays)
         val delta = SignalWeights.delta(signal)
-        val tags = item.tags.map(Blocklist::normalize).filter { it.isNotBlank() }.distinct().take(MAX_TAGS)
-        // Spread the signal over the item's tags so heavily-tagged items don't dominate.
-        val perTag = if (tags.isEmpty()) 0.0 else delta / sqrt(tags.size.toDouble())
+        // Learn from every tag on the item (plus title keywords where tags are thin), error-driven.
+        val tags = Features.of(item)
         db.withTransaction {
             signalDao.insert(SignalEntity(itemKey = item.key, type = signal.type.name, value = signal.value, at = now))
             if (tags.isNotEmpty()) {
-                val existing = affinityDao.tags(tags).associateBy { it.tag }
-                affinityDao.upsertTags(
-                    tags.map { t ->
-                        val row = existing[t]
-                        TagAffinityEntity(t, model.update(row?.score ?: 0.0, row?.updatedAt ?: now, perTag, now), now)
-                    },
-                )
+                val current = affinityDao.tags(tags).associate { it.tag to model.decayed(it.score, it.updatedAt, now) }
+                val next = TasteModel.update(tags, current, delta)
+                affinityDao.upsertTags(next.map { (t, score) -> TagAffinityEntity(t, score, now) })
             }
             item.creator?.let(Blocklist::normalize)?.takeIf { it.isNotBlank() }?.let { c ->
                 val row = affinityDao.creator(c)
-                affinityDao.upsertCreator(CreatorAffinityEntity(c, model.update(row?.score ?: 0.0, row?.updatedAt ?: now, delta, now), now))
+                val current = row?.let { model.decayed(it.score, it.updatedAt, now) } ?: 0.0
+                val next = TasteModel.update(listOf(c), mapOf(c to current), delta).getValue(c)
+                affinityDao.upsertCreator(CreatorAffinityEntity(c, next, now))
             }
         }
     }
 
     /** Current affinities, decayed to now. */
     suspend fun affinities(): Affinities {
+        ensureModel()
         val now = System.currentTimeMillis()
         val model = AffinityModel(settings.get().halfLifeDays)
         return Affinities(
@@ -80,6 +98,15 @@ class SignalRepository @Inject constructor(
     }
 
     companion object {
-        private const val MAX_TAGS = 15
+        const val TASTE_MODEL_VERSION = 2
+    }
+
+    /** Strongest learned likes and dislikes, for the "what it has learned" screen. */
+    suspend fun topInterests(limit: Int = 25): Pair<List<Pair<String, Double>>, List<Pair<String, Double>>> {
+        val a = affinities()
+        val all = a.tags.entries.map { it.key to it.value } + a.creators.entries.map { "@" + it.key to it.value }
+        val likes = all.filter { it.second > 0.05 }.sortedByDescending { it.second }.take(limit)
+        val dislikes = all.filter { it.second < -0.05 }.sortedBy { it.second }.take(limit)
+        return likes to dislikes
     }
 }

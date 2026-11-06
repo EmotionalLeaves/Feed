@@ -16,6 +16,9 @@ import kotlinx.serialization.json.contentOrNull
 object BooruParser {
     const val SOURCE_ID = "booru"
 
+    /** Boards tag posts thoroughly; keep them all (the recommender learns from every one). */
+    private const val MAX_TAGS = 150
+
     fun parse(root: JsonElement, host: String): List<MediaItem> {
         val posts: List<JsonElement> = when {
             root is JsonArray -> root
@@ -52,7 +55,7 @@ object BooruParser {
                 ?: str("tags")  // gelbooru/rule34/moebooru: space-separated string under "tags"
                 ?: ((p["tags"] as? JsonObject)?.get("general") as? JsonArray)
                     ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.joinToString(" ")
-            val tags = tagString?.split(Regex("\\s+"))?.filter { it.isNotBlank() }?.take(30).orEmpty()
+            val tags = tagString?.split(Regex("\\s+"))?.filter { it.isNotBlank() }?.take(MAX_TAGS).orEmpty()
             val artist = str("tag_string_artist")?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() }
 
             MediaItem(

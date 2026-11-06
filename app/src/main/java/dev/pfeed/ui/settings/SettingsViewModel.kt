@@ -158,8 +158,15 @@ class SettingsViewModel @Inject constructor(
     fun setWeights(w: RankWeights) = update { it.copy(weights = w) }
     fun setHalfLife(days: Double) = update { it.copy(halfLifeDays = days) }
     fun resetWeights() = update { it.copy(weights = RankWeights(), halfLifeDays = 14.0) }
+    private val _interests = MutableStateFlow<Pair<List<Pair<String, Double>>, List<Pair<String, Double>>>?>(null)
+    /** (likes, dislikes), strongest first; null until loaded. */
+    val interests: StateFlow<Pair<List<Pair<String, Double>>, List<Pair<String, Double>>>?> = _interests
+
+    fun loadInterests() = viewModelScope.launch { _interests.value = signals.topInterests() }
+
     fun resetRecommendations() = viewModelScope.launch {
         signals.reset()
+        _interests.value = signals.topInterests()
         _messages.tryEmit("Recommendations reset")
     }
 

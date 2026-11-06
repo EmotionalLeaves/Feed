@@ -208,6 +208,7 @@ private fun FeedPage(
     var paused by remember(item.key) { mutableStateOf(!vm.autoplayAllowed()) }
     var heartAt by remember { mutableStateOf<Offset?>(null) }
     var heartTick by remember { mutableIntStateOf(0) }
+    var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
 
     Box(
         Modifier
@@ -225,7 +226,7 @@ private fun FeedPage(
             },
     ) {
         when (item.type) {
-            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm)
+            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it })
             MediaType.IMAGE, MediaType.GIF -> ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
@@ -252,6 +253,14 @@ private fun FeedPage(
             onTag = onOpenTag,
             onMenu = onMenu,
         )
+        if (item.type == MediaType.VIDEO) {
+            ScrubBar(
+                player = player,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                // Scrubbing back to see something again is a rewatch: a strong signal for For You.
+                onScrubbedBack = { vm.statsFor(item.key).replays++ },
+            )
+        }
     }
 }
 
@@ -272,7 +281,7 @@ private fun Overlay(
 ) {
     Box(Modifier.fillMaxSize()) {
         Column(
-            Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 24.dp),
+            Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 36.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
@@ -308,7 +317,7 @@ private fun Overlay(
             Modifier
                 .align(Alignment.BottomStart)
                 .fillMaxWidth(0.8f)
-                .padding(start = 12.dp, bottom = 20.dp),
+                .padding(start = 12.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

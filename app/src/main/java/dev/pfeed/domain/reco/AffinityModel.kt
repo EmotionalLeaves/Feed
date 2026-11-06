@@ -22,6 +22,41 @@ object SignalWeights {
     }
 }
 
+/**
+ * The taste model: a linear score over an item's [Features], learned online with an error-driven
+ * (LMS) rule. Each signal sets a target for how much the user likes the item ([SignalWeights.delta]);
+ * every feature moves by a share of the *error* between that target and what the model already
+ * predicts.
+ *
+ * Why error-driven: crediting every tag of a watched post equally makes tags that merely co-occur
+ * look liked, until everything scores high and the feed can't tell posts apart (it learns, then
+ * forgets). With the error rule, once the model predicts the user's taste correctly it stops pushing,
+ * and co-occurring tags get pushed back down by the skipped posts that also carry them. The feature
+ * that actually predicts engagement keeps the credit.
+ */
+object TasteModel {
+    /** Fraction of the error corrected per signal. */
+    const val STEP = 0.5
+    /** Output scale for ranking: prediction 1 ≈ 0.46, 3 (a like) ≈ 0.9. */
+    private const val SCORE_SCALE = 2.0
+
+    fun predict(features: List<String>, weights: Map<String, Double>): Double {
+        if (features.isEmpty()) return 0.0
+        return features.sumOf { weights[it] ?: 0.0 } / kotlin.math.sqrt(features.size.toDouble())
+    }
+
+    /** New weights for [features] after one signal with [target]; other features are untouched. */
+    fun update(features: List<String>, weights: Map<String, Double>, target: Double): Map<String, Double> {
+        if (features.isEmpty()) return emptyMap()
+        val step = STEP * (target - predict(features, weights)) / kotlin.math.sqrt(features.size.toDouble())
+        return features.associateWith { ((weights[it] ?: 0.0) + step).coerceIn(-AffinityModel.MAX_SCORE, AffinityModel.MAX_SCORE) }
+    }
+
+    /** Ranking score in (-1, 1). */
+    fun score(features: List<String>, weights: Map<String, Double>): Double =
+        kotlin.math.tanh(predict(features, weights) / SCORE_SCALE)
+}
+
 /** Exponentially decaying affinity scores. Scores halve every [halfLifeDays] without new signals. */
 class AffinityModel(halfLifeDays: Double) {
     private val halfLifeMs = halfLifeDays * DAY_MS
