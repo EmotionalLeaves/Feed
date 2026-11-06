@@ -28,16 +28,26 @@ import dev.pfeed.security.AppLockManager
 import dev.pfeed.security.LauncherDisguise
 import dev.pfeed.source.RegisteredSource
 import dev.pfeed.source.SourceRegistry
+import dev.pfeed.source.discovery.DiscoveredSource
+import dev.pfeed.source.discovery.SourceDiscovery
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import javax.inject.Inject
+
+sealed interface SearchState {
+    data object Idle : SearchState
+    data object Loading : SearchState
+    data class Results(val query: String, val items: List<DiscoveredSource>) : SearchState
+    data class Error(val message: String) : SearchState
+}
 
 /** Shared by all settings screens (each gets its own instance; state lives in the repositories). */
 @HiltViewModel
@@ -50,6 +60,7 @@ class SettingsViewModel @Inject constructor(
     private val exporter: SettingsExporter,
     private val mediaCache: MediaCache,
     private val lock: AppLockManager,
+    private val discovery: SourceDiscovery,
 ) : ViewModel() {
 
     val settings: StateFlow<AppSettings> = settingsRepo.flow.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
@@ -61,6 +72,35 @@ class SettingsViewModel @Inject constructor(
 
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
     val messages: SharedFlow<String> = _messages
+
+    // ---- source discovery / search ----
+    private val _searchState = MutableStateFlow<SearchState>(SearchState.Idle)
+    val searchState: StateFlow<SearchState> = _searchState.asStateFlow()
+
+    fun searchSources(query: String) {
+        if (query.isBlank()) { _searchState.value = SearchState.Idle; return }
+        viewModelScope.launch {
+            _searchState.value = SearchState.Loading
+            runCatching { discovery.search(query) }
+                .onSuccess { results ->
+                    _searchState.value = if (results.isEmpty())
+                        SearchState.Error("No sources found for \"$query\". Try a different term.")
+                    else
+                        SearchState.Results(query, results)
+                }
+                .onFailure { e ->
+                    _searchState.value = SearchState.Error(e.message ?: "Search failed")
+                }
+        }
+    }
+
+    fun clearSearch() { _searchState.value = SearchState.Idle }
+
+    fun addDiscovered(sources: List<DiscoveredSource>) = viewModelScope.launch {
+        val count = discovery.addAll(sources)
+        _messages.tryEmit(if (count > 0) "Added $count source${if (count == 1) "" else "s"}" else "Already added")
+        _searchState.value = SearchState.Idle
+    }
 
     private fun update(f: (AppSettings) -> AppSettings) = viewModelScope.launch { settingsRepo.update(f) }
 

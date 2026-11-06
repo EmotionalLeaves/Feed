@@ -9,18 +9,24 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +42,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -49,14 +56,16 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.pfeed.data.settings.JsonFeed
+import dev.pfeed.source.discovery.DiscoveredSource
 import dev.pfeed.ui.common.findActivity
 
 private enum class QuickAddType(val label: String) {
-    DIRECT("Direct link"),
-    RSS("RSS / Atom"),
+    SEARCH("🔍 Search"),
     REDDIT("Reddit"),
     MASTODON("Mastodon"),
     BOORU("Booru"),
+    DIRECT("Direct link"),
+    RSS("RSS / Atom"),
     JSON("JSON API"),
     FOLDER("Local folder"),
 }
@@ -66,6 +75,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val sources by vm.sources.collectAsStateWithLifecycle()
     val s by vm.settings.collectAsStateWithLifecycle()
     val auth by vm.authStatus.collectAsStateWithLifecycle()
+    val searchState by vm.searchState.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -117,7 +127,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             }
 
             Header("Quick add")
-            QuickAdd(vm, onPickFolder = { folderPicker.launch(null) })
+            QuickAdd(vm, searchState, onPickFolder = { folderPicker.launch(null) })
 
             Header("Added")
             AddedList(vm, s)
@@ -127,8 +137,8 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun QuickAdd(vm: SettingsViewModel, onPickFolder: () -> Unit) {
-    var kind by remember { mutableStateOf(QuickAddType.DIRECT) }
+private fun QuickAdd(vm: SettingsViewModel, searchState: SearchState, onPickFolder: () -> Unit) {
+    var kind by remember { mutableStateOf(QuickAddType.SEARCH) }
     Column(Modifier.padding(horizontal = 12.dp)) {
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             QuickAddType.entries.forEach { t ->
@@ -136,13 +146,103 @@ private fun QuickAdd(vm: SettingsViewModel, onPickFolder: () -> Unit) {
             }
         }
         when (kind) {
+            QuickAddType.SEARCH -> SourceSearchPanel(vm, searchState)
             QuickAddType.DIRECT -> OneField("Media or page URL", "https://…/clip.mp4", KeyboardType.Uri) { vm.addDirect(it) }
             QuickAddType.RSS -> OneField("Feed URL", "https://site/feed.xml", KeyboardType.Uri) { vm.addFeed(it) }
-            QuickAddType.REDDIT -> OneField("Subreddit", "e.g. AnimalsBeingBros", KeyboardType.Text) { vm.addReddit(it) }
-            QuickAddType.MASTODON -> TwoField("Instance host", "mastodon.social", "Hashtag (optional)", "art") { a, b -> vm.addMastodon(a, b) }
-            QuickAddType.BOORU -> TwoField("Booru host", "safebooru.donmai.us", "Tags (optional)", "landscape") { a, b -> vm.addBooru(a, b) }
+            QuickAddType.REDDIT -> OneField("Subreddit name or topic", "e.g. roughsex", KeyboardType.Text) { vm.addReddit(it) }
+            QuickAddType.MASTODON -> TwoField("Instance host", "mastodon.social", "Any hashtag", "bdsm") { a, b -> vm.addMastodon(a, b) }
+            QuickAddType.BOORU -> TwoField("Booru host", "rule34.xxx", "Any tags (space-separated)", "bondage roughsex") { a, b -> vm.addBooru(a, b) }
             QuickAddType.JSON -> JsonForm(vm)
             QuickAddType.FOLDER -> OutlinedButton(onClick = onPickFolder, modifier = Modifier.padding(vertical = 8.dp)) { Text("Pick a folder…") }
+        }
+    }
+}
+
+@Composable
+private fun SourceSearchPanel(vm: SettingsViewModel, state: SearchState) {
+    var query by remember { mutableStateOf("") }
+    val selected = remember { mutableStateListOf<DiscoveredSource>() }
+
+    Column(Modifier.padding(vertical = 8.dp)) {
+        Text(
+            "Type any topic — the app searches Reddit, Mastodon, and Booru boards and adds matching sources.",
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                label = { Text("Topic") },
+                placeholder = { Text("e.g. bondage, gangbang, milf…") },
+                singleLine = true,
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { if (query.isNotBlank()) vm.searchSources(query) }),
+                modifier = Modifier.weight(1f),
+            )
+            Button(
+                onClick = { vm.searchSources(query) },
+                enabled = query.isNotBlank() && state !is SearchState.Loading,
+            ) { Text("Search") }
+        }
+
+        Spacer(Modifier.height(8.dp))
+
+        when (state) {
+            is SearchState.Idle -> Unit
+            is SearchState.Loading -> {
+                Row(Modifier.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator()
+                    Text("Searching Reddit, Mastodon, Booru boards…", style = MaterialTheme.typography.bodySmall)
+                }
+            }
+            is SearchState.Error -> {
+                Text(state.message, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 4.dp))
+            }
+            is SearchState.Results -> {
+                // Sync selection with new results
+                LaunchedEffect(state) { selected.clear(); selected.addAll(state.items) }
+
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text("${state.items.size} sources found for \"${state.query}\"", style = MaterialTheme.typography.labelMedium)
+                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TextButton(onClick = { selected.clear() }) { Text("None") }
+                        TextButton(onClick = { selected.clear(); selected.addAll(state.items) }) { Text("All") }
+                    }
+                }
+
+                state.items.forEach { src ->
+                    val isSelected = src in selected
+                    Card(
+                        onClick = { if (isSelected) selected.remove(src) else selected.add(src) },
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
+                    ) {
+                        Row(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(src.label, style = MaterialTheme.typography.bodyMedium)
+                                Text(src.description, style = MaterialTheme.typography.bodySmall, maxLines = 1)
+                            }
+                            androidx.compose.material3.Checkbox(
+                                checked = isSelected,
+                                onCheckedChange = { checked -> if (checked) selected.add(src) else selected.remove(src) },
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { vm.addDiscovered(selected.toList()) },
+                        enabled = selected.isNotEmpty(),
+                    ) {
+                        Icon(Icons.Default.Add, null)
+                        Text(" Add ${selected.size} selected")
+                    }
+                    OutlinedButton(onClick = { vm.clearSearch() }) { Text("Cancel") }
+                }
+            }
         }
     }
 }
