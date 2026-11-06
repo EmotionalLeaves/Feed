@@ -27,6 +27,7 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "1.0.0"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API source adapter configuration (see SOURCES.md). Empty = adapter stays disabled.
         buildConfigField("String", "API_DISPLAY_NAME", quoted("api.displayName"))
@@ -139,4 +140,9 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
+
+    androidTestImplementation(platform(libs.compose.bom))
+    androidTestImplementation(libs.compose.ui.test.junit4)
+    androidTestImplementation(libs.androidx.test.ext.junit)
+    androidTestImplementation(libs.androidx.test.runner)
 }
