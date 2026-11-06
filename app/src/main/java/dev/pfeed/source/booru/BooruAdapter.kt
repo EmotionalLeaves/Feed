@@ -28,6 +28,8 @@ class BooruAdapter @Inject constructor(
     override val id = BooruParser.SOURCE_ID
     override val displayName = "Booru (Danbooru-style)"
     override val requiresAuth = false
+    // Booru servers vary widely in capacity; keep concurrent load low to avoid timeouts
+    override val maxConcurrency = 6
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 

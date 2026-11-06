@@ -26,6 +26,7 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Qualifier
 import javax.inject.Singleton
+import kotlin.math.max
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -48,12 +49,28 @@ object AppModule {
     @Provides
     @Singleton
     fun okHttp(): OkHttpClient = OkHttpClient.Builder()
-        .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(20, TimeUnit.SECONDS)
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .callTimeout(45, TimeUnit.SECONDS)
+        // Default User-Agent
         .addInterceptor { chain ->
             val request = chain.request()
             if (request.header("User-Agent") != null) chain.proceed(request)
             else chain.proceed(request.newBuilder().header("User-Agent", "PrivateFeed/${BuildConfig.VERSION_NAME} (Android)").build())
+        }
+        // 429 / 503 retry: honour Retry-After header, back off up to 2 times
+        .addInterceptor { chain ->
+            var response = chain.proceed(chain.request())
+            var tries = 0
+            while ((response.code == 429 || response.code == 503) && tries < 2) {
+                val retryAfterSec = response.header("Retry-After")?.toLongOrNull() ?: (2L shl tries)
+                val delayMs = max(retryAfterSec * 1_000L, 1_000L).coerceAtMost(10_000L)
+                response.close()
+                Thread.sleep(delayMs)
+                response = chain.proceed(chain.request())
+                tries++
+            }
+            response
         }
         .build()
 

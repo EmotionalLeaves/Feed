@@ -13,7 +13,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.sync.withPermit
 
 /**
  * Base for adapters that read a user-configured list of entries (subreddits, hosts, feeds…), fetch a
@@ -33,6 +35,8 @@ abstract class CachingAdapter : SourceAdapter {
     protected open val cacheMs = 5 * 60_000L
     protected open val minRefreshMs = 45_000L
     protected open val pageSize = 20
+    /** Max concurrent fetchEntry calls per refresh. Override to tighten for rate-limited APIs. */
+    protected open val maxConcurrency = 8
 
     /** The configured entries; also used as the cache key. */
     protected abstract suspend fun entries(): List<String>
@@ -64,8 +68,9 @@ abstract class CachingAdapter : SourceAdapter {
             cache = emptyList(); signature = sig; cachedAt = now
             return cache
         }
+        val sem = Semaphore(maxConcurrency)
         val results = coroutineScope {
-            sig.map { entry -> async(Dispatchers.IO) { runCatching { fetchEntry(entry) } } }.awaitAll()
+            sig.map { entry -> async(Dispatchers.IO) { sem.withPermit { runCatching { fetchEntry(entry) } } } }.awaitAll()
         }
         val ok = results.mapNotNull { it.getOrNull() }
         if (ok.isEmpty()) {
