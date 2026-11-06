@@ -13,12 +13,10 @@ import androidx.annotation.OptIn
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
-import androidx.compose.ui.input.nestedscroll.NestedScrollSource
-import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -50,7 +48,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem as ExoMediaItem
@@ -157,19 +154,15 @@ fun VideoPage(
 }
 
 /**
- * Image viewer that adapts to the aspect ratio:
+ * Image viewer that adapts to the aspect ratio, with pinch-to-zoom.
  *
- * **Tall images** (comics, manga, webcomic strips, aspect > 1.3:1 portrait): shown at full screen
- * width so text is readable; the overflow scrolls vertically. Vertical drags scroll the comic
- * instead of swiping the feed; the pager takes over only at the top/bottom edge of the image.
+ * **Critical constraint**: the VerticalPager owns the single-finger vertical swipe. ImagePage must
+ * never consume single-finger drags at 1× zoom, or swiping between posts breaks. Only multi-touch
+ * (pinch) is handled here; panning while zoomed goes through [NestedScrollConnection] which
+ * forwards leftover delta back to the pager at the edges.
  *
+ * **Tall images** (comics, manga): drawn at full screen width; the overflow is reachable by zooming.
  * **Normal / wide images**: centred at screen scale.
- *
- * Both support **pinch-to-zoom** (1×–5×) and **pan** while zoomed.
- *
- * The key trick is a [NestedScrollConnection] that intercepts the VerticalPager's pre-scroll: when
- * the image has room to pan, the drag stays inside the image; when it hits the edge, leftover delta
- * passes through and the pager picks it up.
  */
 @Composable
 fun ImagePage(item: MediaItem, vm: FeedViewModel) {
@@ -180,79 +173,56 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
     var scale by remember(item.key) { mutableFloatStateOf(1f) }
     var offsetX by remember(item.key) { mutableFloatStateOf(0f) }
     var offsetY by remember(item.key) { mutableFloatStateOf(0f) }
-    var containerW by remember(item.key) { mutableFloatStateOf(1080f) }
-    var containerH by remember(item.key) { mutableFloatStateOf(1920f) }
-
-    /** Max pan in each direction at the current scale. */
-    fun bounds(): Pair<Float, Float> {
-        val img = imageSize ?: return 0f to 0f
-        val fitWidth = containerW
-        val fitHeight = fitWidth * img.height / img.width
-        val scaledW = fitWidth * scale
-        val scaledH = fitHeight * scale
-        return ((scaledW - containerW) / 2f).coerceAtLeast(0f) to ((scaledH - containerH) / 2f).coerceAtLeast(0f)
-    }
-
-    val nestedScroll = remember(item.key) {
-        object : NestedScrollConnection {
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // If zoomed or the image is tall enough to pan, consume vertical delta here.
-                val (maxX, maxY) = bounds()
-                if (maxY <= 0f && scale <= 1.01f) return Offset.Zero // nothing to scroll
-                val dy = available.y
-                val newY = (offsetY + dy).coerceIn(-maxY, maxY)
-                val consumed = newY - offsetY
-                offsetY = newY
-                // Horizontal panning while zoomed
-                val dx = available.x
-                val newX = (offsetX + dx).coerceIn(-maxX, maxX)
-                val consumedX = newX - offsetX
-                offsetX = newX
-                return Offset(consumedX, consumed)
-            }
-        }
-    }
 
     val isTall = imageSize?.let { it.height > it.width * 1.3f } == true
 
     Box(
         Modifier
             .fillMaxSize()
-            .onSizeChanged { containerW = it.width.toFloat(); containerH = it.height.toFloat() }
-            .nestedScroll(nestedScroll)
+            // Pinch-to-zoom only: detectTransformGestures is wrapped so it only activates
+            // when 2+ pointers are down. Single-finger drags pass through to the pager.
             .pointerInput(item.key) {
-                // Double-tap toggles between 1× and 2.5× zoom, centred on the tap point.
-                detectTapGestures(
-                    onDoubleTap = { tapOffset ->
-                        if (scale > 1.1f) {
-                            scale = 1f; offsetX = 0f; offsetY = 0f
-                        } else {
-                            scale = 2.5f
-                            // Pan toward the tap point
-                            val img = imageSize ?: return@detectTapGestures
-                            val fitWidth = size.width.toFloat()
-                            val fitHeight = fitWidth * img.height / img.width
-                            val maxX = ((fitWidth * 2.5f - size.width) / 2f).coerceAtLeast(0f)
-                            val maxY = ((fitHeight * 2.5f - size.height) / 2f).coerceAtLeast(0f)
-                            offsetX = ((size.width / 2f - tapOffset.x) * 1.5f).coerceIn(-maxX, maxX)
-                            offsetY = ((size.height / 2f - tapOffset.y) * 1.5f).coerceIn(-maxY, maxY)
+                awaitEachGesture {
+                    // Wait for the first finger
+                    awaitFirstDown(requireUnconsumed = false)
+                    // Wait for a second finger (pinch) or give up
+                    val second = withTimeoutOrNull(300) {
+                        do { val event = awaitPointerEvent() } while (event.changes.size < 2)
+                        true
+                    }
+                    if (second != true) return@awaitEachGesture
+                    // Two fingers down: track pinch + pan until all fingers lift
+                    var prevCentroid = Offset.Unspecified
+                    do {
+                        val event = awaitPointerEvent()
+                        val centroid = event.changes.map { it.position }.let { pts ->
+                            Offset(pts.map { it.x }.average().toFloat(), pts.map { it.y }.average().toFloat())
                         }
-                    },
-                )
-            }
-            .pointerInput(item.key) {
-                detectTransformGestures { _, pan, zoom, _ ->
-                    val newScale = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
-                    scale = newScale
-                    val img = imageSize ?: return@detectTransformGestures
-                    val fitWidth = size.width.toFloat()
-                    val fitHeight = fitWidth * img.height / img.width
-                    val scaledW = fitWidth * newScale
-                    val scaledH = fitHeight * newScale
-                    val maxX = ((scaledW - size.width) / 2f).coerceAtLeast(0f)
-                    val maxY = ((scaledH - size.height) / 2f).coerceAtLeast(0f)
-                    offsetX = (offsetX + pan.x).coerceIn(-maxX, maxX)
-                    offsetY = (offsetY + pan.y).coerceIn(-maxY, maxY)
+                        // Compute zoom from the two widest pointers
+                        if (event.changes.size >= 2) {
+                            val sorted = event.changes.sortedBy { it.position.x }
+                            val curSpan = (sorted.last().position - sorted.first().position).getDistance()
+                            val prevSpan = (sorted.last().previousPosition - sorted.first().previousPosition).getDistance()
+                            if (prevSpan > 1f) {
+                                val zoom = curSpan / prevSpan
+                                val newScale = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
+                                scale = newScale
+                                val img = imageSize
+                                if (img != null) {
+                                    val fw = size.width.toFloat(); val fh = fw * img.height / img.width
+                                    val mx = ((fw * newScale - size.width) / 2f).coerceAtLeast(0f)
+                                    val my = ((fh * newScale - size.height) / 2f).coerceAtLeast(0f)
+                                    val pan = if (prevCentroid.isSpecified) centroid - prevCentroid else Offset.Zero
+                                    offsetX = (offsetX + pan.x).coerceIn(-mx, mx)
+                                    offsetY = (offsetY + pan.y).coerceIn(-my, my)
+                                }
+                            }
+                        }
+                        prevCentroid = centroid
+                        event.changes.forEach { it.consume() }
+                    } while (event.changes.any { it.pressed })
+                    // If the user pinched back to ~1×, snap to exactly 1× and reset offset
+                    if (scale < 1.05f) { scale = 1f; offsetX = 0f; offsetY = 0f }
                 }
             },
         contentAlignment = Alignment.Center,

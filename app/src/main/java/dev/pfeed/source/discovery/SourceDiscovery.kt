@@ -7,6 +7,7 @@ import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.source.net.HttpJson
 import dev.pfeed.source.parse.JsonPath
 import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -104,27 +105,40 @@ class SourceDiscovery @Inject constructor(
 
     // ── Reddit subreddit search ──────────────────────────────────────────────
 
-    private suspend fun searchReddit(query: String): List<DiscoveredSource> = runCatching {
-        val enc = java.net.URLEncoder.encode(query, "UTF-8")
-        val root = http.get(SRC, "https://www.reddit.com/subreddits/search.json?q=$enc&limit=25&include_over_18=on&raw_json=1")
-        val children = JsonPath.array(root, "data.children") ?: return@runCatching emptyList()
-        children.mapNotNull { child ->
-            val data = (child as? JsonObject)?.get("data") as? JsonObject ?: return@mapNotNull null
-            val name = data["display_name"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-            val over18 = data["over18"]?.jsonPrimitive?.contentOrNull == "true"
-            val sub = data["subscribers"]?.jsonPrimitive?.contentOrNull?.toLongOrNull() ?: 0
-            val desc = data["public_description"]?.jsonPrimitive?.contentOrNull?.take(80) ?: ""
-            // Only include NSFW subs (or subs where query looks adult)
-            if (!over18 && !looksAdult(query)) return@mapNotNull null
-            DiscoveredSource(
-                type = "reddit",
-                label = "r/$name",
-                description = desc.ifBlank { "Reddit · ${formatCount(sub)} members" },
-                subValue = name,
-                subscriberCount = sub,
-            )
+    /**
+     * Reddit killed unauthenticated JSON in May 2026, so the subreddit-search API is gone. Instead,
+     * we suggest the query as a subreddit name directly (many NSFW subs are named after their
+     * content), plus common variations (underscores, _porn suffix).
+     */
+    private suspend fun searchReddit(query: String): List<DiscoveredSource> {
+        val q = query.trim().lowercase()
+        if (q.length < 2) return emptyList()
+
+        val candidates = buildList {
+            add(q.replace(' ', '_'))
+            add(q.replace(' ', '_') + "_porn")
+            add(q.replace(' ', '_') + "_nsfw")
+            if (q.contains(' ')) add(q.replace(" ", ""))
+        }.distinct().filter { it.length in 2..24 }
+
+        // Check each candidate: try to fetch its RSS feed. If it returns content, it exists.
+        return coroutineScope {
+            candidates.map { name ->
+                async {
+                    val rssUrl = "https://www.reddit.com/r/$name/hot/.rss"
+                    val exists = runCatching { http.getRaw(SRC, rssUrl) }.getOrNull()
+                        ?.let { it.contains("<entry>") } == true
+                    if (exists) DiscoveredSource(
+                        type = "reddit",
+                        label = "r/$name",
+                        description = "Reddit · subreddit",
+                        subValue = name,
+                        subscriberCount = 10_000,
+                    ) else null
+                }
+            }.awaitAll().filterNotNull()
         }
-    }.getOrDefault(emptyList())
+    }
 
     // ── Mastodon hashtag search ───────────────────────────────────────────────
 
