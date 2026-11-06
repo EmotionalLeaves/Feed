@@ -142,7 +142,7 @@ class BooruAdapter @Inject constructor(
         return when (family) {
             BooruFamily.GELBOORU -> "$base/index.php?page=dapi&s=post&q=index&json=1&limit=40&pid=$page$tagsParam"
             BooruFamily.MOEBOORU -> "$base/post.json?limit=40&page=${page + 1}$tagsParam"
-            BooruFamily.SANKAKU -> "$base/post/index.json?limit=40&page=${page + 1}$tagsParam"
+            BooruFamily.SANKAKU -> "$base/posts/keyset?limit=40&page=${page + 1}$tagsParam"
             BooruFamily.DANBOORU -> "$base/posts.json?limit=40&page=${page + 1}$tagsParam"
         }
     }

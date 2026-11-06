@@ -95,6 +95,7 @@ class FeedViewModel @Inject constructor(
     private val _hint = MutableStateFlow<String?>(null)
     val hint: StateFlow<String?> = _hint
 
+
     private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 8)
     val messages: SharedFlow<String> = _messages
 

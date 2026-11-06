@@ -28,6 +28,8 @@ object BooruParser {
             root is JsonObject && root["post"] is JsonArray -> (root["post"] as JsonArray)
             // Gelbooru single result: {"post":{...}}
             root is JsonObject && root["post"] is JsonObject -> listOf(root["post"]!!)
+            // Sankaku capi-v2: {"data":[...]}
+            root is JsonObject && root["data"] is JsonArray -> (root["data"] as JsonArray)
             else -> emptyList()
         }
         // Post numbers are only unique within one board: prefix the board so rule34 #123 and

@@ -3,6 +3,7 @@ package dev.pfeed.source.discovery
 import dev.pfeed.data.settings.AppSettings
 import dev.pfeed.data.settings.BooruFeed
 import dev.pfeed.data.settings.MastodonFeed
+import dev.pfeed.data.repo.BooruKeys
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.source.net.HttpJson
 import dev.pfeed.source.parse.JsonPath
@@ -29,6 +30,7 @@ data class DiscoveredSource(
 class SourceDiscovery @Inject constructor(
     private val http: HttpJson,
     private val settings: SettingsRepository,
+    private val booruKeys: BooruKeys,
 ) {
     companion object {
         private const val SRC = "discovery"
@@ -41,7 +43,8 @@ class SourceDiscovery @Inject constructor(
             "lewdland.social", "latex.social", "rubber.social",
         )
 
-        // Booru hosts to query when searching by tag
+        // Booru hosts to query when searching by tag (rule34/gelbooru are included but only
+        // queried when the user has set up their API key; otherwise they'd return errors).
         private val BOORU_HOSTS = listOf(
             "rule34.xxx",
             "gelbooru.com",
@@ -51,6 +54,8 @@ class SourceDiscovery @Inject constructor(
             "e621.net",
             "yande.re",
             "konachan.com",
+            "chan.sankakucomplex.com",
+            "hypnohub.net",
         )
     }
 
@@ -163,8 +168,10 @@ class SourceDiscovery @Inject constructor(
             listOf(tag) // fallback: just use the query directly
         }
 
+        // Skip boards that need an API key unless the user has set one up.
+        val hosts = BOORU_HOSTS.filter { !booruKeys.missing(it) }
         tagNames.flatMap { t ->
-            BOORU_HOSTS.map { host ->
+            hosts.map { host ->
                 DiscoveredSource(
                     type = "booru",
                     label = "$host · $t",
@@ -176,6 +183,7 @@ class SourceDiscovery @Inject constructor(
                         "gelbooru.com" -> 400_000
                         "danbooru.donmai.us" -> 300_000
                         "e621.net" -> 200_000
+                        "chan.sankakucomplex.com" -> 150_000
                         else -> 100_000
                     },
                 )

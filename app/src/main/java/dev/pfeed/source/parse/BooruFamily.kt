@@ -39,7 +39,11 @@ enum class BooruFamily {
         /** Where the API lives. rule34.xxx serves its API from a separate host. */
         fun apiBase(host: String): String {
             val h = bareHost(host)
-            return if (h == "rule34.xxx") "https://api.rule34.xxx" else "https://$h"
+            return when {
+                h == "rule34.xxx" -> "https://api.rule34.xxx"
+                h.endsWith("sankakucomplex.com") -> "https://capi-v2.sankakucomplex.com"
+                else -> "https://$h"
+            }
         }
 
         /** The human-facing page for a post: what "Open source page" opens. */
@@ -48,7 +52,7 @@ enum class BooruFamily {
             return when (of(h)) {
                 GELBOORU -> "https://$h/index.php?page=post&s=view&id=$postId"
                 MOEBOORU -> "https://$h/post/show/$postId"
-                SANKAKU -> "https://$h/posts/$postId"
+                SANKAKU -> "https://${h.removePrefix("capi-v2.")}/posts/$postId"
                 DANBOORU -> "https://$h/posts/$postId"
             }
         }
