@@ -56,7 +56,7 @@ class BooruKeys @Inject constructor(
     suspend fun refresh() { load() }
 
     private suspend fun load(): Map<String, BooruKey> = mutex.withLock {
-        cache ?: NEEDS_KEY.mapNotNull { host ->
+        cache ?: NEEDS_KEY.keys.mapNotNull { host ->
             dao.get(rowId(host))?.let { row ->
                 runCatching { json.decodeFromString(BooruKey.serializer(), row.json) }.getOrNull()?.let { host to it }
             }
