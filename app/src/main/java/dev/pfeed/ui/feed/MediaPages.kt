@@ -212,7 +212,7 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                                     val fw = size.width.toFloat(); val fh = fw * img.height / img.width
                                     val mx = ((fw * newScale - size.width) / 2f).coerceAtLeast(0f)
                                     val my = ((fh * newScale - size.height) / 2f).coerceAtLeast(0f)
-                                    val pan = if (prevCentroid.isSpecified) centroid - prevCentroid else Offset.Zero
+                                    val pan = if (prevCentroid != Offset.Unspecified) centroid - prevCentroid else Offset.Zero
                                     offsetX = (offsetX + pan.x).coerceIn(-mx, mx)
                                     offsetY = (offsetY + pan.y).coerceIn(-my, my)
                                 }
