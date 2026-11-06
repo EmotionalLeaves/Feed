@@ -1,14 +1,14 @@
 package dev.pfeed
 
-import androidx.compose.ui.geometry.Offset
+import android.os.SystemClock
+import android.view.InputDevice
+import android.view.MotionEvent
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -82,13 +82,30 @@ class SmokeTest {
         rule.onNodeWithText("Feed").performClick()
         waitFor(what = "back on feed") { exists("For You") }
 
-        // 6. Panic gesture: three fingers down at once locks the app.
+        // 6. Panic gesture: three fingers down at once locks the app. Sent as real MotionEvents through
+        //    the Activity, the same path a physical touch takes.
         val lockManager = rule.activity.lockManager
-        rule.onRoot().performTouchInput {
-            down(0, center)
-            down(1, center + Offset(80f, 0f))
-            down(2, center + Offset(160f, 0f))
-            up(0); up(1); up(2)
+        rule.runOnUiThread {
+            val activity = rule.activity
+            val cx = activity.window.decorView.width / 2f
+            val cy = activity.window.decorView.height / 2f
+            val t = SystemClock.uptimeMillis()
+            fun touch(action: Int, count: Int): MotionEvent {
+                val props = Array(count) { i ->
+                    MotionEvent.PointerProperties().apply { id = i; toolType = MotionEvent.TOOL_TYPE_FINGER }
+                }
+                val coords = Array(count) { i ->
+                    MotionEvent.PointerCoords().apply { x = cx + i * 80f; y = cy; pressure = 1f; size = 1f }
+                }
+                return MotionEvent.obtain(t, t, action, count, props, coords, 0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0)
+            }
+            fun pointerDown(index: Int) = MotionEvent.ACTION_POINTER_DOWN or (index shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
+            listOf(
+                touch(MotionEvent.ACTION_DOWN, 1),
+                touch(pointerDown(1), 2),
+                touch(pointerDown(2), 3),
+                touch(MotionEvent.ACTION_CANCEL, 3),
+            ).forEach { ev -> activity.dispatchTouchEvent(ev); ev.recycle() }
         }
         val deadline = System.currentTimeMillis() + 5_000
         while (!lockManager.locked.value && System.currentTimeMillis() < deadline) Thread.sleep(100)

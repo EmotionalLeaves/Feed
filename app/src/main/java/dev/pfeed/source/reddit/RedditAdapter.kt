@@ -5,23 +5,29 @@ import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.Page
+import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
 import dev.pfeed.source.pageAt
 import dev.pfeed.source.parse.RedditParser
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.contentOrNull
 import java.net.URLEncoder
 import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Reads public subreddit listings via Reddit's documented `.json` endpoints (read-only, no auth).
- * The user adds subreddit names in Settings → Sources. See SOURCES.md for the terms note.
+ * Reads public subreddit listings via Reddit's `.json` endpoints (read-only, no auth) and pages
+ * each subreddit endlessly with Reddit's `after` token.
  *
- * Reddit rate-limits aggressively (~60 req/min per IP). To avoid 429s:
- * - Cap concurrency to 4 simultaneous requests ([maxConcurrency]).
- * - Sample at most [SUBS_PER_REFRESH] subs per refresh, rotating randomly so all subs are
- *   visited over time without hammering all 130+ at once.
- * - The OkHttp retry interceptor (AppModule) handles residual 429s with Retry-After back-off.
+ * Variety: each subreddit gets a random listing (hot / top of week, month, year, all time) when it
+ * starts, so two launches don't open on the same posts. When a listing runs out (Reddit stops at
+ * ~1000 posts) the base class starts it over with a new random listing.
+ *
+ * Rate limits (~60 req/min per IP): at most 4 requests in flight, 10 subreddits per step, and the
+ * OkHttp interceptor honours Retry-After on 429.
  */
 @Singleton
 class RedditAdapter @Inject constructor(
@@ -31,37 +37,49 @@ class RedditAdapter @Inject constructor(
     override val id = RedditParser.SOURCE_ID
     override val displayName = "Reddit"
     override val requiresAuth = false
-    // Reddit is strict: 4 concurrent max, 90s cache to stay under 60 req/min across refreshes
     override val maxConcurrency = 4
-    override val cacheMs = 90_000L
-
-    companion object {
-        /** Max subs to fetch per refresh cycle. Rotated randomly across all configured subs. */
-        private const val SUBS_PER_REFRESH = 25
-    }
+    override val entriesPerExtend = 10
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
-    override suspend fun entries(): List<String> {
-        val all = settings.get().redditSubs
-        // Sample randomly so across refreshes we cycle through the whole list
-        return if (all.size <= SUBS_PER_REFRESH) all else all.shuffled().take(SUBS_PER_REFRESH)
-    }
+    override suspend fun entries(): List<String> = settings.get().redditSubs
 
-    override suspend fun fetchEntry(entry: String): List<MediaItem> {
+    override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         val sub = entry.trim().removePrefix("/").removePrefix("r/").trim('/')
-        if (sub.isEmpty()) return emptyList()
-        // Try /top first (more varied content), fall back to /hot
-        return runCatching {
-            RedditParser.parse(http.get(id, "https://www.reddit.com/r/$sub/top.json?t=week&limit=50&raw_json=1"))
-        }.recoverCatching {
-            RedditParser.parse(http.get(id, "https://www.reddit.com/r/$sub/hot.json?limit=50&raw_json=1"))
-        }.getOrThrow()
+        if (sub.isEmpty()) return EntryPage(emptyList(), null)
+
+        var listing = token?.substringBefore('|') ?: LISTINGS.random()
+        val after = token?.substringAfter('|', "")?.ifBlank { null }
+        val root = try {
+            http.get(id, url(sub, listing, after))
+        } catch (e: SourceException) {
+            // A 429 is handled by the interceptor; for other failures on a fresh start, try plain hot once.
+            if (after != null || listing == "hot" || e.message?.contains("rate-limiting") == true) throw e
+            listing = "hot"
+            http.get(id, url(sub, listing, null))
+        }
+        val next = afterToken(root)
+        return EntryPage(RedditParser.parse(root), next?.let { "$listing|$it" })
     }
 
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
-        val root = http.get(id, "https://www.reddit.com/search.json?q=$q&sort=top&t=week&limit=50&raw_json=1")
+        val root = http.get(id, "https://www.reddit.com/search.json?q=$q&sort=top&t=week&limit=50&raw_json=1&include_over_18=on")
         return RedditParser.parse(root).pageAt(cursor, pageSize)
+    }
+
+    private fun url(sub: String, listing: String, after: String?): String {
+        val afterParam = after?.let { "&after=${URLEncoder.encode(it, "UTF-8")}" }.orEmpty()
+        return when (listing) {
+            "hot" -> "https://www.reddit.com/r/$sub/hot.json?limit=50&raw_json=1$afterParam"
+            else -> "https://www.reddit.com/r/$sub/top.json?t=${listing.removePrefix("top-")}&limit=50&raw_json=1$afterParam"
+        }
+    }
+
+    private fun afterToken(root: JsonElement): String? =
+        (((root as? JsonObject)?.get("data") as? JsonObject)?.get("after") as? JsonPrimitive)?.contentOrNull
+
+    companion object {
+        private val LISTINGS = listOf("hot", "top-week", "top-month", "top-year", "top-all")
     }
 }

@@ -82,4 +82,12 @@ class RankerTest {
         val decayed = model.decayed(8.0, 0, (14 * AffinityModel.DAY_MS).toLong())
         assertEquals(4.0, decayed, 1e-9)
     }
+
+    @Test
+    fun `limit picks only the best few and leaves the rest for later`() {
+        val items = (1..50).map { item("n$it", tags = listOf("neutral")) } + item("liked", tags = listOf("cats"))
+        val ranked = Ranker(noExplore).rank(items, mapOf("cats" to 10.0), emptyMap(), now, limit = 12)
+        assertEquals(12, ranked.size)
+        assertEquals("liked", ranked.first().id)
+    }
 }

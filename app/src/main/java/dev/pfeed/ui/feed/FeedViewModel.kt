@@ -15,6 +15,7 @@ import dev.pfeed.data.repo.Follows
 import dev.pfeed.data.repo.LibraryKind
 import dev.pfeed.data.repo.LibraryRepository
 import dev.pfeed.data.repo.NetworkMonitor
+import dev.pfeed.data.repo.SeenItems
 import dev.pfeed.data.repo.SignalRepository
 import dev.pfeed.data.repo.TransientFeedHolder
 import dev.pfeed.data.settings.AppSettings
@@ -31,7 +32,9 @@ import dev.pfeed.player.Preloader
 import dev.pfeed.source.SourceRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -60,6 +63,7 @@ class FeedViewModel @Inject constructor(
     private val registry: SourceRegistry,
     private val network: NetworkMonitor,
     private val preloader: Preloader,
+    private val seen: SeenItems,
     holder: TransientFeedHolder,
     val playerPool: PlayerPool,
 ) : ViewModel() {
@@ -98,6 +102,9 @@ class FeedViewModel @Inject constructor(
 
     private var session: FeedSession? = null
     private var endReached = false
+    private var lastSettled = 0
+    private var retryJob: Job? = null
+    private var retryDelayMs = RETRY_MIN_MS
     private val streams = HashMap<String, Deferred<StreamInfo?>>()
     private val stats = HashMap<String, PlaybackStats>()
 
@@ -132,8 +139,12 @@ class FeedViewModel @Inject constructor(
         if (isViewer) return
         finishCurrent()
         currentItem = null
-        session = sessions.create(tag?.let { FeedSpec.Tag(it) } ?: FeedSpec.Main(_mode.value))
+        retryJob?.cancel()
+        retryDelayMs = RETRY_MIN_MS
+        session?.close()
+        session = sessions.create(tag?.let { FeedSpec.Tag(it) } ?: FeedSpec.Main(_mode.value), viewModelScope)
         raw.value = emptyList()
+        lastSettled = 0
         endReached = false
         _hint.value = null
         loadMore()
@@ -147,14 +158,34 @@ class FeedViewModel @Inject constructor(
             try {
                 val r = s.loadMore()
                 if (s !== session) return@launch // mode changed while loading
-                raw.update { it + r.items }
+                raw.update { list ->
+                    val have = list.mapTo(HashSet()) { it.key }
+                    list + r.items.filter { it.key !in have }
+                }
                 endReached = r.endReached
                 _hint.value = r.hint
                 r.errors.forEach { _messages.tryEmit(it) }
+                if (r.items.isEmpty() && !r.endReached && r.hint == null) scheduleRetry(s) else retryDelayMs = RETRY_MIN_MS
             } finally {
                 _loading.value = false
             }
         }
+    }
+
+    /** Sources were slow or briefly failing: try again shortly (backing off) if the user is near the end. */
+    private fun scheduleRetry(s: FeedSession) {
+        retryJob?.cancel()
+        val wait = retryDelayMs
+        retryDelayMs = (retryDelayMs * 2).coerceAtMost(RETRY_MAX_MS)
+        retryJob = viewModelScope.launch {
+            delay(wait)
+            if (s === session && lastSettled >= items.value.size - LOAD_AHEAD) loadMore()
+        }
+    }
+
+    override fun onCleared() {
+        session?.close()
+        super.onCleared()
     }
 
     // ---- playback plumbing ----
@@ -184,7 +215,9 @@ class FeedViewModel @Inject constructor(
 
     fun onPageSettled(index: Int) {
         val list = items.value
+        lastSettled = index
         val item = list.getOrNull(index) ?: return
+        seen.mark(item.key)
         if (item.key != currentItem?.key) {
             finishCurrent()
             currentItem = item
@@ -320,6 +353,8 @@ class FeedViewModel @Inject constructor(
 
     companion object {
         private const val LOAD_AHEAD = 5
+        private const val RETRY_MIN_MS = 2_000L
+        private const val RETRY_MAX_MS = 30_000L
         private const val FAST_SKIP_MS = 2_000L
         private const val STILL_NOMINAL_MS = 6_000.0
     }

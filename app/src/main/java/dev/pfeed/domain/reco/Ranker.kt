@@ -49,7 +49,8 @@ class Ranker(
 
     /**
      * Greedy re-ranking. [recentSources] are the source ids of items already shown, so diversity
-     * carries across pages.
+     * carries across pages. [limit] stops after that many picks: the feed draws a small batch from a
+     * large candidate pool and re-ranks the rest later with fresher affinities.
      */
     fun rank(
         items: List<MediaItem>,
@@ -57,11 +58,12 @@ class Ranker(
         creatorAffinity: Map<String, Double>,
         now: Instant,
         recentSources: List<String> = emptyList(),
+        limit: Int = items.size,
     ): List<MediaItem> {
         val pool = items.map { it to baseScore(it, tagAffinity, creatorAffinity, now) }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
-        val out = ArrayList<MediaItem>(items.size)
-        while (pool.isNotEmpty()) {
+        val out = ArrayList<MediaItem>(limit.coerceIn(0, items.size))
+        while (pool.isNotEmpty() && out.size < limit) {
             val index = if (random.nextDouble() < weights.exploration) {
                 random.nextInt(pool.size)
             } else {

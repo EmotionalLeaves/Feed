@@ -2,6 +2,8 @@ package dev.pfeed
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.SystemClock
+import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -32,8 +34,22 @@ class MainActivity : FragmentActivity() {
         }
     }
 
-    /** Panic: lock immediately and jump to the home screen. */
+    private var lastPanicAt = 0L
+
+    /**
+     * Panic detection at the window level: sees every touch before any view does, including native
+     * views embedded in the feed (video surfaces, web embeds) that the Compose-level detector can miss.
+     */
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        if (ev.actionMasked == MotionEvent.ACTION_POINTER_DOWN && ev.pointerCount >= 3) panic()
+        return super.dispatchTouchEvent(ev)
+    }
+
+    /** Panic: lock immediately and jump to the home screen. Debounced: both detectors may fire for one gesture. */
     private fun panic() {
+        val now = SystemClock.elapsedRealtime()
+        if (lastPanicAt != 0L && now - lastPanicAt < 1_000L) return
+        lastPanicAt = now
         lockManager.lockNow()
         startActivity(
             Intent(Intent.ACTION_MAIN)

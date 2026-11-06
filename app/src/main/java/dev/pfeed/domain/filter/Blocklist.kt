@@ -12,6 +12,7 @@ data class Blocklist(
     val items: Set<String> = emptySet(),
 ) {
     fun allows(item: MediaItem): Boolean {
+        if (!MinorsFilter.allows(item)) return false
         if (item.key in items) return false
         val creator = item.creator?.let(::normalize)
         if (creator != null && creator in creators) return false

@@ -43,4 +43,12 @@ class BlocklistTest {
         val items = listOf(item("a"), item("b", tags = listOf("bad")), item("c"))
         assertEquals(listOf("a", "c"), bl.filter(items).map { it.id })
     }
+
+    @Test
+    fun `built-in minors filter applies even with an empty blocklist`() {
+        assertFalse(Blocklist.EMPTY.allows(item("1", tags = listOf("loli"))))
+        assertFalse(Blocklist.EMPTY.allows(item("2", tags = listOf("Child"))))
+        assertFalse(Blocklist.EMPTY.allows(item("3", title = "underage something")))
+        assertTrue(Blocklist.EMPTY.allows(item("4", tags = listOf("bdsm", "young_woman"))))
+    }
 }
