@@ -26,6 +26,21 @@ keytool -genkeypair -v -keystore ~/keys/pfeed.jks -alias pfeed -keyalg RSA -keys
 
 Then set `release.storeFile`, `release.storePassword`, `release.keyAlias` and `release.keyPassword` in `local.properties`. That file is git-ignored and should never be committed. If those keys are missing, `assembleRelease` produces an unsigned APK.
 
+### Building on GitHub Actions
+
+`.github/workflows/build.yml` runs on every push to `main` (or by hand from the **Actions** tab, using **Run workflow**). It runs the unit tests, builds the APK, runs lint, and attaches the APK to the run under **Artifacts**. Keep the repository **private**: artifacts are visible to anyone who can see the repo.
+
+Without signing secrets, the workflow builds a debug-signed APK, which installs fine for personal use. To get a properly signed release APK, add these under **Settings → Secrets and variables → Actions**:
+
+| Secret | Value |
+|---|---|
+| `KEYSTORE_BASE64` | output of `base64 -w0 pfeed.jks` |
+| `KEYSTORE_PASSWORD` | keystore password |
+| `KEY_ALIAS` | e.g. `pfeed` |
+| `KEY_PASSWORD` | key password |
+
+Optional `API_DISPLAY_NAME`, `API_BASE_URL`, `API_AUTH_URL`, `API_TOKEN_URL`, `API_CLIENT_ID` and `API_SCOPES` secrets configure the API adapter (see SOURCES.md).
+
 ### Dependency versions
 
 All versions are pinned in `gradle/libs.versions.toml`. If a newer AGP or Android Studio asks you to upgrade, bump them there. For example, AGP 9 has built-in Kotlin, which means removing the `kotlin-android` plugin line.
