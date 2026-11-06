@@ -35,6 +35,11 @@ class SecretStore @Inject constructor(@ApplicationContext context: Context) {
             .apply()
     }
 
+    /** Turns the app lock off. The database key is separate (Keystore-wrapped) and unaffected. */
+    fun clearPin() {
+        prefs.edit().remove(KEY_PIN_HASH).remove(KEY_PIN_SALT).commit()
+    }
+
     fun verifyPin(pin: CharArray): Boolean {
         val salt = prefs.getString(KEY_PIN_SALT, null)?.let(::unb64) ?: return false
         val expected = prefs.getString(KEY_PIN_HASH, null)?.let(::unb64) ?: return false

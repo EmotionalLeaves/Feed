@@ -62,7 +62,10 @@ object BooruParser {
                 id = "$board/$id",
                 sourceId = SOURCE_ID,
                 type = type,
-                title = tags.take(4).joinToString(" ").ifBlank { "post $id" },
+                // Boards have no real titles. A made-up one (e.g. the first tags) made thousands of
+                // different posts look identical to the duplicate filter, so leave it empty; the
+                // tags are shown instead.
+                title = null,
                 creator = artist,
                 tags = tags,
                 durationSec = null,

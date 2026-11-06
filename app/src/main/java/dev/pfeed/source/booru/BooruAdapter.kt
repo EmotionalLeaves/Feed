@@ -79,11 +79,18 @@ class BooruAdapter @Inject constructor(
         if (tag.isEmpty()) return@cachedSearch emptyList()
         val hosts = settings.get().booruFeeds.map { BooruFamily.bareHost(it.host) }.distinct()
             .filterNot { keys.missing(it) }
+        // "rough sex" → the tag rough_sex, and also rough + sex as two tags (boards AND them;
+        // Danbooru allows two tags for anonymous users, so at most two words).
+        val words = query.trim().lowercase().removePrefix("#").split(Regex("\\s+")).filter { it.isNotBlank() }
+        val queries = buildList {
+            add(tag)
+            if (words.size >= 2) add(words.take(2).joinToString(" "))
+        }.distinct()
         val remote = coroutineScope {
-            hosts.map { host ->
+            hosts.flatMap { host -> queries.map { host to it } }.map { (host, q) ->
                 async {
                     withTimeoutOrNull(SEARCH_HOST_TIMEOUT_MS) {
-                        runCatching { fetchPosts(host, tag, 0) }.getOrDefault(emptyList())
+                        runCatching { fetchPosts(host, q, 0) }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()

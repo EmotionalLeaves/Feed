@@ -16,8 +16,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Locked on every cold launch, and again whenever the app returns from the background after
- * `lockTimeoutSec` (default 30 s). [lockNow] is used by the panic gesture.
+ * The app lock is optional and off until the user sets a PIN in Settings. With a PIN, the app is
+ * locked on every cold launch and again whenever it returns from the background after
+ * `lockTimeoutSec` (default 30 s); [lockNow] is used by the panic gesture. Without one, it never locks.
  */
 @Singleton
 class AppLockManager @Inject constructor(
@@ -26,8 +27,12 @@ class AppLockManager @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) : DefaultLifecycleObserver {
 
-    private val _locked = MutableStateFlow(true)
+    private val _locked = MutableStateFlow(secrets.hasPin)
     val locked: StateFlow<Boolean> = _locked
+
+    private val _enabled = MutableStateFlow(secrets.hasPin)
+    /** True when a PIN is set (the lock is on). */
+    val enabled: StateFlow<Boolean> = _enabled
 
     @Volatile private var timeoutMs = 30_000L
     private var backgroundedAt = 0L
@@ -46,12 +51,13 @@ class AppLockManager @Inject constructor(
     }
 
     override fun onStart(owner: LifecycleOwner) {
-        if (backgroundedAt != 0L && SystemClock.elapsedRealtime() - backgroundedAt >= timeoutMs) _locked.value = true
+        if (secrets.hasPin && backgroundedAt != 0L && SystemClock.elapsedRealtime() - backgroundedAt >= timeoutMs) _locked.value = true
         backgroundedAt = 0L
     }
 
+    /** Locks if a PIN is set; with the lock off there's nothing to unlock with, so it does nothing. */
     fun lockNow() {
-        _locked.value = true
+        if (secrets.hasPin) _locked.value = true
     }
 
     /** Called after a successful biometric prompt. */
@@ -63,7 +69,19 @@ class AppLockManager @Inject constructor(
     suspend fun createPin(pin: CharArray) {
         withContext(Dispatchers.Default) { secrets.setPin(pin) }
         pin.fill('0')
+        _enabled.value = true
         _locked.value = false
+    }
+
+    /** Turns the lock off after checking the current PIN. */
+    suspend fun disable(current: CharArray): Boolean {
+        val ok = withContext(Dispatchers.Default) { secrets.verifyPin(current) }
+        current.fill('0')
+        if (!ok) return false
+        withContext(Dispatchers.Default) { secrets.clearPin() }
+        _enabled.value = false
+        _locked.value = false
+        return true
     }
 
     sealed interface PinResult {

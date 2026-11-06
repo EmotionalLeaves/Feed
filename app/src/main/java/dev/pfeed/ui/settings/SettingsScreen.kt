@@ -55,6 +55,8 @@ private val historySteps = listOf(7, 30, 90, 365)
 
 private sealed interface PendingDialog {
     data object ChangePin : PendingDialog
+    data object EnableLock : PendingDialog
+    data object DisableLock : PendingDialog
     data object ConfirmReset : PendingDialog
     data class ExportPassword(val uri: Uri) : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
@@ -63,6 +65,7 @@ private sealed interface PendingDialog {
 @Composable
 fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val s by vm.settings.collectAsStateWithLifecycle()
+    val lockOn by vm.lockEnabled.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var dialog by remember { mutableStateOf<PendingDialog?>(null) }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -92,15 +95,24 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         SwitchRow("Start muted", s.defaultMute, vm::setDefaultMute)
 
         Header("Privacy")
-        Text("Re-lock after leaving the app", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyMedium)
-        lockSteps.forEach { (sec, label) -> RadioRow(label, s.lockTimeoutSec == sec) { vm.setLockTimeout(sec) } }
-        NavRow("Change PIN", null) { dialog = PendingDialog.ChangePin }
+        SwitchRow("App lock (PIN)", lockOn) { on -> dialog = if (on) PendingDialog.EnableLock else PendingDialog.DisableLock }
+        if (lockOn) {
+            Text("Re-lock after leaving the app", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyMedium)
+            lockSteps.forEach { (sec, label) -> RadioRow(label, s.lockTimeoutSec == sec) { vm.setLockTimeout(sec) } }
+            NavRow("Change PIN", null) { dialog = PendingDialog.ChangePin }
+        } else {
+            Text(
+                "Off: the app opens straight to the feed. Turn on to require a PIN (or fingerprint) to open it.",
+                Modifier.padding(horizontal = 16.dp),
+                style = MaterialTheme.typography.bodySmall,
+            )
+        }
         Text("Launcher icon", Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.bodyMedium)
         listOf(Disguise.NONE to "Feed (default)", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator").forEach { (d, label) ->
             RadioRow(label, s.disguise == d) { vm.setDisguise(d) }
         }
         Text(
-            "Panic: tap with three fingers anywhere to lock and jump to the home screen.",
+            "Panic: tap with three fingers anywhere to jump to the home screen (and lock, if the app lock is on).",
             Modifier.padding(16.dp),
             style = MaterialTheme.typography.bodySmall,
         )
@@ -124,6 +136,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
 
     when (val d = dialog) {
         PendingDialog.ChangePin -> ChangePinDialog(onDismiss = { dialog = null }) { cur, new -> vm.changePin(cur, new); dialog = null }
+        PendingDialog.EnableLock -> TwoPinDialog(
+            title = "Set a PIN",
+            first = "PIN (4–8 digits)",
+            second = "Confirm PIN",
+            action = "Turn on",
+            onDismiss = { dialog = null },
+        ) { a, b -> vm.enableLock(a, b); dialog = null }
+        PendingDialog.DisableLock -> OnePinDialog(title = "Turn off app lock", label = "Current PIN", action = "Turn off", onDismiss = { dialog = null }) {
+            vm.disableLock(it); dialog = null
+        }
         PendingDialog.ConfirmReset -> AlertDialog(
             onDismissRequest = { dialog = null },
             properties = SecureDialog,
@@ -222,6 +244,38 @@ private fun ChangePinDialog(onDismiss: () -> Unit, onConfirm: (String, String) -
             }
         },
         confirmButton = { TextButton(onClick = { onConfirm(current, new) }, enabled = current.isNotEmpty() && new.length >= 4) { Text("Change") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun TwoPinDialog(title: String, first: String, second: String, action: String, onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
+    var a by remember { mutableStateOf("") }
+    var b by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = SecureDialog,
+        title = { Text(title) },
+        text = {
+            Column {
+                PinField(first, a) { a = it }
+                PinField(second, b) { b = it }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onConfirm(a, b) }, enabled = a.length >= 4 && b.length >= 4) { Text(action) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+    )
+}
+
+@Composable
+private fun OnePinDialog(title: String, label: String, action: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var a by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = SecureDialog,
+        title = { Text(title) },
+        text = { PinField(label, a) { a = it } },
+        confirmButton = { TextButton(onClick = { onConfirm(a) }, enabled = a.isNotEmpty()) { Text(action) } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
 }

@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -74,10 +75,14 @@ data class SearchFilters(
 
 data class SearchUi(
     val query: String = "",
+    /** The query the results are for (the field may have been edited since). */
+    val searched: String? = null,
     val loading: Boolean = false,
+    val pending: Int = 0,
     val results: List<MediaItem> = emptyList(),
     val errors: List<String> = emptyList(),
     val elapsedMs: Long? = null,
+    val sourcesWithResults: Int = 0,
 )
 
 @HiltViewModel
@@ -106,10 +111,21 @@ class SearchViewModel @Inject constructor(
         val q = _ui.value.query.trim()
         if (q.isEmpty()) return
         job?.cancel()
-        _ui.update { it.copy(loading = true, errors = emptyList()) }
+        _ui.update { it.copy(searched = q, loading = true, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0) }
         job = viewModelScope.launch {
-            val r = repo.search(q)
-            _ui.update { it.copy(loading = false, results = r.items, errors = r.errors, elapsedMs = r.elapsedMs) }
+            repo.search(q).collect { r ->
+                _ui.update {
+                    it.copy(
+                        loading = !r.done,
+                        pending = r.pending,
+                        results = r.items,
+                        errors = r.errors,
+                        elapsedMs = r.elapsedMs,
+                        sourcesWithResults = r.sourcesWithResults,
+                    )
+                }
+            }
+            _ui.update { it.copy(loading = false, pending = 0) }
         }
     }
 
@@ -155,18 +171,38 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
                 FilterChip(selected = filters.duration == d, onClick = { vm.setDuration(d) }, label = { Text(d.label) })
             }
         }
+        if (ui.loading) LinearProgressIndicator(Modifier.fillMaxWidth().padding(horizontal = 12.dp))
         val status = buildString {
-            ui.elapsedMs?.let { append("${visible.size} results in ${it} ms") }
-            if (ui.errors.isNotEmpty()) append(" · " + ui.errors.joinToString(" · "))
+            if (ui.searched != null) {
+                append("${visible.size} results")
+                if (ui.sourcesWithResults > 0) append(" from ${ui.sourcesWithResults} source${if (ui.sourcesWithResults == 1) "" else "s"}")
+                if (ui.loading) append(" · still searching ${ui.pending}…")
+                else ui.elapsedMs?.let { append(" · ${"%.1f".format(it / 1000.0)} s") }
+                if (ui.errors.isNotEmpty()) append(" · ${ui.errors.size} didn't answer")
+            }
         }
         if (status.isNotBlank()) {
             Text(status, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         }
         Box(Modifier.fillMaxSize()) {
-            if (ui.loading) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
-            } else {
-                MediaGrid(visible, onOpen = { index -> nav.navigate(Routes.viewer(vm.open(index))) })
+            when {
+                visible.isNotEmpty() -> MediaGrid(visible, onOpen = { index -> nav.navigate(Routes.viewer(vm.open(index))) })
+                ui.loading -> CircularProgressIndicator(Modifier.align(Alignment.Center))
+                ui.searched != null -> Column(Modifier.align(Alignment.Center).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        if (ui.results.isNotEmpty()) "Nothing matches the filters above." else "No results for \"${ui.searched}\".",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Text(
+                        if (ui.results.isNotEmpty()) "Clear a filter to see the ${ui.results.size} results."
+                        else "Try one or two words, or a tag like rough_sex. rule34 and gelbooru need a key (Settings → Sources).",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(top = 8.dp),
+                    )
+                    if (ui.errors.isNotEmpty()) {
+                        Text(ui.errors.joinToString("\n"), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 12.dp))
+                    }
+                }
             }
         }
     }

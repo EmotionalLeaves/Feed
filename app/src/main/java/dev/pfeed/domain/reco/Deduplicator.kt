@@ -16,7 +16,15 @@ class Deduplicator(
     private val maxHamming: Int = 6,
     private val durationToleranceSec: Int = 2,
 ) {
-    data class Signature(val key: String, val title: String, val durationSec: Int?, val isVideo: Boolean, val phash: Long?)
+    data class Signature(
+        val key: String,
+        val title: String,
+        val durationSec: Int?,
+        val isVideo: Boolean,
+        val phash: Long?,
+        /** Items from the same post (a gallery) share a page URL and are never duplicates of each other. */
+        val pageUrl: String? = null,
+    )
 
     private val keys = HashSet<String>()
     private val byTitle = HashMap<String, MutableList<Signature>>()
@@ -54,6 +62,7 @@ class Deduplicator(
     }
 
     private fun titleDurationMatch(a: Signature, b: Signature): Boolean {
+        if (a.pageUrl != null && a.pageUrl == b.pageUrl) return false
         val da = a.durationSec
         val db = b.durationSec
         return when {
@@ -82,6 +91,7 @@ class Deduplicator(
             durationSec = item.durationSec,
             isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED,
             phash = phash,
+            pageUrl = item.pageUrl,
         )
 
         fun normalizeTitle(title: String?): String {

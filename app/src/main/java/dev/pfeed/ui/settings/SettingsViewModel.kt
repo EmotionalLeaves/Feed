@@ -148,6 +148,23 @@ class SettingsViewModel @Inject constructor(
         _messages.tryEmit("Launcher updated. Some launchers take a few seconds to refresh.")
     }
 
+    val lockEnabled: StateFlow<Boolean> = lock.enabled
+
+    fun enableLock(pin: String, confirm: String) = viewModelScope.launch {
+        when {
+            pin.length < 4 -> _messages.tryEmit("PIN must be at least 4 digits")
+            pin != confirm -> _messages.tryEmit("PINs don't match")
+            else -> {
+                lock.createPin(pin.toCharArray())
+                _messages.tryEmit("App lock on")
+            }
+        }
+    }
+
+    fun disableLock(current: String) = viewModelScope.launch {
+        _messages.tryEmit(if (lock.disable(current.toCharArray())) "App lock off" else "Wrong PIN")
+    }
+
     fun changePin(current: String, new: String) = viewModelScope.launch {
         if (new.length < 4) { _messages.tryEmit("New PIN must be at least 4 digits"); return@launch }
         val ok = lock.changePin(current.toCharArray(), new.toCharArray())

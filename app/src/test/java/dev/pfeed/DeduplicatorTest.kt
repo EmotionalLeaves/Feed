@@ -63,4 +63,22 @@ class DeduplicatorTest {
         val reversed = IntArray(72) { i -> (8 - i % 9) * 20 } // decreasing: all 64 bits 1
         assertEquals(64, PerceptualHash.distance(PerceptualHash.dHash(gradient), PerceptualHash.dHash(reversed)))
     }
+
+    @Test
+    fun `different board posts are not duplicates just because they share tags`() {
+        val root = kotlinx.serialization.json.Json.parseToJsonElement(
+            """[{"id":1,"file_url":"https://c/1.jpg","tags":"1girl ass bdsm big_breasts rope"},
+                {"id":2,"file_url":"https://c/2.jpg","tags":"1girl ass bdsm big_breasts gag"}]""",
+        )
+        val posts = dev.pfeed.source.parse.BooruParser.parse(root, "gelbooru.com")
+        assertEquals(2, Deduplicator().filter(posts).size)
+    }
+
+    @Test
+    fun `images from one gallery post are all kept`() {
+        val a = item("a", title = "A long shared caption for a gallery", type = dev.pfeed.domain.model.MediaType.IMAGE)
+        val b = item("b", title = "A long shared caption for a gallery", type = dev.pfeed.domain.model.MediaType.IMAGE)
+            .copy(pageUrl = a.pageUrl)
+        assertEquals(2, Deduplicator().filter(listOf(a, b)).size)
+    }
 }

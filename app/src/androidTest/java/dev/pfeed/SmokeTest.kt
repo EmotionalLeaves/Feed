@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -17,7 +18,8 @@ import org.junit.runner.RunWith
 
 /**
  * End-to-end smoke test on a real emulator: app starts (Hilt, SQLCipher, DataStore, WorkManager),
- * PIN gate works, every top-level screen opens without crashing, and the panic gesture locks the app.
+ * the app opens without a PIN by default, every top-level screen opens without crashing, and the
+ * panic gesture locks the app once a PIN is set.
  */
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
@@ -39,25 +41,12 @@ class SmokeTest {
         }
     }
 
-    private fun typePin() = pin.forEach { rule.onNodeWithText(it).performClick() }
 
     @Test
     fun launchUnlockNavigateAndPanic() {
-        // 1. Lock screen appears on launch.
-        waitFor(what = "lock screen") { exists("Create a PIN") || exists("Enter PIN") }
-
-        // 2. Create (fresh install) or enter the PIN.
-        if (exists("Create a PIN")) {
-            typePin()
-            rule.onNodeWithText("OK").performClick()
-            waitFor(what = "confirm stage") { exists("Confirm PIN") }
-            typePin()
-            rule.onNodeWithText("OK").performClick()
-        } else {
-            typePin()
-            rule.onNodeWithText("Unlock").performClick()
-        }
-        waitFor(what = "unlock") { !exists("Confirm PIN") && !exists("Enter PIN") && !exists("Create a PIN") }
+        // 1–2. The app lock is optional and off by default: no PIN screen, straight to the feed.
+        waitFor(what = "app opens without a PIN") { exists("For You") || exists("Latest") }
+        assertTrue("no lock screen by default", !exists("Create a PIN") && !exists("Enter PIN"))
 
         // 3. Feed loads — either content appears (pre-seeded sources) or the tab bar is visible.
         //    We no longer expect an empty-state: sources are pre-seeded at install and start loading.
@@ -85,6 +74,8 @@ class SmokeTest {
         // 6. Panic gesture: three fingers down at once locks the app. Sent as real MotionEvents through
         //    the Activity, the same path a physical touch takes.
         val lockManager = rule.activity.lockManager
+        // Panic only locks when the user has turned the lock on; turn it on the way Settings does.
+        runBlocking { lockManager.createPin(pin.joinToString("").toCharArray()) }
         rule.runOnUiThread {
             val activity = rule.activity
             val cx = activity.window.decorView.width / 2f
