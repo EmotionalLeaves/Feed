@@ -8,8 +8,11 @@ import dev.pfeed.domain.model.Page
 import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
-import dev.pfeed.source.pageAt
 import dev.pfeed.source.parse.RedditParser
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -62,10 +65,32 @@ class RedditAdapter @Inject constructor(
         return EntryPage(RedditParser.parse(root), next?.let { "$listing|$it" })
     }
 
-    override suspend fun search(query: String, cursor: String?): Page<MediaItem> {
+    /**
+     * Searches Reddit-wide (NSFW included) and, in parallel, inside the user's own subreddits (as
+     * multireddits of up to [SUBS_PER_SEARCH] subs, so 130 subs is three requests), plus anything
+     * already loaded. Results are interleaved so one request doesn't crowd out the others.
+     */
+    override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
-        val root = http.get(id, "https://www.reddit.com/search.json?q=$q&sort=top&t=week&limit=50&raw_json=1&include_over_18=on")
-        return RedditParser.parse(root).pageAt(cursor, pageSize)
+        if (q.isEmpty()) return@cachedSearch emptyList()
+        val subs = entries().map { it.trim().removePrefix("/").removePrefix("r/").trim('/') }.filter { it.isNotEmpty() }.distinct()
+        val urls = buildList {
+            add("https://www.reddit.com/search.json?q=$q&sort=relevance&t=all&limit=100&raw_json=1&include_over_18=on")
+            subs.chunked(SUBS_PER_SEARCH).forEach { chunk ->
+                add("https://www.reddit.com/r/${chunk.joinToString("+")}/search.json?q=$q&restrict_sr=on&sort=relevance&t=all&limit=100&raw_json=1&include_over_18=on")
+            }
+        }
+        val remote = coroutineScope {
+            urls.map { u ->
+                async {
+                    withTimeoutOrNull(SEARCH_TIMEOUT_MS) {
+                        runCatching { RedditParser.parse(http.get(id, u)) }.getOrDefault(emptyList())
+                    }.orEmpty()
+                }
+            }.awaitAll()
+        }
+        val merged = (interleave(remote) + poolMatches(query)).distinctBy { it.key }
+        merged
     }
 
     private fun url(sub: String, listing: String, after: String?): String {
@@ -81,5 +106,14 @@ class RedditAdapter @Inject constructor(
 
     companion object {
         private val LISTINGS = listOf("hot", "top-week", "top-month", "top-year", "top-all")
+        private const val SUBS_PER_SEARCH = 50
+        private const val SEARCH_TIMEOUT_MS = 6_000L
+
+        private fun <T> interleave(lists: List<List<T>>): List<T> {
+            val out = ArrayList<T>(lists.sumOf { it.size })
+            val max = lists.maxOfOrNull { it.size } ?: 0
+            for (i in 0 until max) for (l in lists) if (i < l.size) out += l[i]
+            return out
+        }
     }
 }

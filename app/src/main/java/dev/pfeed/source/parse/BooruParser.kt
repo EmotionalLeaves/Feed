@@ -27,7 +27,9 @@ object BooruParser {
             root is JsonObject && root["post"] is JsonObject -> listOf(root["post"]!!)
             else -> emptyList()
         }
-        val base = host.trimEnd('/')
+        // Post numbers are only unique within one board: prefix the board so rule34 #123 and
+        // gelbooru #123 are different items (likes, history, playback and links stay separate).
+        val board = BooruFamily.bareHost(host).removePrefix("api.")
         return posts.mapNotNull { element ->
             val p = element as? JsonObject ?: return@mapNotNull null
             fun str(key: String) = (p[key] as? JsonPrimitive)?.contentOrNull
@@ -54,7 +56,7 @@ object BooruParser {
             val artist = str("tag_string_artist")?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() }
 
             MediaItem(
-                id = id,
+                id = "$board/$id",
                 sourceId = SOURCE_ID,
                 type = type,
                 title = tags.take(4).joinToString(" ").ifBlank { "post $id" },
@@ -62,7 +64,7 @@ object BooruParser {
                 tags = tags,
                 durationSec = null,
                 thumbnailUrl = preview ?: media.takeIf { type != MediaType.VIDEO },
-                pageUrl = "$base/posts/$id",
+                pageUrl = BooruFamily.postPage(board, id),
                 publishedAt = MediaTypes.parseDate(str("created_at")),
                 extras = mapOf("media" to media),
             )

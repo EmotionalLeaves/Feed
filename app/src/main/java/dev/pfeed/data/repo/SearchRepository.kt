@@ -16,7 +16,11 @@ import javax.inject.Singleton
 
 data class SearchResult(val items: List<MediaItem>, val errors: List<String>, val elapsedMs: Long)
 
-/** Fans a query out to every enabled adapter in parallel with a hard per-source deadline (target: < 3 s total). */
+/**
+ * Fans a query out to every enabled adapter in parallel. Each adapter itself searches all of its
+ * servers in parallel with per-server deadlines; here each source gets up to [MAX_PER_SOURCE]
+ * results (several pages) within [PER_SOURCE_TIMEOUT_MS], keeping whatever arrived if time runs out.
+ */
 @Singleton
 class SearchRepository @Inject constructor(
     private val registry: SourceRegistry,
@@ -32,8 +36,30 @@ class SearchRepository @Inject constructor(
             adapters.map { a ->
                 async {
                     a to try {
-                        withTimeoutOrNull(PER_SOURCE_TIMEOUT_MS) { Result.success(a.search(query, null).items) }
-                            ?: Result.failure(Exception("timed out"))
+                        val got = ArrayList<MediaItem>()
+                        var failure: Exception? = null
+                        val finished = withTimeoutOrNull(PER_SOURCE_TIMEOUT_MS) {
+                            var cursor: String? = null
+                            do {
+                                val page = try {
+                                    a.search(query, cursor)
+                                } catch (e: CancellationException) {
+                                    throw e
+                                } catch (e: Exception) {
+                                    if (got.isEmpty()) failure = e
+                                    break
+                                }
+                                got += page.items
+                                cursor = page.nextCursor
+                            } while (cursor != null && got.size < MAX_PER_SOURCE)
+                            true
+                        }
+                        when {
+                            got.isNotEmpty() -> Result.success(got.toList())
+                            failure != null -> Result.failure(failure!!)
+                            finished == null -> Result.failure(Exception("timed out"))
+                            else -> Result.success(emptyList())
+                        }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
@@ -65,6 +91,7 @@ class SearchRepository @Inject constructor(
     }
 
     companion object {
-        private const val PER_SOURCE_TIMEOUT_MS = 2_500L
+        private const val PER_SOURCE_TIMEOUT_MS = 9_000L
+        private const val MAX_PER_SOURCE = 150
     }
 }

@@ -16,7 +16,9 @@ import kotlinx.serialization.json.contentOrNull
 object MastodonParser {
     const val SOURCE_ID = "mastodon"
 
-    fun parse(root: JsonElement): List<MediaItem> {
+    /** [host] (the instance the timeline came from) prefixes ids so two instances' local ids can't collide. */
+    fun parse(root: JsonElement, host: String? = null): List<MediaItem> {
+        val prefix = host?.let { BooruFamily.bareHost(it) + "/" }.orEmpty()
         val statuses = root as? JsonArray ?: return emptyList()
         val out = ArrayList<MediaItem>()
         for (element in statuses) {
@@ -46,7 +48,7 @@ object MastodonParser {
                 }
                 val attId = str(a, "id") ?: url.hashCode().toString()
                 out += MediaItem(
-                    id = "${statusId}_$attId",
+                    id = "$prefix${statusId}_$attId",
                     sourceId = SOURCE_ID,
                     type = type,
                     title = title ?: str(a, "description"),

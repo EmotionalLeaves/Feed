@@ -8,8 +8,11 @@ import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.Page
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
-import dev.pfeed.source.pageAt
 import dev.pfeed.source.parse.MastodonParser
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -46,16 +49,28 @@ class MastodonAdapter @Inject constructor(
         val root = http.get(id, timelineUrl(feed.host, feed.tag, maxId = token))
         val statuses = root as? JsonArray
         val oldest = (statuses?.lastOrNull() as? JsonObject)?.get("id") as? JsonPrimitive
-        return EntryPage(MastodonParser.parse(root), next = oldest?.contentOrNull?.takeIf { statuses?.isNotEmpty() == true })
+        return EntryPage(MastodonParser.parse(root, feed.host), next = oldest?.contentOrNull?.takeIf { statuses?.isNotEmpty() == true })
     }
 
-    override suspend fun search(query: String, cursor: String?): Page<MediaItem> {
+    /**
+     * Hashtag search on every configured instance at once, each with its own deadline, plus anything
+     * already loaded. Hashtags can't contain spaces, so "rough sex" is searched as #roughsex.
+     */
+    override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
+        val tag = query.trim().removePrefix("#").replace(Regex("[\\s_-]+"), "")
+        if (tag.isEmpty()) return@cachedSearch emptyList()
         val hosts = settings.get().mastodonFeeds.filterNot { isExcluded(it.host) }.map { normalizeHost(it.host) }.distinct()
-        val tag = query.trim().removePrefix("#")
-        val merged = hosts.flatMap { host ->
-            runCatching { MastodonParser.parse(http.get(id, timelineUrl(host, tag))) }.getOrDefault(emptyList())
-        }.distinctBy { it.key }
-        return merged.pageAt(cursor, pageSize)
+        val remote = coroutineScope {
+            hosts.map { host ->
+                async {
+                    withTimeoutOrNull(SEARCH_HOST_TIMEOUT_MS) {
+                        runCatching { MastodonParser.parse(http.get(id, timelineUrl(host, tag)), host) }.getOrDefault(emptyList())
+                    }.orEmpty()
+                }
+            }.awaitAll()
+        }
+        val merged = (remote.flatten().sortedByDescending { it.publishedAt } + poolMatches(query)).distinctBy { it.key }
+        merged
     }
 
     private fun timelineUrl(host: String, tag: String?, maxId: String? = null): String {
@@ -76,6 +91,7 @@ class MastodonAdapter @Inject constructor(
     companion object {
         /** Instances known for hosting sexualized depictions of minors; never fetched, even if saved in settings. */
         private val EXCLUDED_HOSTS = setOf("pawoo.net", "baraag.net")
+        private const val SEARCH_HOST_TIMEOUT_MS = 6_000L
     }
 
     private fun normalizeHost(host: String): String {

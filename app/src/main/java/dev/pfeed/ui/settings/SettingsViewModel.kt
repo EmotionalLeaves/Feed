@@ -11,6 +11,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dev.pfeed.data.db.BlockEntity
 import dev.pfeed.data.repo.BlockKind
 import dev.pfeed.data.repo.BlockRepository
+import dev.pfeed.data.repo.BooruKeys
 import dev.pfeed.data.repo.SettingsExporter
 import dev.pfeed.data.repo.SignalRepository
 import dev.pfeed.data.repo.WrongPasswordException
@@ -61,7 +62,34 @@ class SettingsViewModel @Inject constructor(
     private val mediaCache: MediaCache,
     private val lock: AppLockManager,
     private val discovery: SourceDiscovery,
+    private val booruKeys: BooruKeys,
 ) : ViewModel() {
+
+    /** Boards (rule34.xxx, gelbooru.com) that have an API key saved. */
+    val booruKeyHosts: StateFlow<Set<String>> = booruKeys.configured
+
+    init {
+        viewModelScope.launch { booruKeys.refresh() }
+    }
+
+    /** [text] is what the board's account page shows, e.g. `&api_key=…&user_id=…`. */
+    fun saveBooruKey(host: String, text: String): Boolean {
+        val key = BooruKeys.parse(text)
+        if (key == null) {
+            _messages.tryEmit("Paste the whole line from $host, e.g. &api_key=…&user_id=…")
+            return false
+        }
+        viewModelScope.launch {
+            booruKeys.set(host, key) // the board's feeds join the stream on the next load
+            _messages.tryEmit("$host unlocked")
+        }
+        return true
+    }
+
+    fun clearBooruKey(host: String) = viewModelScope.launch {
+        booruKeys.clear(host)
+        _messages.tryEmit("Removed key for $host")
+    }
 
     val settings: StateFlow<AppSettings> = settingsRepo.flow.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
     val sources: StateFlow<List<RegisteredSource>> = registry.observe().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())

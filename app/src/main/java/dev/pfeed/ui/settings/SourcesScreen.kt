@@ -58,6 +58,9 @@ import androidx.navigation.NavController
 import dev.pfeed.data.settings.JsonFeed
 import dev.pfeed.source.discovery.DiscoveredSource
 import dev.pfeed.ui.common.findActivity
+import dev.pfeed.ui.common.openExternal
+import dev.pfeed.data.repo.BooruKeys
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 
 private enum class QuickAddType(val label: String) {
     SEARCH("🔍 Search"),
@@ -76,6 +79,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val s by vm.settings.collectAsStateWithLifecycle()
     val auth by vm.authStatus.collectAsStateWithLifecycle()
     val searchState by vm.searchState.collectAsStateWithLifecycle()
+    val keyHosts by vm.booruKeyHosts.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -125,6 +129,9 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                     }
                 }
             }
+
+            Header("Board API keys")
+            BoardKeys(vm, keyHosts)
 
             Header("Quick add")
             QuickAdd(vm, searchState, onPickFolder = { folderPicker.launch(null) })
@@ -399,4 +406,46 @@ private fun Entry(kind: String, label: String, onDelete: () -> Unit) {
         headlineContent = { Text(label, maxLines = 2) },
         trailingContent = { IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "Remove") } },
     )
+}
+
+/**
+ * rule34.xxx and gelbooru.com only answer API requests that carry a free account's key. Their feeds
+ * are skipped until a key is pasted here.
+ */
+@Composable
+private fun BoardKeys(vm: SettingsViewModel, configured: Set<String>) {
+    val context = LocalContext.current
+    Text(
+        "rule34.xxx and gelbooru.com need a free account key before their feeds load. Make an account, " +
+            "open its options page, tick \"Generate New Key\", save, then copy the line that looks like " +
+            "&api_key=…&user_id=… and paste it here.",
+        style = MaterialTheme.typography.bodySmall,
+        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+    )
+    BooruKeys.NEEDS_KEY.forEach { (host, optionsUrl) ->
+        var text by remember(host) { mutableStateOf("") }
+        val has = host in configured
+        Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Column(Modifier.padding(12.dp)) {
+                Text(host, style = MaterialTheme.typography.titleMedium)
+                Text(if (has) "Key saved, feeds on" else "No key, feeds skipped", style = MaterialTheme.typography.bodySmall)
+                if (has) {
+                    TextButton(onClick = { vm.clearBooruKey(host) }) { Text("Remove key") }
+                } else {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        label = { Text("&api_key=…&user_id=…") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 8.dp)) {
+                        Button(onClick = { if (vm.saveBooruKey(host, text)) text = "" }, enabled = text.isNotBlank()) { Text("Save") }
+                        OutlinedButton(onClick = { openExternal(context, optionsUrl) }) { Text("Get a key") }
+                    }
+                }
+            }
+        }
+    }
 }

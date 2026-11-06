@@ -60,6 +60,8 @@ abstract class CachingAdapter : SourceAdapter {
     private val failures = HashMap<String, Int>()
     private var recycles = 0
     private var lastError: Throwable? = null
+    /** Read-only copy of [pool] for search, so a search never waits behind a slow refill. */
+    @Volatile private var poolSnapshot: List<MediaItem> = emptyList()
 
     /** Wired by Hilt; tests can set it directly. */
     var seen: SeenFilter = SeenFilter.NONE
@@ -141,6 +143,33 @@ abstract class CachingAdapter : SourceAdapter {
         }.pageAt(cursor, pageSize)
     }
 
+    private val searchMutex = Mutex()
+    private var lastSearch: Triple<String, Long, List<MediaItem>>? = null
+
+    /**
+     * Runs [block] once per query and pages the result in memory, so asking for page 2, 3… of the
+     * same search doesn't hit every server again. Cached for [SEARCH_CACHE_MS].
+     */
+    protected suspend fun cachedSearch(query: String, cursor: String?, block: suspend () -> List<MediaItem>): Page<MediaItem> {
+        val q = query.trim().lowercase()
+        val now = System.currentTimeMillis()
+        val hit = searchMutex.withLock { lastSearch?.takeIf { it.first == q && now - it.second < SEARCH_CACHE_MS }?.third }
+        val all = if (hit != null && cursor != null) hit else block().also { r -> searchMutex.withLock { lastSearch = Triple(q, now, r) } }
+        return all.pageAt(cursor, pageSize)
+    }
+
+    /** Items already loaded into the stream that match [query] (title, creator or tag). No network. */
+    protected fun poolMatches(query: String): List<MediaItem> {
+        val q = query.trim().lowercase().removePrefix("#")
+        if (q.isEmpty()) return emptyList()
+        val qTag = q.replace(Regex("\\s+"), "_")
+        return poolSnapshot.filter { item ->
+            item.title?.lowercase()?.contains(q) == true ||
+                item.creator?.lowercase()?.contains(q) == true ||
+                item.tags.any { val t = it.lowercase(); t.contains(q) || t.contains(qTag) }
+        }.take(POOL_SEARCH_LIMIT)
+    }
+
     // ── internals (all called with mutex held) ──
 
     private fun resetGeneration(sig: List<String>, now: Long) {
@@ -148,6 +177,7 @@ abstract class CachingAdapter : SourceAdapter {
         generationAt = now
         signature = sig
         pool.clear(); poolKeys.clear()
+        poolSnapshot = emptyList()
         order = sig.distinct().shuffled()
         rr = 0
         tokens.clear(); done.clear(); failures.clear()
@@ -212,6 +242,7 @@ abstract class CachingAdapter : SourceAdapter {
         // Interleave entries so one subreddit/tag doesn't fill a whole page on its own.
         val merged = interleave(fresh)
         pool += merged
+        poolSnapshot = pool.toList()
 
         if (!anyOk && pool.isEmpty()) {
             val e = lastError
@@ -235,6 +266,8 @@ abstract class CachingAdapter : SourceAdapter {
         /** How many times the whole entry list may start over within one generation. */
         private const val MAX_RECYCLES = 2
         private const val MAX_ENTRY_FAILURES = 3
+        private const val POOL_SEARCH_LIMIT = 100
+        private const val SEARCH_CACHE_MS = 120_000L
 
         internal fun <T> interleave(lists: List<List<T>>): List<T> {
             val out = ArrayList<T>(lists.sumOf { it.size })

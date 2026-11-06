@@ -6,6 +6,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonElement
 import okhttp3.Call
 import okhttp3.Callback
@@ -57,6 +58,8 @@ class HttpJson @Inject constructor(
                 isAuthError = code in 401..403,
             )
         }
+        // Some boards (rule34.xxx) answer "no results" with an empty body.
+        if (body.isBlank()) return JsonArray(emptyList())
         return try {
             withContext(Dispatchers.Default) { json.parseToJsonElement(body) }
         } catch (e: Exception) {

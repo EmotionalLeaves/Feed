@@ -62,6 +62,7 @@ class SourceParsersTest {
         assertEquals(MediaType.IMAGE, items[0].type)
         assertEquals("someartist", items[0].creator)
         assertEquals("https://booru.example/posts/101", items[0].pageUrl)
+        assertEquals("booru.example/101", items[0].id)
         assertEquals(MediaType.VIDEO, items[1].type)
         assertTrue("sunset" in items[0].tags)
     }
@@ -121,5 +122,21 @@ class SourceParsersTest {
         assertEquals("https://x/y.mp4", items[0].extras["media"])
         assertTrue(items[0].id.endsWith(":z1"))
         assertTrue("x" in items[0].tags)
+    }
+
+    @Test fun `booru links go to the right page for each board engine`() {
+        val root = parse("""[{"id":7,"file_url":"https://cdn/x.jpg","tags":"a b"}]""")
+        assertEquals("https://rule34.xxx/index.php?page=post&s=view&id=7", BooruParser.parse(root, "https://api.rule34.xxx")[0].pageUrl)
+        assertEquals("https://gelbooru.com/index.php?page=post&s=view&id=7", BooruParser.parse(root, "gelbooru.com")[0].pageUrl)
+        assertEquals("https://yande.re/post/show/7", BooruParser.parse(root, "https://yande.re")[0].pageUrl)
+        assertEquals("https://konachan.com/post/show/7", BooruParser.parse(root, "konachan.com")[0].pageUrl)
+        assertEquals("https://danbooru.donmai.us/posts/7", BooruParser.parse(root, "https://danbooru.donmai.us/")[0].pageUrl)
+    }
+
+    @Test fun `same post number on two boards is two different items`() {
+        val root = parse("""[{"id":7,"file_url":"https://cdn/x.jpg"}]""")
+        val a = BooruParser.parse(root, "rule34.xxx")[0]
+        val b = BooruParser.parse(root, "gelbooru.com")[0]
+        assertTrue(a.key != b.key)
     }
 }
