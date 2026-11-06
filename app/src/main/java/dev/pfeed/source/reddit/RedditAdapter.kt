@@ -33,13 +33,17 @@ class RedditAdapter @Inject constructor(
     override suspend fun fetchEntry(entry: String): List<MediaItem> {
         val sub = entry.trim().removePrefix("/").removePrefix("r/").trim('/')
         if (sub.isEmpty()) return emptyList()
-        val root = http.get(id, "https://www.reddit.com/r/$sub/hot.json?limit=50&raw_json=1")
-        return RedditParser.parse(root)
+        // Try top (more content variety) and hot, return whichever succeeds first
+        return runCatching {
+            RedditParser.parse(http.get(id, "https://www.reddit.com/r/$sub/top.json?t=week&limit=50&raw_json=1"))
+        }.recoverCatching {
+            RedditParser.parse(http.get(id, "https://www.reddit.com/r/$sub/hot.json?limit=50&raw_json=1"))
+        }.getOrThrow()
     }
 
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> {
         val q = URLEncoder.encode(query.trim(), "UTF-8")
-        val root = http.get(id, "https://www.reddit.com/search.json?q=$q&limit=50&raw_json=1")
+        val root = http.get(id, "https://www.reddit.com/search.json?q=$q&sort=top&t=week&limit=50&raw_json=1")
         return RedditParser.parse(root).pageAt(cursor, pageSize)
     }
 }

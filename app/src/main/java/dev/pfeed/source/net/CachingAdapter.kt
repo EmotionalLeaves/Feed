@@ -69,6 +69,8 @@ abstract class CachingAdapter : SourceAdapter {
         }
         val ok = results.mapNotNull { it.getOrNull() }
         if (ok.isEmpty()) {
+            // All entries failed — keep stale cache if we have one, otherwise throw
+            if (cache.isNotEmpty()) return cache
             val first = results.firstNotNullOfOrNull { it.exceptionOrNull() }
             throw first as? SourceException ?: SourceException(id, first?.message ?: "Couldn't load", cause = first)
         }

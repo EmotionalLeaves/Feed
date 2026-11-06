@@ -19,7 +19,12 @@ object BooruParser {
     fun parse(root: JsonElement, host: String): List<MediaItem> {
         val posts: List<JsonElement> = when {
             root is JsonArray -> root
+            // e621: {"posts":[...]}
             root is JsonObject && root["posts"] is JsonArray -> (root["posts"] as JsonArray)
+            // Gelbooru/rule34: {"@attributes":{...}, "post":[...]}
+            root is JsonObject && root["post"] is JsonArray -> (root["post"] as JsonArray)
+            // Gelbooru single result: {"post":{...}}
+            root is JsonObject && root["post"] is JsonObject -> listOf(root["post"]!!)
             else -> emptyList()
         }
         val base = host.trimEnd('/')
@@ -28,17 +33,21 @@ object BooruParser {
             fun str(key: String) = (p[key] as? JsonPrimitive)?.contentOrNull
             val id = (p["id"] as? JsonPrimitive)?.contentOrNull ?: return@mapNotNull null
 
-            // Danbooru: file_url / large_file_url. e621: file.url, preview.url. moebooru: file_url.
+            // Danbooru: file_url / large_file_url
+            // e621: file.url
+            // moebooru (konachan/yande.re): file_url or sample_url
+            // Gelbooru/rule34: file_url or sample_url
             val fileObj = p["file"] as? JsonObject
-            val media = str("file_url") ?: str("large_file_url")
+            val media = str("file_url") ?: str("large_file_url") ?: str("sample_url")
                 ?: (fileObj?.get("url") as? JsonPrimitive)?.contentOrNull
                 ?: return@mapNotNull null
             val type = MediaTypes.classify(media) ?: return@mapNotNull null
 
-            val preview = str("preview_file_url")
+            val preview = str("preview_file_url") ?: str("preview_url")
                 ?: ((p["preview"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull
 
             val tagString = str("tag_string")
+                ?: str("tags")  // gelbooru/rule34/moebooru: space-separated string under "tags"
                 ?: ((p["tags"] as? JsonObject)?.get("general") as? JsonArray)
                     ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.joinToString(" ")
             val tags = tagString?.split(Regex("\\s+"))?.filter { it.isNotBlank() }?.take(30).orEmpty()

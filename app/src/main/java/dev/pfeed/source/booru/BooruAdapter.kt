@@ -48,9 +48,35 @@ class BooruAdapter @Inject constructor(
         return merged.pageAt(cursor, pageSize)
     }
 
+    /**
+     * Builds the correct API URL for the board family. Each board family has its own path:
+     * - Danbooru/safebooru/e621/tbib: /posts.json
+     * - rule34.xxx / gelbooru.com: /index.php?page=dapi&s=post&q=index&json=1
+     * - konachan / yande.re (moebooru): /post.json
+     * - Sankaku: /post/index.json
+     */
     private fun postsUrl(host: String, tags: String?): String {
-        val query = tags?.trim().orEmpty().let { if (it.isEmpty()) "" else "&tags=${URLEncoder.encode(it, "UTF-8")}" }
-        return "$host/posts.json?limit=40$query"
+        val enc = tags?.trim().orEmpty().let { if (it.isEmpty()) "" else URLEncoder.encode(it, "UTF-8") }
+        val h = host.removeSuffix("/")
+        return when {
+            h.contains("rule34.xxx") || h.contains("gelbooru.com") -> {
+                val tagsParam = if (enc.isEmpty()) "" else "&tags=$enc"
+                "$h/index.php?page=dapi&s=post&q=index&json=1&limit=40$tagsParam"
+            }
+            h.contains("konachan.com") || h.contains("yande.re") || h.contains("behoimi") -> {
+                val tagsParam = if (enc.isEmpty()) "" else "&tags=$enc"
+                "$h/post.json?limit=40$tagsParam"
+            }
+            h.contains("sankakucomplex.com") -> {
+                val tagsParam = if (enc.isEmpty()) "" else "&tags=$enc"
+                "$h/post/index.json?limit=40$tagsParam"
+            }
+            else -> {
+                // Danbooru/e621/tbib/xbooru/dollbooru and most others
+                val tagsParam = if (enc.isEmpty()) "" else "&tags=$enc"
+                "$h/posts.json?limit=40$tagsParam"
+            }
+        }
     }
 
     private fun normalizeHost(host: String): String {
