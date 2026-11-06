@@ -2,12 +2,10 @@ package dev.pfeed.source.rss
 
 import android.util.Xml
 import dev.pfeed.domain.model.MediaType
+import dev.pfeed.source.parse.MediaTypes
 import org.xmlpull.v1.XmlPullParser
 import java.io.InputStream
 import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZonedDateTime
-import java.time.format.DateTimeFormatter
 
 /** Minimal RSS 2.0 / Atom parser with Media RSS (`media:`), enclosure and iTunes-duration support. */
 object FeedParser {
@@ -143,33 +141,11 @@ object FeedParser {
         return Result(feedTitle?.trim(), entries)
     }
 
-    fun classify(url: String?, mime: String?, medium: String?): MediaType? {
-        val m = mime?.lowercase()
-        val u = url?.substringBefore('?')?.substringBefore('#')?.lowercase().orEmpty()
-        fun ext(vararg e: String) = e.any { u.endsWith(it) }
-        return when {
-            m == "image/gif" || ext(".gif") -> MediaType.GIF
-            m?.startsWith("video/") == true || m == "application/x-mpegurl" || m == "application/vnd.apple.mpegurl" ||
-                medium == "video" || ext(".mp4", ".webm", ".m4v", ".mov", ".m3u8", ".mkv") -> MediaType.VIDEO
-            m?.startsWith("image/") == true || medium == "image" || ext(".jpg", ".jpeg", ".png", ".webp", ".avif") -> MediaType.IMAGE
-            else -> null
-        }
-    }
+    fun classify(url: String?, mime: String?, medium: String?): MediaType? = MediaTypes.classify(url, mime, medium)
 
-    fun parseDate(raw: String): Instant? {
-        val s = raw.trim()
-        if (s.isEmpty()) return null
-        runCatching { return OffsetDateTime.parse(s).toInstant() }
-        runCatching { return Instant.parse(s) }
-        runCatching { return ZonedDateTime.parse(s, DateTimeFormatter.RFC_1123_DATE_TIME).toInstant() }
-        return null
-    }
+    fun parseDate(raw: String): Instant? = MediaTypes.parseDate(raw)
 
-    /** "SS", "MM:SS" or "HH:MM:SS". */
-    fun parseDuration(raw: String): Int? {
-        val parts = raw.trim().split(':').map { it.trim().toIntOrNull() ?: return null }
-        return parts.fold(0) { acc, p -> acc * 60 + p }.takeIf { parts.isNotEmpty() }
-    }
+    fun parseDuration(raw: String): Int? = MediaTypes.parseDuration(raw)
 
     private fun XmlPullParser.attr(name: String): String? =
         getAttributeValue(null, name)?.takeIf { it.isNotBlank() }

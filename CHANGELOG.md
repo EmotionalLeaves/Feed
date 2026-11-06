@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0 — 2026-11-05
+
+More sources and a faster way to add them.
+
+- **New adapters:** Direct links, Reddit (public JSON), Mastodon/Fediverse (public + tag timelines), Booru (Danbooru/e621/moebooru-style `posts.json`), and a **Generic JSON** adapter that maps any JSON endpoint via user-defined field paths.
+- **Quick-add UI:** Settings → Sources now has a type picker + inline fields for every source type, with a combined list of everything added and one-tap delete.
+- **Refactor:** pure parsers extracted to `source/parse/` (`MediaTypes`, `JsonPath`, and the per-source parsers) and a shared `source/net/` (`HttpJson`, `CachingAdapter`). 10 new unit tests (JsonPath + the four parsers); 29 tests total.
+- No site-specific scrapers: sources without a feed/API are left to the Direct and JSON adapters (see SOURCES.md).
+
 ## 1.0.0 — 2026-11-05
 
 Initial build covering all seven phases of the spec. Written in a single pass and committed as one commit.

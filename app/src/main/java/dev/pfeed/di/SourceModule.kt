@@ -7,7 +7,12 @@ import dagger.hilt.components.SingletonComponent
 import dagger.multibindings.IntoSet
 import dev.pfeed.source.SourceAdapter
 import dev.pfeed.source.api.ApiSourceAdapter
+import dev.pfeed.source.booru.BooruAdapter
+import dev.pfeed.source.direct.DirectMediaAdapter
+import dev.pfeed.source.generic.GenericJsonAdapter
 import dev.pfeed.source.local.LocalFilesAdapter
+import dev.pfeed.source.mastodon.MastodonAdapter
+import dev.pfeed.source.reddit.RedditAdapter
 import dev.pfeed.source.rss.RssAdapter
 
 /** Register new adapters here (one @Binds @IntoSet line each). */
@@ -22,4 +27,19 @@ abstract class SourceModule {
 
     @Binds @IntoSet
     abstract fun local(adapter: LocalFilesAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun direct(adapter: DirectMediaAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun reddit(adapter: RedditAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun mastodon(adapter: MastodonAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun booru(adapter: BooruAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun genericJson(adapter: GenericJsonAdapter): SourceAdapter
 }

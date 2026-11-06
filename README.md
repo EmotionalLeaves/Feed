@@ -56,7 +56,7 @@ You can also run `adb install -r app/build/outputs/apk/release/app-release.apk`.
 ## First run
 
 1. **Create a PIN** (4–8 digits). After that, biometrics are offered if the device supports them.
-2. Go to **Settings → Manage sources** and add RSS/Atom feed URLs and/or pick local folders.
+2. Go to **Settings → Manage sources**, turn on the sources you want, and use **Quick add** (see below) to add entries.
 3. Swipe the feed: **tap** to pause, **double-tap** to like, **long-press** for the menu (Save, Not interested, Follow, Block creator/tag, Open source page, Report).
 4. **Panic:** a three-finger tap anywhere locks the app and jumps to the home screen.
 
@@ -72,7 +72,11 @@ dev.pfeed
 │   ├── db/            Room entities/DAOs, encrypted by SQLCipher
 │   ├── settings/      DataStore-backed AppSettings
 │   └── repo/          FeedSession (fetch → blocklist → dedup → rank), Search, Library, Signals, Export
-├── source/            SourceAdapter, SourceRegistry, rss/, local/, api/, auth/ (OAuth PKCE)
+├── source/            SourceAdapter, SourceRegistry
+│   ├── parse/         pure, unit-tested parsers (MediaTypes, JsonPath, Reddit/Booru/Mastodon/GenericJson)
+│   ├── net/           HttpJson, CachingAdapter (fetch-many + in-memory paging base)
+│   ├── rss/ local/ direct/ reddit/ mastodon/ booru/ generic/ api/   the adapters
+│   └── auth/          OAuth PKCE (Custom Tabs)
 ├── player/            MediaCache (LRU), PlayerPool (3 ExoPlayers), Preloader
 ├── security/          AppLockManager, SecretStore (PIN + Keystore-wrapped DB key), LauncherDisguise
 ├── work/              MaintenanceWorker (history purge, compaction)
@@ -102,6 +106,35 @@ Exploration is ε-greedy: by default 10% of slots are filled at random. You can 
 - `PlayerPool` owns exactly three ExoPlayers. The pager composes the current page ±1 (`beyondViewportPageCount = 1`). Each video page acquires a player when it is composed and releases it when it is disposed, so decoder count and memory stay flat however far you swipe.
 - **Preload:** item +1 is prepared and buffering in its pooled player. For item +2, the thumbnail and the first ~1.5 MB of the stream are written into the cache (`Preloader`).
 - The cache is a `SimpleCache` with an LRU evictor (default 1 GB, configurable; a new size applies on next launch). It is bypassed for `content://` local files.
+
+## Built-in sources
+
+All sources are off by default until you add entries. **Settings → Sources** has a **Quick add** bar: pick a type, fill the field(s), tap **Add**. Everything you add is listed below the bar with a delete button, and the order of the source cards sets priority (higher wins when the same item shows up in two sources).
+
+| Type | What you enter | Notes |
+|---|---|---|
+| **Direct link** | a media or page URL | Plays your own `.mp4/.webm/.m3u8/.gif/.jpg/.png/.webp` links. |
+| **RSS / Atom** | a feed URL | Any feed with `enclosure` / Media RSS (`media:content`, `media:thumbnail`, `media:player`). |
+| **Reddit** | a subreddit name | Public `/r/<sub>/hot.json`; reddit-hosted video plays via HLS. Read-only, no login. |
+| **Mastodon** | an instance host + optional hashtag | Public / tag timelines (`/api/v1/timelines/...`, `only_media`). No login. |
+| **Booru** | a host + optional tags | Danbooru-style `posts.json` (Danbooru / e621 / moebooru-compatible). |
+| **JSON API** | a mapping (see below) | **The universal one** — any JSON endpoint becomes a feed. |
+| **Local folder** | pick a folder | Reads images/GIFs/videos from a folder via the Storage Access Framework. |
+
+### JSON API: map any source
+
+The **Generic JSON adapter** turns any endpoint that returns JSON into a feed without writing code. You give it:
+
+- **URL template** — e.g. `https://host/api/posts?tag={query}&page={cursor}`. `{query}` and `{cursor}` are filled in (left blank on a plain feed load).
+- **Items path** — dotted path to the array of items, e.g. `data.children`.
+- **Media path** — dotted path (relative to each item, after the optional **wrapper path**) to the playable URL, e.g. `url` or `data.url`.
+- **More options** — wrapper path, id / title / creator / thumbnail / tags / page-URL paths, a **media type** hint (`auto` classifies by extension), and an optional **search URL template** using `{query}`.
+
+Numeric path segments index arrays (`data.children.0.data`). This is the way to pull in a source that isn't RSS/Reddit/Mastodon/Booru: if it returns JSON and you can read it, you can map it.
+
+### What's intentionally not built in
+
+There are no hardcoded scrapers that log in to a specific site or reverse-engineer its private player to defeat its terms of service. They break whenever a site changes, and an auto-crawler with no provenance is how an aggregator ends up serving illegal or non-consensual material. The **Direct link** and **JSON API** adapters let you wire such a source in yourself where it exposes a usable endpoint, which keeps that choice — and its upkeep — with you.
 
 ## Adding a SourceAdapter
 

@@ -141,7 +141,7 @@ class FeedSession(
         val end = exhausted.containsAll(adapters.map { it.id })
         val hint = if (end && shown.isEmpty()) {
             if (errors.isNotEmpty()) "Couldn't load anything. Check Settings → Sources."
-            else "No items yet. Add RSS feeds or local folders in Settings → Sources."
+            else "No items yet. Add sources in Settings → Sources."
         } else null
         return LoadResult(ordered, errors, endReached = end, hint = hint)
     }

@@ -15,7 +15,10 @@ import dev.pfeed.data.repo.SettingsExporter
 import dev.pfeed.data.repo.SignalRepository
 import dev.pfeed.data.repo.WrongPasswordException
 import dev.pfeed.data.settings.AppSettings
+import dev.pfeed.data.settings.BooruFeed
 import dev.pfeed.data.settings.Disguise
+import dev.pfeed.data.settings.JsonFeed
+import dev.pfeed.data.settings.MastodonFeed
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -115,6 +118,49 @@ class SettingsViewModel @Inject constructor(
         return true
     }
     fun removeFeed(url: String) = update { it.copy(rssFeeds = it.rssFeeds - url) }
+
+    fun addDirect(url: String): Boolean {
+        val u = url.trim().toHttpUrlOrNull() ?: return false.also { _messages.tryEmit("That isn't a valid http(s) URL") }
+        update { s -> if (u.toString() in s.directUrls) s else s.copy(directUrls = s.directUrls + u.toString()) }
+        return true
+    }
+    fun removeDirect(url: String) = update { it.copy(directUrls = it.directUrls - url) }
+
+    fun addReddit(name: String): Boolean {
+        val sub = name.trim().removePrefix("/").removePrefix("r/").trim('/')
+        if (sub.isBlank() || sub.contains(' ')) { _messages.tryEmit("Enter a single subreddit name"); return false }
+        update { s -> if (sub in s.redditSubs) s else s.copy(redditSubs = s.redditSubs + sub) }
+        return true
+    }
+    fun removeReddit(sub: String) = update { it.copy(redditSubs = it.redditSubs - sub) }
+
+    fun addMastodon(host: String, tag: String): Boolean {
+        val h = host.trim()
+        if (h.isBlank() || h.contains(' ')) { _messages.tryEmit("Enter an instance host, e.g. mastodon.social"); return false }
+        val feed = MastodonFeed(h, tag.trim().removePrefix("#").ifBlank { null })
+        update { s -> if (feed in s.mastodonFeeds) s else s.copy(mastodonFeeds = s.mastodonFeeds + feed) }
+        return true
+    }
+    fun removeMastodon(feed: MastodonFeed) = update { it.copy(mastodonFeeds = it.mastodonFeeds - feed) }
+
+    fun addBooru(host: String, tags: String): Boolean {
+        val h = host.trim()
+        if (h.isBlank() || h.contains(' ')) { _messages.tryEmit("Enter a booru host, e.g. safebooru.donmai.us"); return false }
+        val feed = BooruFeed(h, tags.trim().ifBlank { null })
+        update { s -> if (feed in s.booruFeeds) s else s.copy(booruFeeds = s.booruFeeds + feed) }
+        return true
+    }
+    fun removeBooru(feed: BooruFeed) = update { it.copy(booruFeeds = it.booruFeeds - feed) }
+
+    fun addJson(feed: JsonFeed): Boolean {
+        if (feed.name.isBlank() || feed.urlTemplate.toHttpUrlOrNull() == null || feed.itemsPath.isBlank()) {
+            _messages.tryEmit("Name, a valid URL and an items path are required")
+            return false
+        }
+        update { s -> s.copy(jsonFeeds = s.jsonFeeds.filterNot { it.name == feed.name } + feed) }
+        return true
+    }
+    fun removeJson(feed: JsonFeed) = update { it.copy(jsonFeeds = it.jsonFeeds - feed) }
 
     fun addFolder(uri: Uri) {
         runCatching { app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
