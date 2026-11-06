@@ -1,0 +1,154 @@
+package dev.pfeed.ui.settings
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dev.pfeed.data.db.BlockEntity
+import dev.pfeed.data.repo.BlockKind
+import dev.pfeed.data.repo.BlockRepository
+import dev.pfeed.data.repo.SettingsExporter
+import dev.pfeed.data.repo.SignalRepository
+import dev.pfeed.data.repo.WrongPasswordException
+import dev.pfeed.data.settings.AppSettings
+import dev.pfeed.data.settings.Disguise
+import dev.pfeed.data.settings.SettingsRepository
+import dev.pfeed.domain.model.AuthContext
+import dev.pfeed.domain.model.AuthResult
+import dev.pfeed.domain.reco.RankWeights
+import dev.pfeed.player.MediaCache
+import dev.pfeed.security.AppLockManager
+import dev.pfeed.security.LauncherDisguise
+import dev.pfeed.source.RegisteredSource
+import dev.pfeed.source.SourceRegistry
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import javax.inject.Inject
+
+/** Shared by all settings screens (each gets its own instance; state lives in the repositories). */
+@HiltViewModel
+class SettingsViewModel @Inject constructor(
+    @ApplicationContext private val app: Context,
+    private val settingsRepo: SettingsRepository,
+    private val registry: SourceRegistry,
+    private val blocks: BlockRepository,
+    private val signals: SignalRepository,
+    private val exporter: SettingsExporter,
+    private val mediaCache: MediaCache,
+    private val lock: AppLockManager,
+) : ViewModel() {
+
+    val settings: StateFlow<AppSettings> = settingsRepo.flow.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
+    val sources: StateFlow<List<RegisteredSource>> = registry.observe().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    val blockEntries: StateFlow<List<BlockEntity>> = blocks.entries.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _authStatus = MutableStateFlow<Map<String, String>>(emptyMap())
+    val authStatus: StateFlow<Map<String, String>> = _authStatus
+
+    private val _messages = MutableSharedFlow<String>(extraBufferCapacity = 4)
+    val messages: SharedFlow<String> = _messages
+
+    private fun update(f: (AppSettings) -> AppSettings) = viewModelScope.launch { settingsRepo.update(f) }
+
+    // ---- playback / privacy ----
+    fun setCacheSize(mb: Int) {
+        mediaCache.configuredSizeMb = mb
+        update { it.copy(cacheSizeMb = mb) }
+    }
+    fun setAutoplayOnMobile(v: Boolean) = update { it.copy(autoplayOnMobileData = v) }
+    fun setDefaultMute(v: Boolean) = update { it.copy(defaultMute = v) }
+    fun setHistoryRetention(days: Int) = update { it.copy(historyRetentionDays = days) }
+    fun setLockTimeout(sec: Int) = update { it.copy(lockTimeoutSec = sec) }
+
+    fun setDisguise(d: Disguise) {
+        LauncherDisguise.apply(app, d)
+        update { it.copy(disguise = d) }
+        _messages.tryEmit("Launcher updated. Some launchers take a few seconds to refresh.")
+    }
+
+    fun changePin(current: String, new: String) = viewModelScope.launch {
+        if (new.length < 4) { _messages.tryEmit("New PIN must be at least 4 digits"); return@launch }
+        val ok = lock.changePin(current.toCharArray(), new.toCharArray())
+        _messages.tryEmit(if (ok) "PIN changed" else "Current PIN is wrong")
+    }
+
+    // ---- recommendations ----
+    fun setWeights(w: RankWeights) = update { it.copy(weights = w) }
+    fun setHalfLife(days: Double) = update { it.copy(halfLifeDays = days) }
+    fun resetWeights() = update { it.copy(weights = RankWeights(), halfLifeDays = 14.0) }
+    fun resetRecommendations() = viewModelScope.launch {
+        signals.reset()
+        _messages.tryEmit("Recommendations reset")
+    }
+
+    // ---- sources ----
+    fun setSourceEnabled(id: String, enabled: Boolean) = viewModelScope.launch { registry.setEnabled(id, enabled) }
+    fun moveSource(id: String, delta: Int) = viewModelScope.launch { registry.move(id, delta) }
+
+    fun authenticate(activity: Activity, id: String) {
+        val adapter = registry.byId(id) ?: return
+        _authStatus.update { it + (id to "Signing in…") }
+        viewModelScope.launch {
+            val status = when (val r = adapter.authenticate(AuthContext(activity))) {
+                AuthResult.Success -> "Signed in"
+                AuthResult.NotRequired -> "No sign-in needed"
+                is AuthResult.Failure -> r.message
+            }
+            _authStatus.update { it + (id to status) }
+        }
+    }
+
+    fun addFeed(url: String): Boolean {
+        val u = url.trim().toHttpUrlOrNull() ?: return false.also { _messages.tryEmit("That isn't a valid http(s) URL") }
+        update { s -> if (u.toString() in s.rssFeeds) s else s.copy(rssFeeds = s.rssFeeds + u.toString()) }
+        return true
+    }
+    fun removeFeed(url: String) = update { it.copy(rssFeeds = it.rssFeeds - url) }
+
+    fun addFolder(uri: Uri) {
+        runCatching { app.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+            .onFailure { _messages.tryEmit("Couldn't keep access to that folder"); return }
+        update { s -> if (uri.toString() in s.localFolders) s else s.copy(localFolders = s.localFolders + uri.toString()) }
+    }
+    fun removeFolder(uri: String) {
+        runCatching { app.contentResolver.releasePersistableUriPermission(Uri.parse(uri), Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        update { it.copy(localFolders = it.localFolders - uri) }
+    }
+
+    // ---- blocklist ----
+    fun block(kind: BlockKind, value: String) = viewModelScope.launch { blocks.block(kind, value) }
+    fun unblock(row: BlockEntity) = viewModelScope.launch { blocks.unblock(row.kind, row.value) }
+    fun clearNotInterested() = viewModelScope.launch { blocks.clearNotInterested() }
+
+    // ---- export / import ----
+    fun exportSettings(uri: Uri, password: String) = viewModelScope.launch {
+        runCatching {
+            app.contentResolver.openOutputStream(uri, "wt")?.use { exporter.exportTo(it, password.toCharArray()) }
+                ?: error("Couldn't open file")
+        }.onSuccess { _messages.tryEmit("Settings exported") }
+            .onFailure { _messages.tryEmit("Export failed: ${it.message}") }
+    }
+
+    fun importSettings(uri: Uri, password: String) = viewModelScope.launch {
+        runCatching {
+            app.contentResolver.openInputStream(uri)?.use { exporter.importFrom(it, password.toCharArray()) }
+                ?: error("Couldn't open file")
+        }.onSuccess {
+            LauncherDisguise.apply(app, settingsRepo.get().disguise)
+            _messages.tryEmit("Settings imported")
+        }.onFailure { e ->
+            _messages.tryEmit(if (e is WrongPasswordException) "Wrong password" else "Import failed: ${e.message}")
+        }
+    }
+}

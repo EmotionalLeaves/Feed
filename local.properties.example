@@ -1,0 +1,17 @@
+# Copy to local.properties (git-ignored) and fill in. Never commit the real file.
+sdk.dir=/path/to/Android/sdk
+
+# Release signing (Phase 7). Create a keystore with:
+#   keytool -genkeypair -v -keystore ~/keys/pfeed.jks -alias pfeed -keyalg RSA -keysize 4096 -validity 10000
+release.storeFile=/absolute/path/to/pfeed.jks
+release.storePassword=CHANGE_ME
+release.keyAlias=pfeed
+release.keyPassword=CHANGE_ME
+
+# API source adapter (see SOURCES.md). Leave blank to keep that adapter disabled.
+api.displayName=
+api.baseUrl=
+api.authUrl=
+api.tokenUrl=
+api.clientId=
+api.scopes=

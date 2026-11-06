@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Feed</string>
+    <string name="disguise_notes">Notes</string>
+    <string name="disguise_calculator">Calculator</string>
+</resources>

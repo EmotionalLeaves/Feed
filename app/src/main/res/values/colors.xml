@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="icon_bg_default">#FF16161D</color>
+    <color name="icon_bg_notes">#FFFFC93C</color>
+    <color name="icon_bg_calculator">#FF2F3640</color>
+</resources>
