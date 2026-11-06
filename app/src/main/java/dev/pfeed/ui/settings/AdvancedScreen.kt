@@ -34,6 +34,8 @@ fun AdvancedScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         LabeledSlider("Creator affinity: ${"%.2f".format(w.creator)}", w.creator.toFloat(), 0f..2f) { vm.setWeights(w.copy(creator = it.toDouble())) }
         LabeledSlider("Freshness: ${"%.2f".format(w.freshness)}", w.freshness.toFloat(), 0f..2f) { vm.setWeights(w.copy(freshness = it.toDouble())) }
         LabeledSlider("Source diversity: ${"%.2f".format(w.diversity)}", w.diversity.toFloat(), 0f..2f) { vm.setWeights(w.copy(diversity = it.toDouble())) }
+        LabeledSlider("Avoid repeats (similar posts in a row): ${"%.2f".format(w.similarity)}", w.similarity.toFloat(), 0f..2f) { vm.setWeights(w.copy(similarity = it.toDouble())) }
+        LabeledSlider("Community score (image boards): ${"%.2f".format(w.quality)}", w.quality.toFloat(), 0f..2f) { vm.setWeights(w.copy(quality = it.toDouble())) }
         LabeledSlider("Exploration: ${(w.exploration * 100).roundToInt()}%", w.exploration.toFloat(), 0f..0.5f) {
             vm.setWeights(w.copy(exploration = it.toDouble()))
         }

@@ -25,8 +25,9 @@ android {
         applicationId = "dev.pfeed"
         minSdk = 26
         targetSdk = 36
-        versionCode = 14
-        versionName = "2.1.0"
+        // Always higher than the last CI build, so Android accepts every new APK as an update.
+        versionCode = 100 + (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0)
+        versionName = "2.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API source adapter configuration (see SOURCES.md). Empty = adapter stays disabled.
@@ -39,6 +40,17 @@ android {
     }
 
     signingConfigs {
+        // When a signing key is provided (CI writes it from repo secrets into local.properties), the
+        // debug build is signed with it too, so every new APK installs over the last one. Without it,
+        // each CI runner signs with its own throwaway key and Android refuses the update.
+        if (local("release.storeFile").isNotBlank()) {
+            getByName("debug") {
+                storeFile = file(local("release.storeFile"))
+                storePassword = local("release.storePassword")
+                keyAlias = local("release.keyAlias")
+                keyPassword = local("release.keyPassword")
+            }
+        }
         create("release") {
             val path = local("release.storeFile")
             if (path.isNotBlank()) {

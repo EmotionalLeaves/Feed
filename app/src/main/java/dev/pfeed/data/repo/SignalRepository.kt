@@ -13,6 +13,7 @@ import dev.pfeed.domain.reco.Features
 import dev.pfeed.domain.reco.Signal
 import dev.pfeed.domain.reco.SignalWeights
 import dev.pfeed.domain.reco.TasteModel
+import dev.pfeed.domain.reco.RankWeights
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.math.abs
@@ -36,12 +37,22 @@ class SignalRepository @Inject constructor(
      */
     private suspend fun ensureModel() {
         if (modelChecked) return
-        if (settings.get().tasteModelVersion < TASTE_MODEL_VERSION) {
-            db.withTransaction {
-                affinityDao.clearTags()
-                affinityDao.clearCreators()
+        val version = settings.get().tasteModelVersion
+        if (version < TASTE_MODEL_VERSION) {
+            if (version < 2) {
+                db.withTransaction {
+                    affinityDao.clearTags()
+                    affinityDao.clearCreators()
+                }
             }
-            settings.update { it.copy(tasteModelVersion = TASTE_MODEL_VERSION) }
+            // v3: new ranking weights. Saved settings hold the old defaults; move those to the new
+            // ones, but keep weights the user tuned by hand.
+            settings.update { s ->
+                s.copy(
+                    weights = if (s.weights.isPre22Default()) RankWeights() else s.weights,
+                    tasteModelVersion = TASTE_MODEL_VERSION,
+                )
+            }
         }
         modelChecked = true
     }
@@ -98,7 +109,7 @@ class SignalRepository @Inject constructor(
     }
 
     companion object {
-        const val TASTE_MODEL_VERSION = 2
+        const val TASTE_MODEL_VERSION = 3
     }
 
     /** Strongest learned likes and dislikes, for the "what it has learned" screen. */

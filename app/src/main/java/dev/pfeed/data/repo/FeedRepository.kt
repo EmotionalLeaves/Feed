@@ -90,6 +90,14 @@ class FeedSession(
     private val candidateKeys = HashSet<String>()
     private val dedup = Deduplicator()
     private val recentSources = ArrayList<String>()
+    private val recentShown = ArrayList<MediaItem>()
+    /** Load number each candidate entered the pool, so items passed over again and again age out. */
+    private val pooledAt = HashMap<String, Int>()
+
+    // Interest fetching (For You): searches for what the user has shown they like.
+    private val interestCursors = HashMap<String, String?>()
+    private val interestDone = HashSet<String>()
+    private var interestRound = 0
 
     /** Stop background fetches; call when the session is replaced. */
     fun close() = scope.cancel()
@@ -110,10 +118,15 @@ class FeedSession(
 
         // Pick up anything that finished in the background since the last call.
         val errors = collect(follows, tag, mode).toMutableList()
+        val forYou = spec is FeedSpec.Main && mode == FeedMode.FOR_YOU
+        // Keep fresh candidates flowing every time, not only when the pool runs low: otherwise the
+        // ranker ends up choosing among leftovers it already passed over.
+        if (candidates.size < POOL_MAX) launchFetches(adapters, prefs)
+        if (forYou) launchInterestFetches(adapters)
         var rounds = 0
         while (candidates.size < POOL_TARGET && rounds < MAX_ROUNDS) {
             rounds++
-            val launched = launchFetches(adapters, prefs)
+            val launched = launchFetches(adapters, prefs) + if (forYou) launchInterestFetches(adapters) else 0
             if (launched == 0 && inFlight.isEmpty()) break
             // First screen: wait for at least something. Later: don't hold up scrolling for stragglers.
             val budget = if (candidates.size < BATCH) FIRST_WAIT_MS else TOP_UP_WAIT_MS
@@ -145,6 +158,53 @@ class FeedSession(
         return n
     }
 
+    /**
+     * For You: search every source for the user's strongest learned interests (a few per load,
+     * rotating), so candidates aren't limited to whatever the general feeds happen to return.
+     * Each (source, interest) pair is paged deeper on later loads. Failures stay silent.
+     */
+    private suspend fun launchInterestFetches(adapters: List<SourceAdapter>): Int {
+        val queries = interestQueries()
+        if (queries.isEmpty()) return 0
+        val picks = List(minOf(INTERESTS_PER_LOAD, queries.size)) { queries[(interestRound + it) % queries.size] }.distinct()
+        interestRound += picks.size
+        var n = 0
+        for (q in picks) for (a in adapters) {
+            val key = "$INTEREST_PREFIX${a.id}|$q"
+            if (key in interestDone || key in inFlight) continue
+            if ((cooldownUntil[key] ?: 0) > loads) continue
+            val cursor = interestCursors[key]
+            inFlight[key] = scope.async { searchFetch(a, q, cursor) }
+            n++
+        }
+        return n
+    }
+
+    /** Top positive learned features, as search queries ("rough_sex" → "rough sex", "w:tied" → "tied"). */
+    private var interestCache: Pair<Int, List<String>>? = null
+
+    private suspend fun interestQueries(): List<String> {
+        interestCache?.let { (at, list) -> if (at == loads) return list }
+        return computeInterests().also { interestCache = loads to it }
+    }
+
+    private suspend fun computeInterests(): List<String> =
+        signals.affinities().tags.entries
+            .filter { it.value >= INTEREST_MIN_WEIGHT }
+            .sortedByDescending { it.value }
+            .take(MAX_INTERESTS)
+            .map { it.key.removePrefix("w:").replace('_', ' ').trim() }
+            .filter { it.length >= 2 }
+            .distinct()
+
+    private suspend fun searchFetch(a: SourceAdapter, query: String, cursor: String?): Result<Page<MediaItem>> = try {
+        Result.success(a.search(query, cursor))
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        Result.failure(e)
+    }
+
     /** Wait until every in-flight fetch is done or [budgetMs] passes; with [needAny], keep waiting (up to a hard cap) for the first one. */
     private suspend fun awaitSome(budgetMs: Long, needAny: Boolean) {
         val pending = inFlight.values.toList()
@@ -162,6 +222,18 @@ class FeedSession(
         for ((id, deferred) in done) {
             inFlight.remove(id)
             val result: Result<Page<MediaItem>> = runCatching { deferred.await() }.getOrElse { Result.failure(it) }
+            if (id.startsWith(INTEREST_PREFIX)) {
+                result.onSuccess { page ->
+                    interestCursors[id] = page.nextCursor
+                    if (page.nextCursor == null) interestDone += id
+                    incoming += page.items
+                }.onFailure {
+                    val n = (failures[id] ?: 0) + 1
+                    failures[id] = n
+                    if (n >= MAX_SOURCE_FAILURES) interestDone += id else cooldownUntil[id] = loads + (1 shl n.coerceAtMost(6))
+                }
+                continue
+            }
             val adapter = registry.byId(id)
             result.onSuccess { page ->
                 started += id
@@ -191,7 +263,7 @@ class FeedSession(
         }
         val hashes = withTimeoutOrNull(HASH_BUDGET_MS) { hasher.hashAll(items) } ?: hasher.cached(items)
         items = dedup.filter(items, hashes)
-        items.forEach { if (candidateKeys.add(it.key)) candidates += it }
+        items.forEach { if (candidateKeys.add(it.key)) { candidates += it; pooledAt[it.key] = loads } }
         return errors
     }
 
@@ -215,10 +287,13 @@ class FeedSession(
     private suspend fun takeBatch(mode: FeedMode): List<MediaItem> {
         // Re-apply filters: the user may have blocked something or swiped past it since it was pooled.
         val blocklist = blocks.current()
-        val dropped = candidates.filter { !blocklist.allows(it) || seen.isSeen(it.key) }
+        // Also age out candidates the ranker has passed over for many loads: they're the leftovers.
+        val dropped = candidates.filter {
+            !blocklist.allows(it) || seen.isSeen(it.key) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS
+        }
         if (dropped.isNotEmpty()) {
             candidates.removeAll(dropped.toSet())
-            dropped.forEach { candidateKeys.remove(it.key) }
+            dropped.forEach { candidateKeys.remove(it.key); pooledAt.remove(it.key) }
         }
         if (candidates.isEmpty()) return emptyList()
 
@@ -226,7 +301,7 @@ class FeedSession(
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
             val ranker = Ranker(settings.get().weights)
-            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH)
+            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown)
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {
                 val pickedKeys = picked.mapTo(HashSet()) { it.key }
@@ -235,6 +310,7 @@ class FeedSession(
                     .take(POOL_MAX)
                 candidates.clear(); candidateKeys.clear()
                 keep.forEach { candidates += it; candidateKeys += it.key }
+                pooledAt.keys.retainAll(candidateKeys)
             }
             picked
         } else if (spec is FeedSpec.Tag) {
@@ -250,8 +326,10 @@ class FeedSession(
         val batchKeys = batch.mapTo(HashSet()) { it.key }
         candidates.removeAll { it.key in batchKeys }
         candidateKeys.removeAll(batchKeys)
-        batch.forEach { shown += it.key; recentSources += it.sourceId }
+        batchKeys.forEach { pooledAt.remove(it) }
+        batch.forEach { shown += it.key; recentSources += it.sourceId; recentShown += it }
         if (recentSources.size > 50) recentSources.subList(0, recentSources.size - 50).clear()
+        if (recentShown.size > Ranker.SIMILARITY_WINDOW) recentShown.subList(0, recentShown.size - Ranker.SIMILARITY_WINDOW).clear()
         return batch
     }
 
@@ -267,5 +345,12 @@ class FeedSession(
         private const val TOP_UP_WAIT_MS = 1_500L
         private const val HARD_WAIT_MS = 40_000L
         private const val HASH_BUDGET_MS = 3_000L
+        /** A candidate passed over for this many loads (~12 items each) is dropped. */
+        private const val STALE_LOADS = 10
+        private const val INTEREST_PREFIX = "interest|"
+        private const val INTERESTS_PER_LOAD = 2
+        private const val MAX_INTERESTS = 8
+        /** TasteModel weight above which a feature counts as a real interest worth searching for. */
+        private const val INTEREST_MIN_WEIGHT = 0.6
     }
 }

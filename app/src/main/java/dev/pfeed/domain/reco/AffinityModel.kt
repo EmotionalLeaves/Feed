@@ -2,7 +2,8 @@ package dev.pfeed.domain.reco
 
 import kotlin.math.pow
 
-enum class SignalType { WATCH, COMPLETE, REPLAY, LIKE, UNLIKE, SAVE, FAST_SKIP, NOT_INTERESTED, FOLLOW }
+/** VIEW carries the whole view as one target (see [Engagement]); WATCH/COMPLETE/REPLAY are kept only for old rows. */
+enum class SignalType { WATCH, COMPLETE, REPLAY, LIKE, UNLIKE, SAVE, FAST_SKIP, NOT_INTERESTED, FOLLOW, VIEW }
 
 /** [value] is the watch ratio for WATCH, the replay count for REPLAY, and 1.0 otherwise. */
 data class Signal(val type: SignalType, val value: Double = 1.0)
@@ -19,6 +20,7 @@ object SignalWeights {
         SignalType.FAST_SKIP -> -1.0
         SignalType.NOT_INTERESTED -> -8.0
         SignalType.FOLLOW -> 5.0
+        SignalType.VIEW -> signal.value
     }
 }
 

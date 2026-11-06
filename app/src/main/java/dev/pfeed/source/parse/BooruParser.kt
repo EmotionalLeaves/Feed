@@ -53,12 +53,21 @@ object BooruParser {
             val preview = str("preview_file_url") ?: str("preview_url")
                 ?: ((p["preview"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull
 
+            // e621 groups tags by category; use every category (general, species, character, …).
+            val tagGroups = p["tags"] as? JsonObject
             val tagString = str("tag_string")
                 ?: str("tags")  // gelbooru/rule34/moebooru: space-separated string under "tags"
-                ?: ((p["tags"] as? JsonObject)?.get("general") as? JsonArray)
-                    ?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.joinToString(" ")
+                ?: tagGroups?.values?.flatMap { g -> (g as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }.orEmpty() }
+                    ?.joinToString(" ")
             val tags = tagString?.split(Regex("\\s+"))?.filter { it.isNotBlank() }?.take(MAX_TAGS).orEmpty()
             val artist = str("tag_string_artist")?.split(' ')?.firstOrNull()?.takeIf { it.isNotBlank() }
+                ?: ((tagGroups?.get("artist") as? JsonArray)?.firstOrNull() as? JsonPrimitive)?.contentOrNull
+                    ?.takeIf { it.isNotBlank() && it != "conditional_dnp" }
+            // Community vote score: a quality prior for ranking. e621 nests it as {"total": n}.
+            val score = (p["score"] as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                ?: ((p["score"] as? JsonObject)?.get("total") as? JsonPrimitive)?.contentOrNull?.toDoubleOrNull()
+                ?: str("total_score")?.toDoubleOrNull()
+                ?: str("fav_count")?.toDoubleOrNull()
 
             MediaItem(
                 id = "$board/$id",
@@ -74,7 +83,10 @@ object BooruParser {
                 thumbnailUrl = preview ?: media.takeIf { type != MediaType.VIDEO },
                 pageUrl = BooruFamily.postPage(board, id),
                 publishedAt = MediaTypes.parseDate(str("created_at")),
-                extras = mapOf("media" to media),
+                extras = buildMap {
+                    put("media", media)
+                    score?.let { put("score", it.toLong().toString()) }
+                },
             )
         }
     }

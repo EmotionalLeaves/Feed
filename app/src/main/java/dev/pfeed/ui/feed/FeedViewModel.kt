@@ -16,6 +16,8 @@ import dev.pfeed.data.repo.LibraryKind
 import dev.pfeed.data.repo.LibraryRepository
 import dev.pfeed.data.repo.NetworkMonitor
 import dev.pfeed.data.repo.SeenItems
+import dev.pfeed.data.repo.DwellBaseline
+import dev.pfeed.domain.reco.Engagement
 import dev.pfeed.data.repo.SignalRepository
 import dev.pfeed.data.repo.TransientFeedHolder
 import dev.pfeed.data.settings.AppSettings
@@ -50,6 +52,8 @@ import javax.inject.Inject
 class PlaybackStats {
     @Volatile var durationMs: Long = 0
     @Volatile var replays: Int = 0
+    /** Set when the user liked/saved/followed/dismissed during this view: that's the signal, not dwell. */
+    @Volatile var explicit: Boolean = false
 }
 
 @HiltViewModel
@@ -64,6 +68,7 @@ class FeedViewModel @Inject constructor(
     private val network: NetworkMonitor,
     private val preloader: Preloader,
     private val seen: SeenItems,
+    private val dwellBaseline: DwellBaseline,
     holder: TransientFeedHolder,
     val playerPool: PlayerPool,
 ) : ViewModel() {
@@ -258,17 +263,15 @@ class FeedViewModel @Inject constructor(
         enteredAt = 0L
         val st = stats[item.key]
         viewModelScope.launch {
-            if (dwell < FAST_SKIP_MS) {
-                signals.record(item, Signal(SignalType.FAST_SKIP))
-                return@launch
-            }
-            val durationMs = st?.durationMs?.takeIf { it > 0 } ?: item.durationSec?.times(1000L)
             val isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED
-            val ratio = if (isVideo && durationMs != null) dwell.toDouble() / durationMs else dwell / STILL_NOMINAL_MS
-            signals.record(item, Signal(SignalType.WATCH, ratio.coerceAtMost(3.0)))
-            val replays = st?.replays ?: 0
-            if (isVideo && (ratio >= 0.9 || replays > 0)) signals.record(item, Signal(SignalType.COMPLETE))
-            if (replays > 0) signals.record(item, Signal(SignalType.REPLAY, replays.toDouble()))
+            val typical = dwellBaseline.typicalMs(isVideo)
+            dwellBaseline.observe(isVideo, dwell)
+            // A like/save/follow/"not interested" already told the model what you think; recording the
+            // dwell afterwards would pull it back toward an average view (the model is error-driven).
+            if (st?.explicit == true) return@launch
+            val durationMs = st?.durationMs?.takeIf { it > 0 } ?: item.durationSec?.times(1000L)
+            val target = Engagement.target(dwell, isVideo, durationMs, st?.replays ?: 0, typical)
+            signals.record(item, Signal(SignalType.VIEW, target))
         }
     }
 
@@ -290,6 +293,7 @@ class FeedViewModel @Inject constructor(
 
     fun like(item: MediaItem) {
         if (item.key in liked.value) return
+        statsFor(item.key).explicit = true
         viewModelScope.launch {
             library.add(LibraryKind.LIKED, item)
             signals.record(item, Signal(SignalType.LIKE))
@@ -298,6 +302,7 @@ class FeedViewModel @Inject constructor(
 
     fun toggleLike(item: MediaItem) {
         if (item.key !in liked.value) return like(item)
+        statsFor(item.key).explicit = true
         viewModelScope.launch {
             library.remove(LibraryKind.LIKED, item)
             signals.record(item, Signal(SignalType.UNLIKE))
@@ -310,6 +315,7 @@ class FeedViewModel @Inject constructor(
                 library.remove(LibraryKind.SAVED, item)
             } else {
                 library.add(LibraryKind.SAVED, item)
+                statsFor(item.key).explicit = true
                 signals.record(item, Signal(SignalType.SAVE))
                 _messages.tryEmit("Saved")
             }
@@ -317,6 +323,7 @@ class FeedViewModel @Inject constructor(
     }
 
     fun notInterested(item: MediaItem) {
+        statsFor(item.key).explicit = true
         viewModelScope.launch {
             signals.record(item, Signal(SignalType.NOT_INTERESTED))
             blocks.block(BlockKind.ITEM, item.key)
@@ -349,6 +356,7 @@ class FeedViewModel @Inject constructor(
                 library.unfollow(FollowKind.CREATOR, creator)
             } else {
                 library.follow(FollowKind.CREATOR, creator)
+                statsFor(item.key).explicit = true
                 signals.record(item, Signal(SignalType.FOLLOW))
                 _messages.tryEmit("Following $creator")
             }
@@ -374,7 +382,5 @@ class FeedViewModel @Inject constructor(
         private const val RETRY_MAX_MS = 30_000L
         private const val RESTART_DELAY_MS = 5_000L
         private const val GC_BEHIND = 50
-        private const val FAST_SKIP_MS = 2_000L
-        private const val STILL_NOMINAL_MS = 6_000.0
     }
 }
