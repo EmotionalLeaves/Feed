@@ -1,5 +1,6 @@
 package dev.pfeed.source.discovery
 
+import dev.pfeed.data.settings.AppSettings
 import dev.pfeed.data.settings.BooruFeed
 import dev.pfeed.data.settings.MastodonFeed
 import dev.pfeed.data.settings.SettingsRepository
@@ -68,37 +69,34 @@ class SourceDiscovery @Inject constructor(
 
     /** Add every discovered source to settings. Returns count added (skips duplicates). */
     suspend fun addAll(sources: List<DiscoveredSource>): Int {
-        var added = 0
+        var addedCount = 0
         settings.update { s ->
             var current = s
+            var localAdded = 0
             for (src in sources) {
-                current = when (src.type) {
-                    "reddit" -> {
-                        if (src.subValue !in current.redditSubs) {
-                            added++
-                            current.copy(redditSubs = current.redditSubs + src.subValue)
-                        } else current
-                    }
-                    "mastodon" -> {
-                        val feed = MastodonFeed(src.subValue, src.tagValue.ifBlank { null })
-                        if (feed !in current.mastodonFeeds) {
-                            added++
-                            current.copy(mastodonFeeds = current.mastodonFeeds + feed)
-                        } else current
-                    }
-                    "booru" -> {
-                        val feed = BooruFeed(src.subValue, src.tagValue.ifBlank { null })
-                        if (feed !in current.booruFeeds) {
-                            added++
-                            current.copy(booruFeeds = current.booruFeeds + feed)
-                        } else current
-                    }
-                    else -> current
-                }
+                val (next, didAdd) = applySource(current, src)
+                current = next
+                if (didAdd) localAdded++
             }
+            addedCount = localAdded  // last write wins if lambda is retried; count is recomputed idempotently
             current
         }
-        return added
+        return addedCount
+    }
+
+    private fun applySource(s: AppSettings, src: DiscoveredSource):
+            Pair<AppSettings, Boolean> = when (src.type) {
+        "reddit" -> if (src.subValue !in s.redditSubs)
+            s.copy(redditSubs = s.redditSubs + src.subValue) to true else s to false
+        "mastodon" -> {
+            val feed = MastodonFeed(src.subValue, src.tagValue.ifBlank { null })
+            if (feed !in s.mastodonFeeds) s.copy(mastodonFeeds = s.mastodonFeeds + feed) to true else s to false
+        }
+        "booru" -> {
+            val feed = BooruFeed(src.subValue, src.tagValue.ifBlank { null })
+            if (feed !in s.booruFeeds) s.copy(booruFeeds = s.booruFeeds + feed) to true else s to false
+        }
+        else -> s to false
     }
 
     // ── Reddit subreddit search ──────────────────────────────────────────────

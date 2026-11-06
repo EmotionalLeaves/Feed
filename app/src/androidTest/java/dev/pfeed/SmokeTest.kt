@@ -59,8 +59,9 @@ class SmokeTest {
         }
         waitFor(what = "unlock") { !exists("Confirm PIN") && !exists("Enter PIN") && !exists("Create a PIN") }
 
-        // 3. Feed loads and, with no sources configured, shows the empty-state hint.
-        waitFor(what = "feed empty state") { exists("No items yet", substring = true) || exists("Nothing here yet.") }
+        // 3. Feed loads — either content appears (pre-seeded sources) or the tab bar is visible.
+        //    We no longer expect an empty-state: sources are pre-seeded at install and start loading.
+        waitFor(what = "feed visible") { exists("For You") || exists("Latest") || exists("Following") }
 
         // 4. Every tab opens.
         rule.onNodeWithText("Search").performClick()
@@ -72,9 +73,9 @@ class SmokeTest {
         rule.onNodeWithText("Settings").performClick()
         waitFor(what = "settings screen") { exists("Manage sources") }
 
-        // 5. Sources screen lists all three adapters.
+        // 5. Sources screen lists adapters and the quick-add bar.
         rule.onNodeWithText("Manage sources").performClick()
-        waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Feed URL") }
+        waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Quick add", substring = true) }
         rule.onNodeWithContentDescription("Back").performClick()
         waitFor(what = "back to settings") { exists("Manage sources") }
 
