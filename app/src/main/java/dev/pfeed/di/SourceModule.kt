@@ -10,6 +10,7 @@ import dev.pfeed.source.api.ApiSourceAdapter
 import dev.pfeed.source.booru.BooruAdapter
 import dev.pfeed.source.direct.DirectMediaAdapter
 import dev.pfeed.source.generic.GenericJsonAdapter
+import dev.pfeed.source.kemono.KemonoAdapter
 import dev.pfeed.source.local.LocalFilesAdapter
 import dev.pfeed.source.mastodon.MastodonAdapter
 import dev.pfeed.source.reddit.RedditAdapter
@@ -39,6 +40,9 @@ abstract class SourceModule {
 
     @Binds @IntoSet
     abstract fun booru(adapter: BooruAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun kemono(adapter: KemonoAdapter): SourceAdapter
 
     @Binds @IntoSet
     abstract fun genericJson(adapter: GenericJsonAdapter): SourceAdapter

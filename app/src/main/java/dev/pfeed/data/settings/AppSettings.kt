@@ -52,6 +52,8 @@ data class AppSettings(
     val redditSubs: List<String> = DefaultSources.redditSubs,
     val mastodonFeeds: List<MastodonFeed> = DefaultSources.mastodonFeeds,
     val booruFeeds: List<BooruFeed> = DefaultSources.booruFeeds,
+    /** coomer.su / kemono.su hosts (OnlyFans/Fansly/Patreon aggregators, shared API). */
+    val kemonoHosts: List<String> = DefaultSources.kemonoHosts,
     val jsonFeeds: List<JsonFeed> = emptyList(),
     /** Storage Access Framework tree URIs. Device-specific, so not imported from backups. */
     val localFolders: List<String> = emptyList(),
@@ -476,4 +478,7 @@ object DefaultSources {
         BooruFeed("aibooru.online", "rating:explicit bondage"),
         BooruFeed("aibooru.online", "rating:explicit bdsm"),
     )
+
+    /** coomer.su (OnlyFans/Fansly) and kemono.su (Patreon/Fanbox/Fantia), same public API. */
+    val kemonoHosts: List<String> = listOf("coomer.su", "kemono.su")
 }
