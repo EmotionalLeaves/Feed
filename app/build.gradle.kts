@@ -40,16 +40,14 @@ android {
     }
 
     signingConfigs {
-        // When a signing key is provided (CI writes it from repo secrets into local.properties), the
-        // debug build is signed with it too, so every new APK installs over the last one. Without it,
-        // each CI runner signs with its own throwaway key and Android refuses the update.
-        if (local("release.storeFile").isNotBlank()) {
-            getByName("debug") {
-                storeFile = file(local("release.storeFile"))
-                storePassword = local("release.storePassword")
-                keyAlias = local("release.keyAlias")
-                keyPassword = local("release.keyPassword")
-            }
+        // One fixed key for every debug build (CI and local), so each new APK installs over the last
+        // one. Without it, each CI runner signs with its own throwaway key and Android refuses the
+        // update. The repo is public, so anyone could sign with this key; the owner accepted that.
+        getByName("debug") {
+            storeFile = rootProject.file("keystore/pfeed.jks")
+            storePassword = "pfeed-sideload"
+            keyAlias = "pfeed"
+            keyPassword = "pfeed-sideload"
         }
         create("release") {
             val path = local("release.storeFile")

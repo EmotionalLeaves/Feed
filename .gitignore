@@ -10,3 +10,5 @@
 .cxx/
 *.jks
 *.keystore
+# Fixed sideload signing key, so updates install over the previous build
+!keystore/pfeed.jks
