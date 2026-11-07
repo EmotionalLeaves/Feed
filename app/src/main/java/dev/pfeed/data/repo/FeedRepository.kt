@@ -263,7 +263,18 @@ class FeedSession(
         }
         val hashes = withTimeoutOrNull(HASH_BUDGET_MS) { hasher.hashAll(items) } ?: hasher.cached(items)
         items = dedup.filter(items, hashes)
-        items.forEach { if (candidateKeys.add(it.key)) { candidates += it; pooledAt[it.key] = loads } }
+        // Cap how many candidates any one source holds in the pool, so the fastest/largest source
+        // (often one booru) can't crowd out everything else and make the feed feel single-source.
+        val perSource = candidates.groupingBy { it.sourceId }.eachCount().toMutableMap()
+        items.shuffled().forEach { item ->
+            val n = perSource[item.sourceId] ?: 0
+            if (n >= PER_SOURCE_POOL_CAP) return@forEach
+            if (candidateKeys.add(item.key)) {
+                candidates += item
+                pooledAt[item.key] = loads
+                perSource[item.sourceId] = n + 1
+            }
+        }
         return errors
     }
 
@@ -336,17 +347,24 @@ class FeedSession(
     companion object {
         /** Items handed to the screen per call; small so ranking reacts quickly to new signals. */
         const val BATCH = 12
-        /** Candidates to keep on hand so ranking has real choice. */
-        private const val POOL_TARGET = 120
-        private const val POOL_MAX = 600
+        /**
+         * Candidates to keep on hand. Enough that ranking has real choice (~4 batches), but small so
+         * the newest signals reshape the next batch quickly — a big backlog means the ranker keeps
+         * serving posts it scored before your recent likes/skips, which feels like it isn't learning.
+         */
+        private const val POOL_TARGET = 50
+        private const val POOL_MAX = 120
+        /** Most candidates one source may hold at once (~40% of POOL_TARGET), to keep the feed mixed. */
+        private const val PER_SOURCE_POOL_CAP = 20
         private const val MAX_ROUNDS = 3
         private const val MAX_SOURCE_FAILURES = 4
-        private const val FIRST_WAIT_MS = 6_000L
-        private const val TOP_UP_WAIT_MS = 1_500L
+        /** First screen: show something as soon as a couple of fast sources answer. */
+        private const val FIRST_WAIT_MS = 3_500L
+        private const val TOP_UP_WAIT_MS = 1_200L
         private const val HARD_WAIT_MS = 40_000L
-        private const val HASH_BUDGET_MS = 3_000L
+        private const val HASH_BUDGET_MS = 2_000L
         /** A candidate passed over for this many loads (~12 items each) is dropped. */
-        private const val STALE_LOADS = 10
+        private const val STALE_LOADS = 8
         private const val INTEREST_PREFIX = "interest|"
         private const val INTERESTS_PER_LOAD = 2
         private const val MAX_INTERESTS = 8

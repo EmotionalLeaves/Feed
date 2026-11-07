@@ -2,7 +2,11 @@ package dev.pfeed.ui.feed
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,8 +27,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VolumeOff
@@ -54,17 +60,24 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.activity.compose.BackHandler
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import dev.pfeed.domain.model.FeedMode
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.MediaType
+import dev.pfeed.ui.common.findActivity
 import dev.pfeed.ui.Routes
 import dev.pfeed.ui.theme.HeartRed
 
@@ -212,6 +225,12 @@ private fun FeedPage(
     var heartAt by remember { mutableStateOf<Offset?>(null) }
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
+    var speeding by remember(item.key) { mutableStateOf(false) }
+    var fullscreen by remember(item.key) { mutableStateOf(false) }
+    val isVideo = item.type == MediaType.VIDEO
+
+    // Hold the right side of a video to play at 2×; release to go back to 1×.
+    LaunchedEffect(player, speeding) { player?.setPlaybackSpeed(if (speeding) 2f else 1f) }
 
     Box(
         Modifier
@@ -225,22 +244,49 @@ private fun FeedPage(
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                         vm.like(item)
                     },
-                    onLongPress = { onMenu() },
                 )
+            }
+            // Press-and-hold: on a video's right third → 2× speed; elsewhere → the menu.
+            // awaitLongPressOrCancellation ignores quick taps and swipes (movement cancels it), so
+            // taps, double-taps and the pager's vertical swipe all keep working.
+            .pointerInput(item.key, isVideo) {
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    val longPress = awaitLongPressOrCancellation(down.id) ?: return@awaitEachGesture
+                    val rightThird = longPress.position.x > size.width * 0.6f
+                    if (isVideo && rightThird) {
+                        speeding = true
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        waitForUpOrCancellation()
+                        speeding = false
+                    } else {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onMenu()
+                    }
+                }
             },
     ) {
         when (item.type) {
-            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it })
+            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, detached = fullscreen)
             MediaType.IMAGE, MediaType.GIF -> ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
-        if (paused && item.type == MediaType.VIDEO) {
+        if (paused && isVideo && !speeding) {
             Icon(
                 Icons.Filled.PlayArrow,
                 contentDescription = "Paused",
                 tint = Color.White.copy(alpha = 0.8f),
                 modifier = Modifier.align(Alignment.Center).size(72.dp),
             )
+        }
+        if (speeding) {
+            Surface(
+                color = Color.Black.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp),
+            ) {
+                Text("2× ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+            }
         }
         HeartBurst(heartAt, heartTick)
         Overlay(
@@ -250,20 +296,72 @@ private fun FeedPage(
             saved = saved,
             muted = muted,
             followingCreator = followingCreator,
+            canFullscreen = isVideo,
             onLike = { vm.toggleLike(item) },
             onSave = { vm.toggleSave(item) },
             onMute = vm::toggleMute,
             onFollow = { vm.toggleFollowCreator(item) },
+            onFullscreen = { fullscreen = true },
             onTag = onOpenTag,
             onMenu = onMenu,
         )
-        if (item.type == MediaType.VIDEO) {
+        if (isVideo) {
             ScrubBar(
                 player = player,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 // Scrubbing back to see something again is a rewatch: a strong signal for For You.
                 onScrubbedBack = { vm.statsFor(item.key).replays++ },
             )
+        }
+    }
+
+    // Fullscreen landscape: shows this video rotated and edge-to-edge until dismissed. Leaving it
+    // (back button or the close control) returns to the feed in portrait at the same spot. Swiping
+    // to another post also ends it, because `fullscreen` is keyed to item.key.
+    if (fullscreen && isVideo) {
+        FullscreenVideo(player = player, onClose = { fullscreen = false })
+    }
+}
+
+/**
+ * Fullscreen landscape player. Forces the activity to landscape while shown (the phone can be turned
+ * to match), fills the screen, and reparents the existing [player] so playback continues seamlessly.
+ * Back or the close button dismisses it and restores portrait; the caller also dismisses on swipe.
+ */
+@OptIn(UnstableApi::class)
+@Composable
+private fun FullscreenVideo(player: androidx.media3.exoplayer.ExoPlayer?, onClose: () -> Unit) {
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+
+    DisposableEffect(Unit) {
+        val previous = activity?.requestedOrientation
+        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        onDispose {
+            activity?.requestedOrientation = previous ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+    BackHandler(onBack = onClose)
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    useController = true
+                    controllerAutoShow = false
+                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+                }
+            },
+            update = { it.player = player },
+            onRelease = { it.player = null },
+            modifier = Modifier.fillMaxSize(),
+        )
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+        ) {
+            Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", tint = Color.White)
         }
     }
 }
@@ -276,10 +374,12 @@ private fun Overlay(
     saved: Boolean,
     muted: Boolean,
     followingCreator: Boolean,
+    canFullscreen: Boolean,
     onLike: () -> Unit,
     onSave: () -> Unit,
     onMute: () -> Unit,
     onFollow: () -> Unit,
+    onFullscreen: () -> Unit,
     onTag: (String) -> Unit,
     onMenu: () -> Unit,
 ) {
@@ -312,6 +412,11 @@ private fun Overlay(
                         contentDescription = if (muted) "Unmute" else "Mute",
                         tint = Color.White,
                     )
+                }
+            }
+            if (canFullscreen) {
+                IconButton(onClick = onFullscreen) {
+                    Icon(Icons.Filled.Fullscreen, contentDescription = "Fullscreen", tint = Color.White, modifier = Modifier.size(30.dp))
                 }
             }
             IconButton(onClick = onMenu) { Icon(Icons.Filled.MoreVert, "More", tint = Color.White) }

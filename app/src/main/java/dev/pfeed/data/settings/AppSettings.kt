@@ -420,5 +420,33 @@ object DefaultSources {
         BooruFeed("chan.sankakucomplex.com", "roughsex rating:explicit"),
         BooruFeed("chan.sankakucomplex.com", "deepthroat rating:explicit"),
         BooruFeed("chan.sankakucomplex.com", "femdom rating:explicit"),
+        // ── e621.net — furry/general, reliable without a key ─────────────────────
+        BooruFeed("e621.net", "rating:explicit order:rank"),
+        BooruFeed("e621.net", "bondage rating:explicit"),
+        BooruFeed("e621.net", "rough_sex rating:explicit"),
+        BooruFeed("e621.net", "bdsm rating:explicit"),
+        BooruFeed("e621.net", "double_penetration rating:explicit"),
+        BooruFeed("e621.net", "deepthroat rating:explicit"),
+        // ── danbooru.donmai.us — anonymous search allows 2 tags ──────────────────
+        BooruFeed("danbooru.donmai.us", "rating:explicit bondage"),
+        BooruFeed("danbooru.donmai.us", "rating:explicit bdsm"),
+        BooruFeed("danbooru.donmai.us", "rating:explicit sex"),
+        BooruFeed("danbooru.donmai.us", "rating:explicit fellatio"),
+        BooruFeed("danbooru.donmai.us", "rating:explicit gangbang"),
+        BooruFeed("danbooru.donmai.us", "rating:explicit anal"),
+        // ── yande.re — high-quality scans ────────────────────────────────────────
+        BooruFeed("yande.re", "rating:explicit"),
+        BooruFeed("yande.re", "bondage rating:explicit"),
+        BooruFeed("yande.re", "nipples rating:explicit"),
+        // ── konachan.com ─────────────────────────────────────────────────────────
+        BooruFeed("konachan.com", "rating:explicit"),
+        BooruFeed("konachan.com", "bondage"),
+        // ── tbib.org / xbooru.com — large gelbooru mirrors, no key ───────────────
+        BooruFeed("tbib.org", "rough_sex"),
+        BooruFeed("tbib.org", "double_penetration"),
+        BooruFeed("tbib.org", "deepthroat"),
+        BooruFeed("xbooru.com", "rough_sex"),
+        BooruFeed("xbooru.com", "gangbang"),
+        BooruFeed("xbooru.com", "facefuck"),
     )
 }

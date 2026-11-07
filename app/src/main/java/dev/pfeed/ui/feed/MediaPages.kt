@@ -79,6 +79,8 @@ fun VideoPage(
     muted: Boolean,
     vm: FeedViewModel,
     onPlayer: (androidx.media3.exoplayer.ExoPlayer?) -> Unit = {},
+    /** When true, this page gives up the player's video surface (the fullscreen view has it). */
+    detached: Boolean = false,
 ) {
     val pool = vm.playerPool
     val version by pool.changes.collectAsState()
@@ -140,7 +142,10 @@ fun VideoPage(
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                 }
             },
-            update = { view -> if (view.player !== player) view.player = player },
+            update = { view ->
+                val want = if (detached) null else player
+                if (view.player !== want) view.player = want
+            },
             onRelease = { view -> view.player = null },
             modifier = Modifier.fillMaxSize(),
         )

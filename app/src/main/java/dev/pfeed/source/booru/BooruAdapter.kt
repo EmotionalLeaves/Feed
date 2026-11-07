@@ -8,6 +8,7 @@ import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.Page
+import dev.pfeed.domain.model.StreamInfo
 import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
@@ -45,6 +46,45 @@ class BooruAdapter @Inject constructor(
     override val entriesPerExtend = 14
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
+
+    /** Cache of post-page → resolved file URL, so replays and re-renders don't re-fetch. */
+    private val resolvedCache = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
+
+    /**
+     * HTML-fallback items (rule34/gelbooru without a key) carry only a still thumbnail. When one is
+     * actually viewed, fetch its post page and pull out the real file: a `<video>`/`<source>` for
+     * clips, the full-size `<img id="image">` or "Original image" link for stills. This is what makes
+     * those posts play/show full-size instead of sitting on a single frame.
+     */
+    override suspend fun resolveStream(item: MediaItem): StreamInfo {
+        if (item.extras["resolve"] != "page") return super.resolveStream(item)
+        val page = item.pageUrl.takeIf { it.startsWith("http") } ?: return super.resolveStream(item)
+        resolvedCache[page]?.let { return it }
+        val resolved = runCatching { resolvePostPage(page) }.getOrNull() ?: run {
+            // Couldn't fetch/parse the page: fall back to the thumbnail so something still shows.
+            return super.resolveStream(item)
+        }
+        resolvedCache[page] = resolved
+        return resolved
+    }
+
+    private suspend fun resolvePostPage(page: String): StreamInfo {
+        val html = http.getRaw(id, page)
+        // Video first: <source src> / <video ... src>. Then full image: #image, "Original image" link.
+        val video = VIDEO_SRC_RE.find(html)?.groupValues?.get(1)
+        if (video != null) return StreamInfo.Direct(absolute(video, page), mimeType = null)
+        val original = ORIGINAL_LINK_RE.find(html)?.groupValues?.get(1)
+            ?: IMAGE_SRC_RE.find(html)?.groupValues?.get(1)
+            ?: throw SourceException(id, "No media on post page")
+        return StreamInfo.Direct(absolute(original, page), mimeType = null)
+    }
+
+    private fun absolute(url: String, page: String): String = when {
+        url.startsWith("//") -> "https:$url"
+        url.startsWith("http") -> url
+        url.startsWith("/") -> "https://" + BooruFamily.bareHost(page).removePrefix("api.") + url
+        else -> url
+    }
 
     override suspend fun entries(): List<String> =
         settings.get().booruFeeds
@@ -207,7 +247,16 @@ class BooruAdapter @Inject constructor(
                 ?: titleRegex.find(block)?.groupValues?.get(1)
             val tags = tagsRaw?.split(Regex("[\\s+]+"))?.filter { it.isNotBlank() }?.take(50).orEmpty()
 
-            val type = dev.pfeed.source.parse.MediaTypes.classify(thumbUrl) ?: dev.pfeed.domain.model.MediaType.IMAGE
+            // The listing only gives a still thumbnail, so classify by the post's tags instead of the
+            // thumbnail extension: video/webm/mp4 → VIDEO, (animated) gif → GIF, else IMAGE. The real
+            // file URL is fetched from the post page on play (resolveStream below).
+            val lower = tags.map { it.lowercase() }
+            val type = when {
+                lower.any { it == "video" || it == "webm" || it == "mp4" || it == "animated" || it == "sound" } ->
+                    dev.pfeed.domain.model.MediaType.VIDEO
+                lower.any { it == "gif" || it == "animated_gif" } -> dev.pfeed.domain.model.MediaType.GIF
+                else -> dev.pfeed.domain.model.MediaType.IMAGE
+            }
             items += MediaItem(
                 id = "$host/$postId",
                 sourceId = BooruParser.SOURCE_ID,
@@ -219,13 +268,17 @@ class BooruAdapter @Inject constructor(
                 thumbnailUrl = thumbUrl,
                 pageUrl = BooruFamily.postPage(host, postId),
                 publishedAt = null,
-                extras = mapOf("media" to thumbUrl), // thumbnail for now; full-size resolves on tap
+                // Marked for lazy resolution: resolveStream fetches the post page for the full file.
+                extras = mapOf("media" to thumbUrl, "resolve" to "page", "host" to host),
             )
         }
         return items
     }
 
     companion object {
+        private val VIDEO_SRC_RE = Regex("""<(?:source|video)[^>]*\bsrc="([^"]+\.(?:mp4|webm|m4v)[^"]*)"""", RegexOption.IGNORE_CASE)
+        private val ORIGINAL_LINK_RE = Regex("""<a[^>]*\bhref="([^"]+)"[^>]*>\s*Original image""", RegexOption.IGNORE_CASE)
+        private val IMAGE_SRC_RE = Regex("""<img[^>]*\bid="image"[^>]*\bsrc="([^"]+)"""", RegexOption.IGNORE_CASE)
         private const val RANDOM_START_PAGES = 4
         /** Most boards refuse deep pages for anonymous users (Danbooru: 1000); stop well before. */
         private const val MAX_PAGES = 200
