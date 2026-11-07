@@ -460,7 +460,6 @@ private fun FeedGroupSection(group: FeedGroup) {
 }
 
 private const val MAX_SHOWN = 60
-}
 
 @Composable
 private fun Entry(label: String, onDelete: () -> Unit) {
