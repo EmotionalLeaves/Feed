@@ -57,6 +57,7 @@ class SourceDiscovery @Inject constructor(
             "hypnohub.net",
             "realbooru.com",
             "aibooru.online",
+            "e6ai.net",
         )
     }
 

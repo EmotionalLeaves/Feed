@@ -13,7 +13,9 @@ import dev.pfeed.source.generic.GenericJsonAdapter
 import dev.pfeed.source.kemono.KemonoAdapter
 import dev.pfeed.source.local.LocalFilesAdapter
 import dev.pfeed.source.mastodon.MastodonAdapter
+import dev.pfeed.source.philomena.PhilomenaAdapter
 import dev.pfeed.source.reddit.RedditAdapter
+import dev.pfeed.source.redgifs.RedgifsAdapter
 import dev.pfeed.source.rss.RssAdapter
 
 /** Register new adapters here (one @Binds @IntoSet line each). */
@@ -43,6 +45,12 @@ abstract class SourceModule {
 
     @Binds @IntoSet
     abstract fun kemono(adapter: KemonoAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun redgifs(adapter: RedgifsAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun philomena(adapter: PhilomenaAdapter): SourceAdapter
 
     @Binds @IntoSet
     abstract fun genericJson(adapter: GenericJsonAdapter): SourceAdapter
