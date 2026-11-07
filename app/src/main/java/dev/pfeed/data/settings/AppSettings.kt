@@ -161,6 +161,15 @@ object DefaultSources {
 
     /** Mastodon/Fediverse NSFW instances with active public media timelines. */
     val mastodonFeeds: List<MastodonFeed> = listOf(
+        // ── mstdn.jp — very large Japanese instance, lots of adult art ────────────
+        MastodonFeed("mstdn.jp", "nsfw"),
+        MastodonFeed("mstdn.jp", "hentai"),
+        MastodonFeed("mstdn.jp", "エロ"),
+        MastodonFeed("mstdn.jp", "bondage"),
+        // ── abdl.link / kinktroet.social — kink-focused instances ────────────────
+        MastodonFeed("kinktroet.social", "bdsm"),
+        MastodonFeed("kinktroet.social", "bondage"),
+        MastodonFeed("kinktroet.social", "nsfw"),
         // ── mastodon.social — broad tag sweeps ───────────────────────────────────
         MastodonFeed("mastodon.social", "nsfw"),
         MastodonFeed("mastodon.social", "porn"),
@@ -448,5 +457,23 @@ object DefaultSources {
         BooruFeed("xbooru.com", "rough_sex"),
         BooruFeed("xbooru.com", "gangbang"),
         BooruFeed("xbooru.com", "facefuck"),
+        // ── realbooru.com — real-life (non-drawn) photos & video, gelbooru engine ─
+        BooruFeed("realbooru.com", "sex"),
+        BooruFeed("realbooru.com", "blowjob"),
+        BooruFeed("realbooru.com", "anal"),
+        BooruFeed("realbooru.com", "bondage"),
+        BooruFeed("realbooru.com", "bdsm"),
+        BooruFeed("realbooru.com", "deepthroat"),
+        BooruFeed("realbooru.com", "gangbang"),
+        BooruFeed("realbooru.com", "double_penetration"),
+        BooruFeed("realbooru.com", "cumshot"),
+        BooruFeed("realbooru.com", "milf"),
+        BooruFeed("realbooru.com", "amateur"),
+        BooruFeed("realbooru.com", "rough"),
+        // ── aibooru.online — AI-generated art, danbooru engine, no key ───────────
+        BooruFeed("aibooru.online", "rating:explicit"),
+        BooruFeed("aibooru.online", "rating:explicit sex"),
+        BooruFeed("aibooru.online", "rating:explicit bondage"),
+        BooruFeed("aibooru.online", "rating:explicit bdsm"),
     )
 }

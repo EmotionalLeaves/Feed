@@ -55,6 +55,8 @@ class SourceDiscovery @Inject constructor(
             "konachan.com",
             "chan.sankakucomplex.com",
             "hypnohub.net",
+            "realbooru.com",
+            "aibooru.online",
         )
     }
 
