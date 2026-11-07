@@ -10,7 +10,16 @@ import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
@@ -26,7 +35,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.SecureFlagPolicy
@@ -68,17 +76,27 @@ fun MediaGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(2.dp),
+        contentPadding = PaddingValues(start = 6.dp, end = 6.dp, top = 2.dp, bottom = 12.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
+            val shape = RoundedCornerShape(8.dp)
             Box(
                 Modifier
-                    .padding(2.dp)
                     .fillMaxWidth()
-                    .aspectRatio(9f / 16f)
+                    .aspectRatio(3f / 4f)
+                    .clip(shape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable { onOpen(index) },
             ) {
+                // Placeholder glyph shows while the thumbnail loads (or if it never does).
+                Icon(
+                    if (item.type == MediaType.IMAGE) Icons.Filled.Image else Icons.Filled.PlayArrow,
+                    contentDescription = null,
+                    tint = Color.White.copy(alpha = 0.15f),
+                    modifier = Modifier.align(Alignment.Center).size(28.dp),
+                )
                 AsyncImage(
                     model = item.thumbnailUrl,
                     contentDescription = item.title,
@@ -86,36 +104,27 @@ fun MediaGrid(
                     modifier = Modifier.fillMaxSize(),
                 )
                 val badge = when (item.type) {
-                    MediaType.VIDEO -> item.durationSec?.let(::formatDuration) ?: "▶"
+                    MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
                     MediaType.GIF -> "GIF"
-                    MediaType.EMBED -> "▶"
                     MediaType.IMAGE -> null
                 }
                 if (badge != null) {
-                    Text(
-                        badge,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(4.dp)
-                            .background(Color(0x99000000))
-                            .padding(horizontal = 4.dp, vertical = 1.dp),
-                    )
-                }
-                item.title?.let {
-                    Text(
-                        it,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        modifier = Modifier
+                    Row(
+                        Modifier
                             .align(Alignment.BottomStart)
-                            .fillMaxWidth()
-                            .background(Color(0x88000000))
-                            .padding(4.dp),
-                    )
+                            .padding(5.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.Black.copy(alpha = 0.6f))
+                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        if (item.type != MediaType.GIF) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                        }
+                        if (badge.isNotEmpty()) {
+                            Text(badge, style = MaterialTheme.typography.labelSmall, color = Color.White)
+                        }
+                    }
                 }
             }
         }

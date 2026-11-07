@@ -16,6 +16,24 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.Dns
+import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.History
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Password
+import androidx.compose.material.icons.filled.RestartAlt
+import androidx.compose.material.icons.filled.SignalCellularAlt
+import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -58,6 +76,9 @@ private sealed interface PendingDialog {
     data object EnableLock : PendingDialog
     data object DisableLock : PendingDialog
     data object ConfirmReset : PendingDialog
+    data object PickLockTimeout : PendingDialog
+    data object PickDisguise : PendingDialog
+    data object PickHistory : PendingDialog
     data class ExportPassword(val uri: Uri) : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
@@ -77,59 +98,68 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         if (uri != null) dialog = PendingDialog.ImportPassword(uri)
     }
 
+    val disguiseOptions = listOf(Disguise.NONE to "Feed (default)", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator")
+
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Header("Sources")
-        NavRow("Manage sources", "Enable, sign in, reorder, add feeds and folders") { nav.navigate(Routes.SOURCES) }
+        Text(
+            "Settings",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
+        )
+
+        Header("Content")
+        NavRow("Sources", "Turn sites on and off, add subreddits, tags and feeds", Icons.Filled.Dns) { nav.navigate(Routes.SOURCES) }
+        NavRow("What For You has learned", "What it thinks you like and skip", Icons.Filled.AutoAwesome) { nav.navigate(Routes.INTERESTS) }
+        NavRow("Blocked", "Tags, creators and posts you've hidden", Icons.Filled.Block) { nav.navigate(Routes.BLOCKLIST) }
 
         Header("Playback")
+        SwitchRow("Start muted", s.defaultMute, Icons.Filled.VolumeOff, vm::setDefaultMute)
+        SwitchRow("Autoplay on mobile data", s.autoplayOnMobileData, Icons.Filled.SignalCellularAlt, vm::setAutoplayOnMobile)
         val cacheIndex = cacheSteps.indexOf(s.cacheSizeMb).takeIf { it >= 0 } ?: 2
         LabeledSlider(
-            label = "Video cache: ${formatMb(cacheSteps[cacheIndex])} (applies on next launch)",
+            label = "Video cache: ${formatMb(cacheSteps[cacheIndex])}",
             value = cacheIndex.toFloat(),
             range = 0f..(cacheSteps.size - 1).toFloat(),
             steps = cacheSteps.size - 2,
             onChange = { vm.setCacheSize(cacheSteps[it.roundToInt()]) },
         )
-        SwitchRow("Autoplay on mobile data", s.autoplayOnMobileData, vm::setAutoplayOnMobile)
-        SwitchRow("Start muted", s.defaultMute, vm::setDefaultMute)
-
-        Header("Privacy")
-        SwitchRow("App lock (PIN)", lockOn) { on -> dialog = if (on) PendingDialog.EnableLock else PendingDialog.DisableLock }
-        if (lockOn) {
-            Text("Re-lock after leaving the app", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyMedium)
-            lockSteps.forEach { (sec, label) -> RadioRow(label, s.lockTimeoutSec == sec) { vm.setLockTimeout(sec) } }
-            NavRow("Change PIN", null) { dialog = PendingDialog.ChangePin }
-        } else {
-            Text(
-                "Off: the app opens straight to the feed. Turn on to require a PIN (or fingerprint) to open it.",
-                Modifier.padding(horizontal = 16.dp),
-                style = MaterialTheme.typography.bodySmall,
-            )
-        }
-        Text("Launcher icon", Modifier.padding(start = 16.dp, top = 8.dp), style = MaterialTheme.typography.bodyMedium)
-        listOf(Disguise.NONE to "Feed (default)", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator").forEach { (d, label) ->
-            RadioRow(label, s.disguise == d) { vm.setDisguise(d) }
-        }
         Text(
-            "Panic: tap with three fingers anywhere to jump to the home screen (and lock, if the app lock is on).",
-            Modifier.padding(16.dp),
+            "Bigger cache = fewer re-downloads. Applies next time the app starts.",
             style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
 
-        Header("History")
-        Text("Keep watch history for", Modifier.padding(horizontal = 16.dp), style = MaterialTheme.typography.bodyMedium)
-        historySteps.forEach { d -> RadioRow("$d days", s.historyRetentionDays == d) { vm.setHistoryRetention(d) } }
+        Header("Privacy")
+        SwitchRow("App lock", lockOn, Icons.Filled.Lock) { on -> dialog = if (on) PendingDialog.EnableLock else PendingDialog.DisableLock }
+        if (lockOn) {
+            ValueRow("Lock again after", lockSteps.firstOrNull { it.first == s.lockTimeoutSec }?.second ?: "${s.lockTimeoutSec} s", Icons.Filled.Timer) {
+                dialog = PendingDialog.PickLockTimeout
+            }
+            NavRow("Change PIN", null, Icons.Filled.Password) { dialog = PendingDialog.ChangePin }
+        }
+        ValueRow("App icon", disguiseOptions.firstOrNull { it.first == s.disguise }?.second ?: "Feed", Icons.Filled.Apps) {
+            dialog = PendingDialog.PickDisguise
+        }
+        ValueRow("Keep watch history", "${s.historyRetentionDays} days", Icons.Filled.History) { dialog = PendingDialog.PickHistory }
+        Text(
+            "Panic: touch the screen with three fingers to jump to your home screen" +
+                if (lockOn) " and lock the app." else ".",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
 
-        Header("Filtering & recommendations")
-        NavRow("Blocklist", "Blocked tags, creators and hidden items") { nav.navigate(Routes.BLOCKLIST) }
-        NavRow("What For You has learned", "The tags, words and creators it thinks you like or skip") { nav.navigate(Routes.INTERESTS) }
-        NavRow("Recommendation weights (advanced)", null) { nav.navigate(Routes.ADVANCED) }
-        NavRow("Reset recommendations", "Forget all likes/skips used for For You") { dialog = PendingDialog.ConfirmReset }
+        Header("Recommendations")
+        NavRow("Fine-tune ranking", "Advanced weights", Icons.Filled.Tune) { nav.navigate(Routes.ADVANCED) }
+        NavRow("Reset recommendations", "Start learning your taste from scratch", Icons.Filled.RestartAlt) { dialog = PendingDialog.ConfirmReset }
 
         Header("Backup")
-        NavRow("Export settings", "Encrypted JSON (no PIN, tokens or history)") { exportLauncher.launch("pfeed-settings.json") }
-        NavRow("Import settings", null) { importLauncher.launch(arrayOf("application/json", "*/*")) }
+        NavRow("Export settings", "Encrypted file. Not included: PIN, sign-ins, history", Icons.Filled.Upload) { exportLauncher.launch("pfeed-settings.json") }
+        NavRow("Import settings", null, Icons.Filled.Download) { importLauncher.launch(arrayOf("application/json", "*/*")) }
+        Spacer(Modifier.height(24.dp))
     }
     SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
@@ -154,6 +184,26 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             confirmButton = { TextButton(onClick = { vm.resetRecommendations(); dialog = null }) { Text("Reset") } },
             dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
         )
+        PendingDialog.PickLockTimeout -> ChoiceDialog(
+            title = "Lock again after",
+            options = lockSteps,
+            selected = s.lockTimeoutSec,
+            onDismiss = { dialog = null },
+        ) { vm.setLockTimeout(it); dialog = null }
+        PendingDialog.PickDisguise -> ChoiceDialog(
+            title = "App icon",
+            note = "Changes the icon and name on your home screen.",
+            options = disguiseOptions,
+            selected = s.disguise,
+            onDismiss = { dialog = null },
+        ) { vm.setDisguise(it); dialog = null }
+        PendingDialog.PickHistory -> ChoiceDialog(
+            title = "Keep watch history for",
+            note = "Older history is deleted. Posts you've seen won't come back while they're in history.",
+            options = historySteps.map { it to "$it days" },
+            selected = s.historyRetentionDays,
+            onDismiss = { dialog = null },
+        ) { vm.setHistoryRetention(it); dialog = null }
         is PendingDialog.ExportPassword -> PasswordDialog("Encrypt export", confirmTwice = true, onDismiss = { dialog = null }) {
             vm.exportSettings(d.uri, it); dialog = null
         }
@@ -177,21 +227,59 @@ internal fun Header(text: String) {
 }
 
 @Composable
-internal fun NavRow(title: String, subtitle: String?, onClick: () -> Unit) {
+internal fun NavRow(title: String, subtitle: String?, icon: ImageVector? = null, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(title) },
         supportingContent = if (subtitle != null) { { Text(subtitle) } } else null,
+        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
         trailingContent = { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null) },
         modifier = Modifier.clickable(onClick = onClick),
     )
 }
 
 @Composable
-internal fun SwitchRow(title: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+internal fun SwitchRow(title: String, checked: Boolean, icon: ImageVector? = null, onChange: (Boolean) -> Unit) {
     ListItem(
         headlineContent = { Text(title) },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
         trailingContent = { Switch(checked = checked, onCheckedChange = onChange) },
         modifier = Modifier.clickable { onChange(!checked) },
+    )
+}
+
+/** A setting with one current value; tapping opens a picker. */
+@Composable
+internal fun ValueRow(title: String, value: String, icon: ImageVector? = null, onClick: () -> Unit) {
+    ListItem(
+        headlineContent = { Text(title) },
+        supportingContent = { Text(value, color = MaterialTheme.colorScheme.primary) },
+        leadingContent = icon?.let { { Icon(it, contentDescription = null) } },
+        modifier = Modifier.clickable(onClick = onClick),
+    )
+}
+
+@Composable
+private fun <T> ChoiceDialog(
+    title: String,
+    options: List<Pair<T, String>>,
+    selected: T,
+    note: String? = null,
+    onDismiss: () -> Unit,
+    onPick: (T) -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = SecureDialog,
+        title = { Text(title) },
+        text = {
+            Column {
+                note?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 8.dp))
+                }
+                options.forEach { (value, label) -> RadioRow(label, value == selected) { onPick(value) } }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
     )
 }
 

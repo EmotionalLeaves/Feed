@@ -21,7 +21,8 @@ object Display {
                 host.startsWith("kemono") -> "Kemono"
                 else -> host.ifBlank { fallback }
             }
-            "booru", "philomena", "mastodon" -> KNOWN_HOSTS[host] ?: prettyHost(host).ifBlank { fallback }
+            "booru", "philomena" -> KNOWN_HOSTS[host] ?: prettyHost(host).ifBlank { fallback }
+            "mastodon" -> KNOWN_HOSTS[host] ?: host.ifBlank { fallback }
             else -> fallback
         }
     }

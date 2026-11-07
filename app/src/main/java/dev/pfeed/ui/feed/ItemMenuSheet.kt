@@ -1,6 +1,24 @@
 package dev.pfeed.ui.feed
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.AssistChip
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
@@ -33,7 +51,7 @@ import androidx.compose.ui.window.SecureFlagPolicy
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.ui.common.openExternal
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun ItemMenuSheet(
     item: MediaItem,
@@ -44,53 +62,88 @@ fun ItemMenuSheet(
 ) {
     val context = LocalContext.current
     var pickTag by remember { mutableStateOf<String?>(null) } // "block" | "follow"
+    val creator = remember(item.key) { Display.creator(item) }
+    val tags = remember(item.key) { Display.tags(item, max = 24) }
+    val source = Display.source(item, vm.sourceName(item.sourceId))
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         properties = ModalBottomSheetProperties(securePolicy = SecureFlagPolicy.SecureOn),
     ) {
-        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding()) {
+        Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 8.dp)) {
             val mode = pickTag
             if (mode != null) {
-                Text(
-                    if (mode == "block") "Block which tag?" else "Follow which tag?",
+                ListItem(
+                    headlineContent = {
+                        Text(if (mode == "block") "Hide posts tagged…" else "Follow a tag", fontWeight = FontWeight.Bold)
+                    },
+                    leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
                     modifier = Modifier.clickable { pickTag = null },
                 )
-                item.tags.forEach { tag ->
-                    MenuRow("#$tag", Icons.Filled.Tag) {
-                        if (mode == "block") vm.blockTag(tag) else vm.toggleFollowTag(tag)
-                        onDismiss()
+                HorizontalDivider()
+                FlowRow(
+                    Modifier.padding(16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    tags.forEach { (label, raw) ->
+                        AssistChip(
+                            onClick = {
+                                if (mode == "block") vm.blockTag(raw) else vm.toggleFollowTag(raw)
+                                onDismiss()
+                            },
+                            label = { Text("#$label") },
+                        )
                     }
                 }
                 return@Column
             }
+
+            // What you're acting on.
+            Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(52.dp).clip(RoundedCornerShape(8.dp))) { Thumbnail(item) }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(creator?.let { "@$it" } ?: source, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        if (creator != null) source else (item.title ?: ""),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            HorizontalDivider()
+
             MenuRow(if (saved) "Remove from saved" else "Save", Icons.Filled.Bookmark) { vm.toggleSave(item); onDismiss() }
-            MenuRow("Not interested", Icons.Filled.ThumbDown) { vm.notInterested(item); onDismiss() }
-            if (item.creator != null) {
-                MenuRow(if (followingCreator) "Unfollow ${item.creator}" else "Follow ${item.creator}", Icons.Filled.PersonAdd) {
+            MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
+            if (creator != null) {
+                MenuRow(if (followingCreator) "Unfollow @$creator" else "Follow @$creator", Icons.Filled.PersonAdd) {
                     vm.toggleFollowCreator(item); onDismiss()
                 }
             }
-            if (item.tags.isNotEmpty()) MenuRow("Follow a tag…", Icons.Filled.Tag) { pickTag = "follow" }
+            if (tags.isNotEmpty()) MenuRow("Follow a tag…", Icons.Filled.Tag) { pickTag = "follow" }
             HorizontalDivider()
-            if (item.creator != null) {
-                MenuRow("Block creator ${item.creator}", Icons.Filled.PersonOff) { vm.blockCreator(item); onDismiss() }
+            if (creator != null) {
+                MenuRow("Block @$creator", Icons.Filled.PersonOff, "Never show their posts") { vm.blockCreator(item); onDismiss() }
             }
-            if (item.tags.isNotEmpty()) MenuRow("Block a tag…", Icons.Filled.Block) { pickTag = "block" }
+            if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
             HorizontalDivider()
-            MenuRow("Open source page", Icons.AutoMirrored.Filled.OpenInNew) { openExternal(context, item.pageUrl); onDismiss() }
+            MenuRow("Open on $source", Icons.AutoMirrored.Filled.OpenInNew) { openExternal(context, item.pageUrl); onDismiss() }
             val report = vm.reportUrl(item)
             if (report != null) {
-                MenuRow("Report to source", Icons.Filled.Flag) { openExternal(context, report); onDismiss() }
+                MenuRow("Report to $source", Icons.Filled.Flag) { openExternal(context, report); onDismiss() }
             }
         }
     }
 }
 
 @Composable
-private fun MenuRow(label: String, icon: ImageVector, onClick: () -> Unit) {
+private fun MenuRow(label: String, icon: ImageVector, supporting: String? = null, onClick: () -> Unit) {
     ListItem(
         headlineContent = { Text(label) },
+        supportingContent = supporting?.let { { Text(it) } },
         leadingContent = { Icon(icon, contentDescription = null) },
         modifier = Modifier.clickable(onClick = onClick),
     )

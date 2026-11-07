@@ -357,7 +357,7 @@ fun HeartBurst(position: Offset?, tick: Int) {
     }
 }
 
-private const val STALL_TIMEOUT_MS = 15_000L
+private const val STALL_TIMEOUT_MS = 20_000L
 private const val MIN_ZOOM = 1f
 private const val MAX_ZOOM = 5f
 

@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -51,6 +52,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -82,6 +84,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val keyHosts by vm.booruKeyHosts.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
+    var reorder by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
 
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
@@ -91,35 +94,54 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             BackHeader("Sources", nav)
+            val totalFeeds = sources.filter { it.enabled }.sumOf { feedCount(it.adapter.id, s) ?: 1 }
+            val onCount = sources.count { it.enabled }
             Text(
-                "Order is priority: when the same item appears in two sources, the higher one wins. " +
-                    "Turn a source on, then add entries below.",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(16.dp),
+                "$totalFeeds feeds from $onCount sources",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp),
             )
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Each source pulls from many sites, subreddits and tags at once.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { reorder = !reorder }) { Text(if (reorder) "Done" else "Reorder") }
+            }
 
             // --- enabled / priority / sign-in ---
             sources.forEachIndexed { index, src ->
                 val a = src.adapter
                 Card(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
-                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Column(Modifier.weight(1f)) {
                             Text(a.displayName, style = MaterialTheme.typography.titleMedium)
                             val status = when {
-                                !a.isConfigured -> "Not configured (see SOURCES.md)"
+                                !a.isConfigured -> "Needs a build-time setting; not available in this build"
                                 auth[a.id] != null -> auth[a.id]!!
                                 a.requiresAuth -> "Sign-in required"
-                                else -> if (src.enabled) "Enabled" else "Disabled"
+                                !src.enabled -> "Off"
+                                else -> feedSummary(a.id, s) ?: "On"
                             }
-                            Text(status, style = MaterialTheme.typography.bodySmall)
+                            Text(
+                                status,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (src.enabled) 0.75f else 0.5f),
+                            )
                         }
-                        IconButton(onClick = { vm.moveSource(a.id, -1) }, enabled = index > 0) {
-                            Icon(Icons.Filled.KeyboardArrowUp, "Move up")
+                        if (reorder) {
+                            IconButton(onClick = { vm.moveSource(a.id, -1) }, enabled = index > 0) {
+                                Icon(Icons.Filled.KeyboardArrowUp, "Move up")
+                            }
+                            IconButton(onClick = { vm.moveSource(a.id, +1) }, enabled = index < sources.lastIndex) {
+                                Icon(Icons.Filled.KeyboardArrowDown, "Move down")
+                            }
+                        } else {
+                            Switch(checked = src.enabled, enabled = a.isConfigured, onCheckedChange = { vm.setSourceEnabled(a.id, it) })
                         }
-                        IconButton(onClick = { vm.moveSource(a.id, +1) }, enabled = index < sources.lastIndex) {
-                            Icon(Icons.Filled.KeyboardArrowDown, "Move down")
-                        }
-                        Switch(checked = src.enabled, enabled = a.isConfigured, onCheckedChange = { vm.setSourceEnabled(a.id, it) })
                     }
                     if (a.requiresAuth && a.isConfigured) {
                         OutlinedButton(
@@ -130,14 +152,15 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 }
             }
 
-            Header("Board API keys")
-            BoardKeys(vm, keyHosts)
-
-            Header("Quick add")
+            Header("Add more")
             QuickAdd(vm, searchState, onPickFolder = { folderPicker.launch(null) })
 
-            Header("Added")
+            Header("Your feeds")
             AddedList(vm, s)
+
+            Header("Optional: board API keys")
+            BoardKeys(vm, keyHosts)
+            Spacer(Modifier.height(24.dp))
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
@@ -380,29 +403,68 @@ private fun Field(label: String, value: String, placeholder: String? = null, onC
     )
 }
 
+/**
+ * Feeds grouped by kind, collapsed by default. There are hundreds of them (subreddits, board tags…);
+ * drawing them all at once made this screen slow and impossible to scan.
+ */
 @Composable
 private fun AddedList(vm: SettingsViewModel, s: dev.pfeed.data.settings.AppSettings) {
-    val empty = s.directUrls.isEmpty() && s.rssFeeds.isEmpty() && s.redditSubs.isEmpty() &&
-        s.mastodonFeeds.isEmpty() && s.booruFeeds.isEmpty() && s.jsonFeeds.isEmpty() && s.localFolders.isEmpty()
-    if (empty) {
+    val groups = listOf(
+        FeedGroup("Subreddits", s.redditSubs.map { sub -> "r/$sub" to { vm.removeReddit(sub) } }),
+        FeedGroup("Image board feeds", s.booruFeeds.map { f -> f.label to { vm.removeBooru(f) } }),
+        FeedGroup("Mastodon feeds", s.mastodonFeeds.map { f -> f.label to { vm.removeMastodon(f) } }),
+        FeedGroup("RSS feeds", s.rssFeeds.map { u -> u to { vm.removeFeed(u) } }),
+        FeedGroup("Direct links", s.directUrls.map { u -> u to { vm.removeDirect(u) } }),
+        FeedGroup("JSON APIs", s.jsonFeeds.map { f -> f.name to { vm.removeJson(f) } }),
+        FeedGroup("Folders", s.localFolders.map { u -> (Uri.parse(u).lastPathSegment?.substringAfter(':') ?: u) to { vm.removeFolder(u) } }),
+    ).filter { it.entries.isNotEmpty() }
+    if (groups.isEmpty()) {
         Text("Nothing added yet.", Modifier.padding(16.dp), style = MaterialTheme.typography.bodySmall)
         return
     }
-    s.directUrls.forEach { Entry("Direct", it) { vm.removeDirect(it) } }
-    s.rssFeeds.forEach { Entry("RSS", it) { vm.removeFeed(it) } }
-    s.redditSubs.forEach { Entry("Reddit", "r/$it") { vm.removeReddit(it) } }
-    s.mastodonFeeds.forEach { f -> Entry("Mastodon", f.label) { vm.removeMastodon(f) } }
-    s.booruFeeds.forEach { f -> Entry("Booru", f.label) { vm.removeBooru(f) } }
-    s.jsonFeeds.forEach { f -> Entry("JSON", f.name) { vm.removeJson(f) } }
-    s.localFolders.forEach { uri ->
-        Entry("Folder", Uri.parse(uri).lastPathSegment?.substringAfter(':') ?: uri) { vm.removeFolder(uri) }
+    groups.forEach { g -> FeedGroupSection(g) }
+}
+
+private class FeedGroup(val title: String, val entries: List<Pair<String, () -> Any?>>)
+
+@Composable
+private fun FeedGroupSection(group: FeedGroup) {
+    var open by remember(group.title) { mutableStateOf(false) }
+    var filter by remember(group.title) { mutableStateOf("") }
+    ListItem(
+        headlineContent = { Text(group.title) },
+        supportingContent = { Text("${group.entries.size}") },
+        trailingContent = { Icon(if (open) Icons.Filled.KeyboardArrowUp else Icons.Filled.KeyboardArrowDown, contentDescription = if (open) "Collapse" else "Expand") },
+        modifier = Modifier.clickable { open = !open },
+    )
+    if (open) {
+        if (group.entries.size > 12) {
+            OutlinedTextField(
+                value = filter,
+                onValueChange = { filter = it },
+                placeholder = { Text("Filter ${group.title.lowercase()}") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
+            )
+        }
+        val shown = group.entries.filter { filter.isBlank() || it.first.contains(filter, ignoreCase = true) }
+        shown.take(MAX_SHOWN).forEach { (label, remove) -> Entry(label) { remove() } }
+        if (shown.size > MAX_SHOWN) {
+            Text(
+                "+${shown.size - MAX_SHOWN} more — type above to find one",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
     }
 }
 
+private const val MAX_SHOWN = 60
+}
+
 @Composable
-private fun Entry(kind: String, label: String, onDelete: () -> Unit) {
+private fun Entry(label: String, onDelete: () -> Unit) {
     ListItem(
-        overlineContent = { Text(kind) },
         headlineContent = { Text(label, maxLines = 2) },
         trailingContent = { IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, "Remove") } },
     )
@@ -448,4 +510,38 @@ private fun BoardKeys(vm: SettingsViewModel, configured: Set<String>) {
             }
         }
     }
+}
+
+/** How many feeds/entries a source pulls from, or null if it has no countable list. */
+private fun feedCount(id: String, s: dev.pfeed.data.settings.AppSettings): Int? = when (id) {
+    "reddit" -> s.redditSubs.size
+    "booru" -> s.booruFeeds.size
+    "mastodon" -> s.mastodonFeeds.size
+    "rss" -> s.rssFeeds.size
+    "direct" -> s.directUrls.size
+    "json" -> s.jsonFeeds.size
+    "local" -> s.localFolders.size
+    "kemono" -> s.kemonoHosts.size
+    else -> null
+}
+
+/** One line under each source: what it's actually pulling from. */
+private fun feedSummary(id: String, s: dev.pfeed.data.settings.AppSettings): String? = when (id) {
+    "reddit" -> "${s.redditSubs.size} subreddits"
+    "booru" -> {
+        val sites = s.booruFeeds.map { it.host.lowercase().removePrefix("www.") }.distinct().size
+        "${s.booruFeeds.size} tag feeds on $sites sites"
+    }
+    "mastodon" -> {
+        val servers = s.mastodonFeeds.map { it.host.lowercase() }.distinct().size
+        "${s.mastodonFeeds.size} hashtag feeds on $servers servers"
+    }
+    "kemono" -> s.kemonoHosts.joinToString(" + ").ifBlank { null }
+    "redgifs" -> "Trending clips across dozens of categories"
+    "philomena" -> "derpibooru.org + furbooru.org"
+    "rss" -> if (s.rssFeeds.isEmpty()) "Add any RSS/Atom feed below" else "${s.rssFeeds.size} feeds"
+    "direct" -> if (s.directUrls.isEmpty()) "Paste a video or image link below" else "${s.directUrls.size} links"
+    "json" -> if (s.jsonFeeds.isEmpty()) "Advanced: map any JSON API" else "${s.jsonFeeds.size} APIs"
+    "local" -> if (s.localFolders.isEmpty()) "Pick a folder on your phone below" else "${s.localFolders.size} folders"
+    else -> null
 }

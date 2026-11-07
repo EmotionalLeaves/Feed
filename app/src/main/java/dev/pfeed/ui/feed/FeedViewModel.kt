@@ -96,6 +96,10 @@ class FeedViewModel @Inject constructor(
      */
     fun markBroken(item: MediaItem) {
         if (item.key in broken.value) return
+        // Only drop what's on screen or ahead. Removing an item behind you would shift the list and
+        // jump the page you're looking at; it stays behind you, harmlessly.
+        val index = items.value.indexOfFirst { it.key == item.key }
+        if (index in 0 until lastSettled) return
         broken.update { it + item.key }
         streams.remove(item.key)
     }
@@ -275,6 +279,8 @@ class FeedViewModel @Inject constructor(
         if (enteredAt == 0L) return
         val dwell = SystemClock.elapsedRealtime() - enteredAt
         enteredAt = 0L
+        // It never worked, so the time on it says nothing about taste: don't learn from it.
+        if (item.key in broken.value) return
         val st = stats[item.key]
         viewModelScope.launch {
             val isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED
@@ -349,14 +355,14 @@ class FeedViewModel @Inject constructor(
         val creator = item.creator ?: return
         viewModelScope.launch {
             blocks.block(BlockKind.CREATOR, creator)
-            _messages.tryEmit("Blocked $creator")
+            _messages.tryEmit("Blocked " + (Display.creator(item)?.let { "@$it" } ?: "this creator"))
         }
     }
 
     fun blockTag(tag: String) {
         viewModelScope.launch {
             blocks.block(BlockKind.TAG, tag)
-            _messages.tryEmit("Blocked #${Blocklist.normalize(tag)}")
+            _messages.tryEmit("Hiding #${Blocklist.normalize(tag).replace('_', ' ')}")
         }
     }
 
@@ -372,7 +378,7 @@ class FeedViewModel @Inject constructor(
                 library.follow(FollowKind.CREATOR, creator)
                 statsFor(item.key).explicit = true
                 signals.record(item, Signal(SignalType.FOLLOW))
-                _messages.tryEmit("Following $creator")
+                _messages.tryEmit("Following " + (Display.creator(item)?.let { "@$it" } ?: "this creator"))
             }
         }
     }
@@ -383,7 +389,7 @@ class FeedViewModel @Inject constructor(
                 library.unfollow(FollowKind.TAG, tag)
             } else {
                 library.follow(FollowKind.TAG, tag)
-                _messages.tryEmit("Following #${Blocklist.normalize(tag)}")
+                _messages.tryEmit("Following #${Blocklist.normalize(tag).replace('_', ' ')}")
             }
         }
     }

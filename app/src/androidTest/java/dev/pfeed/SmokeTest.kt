@@ -54,19 +54,19 @@ class SmokeTest {
 
         // 4. Every tab opens.
         rule.onNodeWithText("Search").performClick()
-        waitFor(what = "search screen") { exists("Search all sources") }
+        waitFor(what = "search screen") { exists("Search every source") && exists("Popular") }
 
         rule.onNodeWithText("Library").performClick()
-        waitFor(what = "library screen") { exists("Saved") && exists("Blocked") }
+        waitFor(what = "library screen") { exists("Saved", substring = true) && exists("Blocked", substring = true) }
 
         rule.onNodeWithText("Settings").performClick()
-        waitFor(what = "settings screen") { exists("Manage sources") }
+        waitFor(what = "settings screen") { exists("Sources") && exists("Privacy") }
 
         // 5. Sources screen lists adapters and the quick-add bar.
-        rule.onNodeWithText("Manage sources").performClick()
-        waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Quick add", substring = true) }
+        rule.onNodeWithText("Sources").performClick()
+        waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Add more") && exists("feeds from", substring = true) }
         rule.onNodeWithContentDescription("Back").performClick()
-        waitFor(what = "back to settings") { exists("Manage sources") }
+        waitFor(what = "back to settings") { exists("Privacy") }
 
         rule.onNodeWithText("Feed").performClick()
         waitFor(what = "back on feed") { exists("For You") }
