@@ -62,11 +62,11 @@ import dev.pfeed.domain.model.StreamInfo
 import dev.pfeed.ui.theme.HeartRed
 
 @Composable
-fun Thumbnail(item: MediaItem, modifier: Modifier = Modifier) {
+fun Thumbnail(item: MediaItem, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
     AsyncImage(
         model = item.thumbnailUrl,
         contentDescription = null,
-        contentScale = ContentScale.Crop,
+        contentScale = contentScale,
         modifier = modifier.fillMaxSize(),
     )
 }
@@ -122,13 +122,20 @@ fun VideoPage(
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY && p != null && p.duration > 0) stats.durationMs = p.duration
             }
-            override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName }
+            override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item) }
         }
         p?.addListener(listener)
         onDispose { p?.removeListener(listener) }
     }
 
     LaunchedEffect(player, play) { player?.playWhenReady = play }
+    // A clip that hasn't shown a frame after this long while on screen is effectively dead: skip it.
+    LaunchedEffect(item.key, play, firstFrame) {
+        if (play && !firstFrame) {
+            kotlinx.coroutines.delay(STALL_TIMEOUT_MS)
+            if (!firstFrame) vm.markBroken(item)
+        }
+    }
     LaunchedEffect(player, muted) { player?.volume = if (muted) 0f else 1f }
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -149,11 +156,12 @@ fun VideoPage(
             onRelease = { view -> view.player = null },
             modifier = Modifier.fillMaxSize(),
         )
-        if (!firstFrame) Thumbnail(item)
+        // Same framing as the video (fit), so there's no jump when the first frame replaces it.
+        if (!firstFrame) Thumbnail(item, contentScale = ContentScale.Fit)
         when {
-            error != null -> Text("Can't play: $error", color = Color.White)
+            error != null -> Unit // already being skipped
             stream is StreamInfo.Embed -> EmbedPage(item, active = play, vm = vm)
-            !firstFrame && play -> CircularProgressIndicator(Modifier.size(36.dp), color = Color.White)
+            !firstFrame && play -> CircularProgressIndicator(Modifier.size(36.dp), color = Color.White.copy(alpha = 0.85f), strokeWidth = 3.dp)
         }
     }
 }
@@ -241,6 +249,8 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                 val d = state.result.drawable
                 imageSize = androidx.compose.ui.unit.IntSize(d.intrinsicWidth, d.intrinsicHeight)
             },
+            // Dead image link: drop it from the feed rather than leaving a black page.
+            onError = { if (stream != null) vm.markBroken(item) },
             modifier = Modifier
                 .then(if (isTall) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                 .graphicsLayer {
@@ -347,6 +357,7 @@ fun HeartBurst(position: Offset?, tick: Int) {
     }
 }
 
+private const val STALL_TIMEOUT_MS = 15_000L
 private const val MIN_ZOOM = 1f
 private const val MAX_ZOOM = 5f
 

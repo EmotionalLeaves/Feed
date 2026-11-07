@@ -11,12 +11,17 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import dev.pfeed.ui.theme.Accent
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -99,24 +104,41 @@ private fun MainNav(locked: Boolean) {
     val entry by nav.currentBackStackEntryAsState()
     val route = entry?.destination?.route
     val currentTab = tabs.firstOrNull { route == it.route || route?.startsWith(it.route + "/") == true }
+    // Feed screens are full-bleed: media runs behind the status bar, the bottom bar turns black.
+    val immersive = route == Routes.FEED || route == Routes.TAG || route == Routes.VIEWER
 
     Scaffold(
         bottomBar = {
             if (currentTab != null) {
-                NavigationBar {
+                NavigationBar(
+                    containerColor = if (immersive) Color.Black else NavigationBarDefaults.containerColor,
+                    tonalElevation = if (immersive) 0.dp else NavigationBarDefaults.Elevation,
+                ) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
                             selected = tab == currentTab,
                             onClick = { nav.navigateTab(tab.route) },
                             icon = { Icon(tab.icon, contentDescription = tab.label) },
                             label = { Text(tab.label) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = Color.White,
+                                selectedTextColor = Color.White,
+                                indicatorColor = Accent.copy(alpha = 0.35f),
+                                unselectedIconColor = Color.White.copy(alpha = 0.55f),
+                                unselectedTextColor = Color.White.copy(alpha = 0.55f),
+                            ),
                         )
                     }
                 }
             }
         },
     ) { padding ->
-        NavHost(nav, startDestination = Routes.FEED, modifier = Modifier.padding(padding)) {
+        NavHost(
+            nav,
+            startDestination = Routes.FEED,
+            // Immersive screens handle the status bar themselves; the others get the normal insets.
+            modifier = if (immersive) Modifier.padding(bottom = padding.calculateBottomPadding()) else Modifier.padding(padding),
+        ) {
             composable(Routes.FEED) { FeedScreen(nav = nav, locked = locked) }
             composable(Routes.TAG, arguments = listOf(navArgument("tag") { type = NavType.StringType })) {
                 FeedScreen(nav = nav, locked = locked)

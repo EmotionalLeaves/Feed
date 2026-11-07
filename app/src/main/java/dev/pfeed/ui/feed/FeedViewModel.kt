@@ -83,8 +83,22 @@ class FeedViewModel @Inject constructor(
     private val raw = MutableStateFlow<List<MediaItem>>(emptyList())
 
     /** Re-filtered whenever the blocklist changes, so a block takes effect immediately. */
-    val items: StateFlow<List<MediaItem>> = combine(raw, blocks.blocklist) { list, bl -> list.filter(bl::allows) }
-        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    /** Items that failed to resolve, load or play. Removed from the feed so it simply moves on. */
+    private val broken = MutableStateFlow<Set<String>>(emptySet())
+
+    val items: StateFlow<List<MediaItem>> = combine(raw, blocks.blocklist, broken) { list, bl, bad ->
+        list.filter { bl.allows(it) && it.key !in bad }
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    /**
+     * Something about this item doesn't work (dead link, unplayable format, blocked host). Drop it
+     * quietly instead of showing an error: the pager slides the next item into its place.
+     */
+    fun markBroken(item: MediaItem) {
+        if (item.key in broken.value) return
+        broken.update { it + item.key }
+        streams.remove(item.key)
+    }
 
     val liked: StateFlow<Set<String>> = library.keys(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val saved: StateFlow<Set<String>> = library.keys(LibraryKind.SAVED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
@@ -170,7 +184,6 @@ class FeedViewModel @Inject constructor(
                 }
                 endReached = r.endReached
                 _hint.value = r.hint
-                r.errors.forEach { _messages.tryEmit(it) }
                 when {
                     r.items.isEmpty() && !r.endReached && r.hint == null -> scheduleRetry(s)
                     r.endReached && r.hint == null -> {
@@ -213,14 +226,15 @@ class FeedViewModel @Inject constructor(
 
     private fun streamAsync(item: MediaItem): Deferred<StreamInfo?> = streams.getOrPut(item.key) {
         viewModelScope.async {
-            try {
+            val resolved: StreamInfo? = try {
                 registry.byId(item.sourceId)?.resolveStream(item)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _messages.tryEmit("${sourceName(item.sourceId)}: ${e.message ?: "can't play this item"}")
                 null
             }
+            if (resolved == null) markBroken(item)
+            resolved
         }
     }
 

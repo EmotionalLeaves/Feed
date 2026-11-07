@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.WindowManager
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
@@ -25,7 +26,11 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
-        enableEdgeToEdge()
+        // The app is always dark: force light status/nav-bar icons even when the phone is in light mode.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
+        )
         super.onCreate(savedInstanceState)
         setContent {
             PFeedTheme {

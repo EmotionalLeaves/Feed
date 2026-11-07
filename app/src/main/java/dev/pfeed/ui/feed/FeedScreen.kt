@@ -1,6 +1,12 @@
 package dev.pfeed.ui.feed
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -18,10 +24,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -31,20 +39,21 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VolumeOff
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -56,17 +65,31 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import androidx.activity.compose.BackHandler
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -78,9 +101,15 @@ import androidx.navigation.NavController
 import dev.pfeed.domain.model.FeedMode
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.MediaType
-import dev.pfeed.ui.common.findActivity
 import dev.pfeed.ui.Routes
+import dev.pfeed.ui.common.findActivity
+import dev.pfeed.ui.theme.Accent
 import dev.pfeed.ui.theme.HeartRed
+import kotlinx.coroutines.flow.distinctUntilChanged
+
+/** Soft shadow so white text stays readable on any image. */
+private val TextShadow = Shadow(color = Color.Black.copy(alpha = 0.7f), offset = Offset(0f, 1.5f), blurRadius = 6f)
+private fun TextStyle.shadowed() = merge(TextStyle(shadow = TextShadow))
 
 @Composable
 fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltViewModel()) {
@@ -101,8 +130,12 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
-    LaunchedEffect(pagerState, items.isNotEmpty()) {
-        snapshotFlow { pagerState.settledPage }.collect { vm.onPageSettled(it) }
+    LaunchedEffect(pagerState) {
+        // Also fires when a different item slides into the settled slot (a broken item was dropped),
+        // so dwell and "seen" tracking always follow what's actually on screen.
+        snapshotFlow { pagerState.settledPage to items.getOrNull(pagerState.settledPage)?.key }
+            .distinctUntilChanged()
+            .collect { (page, key) -> if (key != null) vm.onPageSettled(page) }
     }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
 
@@ -110,7 +143,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         if (items.isNotEmpty()) {
             VerticalPager(
                 state = pagerState,
-                beyondViewportPageCount = 2,
+                beyondViewportPageCount = 1,
                 key = { index -> items.getOrNull(index)?.key ?: index },
                 modifier = Modifier.fillMaxSize(),
             ) { page ->
@@ -127,26 +160,33 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     onMenu = { menuFor = item },
                 )
             }
-        } else {
-            when {
-                loading -> CircularProgressIndicator(Modifier.align(Alignment.Center), color = Color.White)
-                else -> Column(Modifier.align(Alignment.Center).padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(hint ?: "Nothing here yet.", color = Color.White, style = MaterialTheme.typography.bodyLarge)
-                    Spacer(Modifier.height(16.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        if (!vm.isViewer) Button(onClick = vm::refresh) { Text("Refresh") }
-                        TextButton(onClick = { nav.navigate(Routes.SOURCES) }) { Text("Sources") }
+            // "Loading more" only when you're actually waiting at the end, not as a constant badge.
+            if (loading && pagerState.settledPage >= items.size - 2) {
+                Surface(
+                    color = Color.Black.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.align(Alignment.Center),
+                ) {
+                    Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(Modifier.width(10.dp))
+                        Text("Loading more…", color = Color.White, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }
+        } else {
+            FeedEmptyState(
+                loading = loading,
+                hint = hint,
+                canRefresh = !vm.isViewer,
+                onRefresh = vm::refresh,
+                onSources = { nav.navigate(Routes.SOURCES) },
+                modifier = Modifier.align(Alignment.Center),
+            )
         }
 
         TopBar(
-            title = when {
-                vm.tag != null -> "#${vm.tag}"
-                vm.isViewer -> null
-                else -> null
-            },
+            title = vm.tag?.let { "#" + it.replace('_', ' ') },
             showModes = vm.tag == null && !vm.isViewer,
             mode = mode,
             onMode = vm::setMode,
@@ -155,7 +195,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
         )
 
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
+        // Confirmations appear under the top bar, clear of the caption and buttons.
+        SnackbarHost(
+            snackbar,
+            Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp, start = 16.dp, end = 16.dp),
+        )
     }
 
     menuFor?.let { item ->
@@ -170,6 +214,44 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 }
 
 @Composable
+private fun FeedEmptyState(
+    loading: Boolean,
+    hint: String?,
+    canRefresh: Boolean,
+    onRefresh: () -> Unit,
+    onSources: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (loading || hint == null) {
+            CircularProgressIndicator(color = Accent, strokeWidth = 3.dp)
+            Spacer(Modifier.height(20.dp))
+            Text("Loading your feed…", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "Pulling from dozens of sources",
+                color = Color.White.copy(alpha = 0.5f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        } else {
+            Text(
+                hint,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(20.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (canRefresh) {
+                    Button(onClick = onRefresh, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Try again") }
+                }
+                OutlinedButton(onClick = onSources) { Text("Sources", color = Color.White) }
+            }
+        }
+    }
+}
+
+@Composable
 private fun TopBar(
     title: String?,
     showModes: Boolean,
@@ -179,34 +261,67 @@ private fun TopBar(
     followTag: Pair<String, Boolean>?,
     onFollowTag: () -> Unit,
 ) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
+    Box(Modifier.fillMaxWidth().statusBarsPadding().height(52.dp)) {
         if (onBack != null) {
-            IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White) }
-        }
-        if (title != null) {
-            Text(title, color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f))
-        } else {
-            Spacer(Modifier.weight(1f))
+            IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+            }
         }
         if (showModes) {
-            listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
-                TextButton(onClick = { onMode(m) }) {
-                    Text(
-                        label,
-                        color = if (m == mode) Color.White else Color.White.copy(alpha = 0.55f),
-                        fontWeight = if (m == mode) FontWeight.Bold else FontWeight.Normal,
-                    )
+            Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
+                    ModeTab(label, selected = m == mode) { onMode(m) }
                 }
             }
-            Spacer(Modifier.weight(1f))
+        } else if (title != null) {
+            Text(
+                title,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium.shadowed(),
+                fontWeight = FontWeight.Bold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.Center).padding(horizontal = 64.dp),
+            )
         }
         if (followTag != null) {
-            TextButton(onClick = onFollowTag) { Text(if (followTag.second) "Following" else "Follow", color = Color.White) }
+            FollowPill(following = followTag.second, onClick = onFollowTag, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp))
         }
     }
+}
+
+@Composable
+private fun ModeTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    val indicator by animateDpAsState(if (selected) 22.dp else 0.dp, label = "modeIndicator")
+    Column(
+        Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            label,
+            color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            style = MaterialTheme.typography.titleSmall.shadowed(),
+        )
+        Spacer(Modifier.height(4.dp))
+        Box(Modifier.width(indicator).height(3.dp).background(Color.White, RoundedCornerShape(2.dp)))
+    }
+}
+
+@Composable
+private fun FollowPill(following: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(50)
+    Text(
+        if (following) "Following" else "Follow",
+        color = Color.White.copy(alpha = if (following) 0.85f else 1f),
+        style = MaterialTheme.typography.labelMedium,
+        fontWeight = FontWeight.SemiBold,
+        modifier = modifier
+            .clip(shape)
+            .then(if (following) Modifier.border(1.dp, Color.White.copy(alpha = 0.5f), shape) else Modifier.background(Accent))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -272,27 +387,40 @@ private fun FeedPage(
             MediaType.IMAGE, MediaType.GIF -> ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
+
+        // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
+        Box(
+            Modifier.align(Alignment.TopCenter).fillMaxWidth().height(140.dp)
+                .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))),
+        )
+        Box(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(320.dp)
+                .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))),
+        )
+
         if (paused && isVideo && !speeding) {
-            Icon(
-                Icons.Filled.PlayArrow,
-                contentDescription = "Paused",
-                tint = Color.White.copy(alpha = 0.8f),
-                modifier = Modifier.align(Alignment.Center).size(72.dp),
-            )
+            Box(
+                Modifier.align(Alignment.Center).size(84.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = "Paused", tint = Color.White, modifier = Modifier.size(56.dp))
+            }
         }
         if (speeding) {
             Surface(
                 color = Color.Black.copy(alpha = 0.55f),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier.align(Alignment.TopCenter).padding(top = 48.dp),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 60.dp),
             ) {
-                Text("2× ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp))
+                Text("2×  ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
             }
         }
         HeartBurst(heartAt, heartTick)
         Overlay(
             item = item,
-            sourceName = vm.sourceName(item.sourceId),
+            sourceLabel = Display.source(item, vm.sourceName(item.sourceId)),
+            creator = remember(item.key) { Display.creator(item) },
+            tags = remember(item.key) { Display.tags(item) },
             liked = liked,
             saved = saved,
             muted = muted,
@@ -325,9 +453,9 @@ private fun FeedPage(
 }
 
 /**
- * Fullscreen landscape player. Forces the activity to landscape while shown (the phone can be turned
- * to match), fills the screen, and reparents the existing [player] so playback continues seamlessly.
- * Back or the close button dismisses it and restores portrait; the caller also dismisses on swipe.
+ * Fullscreen landscape player in its own window above everything (nav bar included), with the
+ * system bars hidden. Forces landscape while shown and reparents the running [player], so playback
+ * continues seamlessly. Back or the close button restores portrait.
  */
 @OptIn(UnstableApi::class)
 @Composable
@@ -342,27 +470,48 @@ private fun FullscreenVideo(player: androidx.media3.exoplayer.ExoPlayer?, onClos
             activity?.requestedOrientation = previous ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
-    BackHandler(onBack = onClose)
 
-    Box(Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    useController = true
-                    controllerAutoShow = false
-                    resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                    setShutterBackgroundColor(android.graphics.Color.BLACK)
+    Dialog(
+        onDismissRequest = onClose,
+        // Own window, so FLAG_SECURE must be set again: no screenshots or recents preview of the video.
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+            securePolicy = SecureFlagPolicy.SecureOn,
+        ),
+    ) {
+        val view = LocalView.current
+        DisposableEffect(view) {
+            val window = (view.parent as? DialogWindowProvider)?.window
+            if (window != null) {
+                WindowCompat.getInsetsController(window, view).apply {
+                    hide(WindowInsetsCompat.Type.systemBars())
+                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
                 }
-            },
-            update = { it.player = player },
-            onRelease = { it.player = null },
-            modifier = Modifier.fillMaxSize(),
-        )
-        IconButton(
-            onClick = onClose,
-            modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
-        ) {
-            Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", tint = Color.White)
+            }
+            onDispose { }
+        }
+        BackHandler(onBack = onClose)
+        Box(Modifier.fillMaxSize().background(Color.Black)) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        useController = true
+                        controllerAutoShow = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        setShutterBackgroundColor(android.graphics.Color.BLACK)
+                    }
+                },
+                update = { it.player = player },
+                onRelease = { it.player = null },
+                modifier = Modifier.fillMaxSize(),
+            )
+            IconButton(
+                onClick = onClose,
+                modifier = Modifier.align(Alignment.TopStart).padding(12.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)),
+            ) {
+                Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", tint = Color.White)
+            }
         }
     }
 }
@@ -370,7 +519,9 @@ private fun FullscreenVideo(player: androidx.media3.exoplayer.ExoPlayer?, onClos
 @Composable
 private fun Overlay(
     item: MediaItem,
-    sourceName: String,
+    sourceLabel: String,
+    creator: String?,
+    tags: List<Pair<String, String>>,
     liked: Boolean,
     saved: Boolean,
     muted: Boolean,
@@ -384,94 +535,116 @@ private fun Overlay(
     onTag: (String) -> Unit,
     onMenu: () -> Unit,
 ) {
-    Box(Modifier.fillMaxSize()) {
-        Column(
-            Modifier.align(Alignment.BottomEnd).padding(end = 8.dp, bottom = 36.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            IconButton(onClick = onLike) {
-                Icon(
-                    if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = if (liked) "Unlike" else "Like",
-                    tint = if (liked) HeartRed else Color.White,
-                    modifier = Modifier.size(32.dp),
-                )
-            }
-            IconButton(onClick = onSave) {
-                Icon(
-                    if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
-                    contentDescription = if (saved) "Unsave" else "Save",
-                    tint = Color.White,
-                    modifier = Modifier.size(30.dp),
-                )
-            }
-            if (item.type == MediaType.VIDEO) {
-                IconButton(onClick = onMute) {
-                    Icon(
-                        if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp,
-                        contentDescription = if (muted) "Unmute" else "Mute",
-                        tint = Color.White,
-                    )
-                }
-            }
-            if (canFullscreen) {
-                IconButton(onClick = onFullscreen) {
-                    Icon(Icons.Filled.Fullscreen, contentDescription = "Fullscreen", tint = Color.White, modifier = Modifier.size(30.dp))
-                }
-            }
-            IconButton(onClick = onMenu) { Icon(Icons.Filled.MoreVert, "More", tint = Color.White) }
-        }
-
-        Column(
-            Modifier
-                .align(Alignment.BottomStart)
-                .fillMaxWidth(0.8f)
-                .padding(start = 12.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp),
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(color = Color.White.copy(alpha = 0.18f), shape = RoundedCornerShape(4.dp)) {
+    // One row: the caption takes whatever width the button rail leaves, so they can never overlap.
+    Row(
+        Modifier.fillMaxSize().padding(start = 14.dp, end = 8.dp, bottom = 34.dp),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                sourceLabel,
+                color = Color.White.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier
+                    .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(6.dp))
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            )
+            if (creator != null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        sourceName,
-                        style = MaterialTheme.typography.labelSmall,
+                        "@$creator",
                         color = Color.White,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        style = MaterialTheme.typography.titleSmall.shadowed(),
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
                     )
-                }
-                item.creator?.let { creator ->
-                    Spacer(Modifier.width(8.dp))
-                    Text("@$creator", color = Color.White, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (followingCreator) "Following" else "Follow",
-                        color = Color.White,
-                        style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier
-                            .background(if (followingCreator) Color.Transparent else Color.White.copy(alpha = 0.2f), RoundedCornerShape(4.dp))
-                            .clickable(onClick = onFollow)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
+                    Spacer(Modifier.width(10.dp))
+                    FollowPill(following = followingCreator, onClick = onFollow)
                 }
             }
-            item.title?.let {
-                Text(it, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+            item.title?.takeIf { it.isNotBlank() }?.let {
+                Text(it, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium.shadowed())
             }
-            if (item.tags.isNotEmpty()) {
+            if (tags.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    item.tags.filter { it.length in 2..30 }.take(8).forEach { tag ->
+                    tags.forEach { (label, raw) ->
                         Text(
-                            "#$tag",
+                            "#$label",
                             color = Color.White,
                             style = MaterialTheme.typography.labelMedium,
+                            maxLines = 1,
                             modifier = Modifier
-                                .background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
-                                .clickable { onTag(tag) }
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                                .clip(RoundedCornerShape(50))
+                                .background(Color.Black.copy(alpha = 0.4f))
+                                .clickable { onTag(raw) }
+                                .padding(horizontal = 10.dp, vertical = 4.dp),
                         )
                     }
                 }
             }
         }
+
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LikeButton(liked = liked, onLike = onLike)
+            RailButton(if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (saved) "Saved" else "Save", onSave)
+            if (item.type == MediaType.VIDEO) {
+                RailButton(if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp, if (muted) "Muted" else "Sound", onMute)
+            }
+            if (canFullscreen) RailButton(Icons.Filled.Fullscreen, "Full", onFullscreen)
+            RailButton(Icons.Filled.MoreHoriz, "More", onMenu)
+        }
     }
+}
+
+@Composable
+private fun RailButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    tint: Color = Color.White,
+    iconScale: Float = 1f,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(2.dp),
+    ) {
+        Box(
+            Modifier.size(46.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.3f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                icon,
+                contentDescription = label,
+                tint = tint,
+                modifier = Modifier.size(28.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+            )
+        }
+        Spacer(Modifier.height(3.dp))
+        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall.shadowed())
+    }
+}
+
+/** Like with a little pop when it turns on (not when the page appears already liked). */
+@Composable
+private fun LikeButton(liked: Boolean, onLike: () -> Unit) {
+    val pop = remember { Animatable(1f) }
+    var previous by remember { mutableStateOf(liked) }
+    LaunchedEffect(liked) {
+        if (liked && !previous) {
+            pop.animateTo(1.35f, tween(110))
+            pop.animateTo(1f, spring(dampingRatio = 0.4f))
+        }
+        previous = liked
+    }
+    RailButton(
+        icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+        label = if (liked) "Liked" else "Like",
+        onClick = onLike,
+        tint = if (liked) HeartRed else Color.White,
+        iconScale = pop.value,
+    )
 }

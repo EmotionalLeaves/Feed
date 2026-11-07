@@ -33,6 +33,9 @@ object Features {
     )
     private val SPLIT = Regex("[^\\p{L}\\p{N}'+]+")
 
+    /** True for tags that are on nearly everything (ratings, file formats, "highres"…). */
+    fun isGeneric(tag: String): Boolean = normalizeTag(tag) in GENERIC
+
     fun normalizeTag(tag: String): String = Blocklist.normalize(tag).replace(' ', '_')
 
     fun of(item: MediaItem): List<String> {
