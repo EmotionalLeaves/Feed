@@ -138,8 +138,14 @@ class FeedSession(
             if (candidates.size >= BATCH && inFlight.isNotEmpty()) break
         }
 
-        val batch = takeBatch(mode)
+        // A batch may fall back to running one origin only when variety genuinely isn't available:
+        // either every source is exhausted, or nothing is still loading and the whole pool is one
+        // origin anyway (e.g. the user runs a single image board), so waiting wouldn't help. While
+        // any fetch is still in flight, the batch stops short of a run and fills in on the next load.
         val allDone = adapters.all { it.id in exhausted } && inFlight.isEmpty()
+        val poolOrigins = candidates.mapTo(HashSet()) { Spread.origin(it) }.size
+        val allowForcedRun = allDone || (inFlight.isEmpty() && poolOrigins <= 1)
+        val batch = takeBatch(mode, allowForcedRun = allowForcedRun)
         val end = allDone && candidates.isEmpty() && batch.isEmpty()
         val hint = if (end && shown.isEmpty()) {
             if (errors.isNotEmpty()) "Couldn't load anything. Check Settings → Sources." else "You have seen everything new for now. Tap Refresh in a bit."
@@ -308,7 +314,7 @@ class FeedSession(
 
     // ── ranking ──
 
-    private suspend fun takeBatch(mode: FeedMode): List<MediaItem> {
+    private suspend fun takeBatch(mode: FeedMode, allowForcedRun: Boolean): List<MediaItem> {
         // Re-apply filters: the user may have blocked something or swiped past it since it was pooled.
         val blocklist = blocks.current()
         // Also age out candidates the ranker has passed over for many loads: they're the leftovers.
@@ -325,7 +331,7 @@ class FeedSession(
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
             val ranker = Ranker(settings.get().weights)
-            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown)
+            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun)
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {
                 val pickedKeys = picked.mapTo(HashSet()) { it.key }
@@ -346,10 +352,11 @@ class FeedSession(
                 ),
                 recentShown,
                 BATCH,
+                allowForcedRun = allowForcedRun,
             )
         } else {
             // Latest / Following: newest first, but spaced so one busy source can't fill the screen.
-            Spread.order(candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }, recentShown, BATCH)
+            Spread.order(candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }, recentShown, BATCH, allowForcedRun = allowForcedRun)
         }
 
         val batchKeys = batch.mapTo(HashSet()) { it.key }

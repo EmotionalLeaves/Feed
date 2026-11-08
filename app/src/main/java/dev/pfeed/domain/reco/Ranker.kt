@@ -70,24 +70,29 @@ class Ranker(
         recentSources: List<String> = emptyList(),
         limit: Int = items.size,
         recent: List<MediaItem> = emptyList(),
+        allowForcedRun: Boolean = true,
     ): List<MediaItem> {
         val pool = items.map { Candidate(it, baseScore(it, tagAffinity, creatorAffinity, now), signature(it)) }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
         val recentSigs = ArrayDeque(recent.takeLast(SIMILARITY_WINDOW).map(::signature))
         val out = ArrayList<MediaItem>(limit.coerceIn(0, items.size))
         // Hard spacing (no runs from one subreddit/site/creator/post) decides which candidates are
-        // eligible; the score picks among them.
+        // eligible; the score picks among them. When [allowForcedRun] is false, a pick that would
+        // break a spacing rule is refused (index -1) so the batch stops short rather than running
+        // one origin; the feed resumes next load once more varied candidates arrive.
+        val minLevel = if (allowForcedRun) 0 else Spread.ALL_RULES
         val spread = Spread(recent)
         while (pool.isNotEmpty() && out.size < limit) {
             val index = if (random.nextDouble() < weights.exploration) {
-                spread.pickRandom(pool, { it.item }, random)
+                spread.pickRandom(pool, { it.item }, random, minLevel)
             } else {
-                spread.pick(pool, { it.item }) { c ->
+                spread.pick(pool, { it.item }, minLevel) { c ->
                     c.score +
                         weights.diversity * diversityBonus(c.item.sourceId, window) -
                         weights.similarity * maxSimilarity(c.sig, recentSigs)
                 }
             }
+            if (index < 0) break
             val picked = pool.removeAt(index)
             spread.add(picked.item)
             out += picked.item

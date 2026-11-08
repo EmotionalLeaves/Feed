@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.2.1 — 2026-11-07
+
+No more runs of one source on screen.
+
+- **Root cause:** the spacing rules can only interleave what's in the candidate pool. On a cold start, or any moment when just one source has answered, the pool is briefly all one origin, so the spacer had no choice but to emit it back-to-back — a screen full of one subreddit/site.
+- **Fix:** while any source might still add a different origin, a batch now stops short instead of emitting a forced run; the feed fills the rest on the next load, once varied candidates have arrived (`Spread.order` / `Ranker.rank` gain an `allowForcedRun` flag, wired to whether variety is still coming). A single origin is only ever run when it's genuinely all there is (every source exhausted, or the pool is one origin and nothing is loading — e.g. a lone image board).
+- **Unchanged:** the non-porn filter (board safe ratings, unmarked Mastodon media, SFW-only sites) and the always-on minors filter stay exactly as they were; no other content is filtered.
+- Tests: the single-origin case now asserts no on-screen run; added coverage for cold-start hold-back and the exhausted-source fallback.
+
 ## 1.1.0 — 2026-11-05
 
 More sources and a faster way to add them.

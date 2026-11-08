@@ -40,10 +40,16 @@ class Spread(recent: List<MediaItem> = emptyList()) {
     /**
      * Index of the item [preferred] most among those meeting the strictest level any candidate
      * meets. [preferred] returns a score (higher is better).
+     *
+     * Returns -1 if the best any candidate can do is below [minLevel]. Callers pass [minLevel] =
+     * [ALL_RULES] to refuse a pick that would break a spacing rule (e.g. a forced run from one
+     * origin because the pool has nothing else), so the batch can stop short and resume once more
+     * varied candidates arrive, instead of dumping a run on screen.
      */
-    fun <T> pick(candidates: List<T>, item: (T) -> MediaItem, preferred: (T) -> Double): Int {
+    fun <T> pick(candidates: List<T>, item: (T) -> MediaItem, minLevel: Int = 0, preferred: (T) -> Double): Int {
         val levels = IntArray(candidates.size) { level(item(candidates[it])) }
         val best = levels.maxOrNull() ?: return -1
+        if (best < minLevel) return -1
         var index = -1
         var score = Double.NEGATIVE_INFINITY
         for (i in candidates.indices) {
@@ -54,10 +60,11 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         return index
     }
 
-    /** A random candidate among those meeting the strictest level any candidate meets. */
-    fun <T> pickRandom(candidates: List<T>, item: (T) -> MediaItem, random: kotlin.random.Random): Int {
+    /** A random candidate among those meeting the strictest level any candidate meets, or -1 if that's below [minLevel]. */
+    fun <T> pickRandom(candidates: List<T>, item: (T) -> MediaItem, random: kotlin.random.Random, minLevel: Int = 0): Int {
         val levels = IntArray(candidates.size) { level(item(candidates[it])) }
         val best = levels.maxOrNull() ?: return -1
+        if (best < minLevel) return -1
         val eligible = candidates.indices.filter { levels[it] == best }
         return eligible[random.nextInt(eligible.size)]
     }
@@ -67,6 +74,9 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         const val WINDOW = 12
         const val MAX_PER_ORIGIN = 3
         const val MAX_PER_CREATOR = 2
+
+        /** [level] value meaning every spacing rule is satisfied (no run, no over-used origin/creator/post). */
+        const val ALL_RULES = 3
 
         /** Where an item comes from, at the level you'd notice: subreddit, board site, server, site. */
         fun origin(item: MediaItem): String = when (item.sourceId) {
@@ -87,14 +97,22 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         /**
          * Orders [items] (already in preference order) so the rules above hold as far as possible,
          * taking at most [limit]. Used by the date-ordered feeds (Latest, Following, tags).
+         *
+         * When [allowForcedRun] is false (the default in the feed while any source might still add
+         * variety), the batch stops as soon as the only remaining choice would break a spacing rule,
+         * rather than emitting a run from one origin; the feed fills the rest on the next load, once
+         * more varied candidates have arrived. Set it true only when there's genuinely nothing else
+         * coming, so the feed still fills from whatever single origin is left instead of stalling.
          */
-        fun order(items: List<MediaItem>, recent: List<MediaItem>, limit: Int): List<MediaItem> {
+        fun order(items: List<MediaItem>, recent: List<MediaItem>, limit: Int, allowForcedRun: Boolean = true): List<MediaItem> {
             val spread = Spread(recent)
             val pool = items.toMutableList()
             val out = ArrayList<MediaItem>(minOf(limit, items.size))
+            val minLevel = if (allowForcedRun) 0 else ALL_RULES
             while (pool.isNotEmpty() && out.size < limit) {
                 // Earlier in the list = preferred (newer / better match).
-                val i = spread.pick(pool.withIndex().toList(), { it.value }) { -it.index.toDouble() }
+                val i = spread.pick(pool.withIndex().toList(), { it.value }, minLevel) { -it.index.toDouble() }
+                if (i < 0) break
                 val picked = pool.removeAt(i)
                 out += picked
                 spread.add(picked)

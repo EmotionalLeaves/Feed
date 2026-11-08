@@ -66,9 +66,43 @@ class SpreadAndRatingTest {
     }
 
     @Test
-    fun `never stalls when only one origin is available`() {
+    fun `fills from one origin only when nothing else is coming`() {
         val only = (1..5).map { board("$it", "one.net") }
-        assertEquals(5, Spread.order(only, emptyList(), 12).size)
+        // allowForcedRun = true is the "every source is exhausted, this is all there is" fallback:
+        // better to show the remaining items than stall the feed.
+        assertEquals(5, Spread.order(only, emptyList(), 12, allowForcedRun = true).size)
+    }
+
+    @Test
+    fun `stops short of a run while more varied candidates may still arrive`() {
+        // Pool is briefly all one site (e.g. cold start: only this source has answered so far).
+        val only = (1..12).map { board("$it", "one.net") }
+        // With nothing shown yet, the first item is fine; the rest would be a run, so the batch
+        // stops after one and the feed fills in on the next load once other sources answer.
+        val fresh = Spread.order(only, emptyList(), 12, allowForcedRun = false)
+        assertEquals(1, fresh.size)
+        // If that same site was the last thing shown, even the first pick would be a run: emit
+        // nothing and let the feed wait for variety rather than continue the run across loads.
+        val afterSame = Spread.order(only, listOf(board("0", "one.net")), 12, allowForcedRun = false)
+        assertTrue(afterSame.isEmpty())
+    }
+
+    @Test
+    fun `a full varied pool still fills the batch with no runs`() {
+        // Even with allowForcedRun = false, variety means the batch fills normally.
+        val pool = (1..40).map { i -> board("$i", "site${i % 8}.net") }
+        val ordered = Spread.order(pool, emptyList(), 12, allowForcedRun = false)
+        assertEquals(12, ordered.size)
+        assertNoRuns(ordered)
+    }
+
+    @Test
+    fun `for you holds a run back until variety arrives`() {
+        val loved = (1..20).map { board("$it", "rule34.xxx").copy(tags = listOf("rope")) }
+        val ranked = Ranker(RankWeights(exploration = 0.0), Random(1))
+            .rank(loved, mapOf("rope" to 10.0), emptyMap(), now, limit = 12, allowForcedRun = false)
+        // One strong match leads; the rest would be a run from the same site, so they wait.
+        assertEquals(1, ranked.size)
     }
 
     @Test
