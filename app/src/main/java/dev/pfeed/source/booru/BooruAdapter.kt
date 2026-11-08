@@ -2,6 +2,7 @@ package dev.pfeed.source.booru
 
 import dev.pfeed.data.repo.BooruKeys
 import dev.pfeed.data.settings.BooruFeed
+import dev.pfeed.data.settings.DefaultSources
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.filter.MinorsFilter
 import dev.pfeed.domain.model.AuthContext
@@ -88,6 +89,7 @@ class BooruAdapter @Inject constructor(
 
     override suspend fun entries(): List<String> =
         settings.get().booruFeeds
+            .filterNot { DefaultSources.isSfwOnlyHost(it.host) }
             .map { json.encodeToString(BooruFeed.serializer(), it) }
 
     /**
@@ -117,6 +119,7 @@ class BooruAdapter @Inject constructor(
         val tag = toTag(query)
         if (tag.isEmpty()) return@cachedSearch emptyList()
         val hosts = settings.get().booruFeeds.map { BooruFamily.bareHost(it.host) }.distinct()
+            .filterNot { DefaultSources.isSfwOnlyHost(it) }
         // "rough sex" → the tag rough_sex, and also rough + sex as two tags (boards AND them;
         // Danbooru allows two tags for anonymous users, so at most two words).
         val words = query.trim().lowercase().removePrefix("#").split(Regex("\\s+")).filter { it.isNotBlank() }
@@ -173,7 +176,8 @@ class BooruAdapter @Inject constructor(
      */
     private suspend fun fetchPostsHtml(host: String, tags: String?, page: Int): List<MediaItem> {
         val base = "https://$host"
-        val enc = tags?.trim().orEmpty().let { if (it.isEmpty()) "" else URLEncoder.encode(it, "UTF-8") }
+        // Same exclusions as the API path: this is the default route for rule34/gelbooru without a key.
+        val enc = fullQuery(host, tags).let { if (it.isEmpty()) "" else URLEncoder.encode(it, "UTF-8") }
         val tagsParam = if (enc.isEmpty()) "" else "&tags=$enc"
         val url = "$base/index.php?page=post&s=list&pid=${page * 42}$tagsParam"
 
@@ -201,14 +205,37 @@ class BooruAdapter @Inject constructor(
      * aren't fetched at all; Danbooru caps anonymous searches at 2 tags, so there the post filter
      * does the work instead.
      */
+    /**
+     * The full tag query sent to a board: the feed's tags, plus — where the board accepts long
+     * queries — the negative tags that keep content involving minors out at the source, and a rating
+     * exclusion so safe-rated (non-adult) posts aren't sent at all. Danbooru limits anonymous
+     * searches to two tags, so there both are enforced on the parsed posts instead.
+     */
+    private fun fullQuery(host: String, tags: String?): String {
+        val family = BooruFamily.of(host)
+        val e621Engine = host.endsWith("e621.net") || host.endsWith("e6ai.net")
+        // Gelbooru-engine and e621 accept long queries. Moebooru (yande.re, Konachan) caps anonymous
+        // searches at 6 tags and Danbooru at 2, so those get no negative list (the parsed posts are
+        // filtered instead), and Moebooru gets the one-tag rating exclusion only when there's room.
+        val longQueries = family == BooruFamily.GELBOORU || e621Engine
+        val base = tags?.trim()?.takeIf { it.isNotEmpty() }
+        val baseCount = base?.split(' ')?.count { it.isNotBlank() } ?: 0
+        val asksRating = base?.split(' ')?.any { it.startsWith("rating:") || it.startsWith("-rating:") } == true
+        val notSafe = when {
+            asksRating -> null
+            host.endsWith("gelbooru.com") -> "-rating:general -rating:sensitive"
+            family == BooruFamily.GELBOORU -> "-rating:safe"
+            e621Engine -> "-rating:s"
+            family == BooruFamily.MOEBOORU && baseCount <= 4 -> "-rating:s"
+            else -> null
+        }
+        return listOfNotNull(base, MinorsFilter.booruNegativeTags.takeIf { longQueries }, notSafe).joinToString(" ")
+    }
+
     private fun postsUrl(host: String, tags: String?, page: Int): String {
         val family = BooruFamily.of(host)
         val base = BooruFamily.apiBase(host)
-        val longQueries = family == BooruFamily.GELBOORU || host.endsWith("e621.net") || host.endsWith("e926.net")
-        val query = listOfNotNull(
-            tags?.trim()?.takeIf { it.isNotEmpty() },
-            MinorsFilter.booruNegativeTags.takeIf { longQueries },
-        ).joinToString(" ")
+        val query = fullQuery(host, tags)
         val tagsParam = if (query.isEmpty()) "" else "&tags=" + URLEncoder.encode(query, "UTF-8")
         return when (family) {
             BooruFamily.GELBOORU -> "$base/index.php?page=dapi&s=post&q=index&json=1&limit=40&pid=$page$tagsParam"
@@ -245,7 +272,8 @@ class BooruAdapter @Inject constructor(
             val block = m.value
             val tagsRaw = tagRegex.find(block)?.groupValues?.get(1)
                 ?: titleRegex.find(block)?.groupValues?.get(1)
-            val tags = tagsRaw?.split(Regex("[\\s+]+"))?.filter { it.isNotBlank() }?.take(50).orEmpty()
+            // Keep rating:… (the content filter reads it); drop score:… (bookkeeping, not a topic).
+            val tags = tagsRaw?.split(Regex("[\\s+]+"))?.filter { it.isNotBlank() && !it.startsWith("score:") }?.take(50).orEmpty()
 
             // The listing only gives a still thumbnail, so classify by the post's tags instead of the
             // thumbnail extension: video/webm/mp4 → VIDEO, (animated) gif → GIF, else IMAGE. The real

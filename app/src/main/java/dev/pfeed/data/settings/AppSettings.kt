@@ -67,6 +67,8 @@ data class AppSettings(
     val disguise: Disguise = Disguise.NONE,
     /** Version of the taste model the stored affinities were learned with; see SignalRepository. */
     val tasteModelVersion: Int = 0,
+    /** Version of the built-in content cleanup applied to saved sources; see SettingsRepository. */
+    val contentFilterVersion: Int = 0,
 )
 
 /**
@@ -435,11 +437,7 @@ object DefaultSources {
         BooruFeed("dollbooru.org", "sex"),
         BooruFeed("dollbooru.org", "bondage"),
         // ══ safebooru.donmai.us — ecchi/questionable ══════════════════════════════
-        BooruFeed("safebooru.donmai.us", "1girl rating:sensitive order:random"),
-        BooruFeed("safebooru.donmai.us", "bikini 1girl order:random"),
         // ══ idol.sankakucomplex.com — cosplay/idol ════════════════════════════════
-        BooruFeed("idol.sankakucomplex.com", "nude"),
-        BooruFeed("idol.sankakucomplex.com", "sex"),
 
         // ── tbib.org — large gelbooru-engine mirror, no key needed ────────────────
         BooruFeed("tbib.org", "nude"),
@@ -539,6 +537,23 @@ object DefaultSources {
         BooruFeed("e6ai.net", "sex"),
     )
 
-    /** coomer.su (OnlyFans/Fansly) and kemono.su (Patreon/Fanbox/Fantia), same public API. */
-    val kemonoHosts: List<String> = listOf("coomer.su", "kemono.su")
+    /**
+     * coomer.su (OnlyFans/Fansly). Its sibling kemono.su shares the API but is mostly non-adult
+     * Patreon/Fanbox posts with no rating to filter on, so it isn't a default.
+     */
+    val kemonoHosts: List<String> = listOf("coomer.su")
+
+    /**
+     * Sites whose content is non-adult by design (SFW mirrors and photo/idol boards). Never fetched,
+     * even if added by hand: this app is for adult content and these only dilute the feed.
+     */
+    private val SFW_ONLY_HOSTS = setOf(
+        "safebooru.donmai.us", "safebooru.org", "e926.net", "konachan.net", "idol.sankakucomplex.com",
+        "sakugabooru.com", "kemono.su", "kemono.party", "kemono.cr",
+    )
+
+    fun isSfwOnlyHost(host: String): Boolean {
+        val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")
+        return SFW_ONLY_HOSTS.any { h == it || h.endsWith(".$it") }
+    }
 }

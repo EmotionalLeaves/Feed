@@ -9,6 +9,7 @@ import dev.pfeed.domain.model.Page
 import dev.pfeed.domain.reco.Deduplicator
 import dev.pfeed.domain.reco.Features
 import dev.pfeed.domain.reco.Ranker
+import dev.pfeed.domain.reco.Spread
 import dev.pfeed.source.SourceAdapter
 import dev.pfeed.source.SourceException
 import dev.pfeed.source.SourceRegistry
@@ -93,6 +94,8 @@ class FeedSession(
     private val recentShown = ArrayList<MediaItem>()
     /** Load number each candidate entered the pool, so items passed over again and again age out. */
     private val pooledAt = HashMap<String, Int>()
+    /** Items admitted per post this session, so a huge gallery can't trickle in for an hour. */
+    private val admittedPerPost = HashMap<String, Int>()
 
     // Interest fetching (For You): searches for what the user has shown they like.
     private val interestCursors = HashMap<String, String?>()
@@ -265,14 +268,24 @@ class FeedSession(
         items = dedup.filter(items, hashes)
         // Cap how many candidates any one source holds in the pool, so the fastest/largest source
         // (often one booru) can't crowd out everything else and make the feed feel single-source.
+        // Same idea one level down: no single subreddit/site may fill the pool either, and a big
+        // gallery post (30 images on Coomer) contributes a few images, not all of them.
         val perSource = candidates.groupingBy { it.sourceId }.eachCount().toMutableMap()
+        val perOrigin = candidates.groupingBy { Spread.origin(it) }.eachCount().toMutableMap()
         items.shuffled().forEach { item ->
             val n = perSource[item.sourceId] ?: 0
             if (n >= PER_SOURCE_POOL_CAP) return@forEach
+            val origin = Spread.origin(item)
+            val o = perOrigin[origin] ?: 0
+            if (o >= PER_ORIGIN_POOL_CAP) return@forEach
+            val post = Spread.postKey(item)
+            if (post != null && (admittedPerPost[post] ?: 0) >= MAX_PER_POST) return@forEach
             if (candidateKeys.add(item.key)) {
                 candidates += item
                 pooledAt[item.key] = loads
                 perSource[item.sourceId] = n + 1
+                perOrigin[origin] = o + 1
+                if (post != null) admittedPerPost[post] = (admittedPerPost[post] ?: 0) + 1
             }
         }
         return errors
@@ -326,12 +339,17 @@ class FeedSession(
             picked
         } else if (spec is FeedSpec.Tag) {
             val t = Features.normalizeTag(spec.tag)
-            candidates.sortedWith(
-                compareByDescending<MediaItem> { item -> item.tags.any { Features.normalizeTag(it) == t } }
-                    .thenByDescending { it.publishedAt ?: Instant.EPOCH },
-            ).take(BATCH)
+            Spread.order(
+                candidates.sortedWith(
+                    compareByDescending<MediaItem> { item -> item.tags.any { Features.normalizeTag(it) == t } }
+                        .thenByDescending { it.publishedAt ?: Instant.EPOCH },
+                ),
+                recentShown,
+                BATCH,
+            )
         } else {
-            candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }.take(BATCH)
+            // Latest / Following: newest first, but spaced so one busy source can't fill the screen.
+            Spread.order(candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }, recentShown, BATCH)
         }
 
         val batchKeys = batch.mapTo(HashSet()) { it.key }
@@ -340,7 +358,7 @@ class FeedSession(
         batchKeys.forEach { pooledAt.remove(it) }
         batch.forEach { shown += it.key; recentSources += it.sourceId; recentShown += it }
         if (recentSources.size > 50) recentSources.subList(0, recentSources.size - 50).clear()
-        if (recentShown.size > Ranker.SIMILARITY_WINDOW) recentShown.subList(0, recentShown.size - Ranker.SIMILARITY_WINDOW).clear()
+        if (recentShown.size > Spread.WINDOW) recentShown.subList(0, recentShown.size - Spread.WINDOW).clear()
         return batch
     }
 
@@ -356,6 +374,10 @@ class FeedSession(
         private const val POOL_MAX = 120
         /** Most candidates one source may hold at once (~40% of POOL_TARGET), to keep the feed mixed. */
         private const val PER_SOURCE_POOL_CAP = 20
+        /** Most candidates one subreddit / board site / server may hold at once. */
+        private const val PER_ORIGIN_POOL_CAP = 10
+        /** Most images taken from one multi-image post per session. */
+        private const val MAX_PER_POST = 3
         private const val MAX_ROUNDS = 3
         private const val MAX_SOURCE_FAILURES = 4
         /** First screen: show something as soon as a couple of fast sources answer. */

@@ -86,6 +86,7 @@ object BooruParser {
                 extras = buildMap {
                     put("media", media)
                     score?.let { put("score", it.toLong().toString()) }
+                    dev.pfeed.domain.filter.ContentRating.normalize(str("rating"))?.let { put("rating", it) }
                 },
             )
         }

@@ -36,6 +36,23 @@ class SettingsRepository @Inject constructor(
     }
 
     private fun decode(prefs: Preferences): AppSettings =
-        prefs[key]?.let { runCatching { json.decodeFromString(AppSettings.serializer(), it) }.getOrNull() }
-            ?: AppSettings()
+        (prefs[key]?.let { runCatching { json.decodeFromString(AppSettings.serializer(), it) }.getOrNull() }
+            ?: AppSettings()).let(::migrate)
+
+    /**
+     * One-time cleanups for settings saved by older versions. Pure and idempotent: applied on every
+     * read until the next write persists the result with the new version number.
+     */
+    private fun migrate(s: AppSettings): AppSettings {
+        var out = s
+        if (out.contentFilterVersion < 1) {
+            // v1: drop sites that only host non-adult content (they were in older defaults).
+            out = out.copy(
+                booruFeeds = out.booruFeeds.filterNot { DefaultSources.isSfwOnlyHost(it.host) },
+                kemonoHosts = out.kemonoHosts.filterNot { DefaultSources.isSfwOnlyHost(it) },
+                contentFilterVersion = 1,
+            )
+        }
+        return out
+    }
 }

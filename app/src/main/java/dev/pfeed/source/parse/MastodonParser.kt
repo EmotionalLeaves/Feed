@@ -38,6 +38,8 @@ object MastodonParser {
                 ?.distinct().orEmpty()
 
             val attachments = status["media_attachments"] as? JsonArray ?: continue
+            // Posters mark adult media "sensitive"; unmarked media on these tags is mostly not porn.
+            val sensitive = (status["sensitive"] as? JsonPrimitive)?.contentOrNull == "true"
             for (att in attachments) {
                 val a = att as? JsonObject ?: continue
                 val url = str(a, "url") ?: continue
@@ -58,7 +60,7 @@ object MastodonParser {
                     thumbnailUrl = str(a, "preview_url") ?: url.takeIf { type == MediaType.IMAGE },
                     pageUrl = pageUrl,
                     publishedAt = published,
-                    extras = mapOf("media" to url),
+                    extras = mapOf("media" to url, "sensitive" to sensitive.toString()),
                 )
             }
         }

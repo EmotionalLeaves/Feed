@@ -1,5 +1,6 @@
 package dev.pfeed.source.kemono
 
+import dev.pfeed.data.settings.DefaultSources
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -43,7 +44,7 @@ class KemonoAdapter @Inject constructor(
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
-    override suspend fun entries(): List<String> = settings.get().kemonoHosts
+    override suspend fun entries(): List<String> = settings.get().kemonoHosts.filterNot { DefaultSources.isSfwOnlyHost(it) }
 
     /** Token = offset into the site-wide recent-posts list, in steps of [PAGE]. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
@@ -61,7 +62,7 @@ class KemonoAdapter @Inject constructor(
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        val hosts = settings.get().kemonoHosts
+        val hosts = settings.get().kemonoHosts.filterNot { DefaultSources.isSfwOnlyHost(it) }
         val remote = hosts.flatMap { entry ->
             val host = entry.trim().removePrefix("https://").removePrefix("http://").trim('/')
             runCatching {

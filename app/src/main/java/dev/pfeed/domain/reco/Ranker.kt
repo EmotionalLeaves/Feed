@@ -75,18 +75,21 @@ class Ranker(
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
         val recentSigs = ArrayDeque(recent.takeLast(SIMILARITY_WINDOW).map(::signature))
         val out = ArrayList<MediaItem>(limit.coerceIn(0, items.size))
+        // Hard spacing (no runs from one subreddit/site/creator/post) decides which candidates are
+        // eligible; the score picks among them.
+        val spread = Spread(recent)
         while (pool.isNotEmpty() && out.size < limit) {
             val index = if (random.nextDouble() < weights.exploration) {
-                random.nextInt(pool.size)
+                spread.pickRandom(pool, { it.item }, random)
             } else {
-                pool.indices.maxBy { i ->
-                    val c = pool[i]
+                spread.pick(pool, { it.item }) { c ->
                     c.score +
                         weights.diversity * diversityBonus(c.item.sourceId, window) -
                         weights.similarity * maxSimilarity(c.sig, recentSigs)
                 }
             }
             val picked = pool.removeAt(index)
+            spread.add(picked.item)
             out += picked.item
             window.addLast(picked.item.sourceId)
             if (window.size > DIVERSITY_WINDOW) window.removeFirst()
