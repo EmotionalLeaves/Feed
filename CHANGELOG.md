@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.3.0 — 2026-11-08
+
+~320 more feeds, and existing installs get them too.
+
+- **Reddit:** ~185 more subreddits (amateur/international, body types, acts, fetish, trans/gay/lesbian, hentai/game, categories). Each subreddit is its own origin, so this also widens the variety the spacer has to work with.
+- **Boorus:** ~95 more tag feeds across the reliable no-key hosts (rule34.xxx, gelbooru, e621, danbooru, realbooru, yande.re, konachan, tbib, xbooru, aibooru, e6ai), plus a new host — **rule34.us** (gelbooru engine), registered in `BooruFamily`.
+- **Mastodon:** ~40 more tag timelines on the big instances (mastodon.social, mstdn.jp, lewd.town, yiff.social, femdom.social, and a few more).
+- **Reaches existing installs:** a v2 settings migration merges the grown default library into saved settings — your own entries stay first, defaults are appended and de-duplicated, and SFW-only hosts are still filtered. Before this, new defaults only showed up on a clean install.
+- **Unchanged:** the always-on minors filter and the `pawoo.net`/`baraag.net` exclusion stay; nothing age-adjacent or incest-themed was added.
+
 ## 3.2.1 — 2026-11-07
 
 No more runs of one source on screen.

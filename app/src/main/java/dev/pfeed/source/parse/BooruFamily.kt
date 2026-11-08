@@ -5,7 +5,7 @@ package dev.pfeed.source.parse
  * Everything that depends on the engine goes through here so the feed, search and links agree.
  */
 enum class BooruFamily {
-    /** Gelbooru engine: rule34.xxx, gelbooru.com, tbib, xbooru, realbooru, safebooru.org, hypnohub. */
+    /** Gelbooru engine: rule34.xxx, rule34.us, gelbooru.com, tbib, xbooru, realbooru, safebooru.org, hypnohub. */
     GELBOORU,
     /** moebooru: konachan, yande.re. */
     MOEBOORU,
@@ -16,7 +16,7 @@ enum class BooruFamily {
 
     companion object {
         private val GELBOORU_HOSTS = listOf(
-            "rule34.xxx", "gelbooru.com", "tbib.org", "xbooru.com", "realbooru.com", "safebooru.org", "hypnohub.net",
+            "rule34.xxx", "rule34.us", "gelbooru.com", "tbib.org", "xbooru.com", "realbooru.com", "safebooru.org", "hypnohub.net",
         )
 
         fun of(host: String): BooruFamily {

@@ -53,6 +53,24 @@ class SettingsRepository @Inject constructor(
                 contentFilterVersion = 1,
             )
         }
+        if (out.contentFilterVersion < 2) {
+            // v2: merge the expanded default feed library into existing installs, so saved settings
+            // from before the library grew still pick up the new sources. The user's own entries and
+            // ordering come first; defaults are appended and de-duplicated; SFW-only hosts stay out.
+            out = out.copy(
+                redditSubs = (out.redditSubs + DefaultSources.redditSubs)
+                    .distinctBy { it.trim().lowercase() },
+                mastodonFeeds = (out.mastodonFeeds + DefaultSources.mastodonFeeds)
+                    .distinctBy { it.host.trim().lowercase() + "|" + (it.tag?.trim()?.lowercase() ?: "") },
+                booruFeeds = (out.booruFeeds + DefaultSources.booruFeeds)
+                    .filterNot { DefaultSources.isSfwOnlyHost(it.host) }
+                    .distinctBy { it.host.trim().lowercase() + "|" + (it.tags?.trim()?.lowercase() ?: "") },
+                kemonoHosts = (out.kemonoHosts + DefaultSources.kemonoHosts)
+                    .filterNot { DefaultSources.isSfwOnlyHost(it) }
+                    .distinctBy { it.trim().lowercase() },
+                contentFilterVersion = 2,
+            )
+        }
         return out
     }
 }
