@@ -24,11 +24,18 @@ class SeenItems @Inject constructor(
 
     init {
         scope.launch {
-            libraryDao.keys(LibraryKind.HISTORY.name).collect { keys ->
-                val next = keys.toHashSet()
-                // History shrank → it was cleared or purged; forget the in-memory marks too.
-                if (next.size < persisted.size) recent.clear() else recent.removeAll(next)
-                persisted = next
+            // Load the history keys once, then only watch the row count. Watching the keys
+            // themselves re-read the whole history (often tens of thousands of rows) on every swipe,
+            // because every swipe adds a history row. New views are already in [recent].
+            persisted = libraryDao.keysOnce(LibraryKind.HISTORY.name).toHashSet()
+            var lastCount = persisted.size
+            libraryDao.count(LibraryKind.HISTORY.name).collect { n ->
+                if (n < lastCount) {
+                    // History shrank → it was cleared or purged; forget the in-memory marks too.
+                    persisted = libraryDao.keysOnce(LibraryKind.HISTORY.name).toHashSet()
+                    recent.clear()
+                }
+                lastCount = n
             }
         }
     }

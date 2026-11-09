@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.12.0 — 2026-11-09
+
+Round 6: long-session performance.
+
+- **No more full history re-read on every swipe.** The "already seen" filter re-queried every post in your history (up to 30 days, often tens of thousands of rows) and rebuilt a set from it each time you swiped, because each swipe adds a history row. It now loads history once and only watches the row count (to notice a clear or purge); new views are tracked in memory as they happen.
+
 ## 3.11.0 — 2026-11-09
 
 Round 5: Library and Sources.

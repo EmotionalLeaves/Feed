@@ -26,6 +26,12 @@ interface LibraryDao {
     @Query("SELECT itemKey FROM library WHERE kind = :kind")
     fun keys(kind: String): Flow<List<String>>
 
+    @Query("SELECT itemKey FROM library WHERE kind = :kind")
+    suspend fun keysOnce(kind: String): List<String>
+
+    @Query("SELECT COUNT(*) FROM library WHERE kind = :kind")
+    fun count(kind: String): Flow<Int>
+
     @Query(
         "SELECT i.json FROM library l INNER JOIN items i ON i.itemKey = l.itemKey " +
             "WHERE l.kind = :kind ORDER BY l.at DESC LIMIT :limit",
