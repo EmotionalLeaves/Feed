@@ -118,17 +118,28 @@ class Ranker(
         const val SQUASH_SCALE = 5.0
         /** Vote score treated as "top quality" (1.0). Typical good board posts score 20–300. */
         private const val QUALITY_REF = 300.0
-        /** Items with no vote data (Reddit RSS, Mastodon) sit at a neutral middle. */
-        const val UNKNOWN_QUALITY = 0.35
+        /**
+         * Items with no vote data (Reddit RSS, Mastodon, Coomer) sit at about the median of scored
+         * ones (a 50-vote board post ≈ 0.69, so 0.35 was a quiet penalty on every vote-less source).
+         */
+        const val UNKNOWN_QUALITY = 0.55
         private const val SIG_FEATURES = 20
 
         fun squash(x: Double): Double = tanh(x / SQUASH_SCALE)
 
+        /**
+         * Votes normalised per source: board scores (tens to hundreds) and RedGIFs likes (hundreds to
+         * tens of thousands) aren't on the same scale, and with one shared reference every RedGIFs
+         * clip maxed out and outranked everything else.
+         */
         fun quality(item: MediaItem): Double {
             val score = item.extras["score"]?.toDoubleOrNull() ?: return UNKNOWN_QUALITY
             if (score <= 0) return 0.0
-            return (ln(1 + score) / ln(1 + QUALITY_REF)).coerceIn(0.0, 1.0)
+            val ref = QUALITY_REFS[item.sourceId] ?: QUALITY_REF
+            return (ln(1 + score) / ln(1 + ref)).coerceIn(0.0, 1.0)
         }
+
+        private val QUALITY_REFS = mapOf("redgifs" to 20_000.0, "philomena" to 500.0, "booru" to QUALITY_REF)
 
         /** The features that make an item "the same kind of thing" as another. */
         internal fun signature(item: MediaItem): Set<String> = Features.of(item).take(SIG_FEATURES).toHashSet()

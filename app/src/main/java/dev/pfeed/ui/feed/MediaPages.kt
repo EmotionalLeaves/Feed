@@ -122,7 +122,11 @@ fun VideoPage(
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() { firstFrame = true }
             override fun onPositionDiscontinuity(old: Player.PositionInfo, new: Player.PositionInfo, reason: Int) {
-                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION) stats.replays++
+                // A clip looping on its own only counts as a rewatch when it's long enough that
+                // sitting through it again is a choice. Short loops (most RedGIFs clips) repeat
+                // passively; counting each loop as a replay made the model over-reward them and
+                // drift toward short clips. Dwell and completion already capture those.
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION && stats.durationMs >= MIN_LOOP_AS_REPLAY_MS) stats.replays++
             }
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY && p != null && p.duration > 0) stats.durationMs = p.duration
@@ -376,6 +380,8 @@ fun HeartBurst(position: Offset?, tick: Int) {
 
 /** On screen this long without a single frame: treat as dead and move on. */
 private const val STALL_TIMEOUT_MS = 12_000L
+/** Clips at least this long count an automatic loop as a deliberate rewatch. */
+private const val MIN_LOOP_AS_REPLAY_MS = 15_000L
 private const val MIN_ZOOM = 1f
 private const val MAX_ZOOM = 5f
 /** Past this zoom the original file replaces the sample. */

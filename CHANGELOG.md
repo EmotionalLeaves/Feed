@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.9.0 — 2026-11-09
+
+Round 3: recommendations.
+
+- **Short looping clips no longer hijack your taste.** Every automatic loop of a clip counted as a "rewatch", one of the strongest like signals, so a 3-second RedGIFs loop you sat on for 10 seconds read as a favourite and the feed drifted toward short loops. Automatic loops now count only for clips 15 s or longer; for short ones, time spent and completion carry the signal. Scrubbing back still counts as a rewatch.
+- **Fair quality scores across sources.** RedGIFs like counts and board vote scores were on one scale, so every RedGIFs clip maxed out; each source now has its own scale. Sources with no votes (Reddit, Mastodon, Coomer) sit at the median instead of a hidden penalty.
+
 ## 3.8.0 — 2026-11-09
 
 Round 2: search.

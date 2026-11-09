@@ -92,3 +92,20 @@ class TransientFeedHolderTest {
         org.junit.Assert.assertNull(h.continuation(withQuery))
     }
 }
+
+class QualityScaleTest {
+    private fun scored(source: String, score: Long) =
+        item("$source-$score", source = source).copy(extras = mapOf("score" to score.toString()))
+
+    @Test
+    fun `vote scores are normalised per source`() {
+        val r = dev.pfeed.domain.reco.Ranker
+        // A popular-but-ordinary RedGIFs clip shouldn't max out the way it did with the board scale.
+        assertTrue(r.quality(scored("redgifs", 2_000)) < 0.85)
+        assertTrue(r.quality(scored("booru", 300)) >= 0.99)
+        // A vote-less post sits near an average scored one, not far below it.
+        val unscored = r.quality(item("x", source = "reddit"))
+        val median = r.quality(scored("booru", 50))
+        assertTrue(kotlin.math.abs(unscored - median) < 0.2)
+    }
+}
