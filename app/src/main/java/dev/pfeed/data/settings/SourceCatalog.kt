@@ -134,7 +134,7 @@ object SourceCatalog {
         "animated", "comic", "corruption", "drool",
     )
 
-    /** Body type × act pairings on the three biggest boards: common tags, so nearly all return posts. */
+    /** Body type × act pairings on the biggest boards (empty pairings get pruned by feed health). */
     private val pairBodies = listOf(
         "huge_breasts", "large_breasts", "milf", "mature_female", "dark-skinned_female", "muscular_female",
         "thick_thighs", "huge_ass", "futanari", "elf", "cat_girl", "succubus", "tan", "gyaru", "plump", "curvy",
@@ -148,6 +148,8 @@ object SourceCatalog {
         for (b in pairBodies) for (a in pairActs) {
             add(BooruFeed("rule34.xxx", "$b $a"))
             add(BooruFeed("gelbooru.com", "$b $a"))
+            add(BooruFeed("tbib.org", "$b $a"))
+            add(BooruFeed("rule34.us", "$b $a"))
             // Danbooru: two tags is the anonymous limit; the post-level rating filter drops safe ones.
             add(BooruFeed("danbooru.donmai.us", "$b $a"))
         }

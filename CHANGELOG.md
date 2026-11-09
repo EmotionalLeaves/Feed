@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.15.0 — 2026-11-09
+
+Round 9: library growth.
+
+- **+512 board feeds:** the body type × act pairings now also run on tbib and rule34.us (≈5,900 built-in feeds). Pairings with no posts are pruned automatically by feed health. Library version 7.
+
 ## 3.14.0 — 2026-11-09
 
 Round 8: code health.
