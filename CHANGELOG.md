@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.14.0 — 2026-11-09
+
+Round 8: code health.
+
+- Build is warning-free: replaced the last deprecated icons (volume on/off) with their auto-mirrored versions.
+
 ## 3.13.0 — 2026-11-09
 
 Round 7: privacy and safety audit.

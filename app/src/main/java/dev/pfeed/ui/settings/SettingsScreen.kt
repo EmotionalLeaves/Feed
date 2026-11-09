@@ -29,7 +29,7 @@ import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.Tune
 import androidx.compose.material.icons.filled.Upload
-import androidx.compose.material.icons.filled.VolumeOff
+import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -115,7 +115,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         NavRow("Blocked", "Tags, creators and posts you've hidden", Icons.Filled.Block) { nav.navigate(Routes.BLOCKLIST) }
 
         Header("Playback")
-        SwitchRow("Start muted", s.defaultMute, Icons.Filled.VolumeOff, vm::setDefaultMute)
+        SwitchRow("Start muted", s.defaultMute, Icons.AutoMirrored.Filled.VolumeOff, vm::setDefaultMute)
         SwitchRow("Autoplay on mobile data", s.autoplayOnMobileData, Icons.Filled.SignalCellularAlt, vm::setAutoplayOnMobile)
         val cacheIndex = cacheSteps.indexOf(s.cacheSizeMb).takeIf { it >= 0 } ?: 2
         LabeledSlider(
