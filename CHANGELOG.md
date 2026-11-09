@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.10.0 — 2026-11-09
+
+Round 4: playback.
+
+- **Unplugging headphones never plays sound on the speaker.** Disconnecting headphones or Bluetooth mutes the feed (with a short notice) and keeps playing silently; before, unmuted audio moved straight to the speaker.
+- **Muted feed doesn't stop your music.** While muted the player no longer takes audio focus, so a podcast or music keeps playing underneath. With sound on it takes focus normally, and a call pauses the video.
+- **Screen stays awake** while the feed is on screen, so long videos don't get cut off by the screen timeout.
+
 ## 3.9.0 — 2026-11-09
 
 Round 3: recommendations.

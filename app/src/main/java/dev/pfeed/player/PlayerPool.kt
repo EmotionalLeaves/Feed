@@ -69,11 +69,30 @@ class PlayerPool @Inject constructor(
                 .setBufferDurationsMs(2_500, 15_000, 500, 1_000)
                 .build(),
         )
+        // Headphones unplugged / Bluetooth dropped → pause, so sound never jumps to the speaker.
+        .setHandleAudioBecomingNoisy(true)
         .build()
-        .apply { repeatMode = Player.REPEAT_MODE_ONE }
+        .apply {
+            repeatMode = Player.REPEAT_MODE_ONE
+            setAudioAttributes(MOVIE, /* handleAudioFocus = */ false)
+        }
         .also { players[i] = it }
 
     companion object {
         const val SIZE = 4
+
+        val MOVIE: androidx.media3.common.AudioAttributes = androidx.media3.common.AudioAttributes.Builder()
+            .setUsage(androidx.media3.common.C.USAGE_MEDIA)
+            .setContentType(androidx.media3.common.C.AUDIO_CONTENT_TYPE_MOVIE)
+            .build()
+
+        /**
+         * Muted: don't take audio focus, so music or a podcast keeps playing under a silent feed.
+         * With sound: take focus (other audio pauses; a call pauses the video).
+         */
+        fun applyMute(player: ExoPlayer, muted: Boolean) {
+            player.volume = if (muted) 0f else 1f
+            player.setAudioAttributes(MOVIE, !muted)
+        }
     }
 }

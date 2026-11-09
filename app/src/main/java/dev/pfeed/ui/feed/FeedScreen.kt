@@ -124,6 +124,12 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
+    // Keep the screen awake while the feed is on screen (long videos, long comics).
+    val hostView = LocalView.current
+    DisposableEffect(active) {
+        hostView.keepScreenOn = active
+        onDispose { hostView.keepScreenOn = false }
+    }
     LaunchedEffect(pagerState) {
         // Also fires when a different item slides into the settled slot (a broken item was dropped),
         // so dwell and "seen" tracking always follow what's actually on screen.

@@ -268,6 +268,14 @@ class FeedViewModel @Inject constructor(
 
     fun toggleMute() { _muted.value = !_muted.value }
 
+    /** Audio route went away (headphones unplugged): silence the feed rather than use the speaker. */
+    fun muteNow() {
+        if (!_muted.value) {
+            _muted.value = true
+            _messages.tryEmit("Headphones disconnected: muted")
+        }
+    }
+
     // ---- dwell tracking & signals ----
 
     fun onPageSettled(index: Int) {

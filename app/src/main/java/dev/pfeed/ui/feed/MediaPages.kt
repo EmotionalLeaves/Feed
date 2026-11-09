@@ -132,6 +132,15 @@ fun VideoPage(
                 if (state == Player.STATE_READY && p != null && p.duration > 0) stats.durationMs = p.duration
             }
             override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item) }
+            // Headphones unplugged: the player paused itself so nothing played on the speaker.
+            // Mute the feed and carry on silently instead of leaving a frozen video.
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (!playWhenReady && reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_BECOMING_NOISY && p != null) {
+                    vm.muteNow()
+                    dev.pfeed.player.PlayerPool.applyMute(p, muted = true)
+                    p.playWhenReady = true
+                }
+            }
         }
         p?.addListener(listener)
         onDispose { p?.removeListener(listener) }
@@ -145,7 +154,7 @@ fun VideoPage(
             if (!firstFrame) vm.markBroken(item)
         }
     }
-    LaunchedEffect(player, muted) { player?.volume = if (muted) 0f else 1f }
+    LaunchedEffect(player, muted) { player?.let { dev.pfeed.player.PlayerPool.applyMute(it, muted) } }
 
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AndroidView(
