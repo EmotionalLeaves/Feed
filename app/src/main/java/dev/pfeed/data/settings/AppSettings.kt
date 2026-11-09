@@ -52,7 +52,7 @@ data class AppSettings(
     val redditSubs: List<String> = DefaultSources.redditSubs,
     val mastodonFeeds: List<MastodonFeed> = DefaultSources.mastodonFeeds,
     val booruFeeds: List<BooruFeed> = DefaultSources.booruFeeds,
-    /** coomer.su / kemono.su hosts (OnlyFans/Fansly/Patreon aggregators, shared API). */
+    /** coomer.st / kemono hosts (OnlyFans/Fansly/Patreon aggregators, shared API). */
     val kemonoHosts: List<String> = DefaultSources.kemonoHosts,
     val jsonFeeds: List<JsonFeed> = emptyList(),
     /** Storage Access Framework tree URIs. Device-specific, so not imported from backups. */
@@ -71,6 +71,16 @@ data class AppSettings(
     val contentFilterVersion: Int = 0,
 )
 
+/** Fediverse instances known for hosting sexualized depictions of minors: never seeded, never fetched. */
+object MastodonExclusions {
+    private val HOSTS = setOf("pawoo.net", "baraag.net")
+
+    fun isExcluded(host: String): Boolean {
+        val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/')
+        return HOSTS.any { h == it || h.endsWith(".$it") }
+    }
+}
+
 /**
  * Out-of-the-box source library so the app has content on first launch with zero setup.
  * All sources are public, unauthenticated APIs or documented JSON endpoints.
@@ -78,7 +88,7 @@ data class AppSettings(
 object DefaultSources {
 
     /** Popular NSFW subreddits (read via reddit.com/r/NAME/hot.json — public, no login). */
-    val redditSubs: List<String> = listOf(
+    private val curatedRedditSubs: List<String> = listOf(
         // ── Rough / hardcore / BDSM (prioritised per user preference) ──────────────
         "BDSM", "BDSMcommunity", "BDSMpics", "BDSMvideos",
         "Bondage", "bondagegirls", "tiedandbound", "tiedup",
@@ -268,7 +278,7 @@ object DefaultSources {
     )
 
     /** Mastodon/Fediverse NSFW instances with active public media timelines. */
-    val mastodonFeeds: List<MastodonFeed> = listOf(
+    private val curatedMastodonFeeds: List<MastodonFeed> = listOf(
         // ── mstdn.jp — very large Japanese instance, lots of adult art ────────────
         MastodonFeed("mstdn.jp", "nsfw"),
         MastodonFeed("mstdn.jp", "hentai"),
@@ -386,7 +396,7 @@ object DefaultSources {
      * Booru/image-board API endpoints — Danbooru-compatible JSON.
      * BooruAdapter auto-detects the correct API path per board family.
      */
-    val booruFeeds: List<BooruFeed> = listOf(
+    private val curatedBooruFeeds: List<BooruFeed> = listOf(
 
         // ── rule34.xxx — works via HTML fallback when no API key is set ──────────
         BooruFeed("rule34.xxx", "bondage"),
@@ -742,11 +752,19 @@ object DefaultSources {
         BooruFeed("e6ai.net", "anal"),
     )
 
+    /** Hand-picked feeds first, then the generated [SourceCatalog]; de-duplicated. */
+    val redditSubs: List<String> = (curatedRedditSubs + SourceCatalog.redditSubs).distinctBy { it.trim().lowercase() }
+    val mastodonFeeds: List<MastodonFeed> = (curatedMastodonFeeds + SourceCatalog.mastodonFeeds)
+        .filterNot { MastodonExclusions.isExcluded(it.host) }
+        .distinctBy { it.host.trim().lowercase() + "|" + (it.tag?.trim()?.lowercase() ?: "") }
+    val booruFeeds: List<BooruFeed> = (curatedBooruFeeds + SourceCatalog.booruFeeds)
+        .distinctBy { it.host.trim().lowercase() + "|" + (it.tags?.trim()?.lowercase() ?: "") }
+
     /**
-     * coomer.su (OnlyFans/Fansly). Its sibling kemono.su shares the API but is mostly non-adult
-     * Patreon/Fanbox posts with no rating to filter on, so it isn't a default.
+     * coomer.st (OnlyFans/Fansly; moved from coomer.su in 2025). Its sibling kemono shares the API but
+     * is mostly non-adult Patreon/Fanbox posts with no rating to filter on, so it isn't a default.
      */
-    val kemonoHosts: List<String> = listOf("coomer.su")
+    val kemonoHosts: List<String> = listOf("coomer.st")
 
     /**
      * Sites whose content is non-adult by design (SFW mirrors and photo/idol boards). Never fetched,

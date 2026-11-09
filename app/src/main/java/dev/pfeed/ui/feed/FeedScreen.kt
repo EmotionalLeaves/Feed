@@ -60,6 +60,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
@@ -229,7 +230,7 @@ private fun FeedEmptyState(
             Text("Loading your feed…", color = Color.White, style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(6.dp))
             Text(
-                "Pulling from dozens of sources",
+                "Pulling from thousands of feeds",
                 color = Color.White.copy(alpha = 0.5f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -343,7 +344,11 @@ private fun FeedPage(
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
     var speeding by remember(item.key) { mutableStateOf(false) }
     var fullscreen by remember(item.key) { mutableStateOf(false) }
-    val isVideo = item.type == MediaType.VIDEO
+    // What the post really is once its file is known: a board/Reddit post listed as an image can turn
+    // out to be an MP4/WebM, which must play as a video (drawn as an image it froze on one frame).
+    val stream by produceState<dev.pfeed.domain.model.StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
+    val type = remember(item.key, stream) { Display.effectiveType(item, stream) }
+    val isVideo = type == MediaType.VIDEO
 
     // Hold the right side of a video to play at 2×; release to go back to 1×.
     LaunchedEffect(player, speeding) { player?.setPlaybackSpeed(if (speeding) 2f else 1f) }
@@ -382,7 +387,7 @@ private fun FeedPage(
                 }
             },
     ) {
-        when (item.type) {
+        when (type) {
             MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, detached = fullscreen)
             MediaType.IMAGE, MediaType.GIF -> ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
@@ -425,6 +430,7 @@ private fun FeedPage(
             saved = saved,
             muted = muted,
             followingCreator = followingCreator,
+            isVideo = isVideo,
             canFullscreen = isVideo,
             onLike = { vm.toggleLike(item) },
             onSave = { vm.toggleSave(item) },
@@ -526,6 +532,7 @@ private fun Overlay(
     saved: Boolean,
     muted: Boolean,
     followingCreator: Boolean,
+    isVideo: Boolean,
     canFullscreen: Boolean,
     onLike: () -> Unit,
     onSave: () -> Unit,
@@ -591,7 +598,7 @@ private fun Overlay(
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LikeButton(liked = liked, onLike = onLike)
             RailButton(if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (saved) "Saved" else "Save", onSave)
-            if (item.type == MediaType.VIDEO) {
+            if (isVideo) {
                 RailButton(if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp, if (muted) "Muted" else "Sound", onMute)
             }
             if (canFullscreen) RailButton(Icons.Filled.Fullscreen, "Full", onFullscreen)

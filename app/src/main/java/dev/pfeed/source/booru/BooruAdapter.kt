@@ -87,10 +87,18 @@ class BooruAdapter @Inject constructor(
         else -> url
     }
 
-    override suspend fun entries(): List<String> =
-        settings.get().booruFeeds
+    /** Encoded entries for the last feed list seen (by identity): there are a thousand-plus of them. */
+    @Volatile private var encoded: Pair<List<BooruFeed>, List<String>>? = null
+
+    override suspend fun entries(): List<String> {
+        val feeds = settings.get().booruFeeds
+        encoded?.let { (src, out) -> if (src === feeds) return out }
+        val out = feeds
             .filterNot { DefaultSources.isSfwOnlyHost(it.host) }
             .map { json.encodeToString(BooruFeed.serializer(), it) }
+        encoded = feeds to out
+        return out
+    }
 
     /**
      * Token = page index (0-based). A fresh start opens on a random page among the first few, so

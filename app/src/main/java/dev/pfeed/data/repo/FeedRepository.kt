@@ -270,7 +270,9 @@ class FeedSession(
                     item.tags.any { Blocklist.normalize(it) in follows.tags }
             }
         }
-        val hashes = withTimeoutOrNull(HASH_BUDGET_MS) { hasher.hashAll(items) } ?: hasher.cached(items)
+        // Near-duplicate detection hashes thumbnails; on the very first screen don't hold it up for long.
+        val hashBudget = if (shown.isEmpty()) FIRST_HASH_BUDGET_MS else HASH_BUDGET_MS
+        val hashes = withTimeoutOrNull(hashBudget) { hasher.hashAll(items) } ?: hasher.cached(items)
         items = dedup.filter(items, hashes)
         // Cap how many candidates any one source holds in the pool, so the fastest/largest source
         // (often one booru) can't crowd out everything else and make the feed feel single-source.
@@ -391,7 +393,8 @@ class FeedSession(
         private const val FIRST_WAIT_MS = 3_500L
         private const val TOP_UP_WAIT_MS = 1_200L
         private const val HARD_WAIT_MS = 40_000L
-        private const val HASH_BUDGET_MS = 2_000L
+        private const val HASH_BUDGET_MS = 1_500L
+        private const val FIRST_HASH_BUDGET_MS = 400L
         /** A candidate passed over for this many loads (~12 items each) is dropped. */
         private const val STALE_LOADS = 8
         private const val INTEREST_PREFIX = "interest|"

@@ -34,6 +34,8 @@ class ThumbnailHasher @Inject constructor(@ApplicationContext private val contex
 
     suspend fun hash(url: String?): Long? {
         if (url.isNullOrBlank()) return null
+        // A video file as "thumbnail" would mean downloading the clip to hash one frame.
+        if (dev.pfeed.source.parse.MediaTypes.classify(url) == dev.pfeed.domain.model.MediaType.VIDEO) return null
         memo.get(url)?.let { return it }
         val value = permits.withPermit {
             withTimeoutOrNull(TIMEOUT_MS) {

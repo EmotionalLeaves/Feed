@@ -1,0 +1,223 @@
+package dev.pfeed.data.settings
+
+/**
+ * The large built-in source library, generated from real board hosts × real tag vocabularies (and
+ * real RedGIFs search terms), so every entry is a query that actually returns posts. Merged into
+ * [DefaultSources] and, through a settings migration, into existing installs.
+ *
+ * Nothing here is age-adjacent: no school, petite/flat or age-play tags on drawn boards, and no
+ * "teen" searches. The always-on minors filter still applies on top of all of it.
+ */
+object SourceCatalog {
+
+    // ── Image boards ────────────────────────────────────────────────────────────
+
+    /** Gelbooru-engine anime/art boards: they share the Danbooru-style tag vocabulary. */
+    private val ANIME_GELBOORU_HOSTS = listOf("rule34.xxx", "gelbooru.com", "tbib.org", "xbooru.com", "rule34.us")
+
+    /** Danbooru-engine boards: anonymous searches allow two tags, so it's always "rating:explicit TAG". */
+    private val DANBOORU_HOSTS = listOf("danbooru.donmai.us", "aibooru.online")
+
+    private val E621_HOSTS = listOf("e621.net", "e6ai.net")
+
+    private val MOEBOORU_HOSTS = listOf("yande.re", "konachan.com")
+
+    /** Danbooru-style tags (drawn/3D). */
+    val animeTags: List<String> = listOf(
+        // acts
+        "sex", "vaginal", "anal", "oral", "fellatio", "deepthroat", "irrumatio", "cunnilingus", "anilingus",
+        "paizuri", "handjob", "footjob", "thigh_sex", "masturbation", "fingering", "female_masturbation",
+        "group_sex", "threesome", "ffm_threesome", "mmf_threesome", "gangbang", "double_penetration",
+        "spitroast", "orgy", "bukkake", "creampie", "cum_in_pussy", "cum_in_mouth", "cum_in_ass",
+        "cum_on_body", "cum_on_breasts", "facial", "cum_drip", "cum_overflow", "excessive_cum", "gokkun",
+        "after_sex", "ejaculation", "squirting", "female_ejaculation", "orgasm", "trembling",
+        // positions
+        "doggystyle", "sex_from_behind", "cowgirl_position", "reverse_cowgirl_position", "missionary",
+        "mating_press", "standing_sex", "full_nelson", "suspended_congress", "prone_bone", "lotus_position",
+        "spooning", "piledriver_(sex)", "69",
+        // kinks
+        "bondage", "bdsm", "shibari", "rope", "restrained", "bound_wrists", "gag", "ball_gag", "blindfold",
+        "collar", "leash", "chain", "handcuffs", "femdom", "pegging", "strap-on", "sex_toy", "vibrator",
+        "dildo", "anal_beads", "butt_plug", "mind_control", "hypnosis", "ahegao", "fucked_silly", "drooling",
+        "x-ray", "cross-section", "impregnation", "pregnant", "lactation", "spanking", "choking",
+        "humiliation", "exhibitionism", "public_indecency", "voyeurism", "stomach_bulge", "size_difference",
+        "tentacles", "tentacle_sex", "futanari", "futa_with_female", "futa_with_futa", "yuri", "yaoi",
+        "monster_girl", "succubus", "demon_girl", "elf", "dark_elf", "cat_girl", "fox_girl", "bunny_girl",
+        "slime_girl", "lamia", "harpy", "orc", "goblin",
+        // bodies (adult-coded)
+        "huge_breasts", "large_breasts", "gigantic_breasts", "sagging_breasts", "milf", "mature_female",
+        "curvy", "thick_thighs", "wide_hips", "plump", "huge_ass", "ass_focus", "muscular_female", "abs",
+        "dark-skinned_female", "tan", "tanlines", "gyaru", "pubic_hair", "hairy_pussy", "nipples",
+        "inverted_nipples", "puffy_nipples", "pussy", "spread_pussy", "spread_legs", "spread_ass",
+        "presenting", "completely_nude", "nude", "uncensored", "huge_penis", "large_penis",
+        // outfits
+        "thighhighs", "pantyhose", "stockings", "garter_belt", "lingerie", "bikini", "micro_bikini",
+        "bodysuit", "latex", "leotard", "playboy_bunny", "maid", "nurse", "nun", "office_lady",
+        "fishnets", "high_heels", "see-through", "wet_clothes", "torn_clothes", "naked_apron",
+        // media
+        "animated", "video", "sound", "3d", "comic", "pov",
+    )
+
+    /** Real-photo tags (realbooru). */
+    val photoTags: List<String> = listOf(
+        "sex", "blowjob", "deepthroat", "anal", "creampie", "cumshot", "facial", "cum_in_mouth", "swallowing",
+        "threesome", "gangbang", "double_penetration", "orgy", "lesbian", "solo_female", "masturbation",
+        "fingering", "dildo", "vibrator", "squirting", "orgasm", "pov", "doggy_style", "cowgirl",
+        "reverse_cowgirl", "missionary", "riding", "titfuck", "handjob", "footjob", "big_breasts",
+        "huge_breasts", "natural_breasts", "big_ass", "pawg", "thick", "curvy", "chubby", "bbw", "fit",
+        "milf", "mature", "asian", "japanese", "latina", "ebony", "indian", "redhead", "blonde", "brunette",
+        "tattoo", "piercing", "pierced_nipples", "hairy_pussy", "shaved_pussy", "pussy", "spread_legs",
+        "lingerie", "stockings", "pantyhose", "high_heels", "bikini", "yoga_pants", "cosplay", "outdoor",
+        "public", "shower", "bondage", "bdsm", "rope", "spanking", "choking", "rough_sex", "interracial",
+        "bbc", "cuckold", "femdom", "strapon", "pegging", "feet", "ass_to_mouth", "gape", "selfie",
+        "mirror_selfie", "amateur", "pornstar", "video", "animated", "gif",
+    )
+
+    /** e621-style tags (furry/anthro; feral excluded). */
+    val furryTags: List<String> = listOf(
+        "anthro", "sex", "anal", "oral", "vaginal_penetration", "knot", "knotting", "cum_inside", "cum_on_face",
+        "cumshot", "excessive_cum", "creampie", "bondage", "bdsm", "femdom", "gangbang", "threesome",
+        "group_sex", "masturbation", "solo", "presenting", "spread_legs", "nude", "big_breasts",
+        "huge_breasts", "big_butt", "thick_thighs", "muscular", "muscular_female", "big_penis", "huge_penis",
+        "male/female", "female/female", "male/male", "intersex", "gynomorph", "herm", "tentacles",
+        "inflation", "pregnant", "latex", "rubber", "collar", "leash", "hypnosis", "transformation",
+        "canine", "feline", "equine", "dragon", "scalie", "avian", "bovine", "lagomorph", "vulpine",
+        "lupine", "animated", "3d_(artwork)", "comic", "pov", "ahegao", "orgasm", "cum_drip",
+    )
+
+    /** moebooru tags (yande.re / Konachan). */
+    val moebooruTags: List<String> = listOf(
+        "sex", "nipples", "pussy", "cum", "naked", "breasts", "bondage", "anal", "fellatio", "paizuri",
+        "masturbation", "yuri", "tentacles", "thighhighs", "lingerie", "bikini", "nopan", "uncensored",
+        "erect_nipples", "breast_hold", "ass", "pussy_juice", "spread_legs", "topless", "bottomless",
+        "censored", "futanari", "dildo", "garter", "pantyhose",
+    )
+
+    val booruFeeds: List<BooruFeed> = buildList {
+        for (tag in animeTags) for (host in ANIME_GELBOORU_HOSTS) add(BooruFeed(host, tag))
+        for (tag in animeTags) for (host in DANBOORU_HOSTS) add(BooruFeed(host, "rating:explicit $tag"))
+        for (tag in photoTags) add(BooruFeed("realbooru.com", tag))
+        for (tag in furryTags) for (host in E621_HOSTS) add(BooruFeed(host, "$tag rating:e"))
+        for (tag in moebooruTags) for (host in MOEBOORU_HOSTS) add(BooruFeed(host, "$tag rating:e"))
+    }
+
+    // ── RedGIFs ─────────────────────────────────────────────────────────────────
+
+    private val redgifsCategories = listOf(
+        "amateur", "homemade", "couple", "real couple", "pov", "close up", "60fps", "4k", "onlyfans",
+        "blowjob", "deepthroat", "sloppy blowjob", "throatpie", "face fuck", "handjob", "titfuck", "footjob",
+        "anal", "anal creampie", "ass to mouth", "gape", "creampie", "cumshot", "facial", "cum in mouth",
+        "swallow", "cum on tits", "cum on ass", "bukkake", "squirting", "orgasm", "female orgasm",
+        "shaking orgasm", "edging", "ruined orgasm", "masturbation", "fingering", "dildo", "vibrator",
+        "toys", "riding", "cowgirl", "reverse cowgirl", "doggystyle", "missionary", "mating press",
+        "prone bone", "standing sex", "rough", "rough sex", "choking", "hair pulling", "spanking", "slapping",
+        "bdsm", "bondage", "tied up", "shibari", "gagged", "collar", "submissive", "dominant", "femdom",
+        "pegging", "strapon", "degradation", "cnc", "breeding", "threesome", "ffm", "mmf", "foursome",
+        "gangbang", "orgy", "double penetration", "spitroast", "group sex", "lesbian", "lesbian strapon",
+        "scissoring", "kissing", "big tits", "huge tits", "natural tits", "small tits", "bouncing tits",
+        "big ass", "pawg", "thick", "curvy", "chubby", "bbw", "fit", "muscle girl", "skinny", "tall",
+        "short", "milf", "mature", "cougar", "college", "asian", "japanese", "korean", "chinese", "thai",
+        "filipina", "indian", "latina", "brazilian", "colombian", "ebony", "black", "white", "redhead",
+        "blonde", "brunette", "goth", "alt", "emo", "tattoo", "piercing", "pierced nipples", "pale",
+        "tan lines", "freckles", "glasses", "hairy", "shaved", "pussy", "pussy close up", "ass close up",
+        "feet", "soles", "legs", "thighs", "stockings", "fishnets", "pantyhose", "lingerie", "heels",
+        "yoga pants", "leggings", "bikini", "thong", "panties", "latex", "leather", "cosplay", "anime cosplay",
+        "nurse", "maid", "public", "outdoor", "beach", "car sex", "shower", "bathtub", "oiled", "massage",
+        "caught", "risky", "flashing", "voyeur", "striptease", "dancing", "twerking", "jiggle", "booty shake",
+        "interracial", "bbc", "cuckold", "hotwife", "wife sharing", "cheating", "glory hole", "casting",
+        "big dick", "monster cock", "huge cock", "cock worship", "ball sucking", "rimming", "ass eating",
+        "pussy eating", "facesitting", "69", "trans", "tgirl", "futanari", "femboy", "gay", "bisexual",
+        "hentai", "3d hentai", "animated hentai", "rule34", "sfm", "blender", "overwatch", "genshin",
+        "jav", "uncensored jav", "pornstar", "camgirl", "selfie", "mirror", "teasing", "joi", "asmr",
+        "moaning", "talking dirty", "sex sounds", "slow motion", "compilation", "cumshot compilation",
+        "rough anal", "deep anal", "anal gape", "anal toys", "plug", "fisting", "squirt compilation",
+    )
+
+    private val redgifsWho = listOf(
+        "milf", "asian", "latina", "ebony", "redhead", "blonde", "brunette",
+        "pawg", "thick", "goth", "japanese", "indian", "big tits", "amateur", "college", "mature",
+        "fit", "tattooed", "busty", "curvy",
+    )
+    private val redgifsWhat = listOf(
+        "blowjob", "anal", "creampie", "riding", "doggystyle", "squirting", "deepthroat", "facial",
+        "threesome", "pov", "rough", "bondage", "masturbation", "orgasm", "titfuck",
+    )
+
+    /** Categories, plus "who × what" pairings (e.g. "milf anal"), each its own trending feed. */
+    val redgifsTerms: List<String> = (redgifsCategories + redgifsWho.flatMap { w -> redgifsWhat.map { "$w $it" } })
+        .map { it.trim().lowercase() }
+        .filter { it.isNotBlank() }
+        .distinct()
+
+    // ── Mastodon ────────────────────────────────────────────────────────────────
+
+    private val mastodonTags = listOf(
+        "nsfw", "porn", "nude", "nudes", "lewd", "hentai", "rule34", "bdsm", "bondage", "kink", "shibari",
+        "femdom", "amateur", "boobs", "ass", "pussy", "cock", "blowjob", "anal", "cum", "milf", "feet",
+        "latex", "cosplay", "furry", "yiff", "futanari", "yuri", "gay", "trans", "selfie", "nsfwart",
+    )
+    private val MASTODON_HOSTS = listOf("mastodon.social", "mstdn.social", "mas.to", "lewd.town", "kinky.business", "sinblr.com")
+
+    val mastodonFeeds: List<MastodonFeed> = buildList {
+        for (tag in mastodonTags) for (host in MASTODON_HOSTS) add(MastodonFeed(host, tag))
+    }
+
+    // ── Reddit ──────────────────────────────────────────────────────────────────
+
+    /** Additional well-known NSFW subreddits (dead or renamed ones are dropped after a few failures). */
+    val redditSubs: List<String> = listOf(
+        // amateur / general
+        "Amateur", "AmateurPorn", "amateurgirlsbigcocks", "AmateurPornVideos", "RealGirls", "NSFW_GIF",
+        "nsfw_gifs", "porn_gifs", "PornGifs", "NSFW_HTML5", "60FPSPorn", "HighResNSFW", "UHDnsfw",
+        "LabiaGW", "GirlsFinishingTheJob", "HappyEmbarrassedGirls", "UnderwearGW", "WouldYouFuckMyWife",
+        "GWCouples", "GoneWildCouples", "gwcumsluts", "Exxxtras", "PornStarHQ", "PornStarLinks", "Pornstars",
+        "nsfwhardcore", "hardcore", "Sex", "SexyFrex", "palegirls", "NSFW_Wallpapers", "iWantToFuckHer",
+        "DirtySnapchat", "NSFW_Snapchat", "snapleaks", "Fitness_NSFW", "gonewildstories", "GWNerdy",
+        "GoneWildPlus", "gonewildcolor", "AsiansGoneWild", "gonewildcurvy", "BustyPetite", "PetiteGoneWild",
+        // bodies
+        "boobs", "Boobies", "Titties", "tits", "hugeboobs", "BigBoobsGonewild", "BigBoobsGW", "naturaltitties",
+        "Nipples", "PuffyNipples", "Areolas", "TittyDrop", "BouncingTits", "boobbounce", "Stacked",
+        "ass", "asstastic", "pawg", "bigasses", "Booty", "BootyGIFs", "BubbleButts", "girlsinyogapants",
+        "yogapants", "LegsUp", "thighdeology", "thick", "thickthighs", "curvy", "Curvy_Women", "BBW",
+        "chubby", "pussy", "GodPussy", "LipsThatGrip", "rearpussy", "spreadeagle", "Asshole", "HairyPussy",
+        "hairy", "Bushy", "Innie", "FitGirls", "fitnakedgirls", "muscle_girls", "Tall_Gone_Wild", "TallGoneWild",
+        "redheads", "ginger", "Blondes", "Brunette", "Tgirls", "Freckled", "tattoo_girls", "PiercedNSFW",
+        "altgonewild", "GothGirls", "goth_babes", "SuicideGirls", "AlternativeNSFW", "emogirlsgonewild",
+        // acts
+        "Blowjobs", "blowjobsandwich", "deepthroat", "SloppyBlowjobs", "throatpies", "facefuck", "Facials",
+        "cumsluts", "cumshots", "CumHaters", "cumfetish", "Creampie", "creampies", "creampiegifs",
+        "anal", "analgw", "AnalGonewild", "buttsex", "Gape", "AnalOrgasms", "assholegonewild",
+        "Squirting", "squirtingcunts", "O_Faces", "FemaleOrgasm", "RealOrgasms", "Orgasms", "orgasmiccontrol",
+        "Handjobs", "titfuck", "Paizuri", "footjobs", "Riding", "GirlsRiding", "Doggystyle", "doggy",
+        "Missionary", "matingpress", "pronebone", "SexInFrontOfOthers", "threesome", "Threesomes", "FFM",
+        "MMF", "groupsex", "gangbang", "GangbangGIFs", "DoublePenetration", "Spitroast", "orgies",
+        "lesbians", "Lesbian_gifs", "scissoring", "girlskissing", "StraponLesbians", "Strapon", "Pegging",
+        // kink
+        "BDSM", "BDSMGW", "bdsmgifs", "bondage", "Bondage_GIFs", "shibari", "ropebunnies", "Rope_Bondage",
+        "femdom", "FemdomCommunity", "Femdom_GIFs", "maledom", "Dominated", "submissive", "SubmissiveGirls",
+        "collared", "Choking", "breathplay", "spanking", "Spanking_GIFs", "redbottoms", "OTKSpanking",
+        "Degradation", "humiliation", "Gagged", "Gagging", "throatfuck", "ForcedOrgasms", "Overstimulation",
+        "breeding", "BreedingKink", "Impregnation", "Lactation", "PreggoPorn",
+        "latex", "latexfetish", "rubberfetish", "Leather", "Stockings", "pantyhose", "nylon", "fishnets",
+        "lingerie", "LingerieGW", "HighHeels", "feet", "FootFetish", "feetish", "Soles", "TickleTorture",
+        "public", "PublicFlashing", "PublicSexPorn", "flashing", "exhibitionism", "Nudism", "nakedoutdoors",
+        "CuckoldCommunity", "Cuckold", "HotWife", "Hotwife", "slutwife", "Swingers", "Wifesharing",
+        "interracial", "InterracialGifs", "bbc", "BlackGirls", "ebony", "EbonyGW", "asianhotties",
+        "AsianNSFW", "juicyasians", "japanesesex", "JAV", "KoreanHotties", "IndianBabes", "IndianNSFW",
+        "latinas", "LatinaCuties", "LatinasGW", "Brazilian", "milf", "milfs", "MILFS", "maturemilf",
+        "OlderWomen", "GILF", "cougars", "Wives", "milfsgonewild",
+        // drawn / 3d
+        "hentai", "HENTAI_GIF", "hentaibondage", "ahegao", "rule34", "rule34gifs", "Rule34LoL",
+        "overwatch_porn", "Genshin_Impact_NSFW", "pokeporn", "cartoonporn", "sfmcompileclub", "SFMporn",
+        "3DPorncraft", "blender_porn", "futanari", "FutanariGifs", "yuri", "yaoi", "MonsterGirl",
+        "tentai", "Tentacle_Hentai", "ecchi", "animebooty", "AnimeMILFS", "thighhighs", "Paizuri",
+        // trans / gay
+        "Tgirls", "Transgonewild", "tgifs", "traps", "GoneWildTrans", "transporn", "femboys", "femboy",
+        "GayGifs", "gaybrosgonewild", "gayporn", "GaybrosGW", "MassiveCock", "ratemycock", "penis",
+        "bigdick", "cock", "MonsterCocks", "ThickDick",
+        // video-heavy
+        "NSFW_GFY", "porninfifteenseconds", "holdthemoan", "Shemales", "60fpsporn", "pornvids", "nsfwvideos",
+        "PornVideos", "NSFWVideoBox", "HardcoreSexGifs", "Sexgifs", "Cumshot_GIFs", "BlowjobGifs", "AnalGifs",
+        "CreampieGifs", "RidingGifs", "SquirtingGifs", "LesbianGifs", "BondageGifs", "FacialGifs",
+    )
+}

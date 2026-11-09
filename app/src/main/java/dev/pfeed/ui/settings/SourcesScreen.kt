@@ -521,6 +521,7 @@ private fun feedCount(id: String, s: dev.pfeed.data.settings.AppSettings): Int? 
     "json" -> s.jsonFeeds.size
     "local" -> s.localFolders.size
     "kemono" -> s.kemonoHosts.size
+    "redgifs" -> dev.pfeed.data.settings.SourceCatalog.redgifsTerms.size
     else -> null
 }
 
@@ -536,7 +537,7 @@ private fun feedSummary(id: String, s: dev.pfeed.data.settings.AppSettings): Str
         "${s.mastodonFeeds.size} hashtag feeds on $servers servers"
     }
     "kemono" -> s.kemonoHosts.joinToString(" + ").ifBlank { null }
-    "redgifs" -> "Trending clips across dozens of categories"
+    "redgifs" -> "${dev.pfeed.data.settings.SourceCatalog.redgifsTerms.size} trending category feeds"
     "philomena" -> "derpibooru.org + furbooru.org"
     "rss" -> if (s.rssFeeds.isEmpty()) "Add any RSS/Atom feed below" else "${s.rssFeeds.size} feeds"
     "direct" -> if (s.directUrls.isEmpty()) "Paste a video or image link below" else "${s.directUrls.size} links"

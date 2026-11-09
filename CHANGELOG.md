@@ -1,5 +1,17 @@
 # Changelog
 
+## 3.4.0 — 2026-11-09
+
+Pass 1 of 3: playback fixes, Coomer back online, ~3,100 built-in feeds.
+
+- **"One-frame videos" fixed (three causes).** (1) Reddit posts were built from the feed's ~140 px `media:thumbnail` because the escaped post HTML was never decoded: images were blurry stills and every v.redd.it / RedGIFs post was a single frame. Reddit now plays v.redd.it as HLS (with sound), resolves RedGIFs links through the RedGIFs API, turns imgur `.gifv`/`.gif` into MP4, and shows full-size `i.redd.it` images. (2) A post listed as an image whose file is really MP4/WebM was drawn by the image loader's video-frame decoder — one still frame. Posts are now rendered by their actual file type. (3) A "video" whose only file is a still is skipped instead of shown.
+- **Coomer works again.** coomer.su stopped resolving in mid-2025; the site moved to coomer.st. Default and saved settings are migrated, old domains are mapped automatically, and the API request uses the header it now expects.
+- **Faster.** Coomer video thumbnails pointed at the video file, so preloading thumbnails downloaded whole clips several posts ahead; the duplicate-checker did the same. Neither touches video files now. The next 3 posts are resolved ahead of time (board post pages, RedGIFs lookups), full-size images are pre-warmed, the first-screen duplicate check waits 0.4 s instead of 2 s, and dead clips are skipped after 12 s instead of 20 s.
+- **No more stalls after a short batch.** The feed keeps loading until 10 posts are buffered ahead instead of waiting for a swipe.
+- **Reddit pages deep.** Subreddits now page with `after` (50 per page, up to 10 pages per pass) instead of stopping at 25 posts; search results carry their own subreddit.
+- **~3,100 built-in feeds** (was ~1,000): 644 subreddits, 1,673 image-board feeds (real tag vocabularies × rule34.xxx, gelbooru, tbib, xbooru, rule34.us, danbooru, aibooru, realbooru, e621, e6ai, yande.re, konachan), 266 Mastodon tag feeds, 523 RedGIFs category and pairing feeds (was 24). Merged into existing installs by a settings migration. Nothing age-adjacent is generated.
+- **Safety:** the minors filter also blocks `high_school`/`jailbait`-type tags and any stated age under 18 in titles ("16yo", "15 years old").
+
 ## 3.3.0 — 2026-11-08
 
 ~320 more feeds, and existing installs get them too.

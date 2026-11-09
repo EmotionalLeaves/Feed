@@ -44,14 +44,15 @@ class KemonoAdapter @Inject constructor(
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
-    override suspend fun entries(): List<String> = settings.get().kemonoHosts.filterNot { DefaultSources.isSfwOnlyHost(it) }
+    override suspend fun entries(): List<String> =
+        settings.get().kemonoHosts.map(::canonicalHost).filterNot { DefaultSources.isSfwOnlyHost(it) }.distinct()
 
     /** Token = offset into the site-wide recent-posts list, in steps of [PAGE]. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
-        val host = entry.trim().removePrefix("https://").removePrefix("http://").trim('/')
+        val host = canonicalHost(entry)
         if (host.isEmpty()) return EntryPage(emptyList(), null)
         val offset = token?.toIntOrNull() ?: 0
-        val root = http.get(id, "https://$host/api/v1/posts?o=$offset")
+        val root = api("https://$host/api/v1/posts?o=$offset")
         val posts = postsArray(root)
         val items = posts.flatMap { post -> itemsFromPost(host, post) }
         // Stop when the API returns an empty page; otherwise step one page deeper.
@@ -62,16 +63,26 @@ class KemonoAdapter @Inject constructor(
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        val hosts = settings.get().kemonoHosts.filterNot { DefaultSources.isSfwOnlyHost(it) }
-        val remote = hosts.flatMap { entry ->
-            val host = entry.trim().removePrefix("https://").removePrefix("http://").trim('/')
+        val hosts = entries()
+        val remote = hosts.flatMap { host ->
             runCatching {
-                val root = http.get(id, "https://$host/api/v1/posts?q=${URLEncoder.encode(q, "UTF-8")}&o=0")
+                val root = api("https://$host/api/v1/posts?q=${URLEncoder.encode(q, "UTF-8")}&o=0")
                 postsArray(root).flatMap { itemsFromPost(host, it) }
             }.getOrDefault(emptyList())
         }
         (remote + poolMatches(query)).distinctBy { it.key }
     }
+
+    /**
+     * The API answers JSON only when asked with `Accept: text/css` (an anti-scraping quirk since 2025);
+     * fall back to a plain request in case that ever changes back.
+     */
+    private suspend fun api(url: String): kotlinx.serialization.json.JsonElement =
+        try {
+            http.get(id, url, mapOf("Accept" to "text/css"))
+        } catch (e: dev.pfeed.source.SourceException) {
+            runCatching { http.get(id, url) }.getOrElse { throw e }
+        }
 
     private fun postsArray(root: kotlinx.serialization.json.JsonElement): List<JsonObject> = when {
         root is JsonArray -> root.mapNotNull { it as? JsonObject }
@@ -97,11 +108,22 @@ class KemonoAdapter @Inject constructor(
             }
         }.distinct()
 
+        fun clean(path: String) = if (path.startsWith("/")) path else "/$path"
+        // Videos have no server thumbnail. Pointing the thumbnail at the video itself made the image
+        // loader download whole clips (often 100+ MB) just to draw a placeholder, several posts ahead.
+        // Use a still from the same post if there is one, otherwise nothing.
+        val postStill = paths.firstOrNull { classify(it) == MediaType.IMAGE }
+            ?.let { "https://img.$host/thumbnail/data${clean(it)}" }
+
         return paths.mapIndexedNotNull { index, path ->
             val type = classify(path) ?: return@mapIndexedNotNull null // skip non-media (pdfs, zips…)
-            val clean = if (path.startsWith("/")) path else "/$path"
+            val clean = clean(path)
             val media = "https://$host/data$clean"
-            val thumb = if (type == MediaType.IMAGE) "https://img.$host/thumbnail/data$clean" else media
+            val thumb = when (type) {
+                MediaType.IMAGE -> "https://img.$host/thumbnail/data$clean"
+                MediaType.GIF -> media
+                else -> postStill
+            }
             MediaItem(
                 id = "$host/$postId/$index",
                 sourceId = SOURCE_ID,
@@ -130,6 +152,17 @@ class KemonoAdapter @Inject constructor(
 
     companion object {
         const val SOURCE_ID = "kemono"
+
+        /** Old domains the sites moved away from (coomer.su stopped resolving in mid-2025). */
+        private val MOVED = mapOf(
+            "coomer.su" to "coomer.st", "coomer.party" to "coomer.st",
+            "kemono.su" to "kemono.cr", "kemono.party" to "kemono.cr",
+        )
+
+        fun canonicalHost(raw: String): String {
+            val h = raw.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")
+            return MOVED[h] ?: h
+        }
         private const val PAGE = 50
         /** Don't page past this; the recent feed that deep is rarely useful and ages out. */
         private const val MAX_OFFSET = 50_000

@@ -190,6 +190,16 @@ class FeedViewModel @Inject constructor(
                 _hint.value = r.hint
                 when {
                     r.items.isEmpty() && !r.endReached && r.hint == null -> scheduleRetry(s)
+                    // A short batch (pool briefly thin) still leaves the screen near the end: keep
+                    // filling right away instead of waiting for a swipe that can't happen yet.
+                    r.items.isNotEmpty() && !r.endReached && items.value.size - lastSettled <= LOAD_AHEAD -> {
+                        retryDelayMs = RETRY_MIN_MS
+                        retryJob?.cancel()
+                        retryJob = viewModelScope.launch {
+                            delay(CHAIN_DELAY_MS)
+                            if (s === session) loadMore()
+                        }
+                    }
                     r.endReached && r.hint == null -> {
                         // All sources ran dry; auto-restart after a short pause so the feed is truly endless.
                         retryJob?.cancel()
@@ -295,14 +305,22 @@ class FeedViewModel @Inject constructor(
         }
     }
 
-    /** Next 4 items: thumbnails always; for the 2nd and 3rd, also the first ~1.5 MB of video. */
+    /**
+     * Next [PRELOAD_AHEAD] items: thumbnails for all; the real file resolved early for the next few
+     * (board post pages and RedGIFs lookups take a round trip, so they're done before you arrive);
+     * full-size images warmed, and the first ~2.5 MB of the next two videos cached.
+     */
     private fun preloadAround(list: List<MediaItem>, index: Int) {
-        val ahead = (index + 1..index + 4).mapNotNull { list.getOrNull(it) }
+        val ahead = (index + 1..index + PRELOAD_AHEAD).mapNotNull { list.getOrNull(it) }
         ahead.forEach { preloader.thumbnail(it.thumbnailUrl) }
-        if (autoplayAllowed()) {
-            ahead.take(2).filter { it.type == MediaType.VIDEO }.forEach { item ->
-                viewModelScope.launch {
-                    (resolve(item) as? StreamInfo.Direct)?.let { preloader.video(item.key, it.url) }
+        val autoplay = autoplayAllowed()
+        ahead.take(RESOLVE_AHEAD).forEachIndexed { i, item ->
+            viewModelScope.launch {
+                val s = resolve(item) as? StreamInfo.Direct ?: return@launch
+                val type = Display.effectiveType(item, s)
+                when {
+                    type == MediaType.VIDEO -> if (autoplay && i < 2) preloader.video(item.key, s.url)
+                    else -> preloader.image(s.url)
                 }
             }
         }
@@ -397,7 +415,10 @@ class FeedViewModel @Inject constructor(
     fun reportUrl(item: MediaItem): String? = registry.byId(item.sourceId)?.reportUrl(item)
 
     companion object {
-        private const val LOAD_AHEAD = 8
+        private const val LOAD_AHEAD = 10
+        private const val PRELOAD_AHEAD = 5
+        private const val RESOLVE_AHEAD = 3
+        private const val CHAIN_DELAY_MS = 300L
         private const val RETRY_MIN_MS = 2_000L
         private const val RETRY_MAX_MS = 30_000L
         private const val RESTART_DELAY_MS = 5_000L

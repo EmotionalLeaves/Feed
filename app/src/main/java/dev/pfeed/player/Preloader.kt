@@ -29,10 +29,19 @@ class Preloader @Inject constructor(
 ) {
     private val jobs = ConcurrentHashMap<String, Job>()
 
-    fun thumbnail(url: String?) {
-        if (url.isNullOrBlank()) return
+    fun thumbnail(url: String?) = image(url)
+
+    /** Warms the image cache for [url]. Video URLs are ignored: decoding one frame means downloading the clip. */
+    fun image(url: String?) {
+        if (url.isNullOrBlank() || !url.startsWith("http")) return
+        if (dev.pfeed.source.parse.MediaTypes.classify(url) == dev.pfeed.domain.model.MediaType.VIDEO) return
+        if (!warmed.add(url)) return
+        if (warmed.size > MAX_WARMED) warmed.clear()
         context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build())
     }
+
+    /** URLs already handed to the image loader, so re-settling on a page doesn't re-enqueue them. */
+    private val warmed = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     fun video(key: String, url: String, bytes: Long = DEFAULT_BYTES) {
         if (!url.startsWith("http") || isAdaptive(url) || jobs.containsKey(key)) return
@@ -65,5 +74,6 @@ class Preloader @Inject constructor(
 
     companion object {
         private const val DEFAULT_BYTES = 2_500_000L
+        private const val MAX_WARMED = 500
     }
 }

@@ -64,7 +64,8 @@ import dev.pfeed.ui.theme.HeartRed
 @Composable
 fun Thumbnail(item: MediaItem, modifier: Modifier = Modifier, contentScale: ContentScale = ContentScale.Crop) {
     AsyncImage(
-        model = item.thumbnailUrl,
+        // Never a video file: the image loader would download the whole clip to draw one frame.
+        model = item.thumbnailUrl?.takeUnless { dev.pfeed.source.parse.MediaTypes.classify(it) == dev.pfeed.domain.model.MediaType.VIDEO },
         contentDescription = null,
         contentScale = contentScale,
         modifier = modifier.fillMaxSize(),
@@ -96,9 +97,13 @@ fun VideoPage(
     // Hand the player up only once it's showing this item, so the scrub bar never drives a stale one.
     LaunchedEffect(player, stream, firstFrame) { onPlayer(if (firstFrame) player else null) }
 
+    // A "video" whose only file is a still (the clip couldn't be found) would sit on one frame: skip it.
+    LaunchedEffect(stream) { if (Display.isStillForVideo(item, stream)) vm.markBroken(item) }
+
     LaunchedEffect(player, stream) {
         val p = player ?: return@LaunchedEffect
         val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
+        if (Display.isStillForVideo(item, s)) return@LaunchedEffect
         if (p.currentMediaItem?.mediaId != item.key) {
             firstFrame = false
             p.setMediaItem(
@@ -357,7 +362,8 @@ fun HeartBurst(position: Offset?, tick: Int) {
     }
 }
 
-private const val STALL_TIMEOUT_MS = 20_000L
+/** On screen this long without a single frame: treat as dead and move on. */
+private const val STALL_TIMEOUT_MS = 12_000L
 private const val MIN_ZOOM = 1f
 private const val MAX_ZOOM = 5f
 

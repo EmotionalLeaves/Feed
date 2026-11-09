@@ -35,9 +35,17 @@ class SettingsRepository @Inject constructor(
         }
     }
 
-    private fun decode(prefs: Preferences): AppSettings =
-        (prefs[key]?.let { runCatching { json.decodeFromString(AppSettings.serializer(), it) }.getOrNull() }
+    /** Last raw JSON and what it decoded to: settings hold thousands of feeds and every fetch reads them. */
+    @Volatile private var lastDecoded: Pair<String?, AppSettings>? = null
+
+    private fun decode(prefs: Preferences): AppSettings {
+        val raw = prefs[key]
+        lastDecoded?.let { (r, s) -> if (r == raw) return s }
+        val decoded = (raw?.let { runCatching { json.decodeFromString(AppSettings.serializer(), it) }.getOrNull() }
             ?: AppSettings()).let(::migrate)
+        lastDecoded = raw to decoded
+        return decoded
+    }
 
     /**
      * One-time cleanups for settings saved by older versions. Pure and idempotent: applied on every
@@ -53,24 +61,33 @@ class SettingsRepository @Inject constructor(
                 contentFilterVersion = 1,
             )
         }
-        if (out.contentFilterVersion < 2) {
-            // v2: merge the expanded default feed library into existing installs, so saved settings
+        if (out.contentFilterVersion < LIBRARY_VERSION) {
+            // v2+: merge the (grown) default feed library into existing installs, so saved settings
             // from before the library grew still pick up the new sources. The user's own entries and
-            // ordering come first; defaults are appended and de-duplicated; SFW-only hosts stay out.
+            // ordering come first; defaults are appended and de-duplicated; SFW-only and excluded
+            // hosts stay out. Bump LIBRARY_VERSION whenever DefaultSources/SourceCatalog grows.
             out = out.copy(
                 redditSubs = (out.redditSubs + DefaultSources.redditSubs)
                     .distinctBy { it.trim().lowercase() },
                 mastodonFeeds = (out.mastodonFeeds + DefaultSources.mastodonFeeds)
+                    .filterNot { MastodonExclusions.isExcluded(it.host) }
                     .distinctBy { it.host.trim().lowercase() + "|" + (it.tag?.trim()?.lowercase() ?: "") },
                 booruFeeds = (out.booruFeeds + DefaultSources.booruFeeds)
                     .filterNot { DefaultSources.isSfwOnlyHost(it.host) }
                     .distinctBy { it.host.trim().lowercase() + "|" + (it.tags?.trim()?.lowercase() ?: "") },
-                kemonoHosts = (out.kemonoHosts + DefaultSources.kemonoHosts)
+                // coomer.su stopped resolving in 2025; the site lives on at coomer.st.
+                kemonoHosts = (out.kemonoHosts.map { if (it.trim().lowercase().removePrefix("https://").removePrefix("www.").trim('/') in MOVED_COOMER) "coomer.st" else it } + DefaultSources.kemonoHosts)
                     .filterNot { DefaultSources.isSfwOnlyHost(it) }
                     .distinctBy { it.trim().lowercase() },
-                contentFilterVersion = 2,
+                contentFilterVersion = LIBRARY_VERSION,
             )
         }
         return out
+    }
+
+    companion object {
+        /** Version of the built-in source library merged into saved settings (see [migrate]). */
+        const val LIBRARY_VERSION = 3
+        private val MOVED_COOMER = setOf("coomer.su", "coomer.party")
     }
 }

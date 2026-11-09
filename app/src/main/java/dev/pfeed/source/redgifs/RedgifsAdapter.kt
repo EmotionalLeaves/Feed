@@ -1,5 +1,6 @@
 package dev.pfeed.source.redgifs
 
+import dev.pfeed.data.settings.SourceCatalog
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
 import dev.pfeed.domain.model.MediaItem
@@ -44,7 +45,32 @@ class RedgifsAdapter @Inject constructor(
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
-    override suspend fun entries(): List<String> = SEED_TERMS
+    override suspend fun entries(): List<String> = SourceCatalog.redgifsTerms
+
+    private val directCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    /**
+     * The playable file for one clip by id — used for RedGIFs links posted on Reddit, which arrive as
+     * a watch-page URL. Cached; null if the clip is gone.
+     */
+    suspend fun directUrl(gid: String): String? {
+        val id = gid.lowercase()
+        directCache[id]?.let { return it }
+        val url = "https://api.redgifs.com/v2/gifs/$id"
+        val root = try {
+            http.get(this.id, url, authHeaders(token()))
+        } catch (e: SourceException) {
+            if (e.isAuthError) {
+                invalidateToken()
+                runCatching { http.get(this.id, url, authHeaders(token())) }.getOrNull()
+            } else null
+        } ?: return null
+        val gif = (root as? JsonObject)?.get("gif") as? JsonObject ?: return null
+        val urls = gif["urls"] as? JsonObject ?: return null
+        val media = listOf("hd", "sd").firstNotNullOfOrNull { (urls[it] as? JsonPrimitive)?.contentOrNull } ?: return null
+        directCache[id] = media
+        return media
+    }
 
     /** Token = page number for this seed term. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
@@ -134,12 +160,5 @@ class RedgifsAdapter @Inject constructor(
         private const val RANDOM_START_PAGES = 5
         private const val MAX_PAGE = 100
         private const val TOKEN_TTL_MS = 6 * 60 * 60_000L
-
-        /** Seed terms for the main feed (the API has no tagless "everything" listing). */
-        private val SEED_TERMS = listOf(
-            "amateur", "blowjob", "anal", "bondage", "bdsm", "rough", "pov", "milf", "threesome",
-            "deepthroat", "creampie", "cumshot", "doggystyle", "riding", "gangbang", "facial",
-            "teen", "hardcore", "orgasm", "lesbian", "hentai", "cosplay", "ass", "tits",
-        )
     }
 }

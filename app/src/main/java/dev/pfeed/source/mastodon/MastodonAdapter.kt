@@ -1,5 +1,6 @@
 package dev.pfeed.source.mastodon
 
+import dev.pfeed.data.settings.MastodonExclusions
 import dev.pfeed.data.settings.MastodonFeed
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
@@ -83,14 +84,9 @@ class MastodonAdapter @Inject constructor(
         }
     }
 
-    private fun isExcluded(host: String): Boolean {
-        val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/')
-        return EXCLUDED_HOSTS.any { h == it || h.endsWith(".$it") }
-    }
+    private fun isExcluded(host: String): Boolean = MastodonExclusions.isExcluded(host)
 
     companion object {
-        /** Instances known for hosting sexualized depictions of minors; never fetched, even if saved in settings. */
-        private val EXCLUDED_HOSTS = setOf("pawoo.net", "baraag.net")
         private const val SEARCH_HOST_TIMEOUT_MS = 6_000L
     }
 

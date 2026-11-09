@@ -1,6 +1,9 @@
 package dev.pfeed.ui.feed
 
 import dev.pfeed.domain.model.MediaItem
+import dev.pfeed.domain.model.MediaType
+import dev.pfeed.domain.model.StreamInfo
+import dev.pfeed.source.parse.MediaTypes
 import dev.pfeed.domain.reco.Features
 
 /**
@@ -9,6 +12,24 @@ import dev.pfeed.domain.reco.Features
  * a person wants to read, without changing the underlying data the app learns from.
  */
 object Display {
+
+    /**
+     * The type to render an item as once its file is known. Listings often only know a thumbnail:
+     * a post listed as an image whose file is really an MP4/WebM must play as a video.
+     */
+    fun effectiveType(item: MediaItem, stream: StreamInfo?): MediaType {
+        val url = (stream as? StreamInfo.Direct)?.url ?: return item.type
+        val actual = MediaTypes.classify(url, (stream as StreamInfo.Direct).mimeType)
+        return if ((item.type == MediaType.IMAGE || item.type == MediaType.GIF) && actual == MediaType.VIDEO) MediaType.VIDEO else item.type
+    }
+
+    /** A video post whose only file is a still image (the clip couldn't be found): nothing to play. */
+    fun isStillForVideo(item: MediaItem, stream: StreamInfo?): Boolean {
+        val s = stream as? StreamInfo.Direct ?: return false
+        if (item.type != MediaType.VIDEO) return false
+        val actual = MediaTypes.classify(s.url, s.mimeType)
+        return actual == MediaType.IMAGE
+    }
 
     /** Short, recognisable name of where an item came from: "r/BDSM", "Rule34", "Coomer"… */
     fun source(item: MediaItem, fallback: String): String {
