@@ -145,12 +145,13 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                         supportingContent = { Text(if (isTag) "Tag" else "Creator") },
                         leadingContent = { Icon(if (isTag) Icons.Filled.Tag else Icons.Filled.Person, contentDescription = null) },
                         trailingContent = { TextButton(onClick = { vm.unfollow(row) }) { Text("Unfollow") } },
-                        modifier = if (isTag) Modifier.clickable { nav.navigate(Routes.tag(row.value)) } else Modifier,
+                        // Tags open their feed; creators open a feed searching every source for them.
+                        modifier = Modifier.clickable { nav.navigate(Routes.tag(row.value)) },
                     )
                 }
             }
             else -> LazyColumn {
-                if (blocked.isEmpty()) item { Empty(Icons.Filled.Block, "Nothing blocked", "Hide a tag or creator from the ⋯ menu on any post.") }
+                if (blocked.isEmpty()) item { Empty(Icons.Filled.Block, "Nothing blocked", "Hide a tag, creator or source from the ⋯ menu on any post.") }
                 items(blocked, key = { it.kind + ":" + it.value }) { row ->
                     ListItem(
                         headlineContent = {
@@ -158,6 +159,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                                 when (row.kind) {
                                     "TAG" -> "#${row.value.replace('_', ' ')}"
                                     "CREATOR" -> "@${row.value}"
+                                    "ORIGIN" -> row.value.substringAfter(':')
                                     else -> "A post you hid"
                                 },
                             )
@@ -167,6 +169,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                                 when (row.kind) {
                                     "ITEM" -> "Not interested"
                                     "TAG" -> "Blocked tag"
+                                    "ORIGIN" -> "Hidden source"
                                     else -> "Blocked creator"
                                 },
                             )

@@ -63,7 +63,17 @@ class SettingsViewModel @Inject constructor(
     private val lock: AppLockManager,
     private val discovery: SourceDiscovery,
     private val booruKeys: BooruKeys,
+    private val feedHealth: dev.pfeed.data.repo.FeedHealthStore,
 ) : ViewModel() {
+
+    /** Feeds of [sourceId] currently skipped because they kept answering "not found" or empty. */
+    fun skippedFeeds(sourceId: String): Int = feedHealth.deadCount(sourceId)
+
+    /** Give every skipped feed another try now instead of after a week. */
+    fun retrySkippedFeeds() {
+        feedHealth.clear()
+        _messages.tryEmit("Skipped feeds will be tried again")
+    }
 
     /** Boards (rule34.xxx, gelbooru.com) that have an API key saved. */
     val booruKeyHosts: StateFlow<Set<String>> = booruKeys.configured

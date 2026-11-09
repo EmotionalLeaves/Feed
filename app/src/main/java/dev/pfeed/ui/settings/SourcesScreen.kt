@@ -44,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -95,6 +96,9 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
             BackHeader("Sources", nav)
             val totalFeeds = sources.filter { it.enabled }.sumOf { feedCount(it.adapter.id, s) ?: 1 }
+            var healthTick by remember { mutableIntStateOf(0) }
+            val skipped = remember(sources, healthTick) { sources.associate { it.adapter.id to vm.skippedFeeds(it.adapter.id) } }
+            val totalSkipped = skipped.values.sum()
             val onCount = sources.count { it.enabled }
             Text(
                 "$totalFeeds feeds from $onCount sources",
@@ -111,6 +115,17 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 )
                 TextButton(onClick = { reorder = !reorder }) { Text(if (reorder) "Done" else "Reorder") }
             }
+            if (totalSkipped > 0) {
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "$totalSkipped feeds kept answering \"not found\" or had nothing to show, so they're skipped for a week.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = { vm.retrySkippedFeeds(); healthTick++ }) { Text("Retry now") }
+                }
+            }
 
             // --- enabled / priority / sign-in ---
             sources.forEachIndexed { index, src ->
@@ -124,7 +139,8 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                                 auth[a.id] != null -> auth[a.id]!!
                                 a.requiresAuth -> "Sign-in required"
                                 !src.enabled -> "Off"
-                                else -> feedSummary(a.id, s) ?: "On"
+                                else -> (feedSummary(a.id, s) ?: "On") +
+                                    (skipped[a.id]?.takeIf { it > 0 }?.let { " · $it skipped (not found)" } ?: "")
                             }
                             Text(
                                 status,

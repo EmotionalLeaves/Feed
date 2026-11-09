@@ -1,5 +1,13 @@
 # Changelog
 
+## 3.11.0 — 2026-11-09
+
+Round 5: Library and Sources.
+
+- **Library → Blocked shows hidden sources correctly** ("Hidden source", by name) instead of mislabelling them as blocked creators.
+- **Followed creators are tappable** in Library → Following, opening a feed that searches every source for them (tags already did this).
+- **Sources shows skipped feeds:** each source lists how many of its feeds are currently skipped as dead, and "Retry now" gives them all another try immediately.
+
 ## 3.10.0 — 2026-11-09
 
 Round 4: playback.
