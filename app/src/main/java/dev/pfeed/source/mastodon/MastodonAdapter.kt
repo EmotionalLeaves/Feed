@@ -60,7 +60,11 @@ class MastodonAdapter @Inject constructor(
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val tag = query.trim().removePrefix("#").replace(Regex("[\\s_-]+"), "")
         if (tag.isEmpty()) return@cachedSearch emptyList()
-        val hosts = settings.get().mastodonFeeds.filterNot { isExcluded(it.host) }.map { normalizeHost(it.host) }.distinct()
+        // The servers with the most configured feeds first, capped: dozens of servers each answering
+        // the same hashtag mostly return the same federated posts.
+        val hosts = settings.get().mastodonFeeds.filterNot { isExcluded(it.host) }
+            .groupingBy { normalizeHost(it.host) }.eachCount()
+            .entries.sortedByDescending { it.value }.map { it.key }.take(MAX_SEARCH_HOSTS)
         val remote = coroutineScope {
             hosts.map { host ->
                 async {
@@ -88,6 +92,7 @@ class MastodonAdapter @Inject constructor(
 
     companion object {
         private const val SEARCH_HOST_TIMEOUT_MS = 6_000L
+        private const val MAX_SEARCH_HOSTS = 24
     }
 
     private fun normalizeHost(host: String): String {

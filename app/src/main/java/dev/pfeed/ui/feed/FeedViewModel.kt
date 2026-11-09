@@ -112,6 +112,11 @@ class FeedViewModel @Inject constructor(
     private val _muted = MutableStateFlow(true)
     val muted: StateFlow<Boolean> = _muted
 
+    /** Landscape mode: the whole feed sideways and immersive, kept while swiping post to post. */
+    private val _landscape = MutableStateFlow(false)
+    val landscape: StateFlow<Boolean> = _landscape
+    fun setLandscape(on: Boolean) { _landscape.value = on }
+
     private val _loading = MutableStateFlow(false)
     val loading: StateFlow<Boolean> = _loading
 
@@ -374,6 +379,16 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             blocks.block(BlockKind.CREATOR, creator)
             _messages.tryEmit("Blocked " + (Display.creator(item)?.let { "@$it" } ?: "this creator"))
+        }
+    }
+
+    /** Never show posts from this item's subreddit / board site / server again. */
+    fun hideOrigin(item: MediaItem, label: String) {
+        statsFor(item.key).explicit = true
+        viewModelScope.launch {
+            signals.record(item, Signal(SignalType.NOT_INTERESTED))
+            blocks.block(BlockKind.ORIGIN, dev.pfeed.domain.reco.Spread.origin(item))
+            _messages.tryEmit("Hidden: $label")
         }
     }
 

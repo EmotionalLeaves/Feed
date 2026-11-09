@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.5.0 — 2026-11-09
+
+Pass 2 of 3: landscape that stays put, hide a whole source, ~4,000 built-in feeds.
+
+- **Landscape mode replaces the one-video fullscreen window.** "Rotate" turns the whole feed sideways and immersive, and it stays landscape while you swipe from post to post (videos and images), until you tap exit or press Back. Before, fullscreen was a separate window for one video that you couldn't swipe in and that ended on every new post.
+- **Hide a source from any post.** The ⋯ menu has "Hide r/…" / "Hide Gelbooru" / "Hide RedGIFs": never show posts from that subreddit, board site or server again, without blocking the topic itself (hiding r/anal doesn't hide anal content elsewhere). Hidden sources are listed under Settings → Blocklist and can be unhidden.
+- **~4,000 built-in feeds** (was ~3,100): "animated + act" board feeds on every anime board (short looping clips: the most TikTok-like board content), 973 RedGIFs category and pairing feeds (was 523), 768 subreddits (was 644). Merged into existing installs (library version 4).
+- Mastodon search asks the 24 busiest servers instead of all ~70, which mostly returned the same federated posts.
+
 ## 3.4.0 — 2026-11-09
 
 Pass 1 of 3: playback fixes, Coomer back online, ~3,100 built-in feeds.

@@ -35,7 +35,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
-import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
@@ -83,11 +83,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.compose.ui.window.SecureFlagPolicy
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -95,9 +90,6 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.media3.common.util.UnstableApi
-import androidx.media3.ui.AspectRatioFrameLayout
-import androidx.media3.ui.PlayerView
 import androidx.navigation.NavController
 import dev.pfeed.domain.model.FeedMode
 import dev.pfeed.domain.model.MediaItem
@@ -122,6 +114,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val liked by vm.liked.collectAsStateWithLifecycle()
     val saved by vm.saved.collectAsStateWithLifecycle()
     val follows by vm.follows.collectAsStateWithLifecycle()
+    val landscape by vm.landscape.collectAsStateWithLifecycle()
 
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     val active = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !locked
@@ -139,6 +132,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             .collect { (page, key) -> if (key != null) vm.onPageSettled(page) }
     }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
+    LandscapeMode(enabled = landscape)
+    BackHandler(enabled = landscape) { vm.setLandscape(false) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (items.isNotEmpty()) {
@@ -159,6 +154,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     vm = vm,
                     onOpenTag = { tag -> nav.navigate(Routes.tag(tag)) },
                     onMenu = { menuFor = item },
+                    landscape = landscape,
+                    onLandscape = vm::setLandscape,
                 )
             }
             // "Loading more" only when you're actually waiting at the end, not as a constant badge.
@@ -186,7 +183,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             )
         }
 
-        TopBar(
+        if (!landscape) TopBar(
             title = vm.tag?.let { "#" + it.replace('_', ' ') },
             showModes = vm.tag == null && !vm.isViewer,
             mode = mode,
@@ -336,6 +333,8 @@ private fun FeedPage(
     vm: FeedViewModel,
     onOpenTag: (String) -> Unit,
     onMenu: () -> Unit,
+    landscape: Boolean,
+    onLandscape: (Boolean) -> Unit,
 ) {
     var paused by remember(item.key) { mutableStateOf(!vm.autoplayAllowed()) }
     val haptic = LocalHapticFeedback.current
@@ -343,7 +342,6 @@ private fun FeedPage(
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
     var speeding by remember(item.key) { mutableStateOf(false) }
-    var fullscreen by remember(item.key) { mutableStateOf(false) }
     // What the post really is once its file is known: a board/Reddit post listed as an image can turn
     // out to be an MP4/WebM, which must play as a video (drawn as an image it froze on one frame).
     val stream by produceState<dev.pfeed.domain.model.StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
@@ -388,17 +386,17 @@ private fun FeedPage(
             },
     ) {
         when (type) {
-            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, detached = fullscreen)
+            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it })
             MediaType.IMAGE, MediaType.GIF -> ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
 
         // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
-        Box(
+        if (!landscape) Box(
             Modifier.align(Alignment.TopCenter).fillMaxWidth().height(140.dp)
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))),
         )
-        Box(
+        if (!landscape) Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(320.dp)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))),
         )
@@ -421,7 +419,14 @@ private fun FeedPage(
             }
         }
         HeartBurst(heartAt, heartTick)
-        Overlay(
+        if (landscape) {
+            IconButton(
+                onClick = { onLandscape(false) },
+                modifier = Modifier.align(Alignment.TopStart).padding(12.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)),
+            ) {
+                Icon(Icons.Filled.FullscreenExit, contentDescription = "Exit landscape", tint = Color.White)
+            }
+        } else Overlay(
             item = item,
             sourceLabel = Display.source(item, vm.sourceName(item.sourceId)),
             creator = remember(item.key) { Display.creator(item) },
@@ -431,12 +436,12 @@ private fun FeedPage(
             muted = muted,
             followingCreator = followingCreator,
             isVideo = isVideo,
-            canFullscreen = isVideo,
+            canFullscreen = true,
             onLike = { vm.toggleLike(item) },
             onSave = { vm.toggleSave(item) },
             onMute = vm::toggleMute,
             onFollow = { vm.toggleFollowCreator(item) },
-            onFullscreen = { fullscreen = true },
+            onFullscreen = { onLandscape(true) },
             onTag = onOpenTag,
             onMenu = onMenu,
         )
@@ -449,75 +454,29 @@ private fun FeedPage(
             )
         }
     }
-
-    // Fullscreen landscape: shows this video rotated and edge-to-edge until dismissed. Leaving it
-    // (back button or the close control) returns to the feed in portrait at the same spot. Swiping
-    // to another post also ends it, because `fullscreen` is keyed to item.key.
-    if (fullscreen && isVideo) {
-        FullscreenVideo(player = player, onClose = { fullscreen = false })
-    }
 }
 
 /**
- * Fullscreen landscape player in its own window above everything (nav bar included), with the
- * system bars hidden. Forces landscape while shown and reparents the running [player], so playback
- * continues seamlessly. Back or the close button restores portrait.
+ * Landscape mode for the whole feed: the screen turns sideways and the system bars hide, and it
+ * stays that way while you swipe from post to post, until you exit (button or Back) or leave the
+ * feed. Before, fullscreen was a separate window for one video that ended on every swipe.
  */
-@OptIn(UnstableApi::class)
 @Composable
-private fun FullscreenVideo(player: androidx.media3.exoplayer.ExoPlayer?, onClose: () -> Unit) {
+private fun LandscapeMode(enabled: Boolean) {
     val context = LocalContext.current
-    val activity = remember(context) { context.findActivity() }
-
-    DisposableEffect(Unit) {
-        val previous = activity?.requestedOrientation
-        activity?.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+    val view = LocalView.current
+    DisposableEffect(enabled) {
+        val activity = context.findActivity()
+        if (!enabled || activity == null) return@DisposableEffect onDispose { }
+        val previous = activity.requestedOrientation
+        activity.requestedOrientation = android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        val controller = WindowCompat.getInsetsController(activity.window, view)
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        controller.hide(WindowInsetsCompat.Type.systemBars())
         onDispose {
-            activity?.requestedOrientation = previous ?: android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
-        }
-    }
-
-    Dialog(
-        onDismissRequest = onClose,
-        // Own window, so FLAG_SECURE must be set again: no screenshots or recents preview of the video.
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-            securePolicy = SecureFlagPolicy.SecureOn,
-        ),
-    ) {
-        val view = LocalView.current
-        DisposableEffect(view) {
-            val window = (view.parent as? DialogWindowProvider)?.window
-            if (window != null) {
-                WindowCompat.getInsetsController(window, view).apply {
-                    hide(WindowInsetsCompat.Type.systemBars())
-                    systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-                }
-            }
-            onDispose { }
-        }
-        BackHandler(onBack = onClose)
-        Box(Modifier.fillMaxSize().background(Color.Black)) {
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = true
-                        controllerAutoShow = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        setShutterBackgroundColor(android.graphics.Color.BLACK)
-                    }
-                },
-                update = { it.player = player },
-                onRelease = { it.player = null },
-                modifier = Modifier.fillMaxSize(),
-            )
-            IconButton(
-                onClick = onClose,
-                modifier = Modifier.align(Alignment.TopStart).padding(12.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)),
-            ) {
-                Icon(Icons.Filled.Close, contentDescription = "Exit fullscreen", tint = Color.White)
-            }
+            controller.show(WindowInsetsCompat.Type.systemBars())
+            activity.requestedOrientation = if (previous == android.content.pm.ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE)
+                android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED else previous
         }
     }
 }
@@ -601,7 +560,7 @@ private fun Overlay(
             if (isVideo) {
                 RailButton(if (muted) Icons.Filled.VolumeOff else Icons.Filled.VolumeUp, if (muted) "Muted" else "Sound", onMute)
             }
-            if (canFullscreen) RailButton(Icons.Filled.Fullscreen, "Full", onFullscreen)
+            if (canFullscreen) RailButton(Icons.Filled.Fullscreen, "Rotate", onFullscreen)
             RailButton(Icons.Filled.MoreHoriz, "More", onMenu)
         }
     }

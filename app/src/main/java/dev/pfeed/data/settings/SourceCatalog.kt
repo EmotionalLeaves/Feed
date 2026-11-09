@@ -93,7 +93,21 @@ object SourceCatalog {
         "censored", "futanari", "dildo", "garter", "pantyhose",
     )
 
+    /** Acts paired with "animated" on boards: short looping clips, the most TikTok-like board content. */
+    val animatedActs: List<String> = listOf(
+        "sex", "vaginal", "anal", "oral", "fellatio", "deepthroat", "paizuri", "handjob", "footjob",
+        "masturbation", "fingering", "cunnilingus", "group_sex", "threesome", "gangbang",
+        "double_penetration", "creampie", "cum_in_pussy", "cum_in_mouth", "facial", "ejaculation",
+        "squirting", "orgasm", "doggystyle", "cowgirl_position", "reverse_cowgirl_position",
+        "missionary", "mating_press", "standing_sex", "full_nelson", "bondage", "femdom", "futanari",
+        "yuri", "tentacles", "ahegao", "huge_breasts", "bouncing_breasts", "jiggle", "huge_ass",
+        "milf", "monster_girl", "x-ray", "pov", "sound", "3d", "blender_(medium)", "source_filmmaker_(medium)",
+    )
+
     val booruFeeds: List<BooruFeed> = buildList {
+        for (act in animatedActs) for (host in ANIME_GELBOORU_HOSTS) add(BooruFeed(host, "animated $act"))
+        // Danbooru allows two tags anonymously; the post-level rating filter drops any safe clips.
+        for (act in animatedActs) for (host in DANBOORU_HOSTS) add(BooruFeed(host, "animated $act"))
         for (tag in animeTags) for (host in ANIME_GELBOORU_HOSTS) add(BooruFeed(host, tag))
         for (tag in animeTags) for (host in DANBOORU_HOSTS) add(BooruFeed(host, "rating:explicit $tag"))
         for (tag in photoTags) add(BooruFeed("realbooru.com", tag))
@@ -134,13 +148,16 @@ object SourceCatalog {
     )
 
     private val redgifsWho = listOf(
-        "milf", "asian", "latina", "ebony", "redhead", "blonde", "brunette",
-        "pawg", "thick", "goth", "japanese", "indian", "big tits", "amateur", "college", "mature",
-        "fit", "tattooed", "busty", "curvy",
+        "milf", "asian", "latina", "ebony", "redhead", "blonde", "brunette", "pawg", "thick", "goth",
+        "japanese", "indian", "big tits", "amateur", "college", "mature", "fit", "tattooed", "busty",
+        "curvy", "bbw", "alt", "korean", "brazilian", "wife", "girlfriend", "pornstar", "natural tits",
+        "big ass", "pale",
     )
     private val redgifsWhat = listOf(
         "blowjob", "anal", "creampie", "riding", "doggystyle", "squirting", "deepthroat", "facial",
-        "threesome", "pov", "rough", "bondage", "masturbation", "orgasm", "titfuck",
+        "threesome", "pov", "rough", "bondage", "masturbation", "orgasm", "titfuck", "cumshot",
+        "reverse cowgirl", "missionary", "handjob", "lesbian", "toys", "gangbang", "outdoor", "shower",
+        "teasing",
     )
 
     /** Categories, plus "who × what" pairings (e.g. "milf anal"), each its own trending feed. */
@@ -219,5 +236,33 @@ object SourceCatalog {
         "NSFW_GFY", "porninfifteenseconds", "holdthemoan", "Shemales", "60fpsporn", "pornvids", "nsfwvideos",
         "PornVideos", "NSFWVideoBox", "HardcoreSexGifs", "Sexgifs", "Cumshot_GIFs", "BlowjobGifs", "AnalGifs",
         "CreampieGifs", "RidingGifs", "SquirtingGifs", "LesbianGifs", "BondageGifs", "FacialGifs",
+        // more amateur / verified
+        "GoneWildSmiles", "gonewildaudio", "GoneMild", "GWBigBoobs", "BigBoobsWithFriends", "realsexyselfies",
+        "Nude_Selfie", "nudeselfies", "selfshots", "AmateurSelfShots", "ShowerBeer", "Shower_Sex",
+        "SexyTummies", "Hipcleavage", "LegsUp", "Feet_NSFW", "SpreadEm", "pussyrating", "ratemyboobs",
+        "RateMyNudeBody", "WomenOfColor", "darkangels", "OnlyFansHottest",
+        "OnlyFansBooty", "OnlyFansBusty", "OnlyFansLatinas",
+        "OnlyFans101", "onlyfansgirls101", "FanslyFriends", "CamGirls", "camwhores", "Chaturbate",
+        // more video
+        "NSFW_Videos", "nsfw_vids", "PornClips", "TikTokNSFW", "TikTokPorn", "tiktokthots",
+        "NSFWFunny", "RealPublicNudity", "OutdoorSex", "CarSex", "Sexsounds", "MoaningGirls",
+        "orgasmcontrol", "ThroatGoats", "sloppy", "ass_and_titties", "Boobsandbottoms", "BonerMaterial",
+        "nsfw2", "NSFW_nospam", "IWantToSuckCock", "BlowJob", "blowjobgifs", "DeepThroatTears",
+        "GaggingWhores", "MouthWideOpen", "cumcoveredfucking", "CumInsideMe", "creampiepov", "povporn",
+        "POV_Porn", "RealPOV", "FacesitPorn", "Facesitting", "Femdomporn", "strapon_sex",
+        // bodies & looks
+        "tightdresses", "SeeThroughClothes", "Braless", "pokies", "bodystockings", "YogaPantsGW",
+        "AssInThong", "Thongs", "Underboob", "Sideboob", "BustyNaturals", "Bigtitsinbikinis", "Bikinis",
+        "tanlines", "TanLines", "PaleGirls", "Redheads", "RedheadGifs", "GingerGW", "LatinasGW",
+        "AsianPorn", "AsianCumsluts", "AsianAnal", "JapaneseAmateur", "ThickAsians", "ThickLatinas",
+        "Ebony_Porn", "BlackPornMatters", "IndianPorn", "DesiNSFW", "ArabPorn", "MiddleEasternHotties",
+        "Euro_Girls", "RussianGirls", "UkrainianGirls", "BritishBabes", "AussieGirls", "CanadianGW",
+        // kink
+        "BDSM_NSFW", "BDSMerotica", "bondageporn", "tiedtits", "Breast_Bondage", "Hogtied", "suspensionbondage",
+        "Fucking_Machines", "FuckingMachines", "sexmachines", "Vibrators", "dildo", "DildoGW", "toys_nsfw",
+        "Hitachi", "Squirt", "squirtinggirls", "SquirtingOrgasms", "AnalPlay", "ButtPlug", "AnalHook",
+        "EdgingTalk", "Edging", "ForcedToCum", "cumcontrol", "Chastity", "Pegging_Unkinked", "Sissy",
+        "SissyHypno", "HypnoHentai", "Hypno", "Latex_Fetish", "LatexBondage", "Rubberdoll", "NylonFeet",
+        "Pantyhosed", "StockingsGW", "Corsets", "Lingerie_GW", "SexyLingerie", "Garter_Belts",
     )
 }

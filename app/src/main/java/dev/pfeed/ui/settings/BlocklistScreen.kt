@@ -35,12 +35,13 @@ fun BlocklistScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel())
     val entries by vm.blockEntries.collectAsStateWithLifecycle()
     val tags = entries.filter { it.kind == BlockKind.TAG.name }
     val creators = entries.filter { it.kind == BlockKind.CREATOR.name }
+    val origins = entries.filter { it.kind == BlockKind.ORIGIN.name }
     val hiddenCount = entries.count { it.kind == BlockKind.ITEM.name }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         BackHeader("Blocklist", nav)
         Text(
-            "Blocked tags and creators are filtered out of every feed and search the moment you add them.",
+            "Blocked tags, creators and sources are filtered out of every feed and search the moment you add them.",
             style = MaterialTheme.typography.bodySmall,
             modifier = Modifier.padding(16.dp),
         )
@@ -61,6 +62,17 @@ fun BlocklistScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel())
                 headlineContent = { Text("@${row.value}") },
                 trailingContent = { IconButton(onClick = { vm.unblock(row) }) { Icon(Icons.Filled.Close, "Unblock") } },
             )
+        }
+
+        if (origins.isNotEmpty()) {
+            Header("Hidden sources")
+            origins.forEach { row ->
+                ListItem(
+                    headlineContent = { Text(row.value.substringAfter(':')) },
+                    supportingContent = row.value.substringBefore(':', "").takeIf { it.isNotBlank() }?.let { k -> { Text(k) } },
+                    trailingContent = { IconButton(onClick = { vm.unblock(row) }) { Icon(Icons.Filled.Close, "Unhide") } },
+                )
+            }
         }
 
         Header("Hidden items")

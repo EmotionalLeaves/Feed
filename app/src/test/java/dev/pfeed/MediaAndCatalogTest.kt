@@ -123,7 +123,7 @@ class MediaAndCatalogTest {
     fun `built-in library has thousands of feeds and nothing excluded`() {
         val total = DefaultSources.redditSubs.size + DefaultSources.booruFeeds.size +
             DefaultSources.mastodonFeeds.size + SourceCatalog.redgifsTerms.size
-        assertTrue("expected thousands of feeds, got $total", total >= 3000)
+        assertTrue("expected thousands of feeds, got $total", total >= 4000)
         assertTrue(DefaultSources.mastodonFeeds.none { MastodonExclusions.isExcluded(it.host) })
         assertTrue(DefaultSources.booruFeeds.none { DefaultSources.isSfwOnlyHost(it.host) })
         assertTrue(DefaultSources.kemonoHosts.none { DefaultSources.isSfwOnlyHost(it) })
@@ -139,6 +139,19 @@ class MediaAndCatalogTest {
             SourceCatalog.mastodonFeeds.mapNotNull { it.tag }
         val hits = terms.filter { t -> bad.any { t.lowercase().contains(it) } }
         assertTrue("age-adjacent built-in feeds: $hits", hits.isEmpty())
+    }
+
+    @Test
+    fun `hiding a source hides only that subreddit or site`() {
+        val bl = dev.pfeed.domain.filter.Blocklist(origins = setOf("r/gonewild", "booru:gelbooru.com"))
+        val gw = item("reddit/t3_1", source = "reddit", tags = listOf("GoneWild"), type = MediaType.IMAGE)
+        val other = item("reddit/t3_2", source = "reddit", tags = listOf("anal"), type = MediaType.IMAGE)
+        val gel = item("gelbooru.com/5", source = "booru", tags = listOf("sex", "rating:e"))
+        val r34 = item("rule34.xxx/5", source = "booru", tags = listOf("sex", "rating:e"))
+        assertFalse(bl.allows(gw))
+        assertTrue(bl.allows(other)) // r/anal stays; so does anal content elsewhere
+        assertFalse(bl.allows(gel))
+        assertTrue(bl.allows(r34))
     }
 
     @Test

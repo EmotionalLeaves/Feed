@@ -8,7 +8,8 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-enum class BlockKind { TAG, CREATOR, ITEM }
+/** ORIGIN = one subreddit / board site / server / service (see Spread.origin): "never show posts from it". */
+enum class BlockKind { TAG, CREATOR, ITEM, ORIGIN }
 
 @Singleton
 class BlockRepository @Inject constructor(private val dao: BlockDao) {
@@ -34,5 +35,6 @@ class BlockRepository @Inject constructor(private val dao: BlockDao) {
         tags = rows.filter { it.kind == BlockKind.TAG.name }.mapTo(HashSet()) { it.value },
         creators = rows.filter { it.kind == BlockKind.CREATOR.name }.mapTo(HashSet()) { it.value },
         items = rows.filter { it.kind == BlockKind.ITEM.name }.mapTo(HashSet()) { it.value },
+        origins = rows.filter { it.kind == BlockKind.ORIGIN.name }.mapTo(HashSet()) { it.value },
     )
 }
