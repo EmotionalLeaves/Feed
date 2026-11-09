@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.13.0 — 2026-11-09
+
+Round 7: privacy and safety audit.
+
+- Audited: every dialog and sheet sets the no-screenshot flag; nothing logs URLs or content; cleartext HTTP is off; the screen-awake flag drops when the app locks.
+- **Minors filter** also catches plurals and unambiguous compounds it missed (`lolis`, `shotas`, `underaged`, `little_girl`, `young_girl`, `kindergarten`…), while ordinary tags such as `young_adult` still pass.
+
 ## 3.12.0 — 2026-11-09
 
 Round 6: long-session performance.

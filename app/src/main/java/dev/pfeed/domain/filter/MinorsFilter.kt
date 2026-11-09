@@ -13,13 +13,17 @@ object MinorsFilter {
         "minor", "minors", "pedo", "pedophile", "pedophilia", "cp",
         "elementary_school", "middle_school", "grade_school", "junior_high", "junior_high_school",
         "high_school", "highschool", "high_school_student", "schoolgirl_(young)", "young", "aged_down",
+        "lolis", "shotas", "underaged", "young_girl", "young_boy", "little_girl", "little_boy",
+        "small_girl", "small_boy", "preschool", "kindergarten", "elementary_schooler", "middle_schooler",
+        "grade_schooler", "child_on_child", "teenage_girl", "teenage_boy",
     )
     private val SPLIT = Regex("[\\s_\\-:/]+")
 
     /** Single words inside a compound tag that only ever mean "a minor" (not "young", "cub", "minor"). */
     private val COMPOUND_WORDS = setOf(
         "loli", "lolicon", "lolita", "shota", "shotacon", "toddlercon", "jailbait", "child", "children",
-        "kid", "kids", "preteen", "underage", "infant", "toddler", "pedo", "pedophile",
+        "kid", "kids", "preteen", "underage", "underaged", "infant", "toddler", "pedo", "pedophile",
+        "lolis", "shotas", "preschool", "kindergarten",
     )
 
     /** "16yo", "15 y/o", "14-year-old", "13 years old"… — any stated age under 18. */
@@ -45,6 +49,6 @@ object MinorsFilter {
 
     private val TITLE_TERMS = setOf(
         "loli", "lolicon", "shota", "shotacon", "underage", "preteen", "toddlercon", "jailbait", "pedo",
-        "highschool", "middleschool",
+        "highschool", "middleschool", "lolis", "shotas", "underaged",
     )
 }
