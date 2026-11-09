@@ -45,10 +45,19 @@ object BooruParser {
             // moebooru (konachan/yande.re): file_url or sample_url
             // Gelbooru/rule34: file_url or sample_url
             val fileObj = p["file"] as? JsonObject
-            val media = str("file_url") ?: str("large_file_url") ?: str("sample_url")
-                ?: (fileObj?.get("url") as? JsonPrimitive)?.contentOrNull
-                ?: return@mapNotNull null
-            val type = MediaTypes.classify(media) ?: return@mapNotNull null
+            val sampleObj = p["sample"] as? JsonObject
+            fun nonBlank(v: String?) = v?.takeIf { it.isNotBlank() }
+            // The original file decides what the post is (a GIF's or video's "sample" is a still).
+            val file = nonBlank(str("file_url")) ?: nonBlank((fileObj?.get("url") as? JsonPrimitive)?.contentOrNull)
+            val sample = nonBlank(str("large_file_url")) ?: nonBlank(str("sample_url"))
+                ?: nonBlank((sampleObj?.get("url") as? JsonPrimitive)?.contentOrNull)
+            val type = MediaTypes.classify(file ?: sample ?: return@mapNotNull null) ?: return@mapNotNull null
+            // Stills: show the board's sample (~850–1500 px, a few hundred KB) rather than the original,
+            // which is often a 5–20 MB PNG and made images slow to appear. The original is kept for zoom.
+            val media = when {
+                type == MediaType.IMAGE && sample != null && MediaTypes.classify(sample) == MediaType.IMAGE -> sample
+                else -> file ?: sample ?: return@mapNotNull null
+            }
 
             val preview = str("preview_file_url") ?: str("preview_url")
                 ?: ((p["preview"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull
@@ -85,6 +94,7 @@ object BooruParser {
                 publishedAt = MediaTypes.parseDate(str("created_at")),
                 extras = buildMap {
                     put("media", media)
+                    if (file != null && file != media) put("full", file)
                     score?.let { put("score", it.toLong().toString()) }
                     dev.pfeed.domain.filter.ContentRating.normalize(str("rating"))?.let { put("rating", it) }
                 },

@@ -246,8 +246,19 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
         contentAlignment = Alignment.Center,
     ) {
         val contentScale = if (isTall) ContentScale.FillWidth else ContentScale.Fit
+        // The feed shows the board's sample; zooming in swaps to the original (the sample stays on
+        // screen as the placeholder while it loads, so there's no flash).
+        val full = item.extras["full"]
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val model = remember(url, full, scale > ZOOM_FULL_RES) {
+            val zoomed = full != null && scale > ZOOM_FULL_RES
+            coil.request.ImageRequest.Builder(context)
+                .data(if (zoomed) full else url)
+                .apply { if (zoomed) placeholderMemoryCacheKey(url) }
+                .build()
+        }
         AsyncImage(
-            model = url,
+            model = model,
             contentDescription = item.title,
             contentScale = contentScale,
             onSuccess = { state ->
@@ -255,7 +266,8 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                 imageSize = androidx.compose.ui.unit.IntSize(d.intrinsicWidth, d.intrinsicHeight)
             },
             // Dead image link: drop it from the feed rather than leaving a black page.
-            onError = { if (stream != null) vm.markBroken(item) },
+            // (A failed full-size load while zoomed isn't a dead post: the sample already showed.)
+            onError = { if (stream != null && !(full != null && scale > ZOOM_FULL_RES)) vm.markBroken(item) },
             modifier = Modifier
                 .then(if (isTall) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                 .graphicsLayer {
@@ -366,6 +378,8 @@ fun HeartBurst(position: Offset?, tick: Int) {
 private const val STALL_TIMEOUT_MS = 12_000L
 private const val MIN_ZOOM = 1f
 private const val MAX_ZOOM = 5f
+/** Past this zoom the original file replaces the sample. */
+private const val ZOOM_FULL_RES = 1.5f
 
 @Composable
 fun CenteredHint(text: String) {

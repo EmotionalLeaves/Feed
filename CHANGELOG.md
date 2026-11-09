@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.6.0 — 2026-11-09
+
+Pass 3 of 3: faster images and network, ~4,600 built-in feeds.
+
+- **Images load much faster.** Board posts used the original file, often a 5–20 MB PNG; stills now use the board's sample (~850–1500 px, a few hundred KB; Philomena's 1280 px rendition), and the original loads only when you pinch-zoom past 1.5× (the sample stays on screen meanwhile). GIFs and videos still use the original, since their "samples" are stills.
+- **No more queuing behind playback.** OkHttp allowed only 5 requests per host at once, shared by video streaming, video preloads, images and API calls; raised to 16 per host / 96 total with a larger connection pool.
+- **~4,600 built-in feeds** (was ~4,000): franchise feeds on every anime board (series with an adult main cast only), real-photo "video + act" feeds on realbooru, hypnohub, 1,124 RedGIFs feeds (more categories), 838 subreddits. Library version 5.
+- Watch-time learning treats a post that turned out to be a clip as a video.
+
 ## 3.5.0 — 2026-11-09
 
 Pass 2 of 3: landscape that stays put, hide a whole source, ~4,000 built-in feeds.

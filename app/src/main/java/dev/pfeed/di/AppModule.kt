@@ -49,6 +49,11 @@ object AppModule {
     @Provides
     @Singleton
     fun okHttp(): OkHttpClient = OkHttpClient.Builder()
+        // OkHttp's default is 5 concurrent requests per host. Video streaming, video preloads and
+        // API calls to the same host (RedGIFs, Reddit, a board's CDN) all share this client, so the
+        // default made preloads and feed requests queue behind playback.
+        .dispatcher(okhttp3.Dispatcher().apply { maxRequests = 96; maxRequestsPerHost = 16 })
+        .connectionPool(okhttp3.ConnectionPool(16, 5, TimeUnit.MINUTES))
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(45, TimeUnit.SECONDS)

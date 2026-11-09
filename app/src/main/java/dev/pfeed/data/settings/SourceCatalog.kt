@@ -104,7 +104,41 @@ object SourceCatalog {
         "milf", "monster_girl", "x-ray", "pov", "sound", "3d", "blender_(medium)", "source_filmmaker_(medium)",
     )
 
+    /**
+     * Franchises whose main cast is adult. Series centred on school-age characters are deliberately
+     * left out; the minors filter and negative tags still apply to everything else.
+     */
+    val franchiseTags: List<String> = listOf(
+        "overwatch", "league_of_legends", "final_fantasy", "final_fantasy_vii", "resident_evil",
+        "street_fighter", "mortal_kombat", "tekken", "soulcalibur", "dead_or_alive", "metroid",
+        "apex_legends", "valorant", "fortnite", "mass_effect", "tomb_raider", "the_witcher",
+        "cyberpunk_2077", "elden_ring", "dark_souls", "bayonetta", "devil_may_cry", "darkstalkers",
+        "the_elder_scrolls", "skyrim", "fallout", "warcraft", "world_of_warcraft", "star_wars", "marvel",
+        "dc_comics", "batman_(series)", "spider-man_(series)", "x-men", "genshin_impact",
+        "honkai:_star_rail", "zenless_zone_zero", "goddess_of_victory:_nikke", "one_piece",
+        "dragon_ball", "helltaker", "metal_gear", "baldur's_gate_3", "dungeons_and_dragons", "warhammer_40k",
+        "monster_hunter", "nier:_automata", "stellar_blade", "bioshock",
+    )
+
+    /** Real-photo video feeds (realbooru tags its clips "video"). */
+    private val photoVideoActs = listOf(
+        "sex", "blowjob", "deepthroat", "anal", "creampie", "cumshot", "facial", "threesome", "lesbian",
+        "masturbation", "squirting", "orgasm", "pov", "riding", "doggy_style", "titfuck", "handjob",
+        "bondage", "rough_sex", "interracial", "milf", "amateur", "big_breasts", "big_ass", "asian",
+        "latina", "ebony", "redhead", "blonde", "outdoor",
+    )
+
+    /** hypnohub.net (gelbooru engine): one niche board, a few feeds. */
+    private val hypnoTags = listOf(
+        "sex", "nude", "femsub", "maledom", "femdom", "malesub", "spiral_eyes", "empty_eyes",
+        "animated", "comic", "corruption", "drool",
+    )
+
     val booruFeeds: List<BooruFeed> = buildList {
+        for (f in franchiseTags) for (host in ANIME_GELBOORU_HOSTS) add(BooruFeed(host, f))
+        for (f in franchiseTags) for (host in DANBOORU_HOSTS) add(BooruFeed(host, "rating:explicit $f"))
+        for (act in photoVideoActs) add(BooruFeed("realbooru.com", "video $act"))
+        for (t in hypnoTags) add(BooruFeed("hypnohub.net", t))
         for (act in animatedActs) for (host in ANIME_GELBOORU_HOSTS) add(BooruFeed(host, "animated $act"))
         // Danbooru allows two tags anonymously; the post-level rating filter drops any safe clips.
         for (act in animatedActs) for (host in DANBOORU_HOSTS) add(BooruFeed(host, "animated $act"))
@@ -145,6 +179,28 @@ object SourceCatalog {
         "jav", "uncensored jav", "pornstar", "camgirl", "selfie", "mirror", "teasing", "joi", "asmr",
         "moaning", "talking dirty", "sex sounds", "slow motion", "compilation", "cumshot compilation",
         "rough anal", "deep anal", "anal gape", "anal toys", "plug", "fisting", "squirt compilation",
+        // more categories
+        "bratty", "good girl", "praise", "eye contact", "looking at camera", "begging", "pleading",
+        "facial expressions", "ahegao", "drooling", "messy", "spit", "sloppy", "wet", "dripping",
+        "cum drip", "cum play", "cum swap", "snowballing", "creampie eating", "multiple creampies",
+        "breeding kink", "pregnant", "lactating", "hairy pussy", "hairy armpits", "armpits", "belly",
+        "abs", "muscular", "bodybuilder", "athletic", "yoga", "gym", "sweaty", "stretching", "flexible",
+        "splits", "legs up", "legs behind head", "spread", "spreading", "gaping pussy", "pussy lips",
+        "big clit", "clit rubbing", "grinding", "humping", "pillow humping", "dry humping", "frotting",
+        "thigh job", "boob job", "nipple play", "nipple clamps", "big nipples", "puffy nipples",
+        "hanging tits", "saggy tits", "perky tits", "fake tits", "oiled tits", "tit slapping", "jiggling",
+        "clapping", "ass clapping", "ass jiggle", "spanking ass", "red ass", "belt", "paddle", "whip",
+        "rope bondage", "hogtied", "spreader bar", "blindfolded", "ball gag", "mouth gag", "leash",
+        "pet play", "puppy play", "kneeling", "worship", "foot worship", "pussy worship", "ass worship",
+        "face fucking", "throat bulge", "gagging", "tears", "mascara", "makeup", "lipstick", "nails",
+        "long nails", "heels on", "stockings sex", "lingerie sex", "dress", "skirt", "upskirt",
+        "no panties", "panties aside", "panty", "bra", "sports bra", "crop top", "tank top", "jeans",
+        "shorts", "towel", "bathrobe", "mirror sex", "bed", "couch", "kitchen", "office", "hotel",
+        "pool", "hot tub", "sauna", "forest", "camping", "balcony", "window", "stairs", "gym sex",
+        "first time", "real orgasm", "multiple orgasms", "shaking legs", "contractions", "pulsating",
+        "slow sex", "passionate", "romantic", "sensual", "hard fuck", "pounding", "deep penetration",
+        "big dick ride", "cock riding", "dildo riding", "suction dildo", "glass dildo", "double dildo",
+        "magic wand", "rabbit vibrator", "sex machine", "fucking machine", "remote vibrator",
     )
 
     private val redgifsWho = listOf(
@@ -264,5 +320,20 @@ object SourceCatalog {
         "EdgingTalk", "Edging", "ForcedToCum", "cumcontrol", "Chastity", "Pegging_Unkinked", "Sissy",
         "SissyHypno", "HypnoHentai", "Hypno", "Latex_Fetish", "LatexBondage", "Rubberdoll", "NylonFeet",
         "Pantyhosed", "StockingsGW", "Corsets", "Lingerie_GW", "SexyLingerie", "Garter_Belts",
+        // couples / amateur video
+        "CouplesGoneWild", "CoupleSex", "HomemadeNsfw", "homemadeporn", "RealHomemade", "AmateurCouples",
+        "SexyCouples", "GWCouples4Ladies", "MarriedSex", "WifeSex", "OnOffGW",
+        "POVgifs", "GirlsOnTop", "CumInside", "CumshotSelfies", "PornGifsHub", "HQGifs", "NSFWgifsHQ",
+        // more bodies
+        "BigTitsGW", "MassiveTitsnAss", "Bustyfit", "fitgirlsnsfw", "GymNudes", "FitAndNatural",
+        "AthleticGirls", "CurvyGirls", "Curvy_Gone_Wild", "ChubbyGirls", "BBWGW", "SSBBW_Love",
+        "Thick_Booty", "AssGW", "bootygifs", "PerfectAss", "assholes", "WhiteGirlsAss",
+        "LatinaAss", "EbonyAss", "AsianAss", "Pawg_Gonewild", "ThickPawg", "TattooedGirls", "InkedGirls",
+        "PiercedTits", "NipplePiercings", "Pierced_NSFW", "AltGW", "GothGW", "EmoGirls", "Punk_GW",
+        // more kink
+        "Rough_Sex", "RoughSexGifs", "ChokingGifs", "SlappingGifs", "SpitGifs", "Spit", "DroolingGirls",
+        "MessyBlowjobs", "AhegaoIRL", "Ahegao_IRL", "OFaces", "CumFaces", "Bukkake_GW", "GloryHoleSex",
+        "FreeUse", "FreeUseGifs", "Exhibitionists", "PublicNudity",
+        "NudeBeach", "Naturists", "Skinnydipping", "HotTubSex", "ShowerGirls", "BathtubGirls",
     )
 }

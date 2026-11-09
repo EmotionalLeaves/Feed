@@ -123,7 +123,7 @@ class MediaAndCatalogTest {
     fun `built-in library has thousands of feeds and nothing excluded`() {
         val total = DefaultSources.redditSubs.size + DefaultSources.booruFeeds.size +
             DefaultSources.mastodonFeeds.size + SourceCatalog.redgifsTerms.size
-        assertTrue("expected thousands of feeds, got $total", total >= 4000)
+        assertTrue("expected thousands of feeds, got $total", total >= 4500)
         assertTrue(DefaultSources.mastodonFeeds.none { MastodonExclusions.isExcluded(it.host) })
         assertTrue(DefaultSources.booruFeeds.none { DefaultSources.isSfwOnlyHost(it.host) })
         assertTrue(DefaultSources.kemonoHosts.none { DefaultSources.isSfwOnlyHost(it) })
@@ -152,6 +152,25 @@ class MediaAndCatalogTest {
         assertTrue(bl.allows(other)) // r/anal stays; so does anal content elsewhere
         assertFalse(bl.allows(gel))
         assertTrue(bl.allows(r34))
+    }
+
+    @Test
+    fun `boards show the sample for stills and keep the original for zoom`() {
+        val root = kotlinx.serialization.json.Json.parseToJsonElement(
+            """[{"id":1,"file_url":"https://b/full.png","large_file_url":"https://b/sample.jpg","rating":"e"},
+               {"id":2,"file_url":"https://b/anim.gif","large_file_url":"https://b/anim_sample.jpg","rating":"e"},
+               {"id":3,"file_url":"https://b/clip.mp4","large_file_url":"https://b/clip_sample.webm","rating":"e"},
+               {"id":4,"file_url":"https://b/only.jpg","sample_url":"","rating":"q"}]""",
+        )
+        val items = dev.pfeed.source.parse.BooruParser.parse(root, "danbooru.donmai.us")
+        assertEquals("https://b/sample.jpg", items[0].extras["media"])
+        assertEquals("https://b/full.png", items[0].extras["full"])
+        assertEquals(MediaType.GIF, items[1].type)
+        assertEquals("https://b/anim.gif", items[1].extras["media"]) // a GIF's sample is a still
+        assertEquals(MediaType.VIDEO, items[2].type)
+        assertEquals("https://b/clip.mp4", items[2].extras["media"])
+        assertEquals("https://b/only.jpg", items[3].extras["media"]) // blank sample ignored
+        assertNull(items[3].extras["full"])
     }
 
     @Test

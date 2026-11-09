@@ -78,7 +78,7 @@ class PhilomenaAdapter @Inject constructor(
         val imgId = s("id") ?: return null
         val reps = img["representations"] as? JsonObject ?: return null
         fun rep(key: String) = (reps[key] as? JsonPrimitive)?.contentOrNull
-        val media = rep("full") ?: return null
+        val full = rep("full") ?: return null
         val thumb = rep("medium") ?: rep("small") ?: rep("thumb")
         val format = s("format")?.lowercase()
         val type = when (format) {
@@ -86,6 +86,9 @@ class PhilomenaAdapter @Inject constructor(
             "gif" -> MediaType.GIF
             else -> MediaType.IMAGE
         }
+        // Stills: the 1280 px "large" rendition instead of the original (often several MB); the
+        // original is kept for zoom.
+        val media = if (type == MediaType.IMAGE) rep("large") ?: full else full
         val tags = (img["tags"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.take(MAX_TAGS).orEmpty()
         val score = (img["score"] as? JsonPrimitive)?.contentOrNull
         val created = s("created_at")?.let { runCatching { Instant.parse(it) }.getOrNull() }
@@ -102,6 +105,7 @@ class PhilomenaAdapter @Inject constructor(
             publishedAt = created,
             extras = buildMap {
                 put("media", media)
+                if (full != media) put("full", full)
                 score?.toLongOrNull()?.let { put("score", it.toString()) }
             },
         )

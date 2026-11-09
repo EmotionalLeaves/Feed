@@ -298,7 +298,9 @@ class FeedViewModel @Inject constructor(
         if (item.key in broken.value) return
         val st = stats[item.key]
         viewModelScope.launch {
-            val isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED
+            // A post listed as an image can turn out to be a clip (see Display.effectiveType); if the
+            // player reported a duration, judge the dwell against typical video viewing, not images.
+            val isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED || (st?.durationMs ?: 0L) > 0L
             val typical = dwellBaseline.typicalMs(isVideo)
             dwellBaseline.observe(isVideo, dwell)
             // A like/save/follow/"not interested" already told the model what you think; recording the
