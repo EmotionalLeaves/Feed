@@ -147,7 +147,14 @@ class FeedViewModel @Inject constructor(
             val (list, start) = holder.get(viewerToken) ?: (emptyList<MediaItem>() to 0)
             raw.value = list
             startIndex = start.coerceIn(0, (list.size - 1).coerceAtLeast(0))
-            endReached = true
+            // Search results continue as an endless feed of the same search after the last result.
+            val more = holder.continuation(viewerToken)
+            if (more != null) {
+                session = sessions.create(FeedSpec.Tag(more), viewModelScope)
+                endReached = false
+            } else {
+                endReached = true
+            }
         } else {
             startIndex = 0
             restart()

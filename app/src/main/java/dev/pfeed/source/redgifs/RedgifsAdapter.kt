@@ -9,6 +9,8 @@ import dev.pfeed.domain.model.Page
 import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.JsonArray
@@ -83,7 +85,11 @@ class RedgifsAdapter @Inject constructor(
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        (runCatching { searchGifs(q, 1, "best") }.getOrDefault(emptyList()) + poolMatches(query)).distinctBy { it.key }
+        // Three pages at once: RedGIFs is usually the richest source of clips for a search.
+        val pages = kotlinx.coroutines.coroutineScope {
+            (1..SEARCH_PAGES).map { p -> async { runCatching { searchGifs(q, p, "best") }.getOrDefault(emptyList()) } }.awaitAll()
+        }
+        (pages.flatten() + poolMatches(query)).distinctBy { it.key }
     }
 
     private suspend fun searchGifs(term: String, page: Int, order: String): List<MediaItem> {
@@ -160,5 +166,6 @@ class RedgifsAdapter @Inject constructor(
         private const val RANDOM_START_PAGES = 5
         private const val MAX_PAGE = 100
         private const val TOKEN_TTL_MS = 6 * 60 * 60_000L
+        private const val SEARCH_PAGES = 3
     }
 }

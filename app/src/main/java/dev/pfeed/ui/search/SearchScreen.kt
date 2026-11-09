@@ -111,6 +111,9 @@ data class SearchFilters(
     /** How many of the filters hidden in the sheet are active (shown as a badge). */
     val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0)
 
+    /** Any filter on: the endless continuation can't honour them, so it isn't offered. */
+    val active: Boolean get() = sheetCount > 0 || type != TypeFilter.ALL
+
     fun matches(item: MediaItem): Boolean {
         if (sources.isNotEmpty() && item.sourceId !in sources) return false
         if (type.types.isNotEmpty() && item.type !in type.types) return false
@@ -214,7 +217,8 @@ class SearchViewModel @Inject constructor(
     fun setDuration(d: DurationFilter) = _filters.update { it.copy(duration = d) }
     fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY) }
 
-    fun open(index: Int): String = holder.put(visible.value, index)
+    /** Opens the results at [index]; past the last one it keeps going as an endless feed of the search. */
+    fun open(index: Int): String = holder.put(visible.value, index, continueWith = _ui.value.searched?.takeIf { !_filters.value.active })
 }
 
 /** Shown before the first search when nothing has been learned yet. */

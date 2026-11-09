@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.8.0 — 2026-11-09
+
+Round 2: search.
+
+- **"Play all" no longer stops at the last result.** Opening search results plays them, then keeps going as an endless feed of the same search (it learns from what you watch, like any tag feed). With filters on, it plays just the filtered results, since the endless feed can't apply them.
+- **RedGIFs search fetches three pages at once** (≈120 clips instead of 40).
+
 ## 3.7.0 — 2026-11-09
 
 Round 1: dead feeds stop wasting requests; ~5,400 built-in feeds.

@@ -77,3 +77,18 @@ class FeedHealthTest {
         assertFalse(CachingAdapter.isPermanentFailure(SourceException("s", "Timed out")))
     }
 }
+
+class TransientFeedHolderTest {
+    @Test
+    fun `search results carry their query for the endless continuation`() {
+        val h = dev.pfeed.data.repo.TransientFeedHolder()
+        val withQuery = h.put(listOf(item("1")), 0, continueWith = "rope")
+        val plain = h.put(listOf(item("2")), 0)
+        org.junit.Assert.assertEquals("rope", h.continuation(withQuery))
+        org.junit.Assert.assertNull(h.continuation(plain))
+        // Old lists are evicted along with their continuation.
+        repeat(10) { h.put(emptyList(), 0, continueWith = "x$it") }
+        org.junit.Assert.assertNull(h.get(withQuery))
+        org.junit.Assert.assertNull(h.continuation(withQuery))
+    }
+}
