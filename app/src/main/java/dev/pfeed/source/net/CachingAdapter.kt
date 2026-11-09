@@ -6,6 +6,7 @@ import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.MediaType
 import dev.pfeed.domain.model.Page
 import dev.pfeed.domain.model.StreamInfo
+import dev.pfeed.source.FeedHealth
 import dev.pfeed.source.SeenFilter
 import dev.pfeed.source.SourceAdapter
 import dev.pfeed.source.SourceException
@@ -69,6 +70,14 @@ abstract class CachingAdapter : SourceAdapter {
     @Inject
     fun injectSeen(items: SeenItems) {
         seen = items
+    }
+
+    /** Which entries keep failing or coming back empty (persisted); wired by Hilt, tests set it. */
+    var health: FeedHealth = FeedHealth.NONE
+
+    @Inject
+    fun injectHealth(store: dev.pfeed.data.repo.FeedHealthStore) {
+        health = store
     }
 
     /** How long a generation lives before a new feed session starts again from the top. */
@@ -178,7 +187,10 @@ abstract class CachingAdapter : SourceAdapter {
         signature = sig
         pool.clear(); poolKeys.clear()
         poolSnapshot = emptyList()
-        order = sig.distinct().shuffled()
+        // Skip entries that keep failing or returning nothing (they get another try after a week).
+        // If somehow everything is marked dead, try them all rather than show nothing.
+        val distinct = sig.distinct()
+        order = distinct.filterNot { health.isDead(id, it) }.ifEmpty { distinct }.shuffled()
         rr = 0
         tokens.clear(); done.clear(); failures.clear()
         recycles = 0
@@ -226,19 +238,31 @@ abstract class CachingAdapter : SourceAdapter {
 
         val fresh = ArrayList<List<MediaItem>>(results.size)
         var anyOk = false
+        var anyContent = false
+        val strikes = ArrayList<String>()
         for ((entry, result) in results) {
+            val firstPage = entry !in tokens
             result.onSuccess { page ->
                 anyOk = true
                 failures.remove(entry)
+                // A first page with nothing we can show (dead tag, text-only subreddit…) counts
+                // against the entry; anything usable clears its record.
+                if (page.items.isNotEmpty()) { health.ok(id, entry); anyContent = true } else if (firstPage) strikes += entry
                 if (page.next == null) done += entry else tokens[entry] = page.next
                 fresh += page.items.filter { poolKeys.add(it.key) && !seen.isSeen(it.key) }
             }.onFailure { e ->
                 lastError = e
+                // Only "this doesn't exist" answers count; network trouble and rate limits don't.
+                if (isPermanentFailure(e)) strikes += entry
                 val n = (failures[entry] ?: 0) + 1
                 failures[entry] = n
                 if (n >= MAX_ENTRY_FAILURES) done += entry
             }
         }
+        // Strike only when other entries in this batch did return content: if everything came back
+        // empty or failed, it's the site or the connection, not these entries.
+        if (anyContent) strikes.forEach { health.strike(id, it) }
+
         // Interleave entries so one subreddit/tag doesn't fill a whole page on its own.
         val merged = interleave(fresh)
         pool += merged
@@ -268,6 +292,12 @@ abstract class CachingAdapter : SourceAdapter {
         private const val MAX_ENTRY_FAILURES = 3
         private const val POOL_SEARCH_LIMIT = 100
         private const val SEARCH_CACHE_MS = 120_000L
+
+        private val PERMANENT_HTTP = Regex("""HTTP (400|403|404|410|451)\b""")
+
+        /** A "doesn't exist / not allowed" answer, as opposed to a timeout, network error or 429/5xx. */
+        internal fun isPermanentFailure(e: Throwable): Boolean =
+            e is SourceException && e.cause !is java.io.IOException && PERMANENT_HTTP.containsMatchIn(e.message.orEmpty())
 
         internal fun <T> interleave(lists: List<List<T>>): List<T> {
             val out = ArrayList<T>(lists.sumOf { it.size })

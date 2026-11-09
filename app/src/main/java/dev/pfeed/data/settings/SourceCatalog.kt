@@ -134,7 +134,23 @@ object SourceCatalog {
         "animated", "comic", "corruption", "drool",
     )
 
+    /** Body type × act pairings on the three biggest boards: common tags, so nearly all return posts. */
+    private val pairBodies = listOf(
+        "huge_breasts", "large_breasts", "milf", "mature_female", "dark-skinned_female", "muscular_female",
+        "thick_thighs", "huge_ass", "futanari", "elf", "cat_girl", "succubus", "tan", "gyaru", "plump", "curvy",
+    )
+    private val pairActs = listOf(
+        "sex", "anal", "paizuri", "fellatio", "cowgirl_position", "doggystyle", "missionary", "creampie",
+        "ahegao", "bondage", "handjob", "footjob", "masturbation", "group_sex", "mating_press", "animated",
+    )
+
     val booruFeeds: List<BooruFeed> = buildList {
+        for (b in pairBodies) for (a in pairActs) {
+            add(BooruFeed("rule34.xxx", "$b $a"))
+            add(BooruFeed("gelbooru.com", "$b $a"))
+            // Danbooru: two tags is the anonymous limit; the post-level rating filter drops safe ones.
+            add(BooruFeed("danbooru.donmai.us", "$b $a"))
+        }
         for (f in franchiseTags) for (host in ANIME_GELBOORU_HOSTS) add(BooruFeed(host, f))
         for (f in franchiseTags) for (host in DANBOORU_HOSTS) add(BooruFeed(host, "rating:explicit $f"))
         for (act in photoVideoActs) add(BooruFeed("realbooru.com", "video $act"))

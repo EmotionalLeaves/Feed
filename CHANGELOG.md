@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.7.0 — 2026-11-09
+
+Round 1: dead feeds stop wasting requests; ~5,400 built-in feeds.
+
+- **Dead-feed pruning.** With thousands of feeds, some will be dead (renamed subreddit, tag with no posts, text-only sub). Each one that answers "not found/forbidden" or whose first page has nothing showable gets a strike; at 3 strikes it's skipped for a week, then gets one more try. Strikes only count when other feeds in the same batch returned content, and network errors, timeouts, rate limits and server errors never count, so going offline or a site outage can't switch anything off.
+- **+768 board feeds:** body type × act pairings (e.g. `milf paizuri`) on rule34.xxx, gelbooru and danbooru. Library version 6.
+
 ## 3.6.0 — 2026-11-09
 
 Pass 3 of 3: faster images and network, ~4,600 built-in feeds.
