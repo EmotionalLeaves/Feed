@@ -145,6 +145,9 @@ object SourceCatalog {
     )
 
     val booruFeeds: List<BooruFeed> = buildList {
+        // Pools: ordered multi-page sets (comics), one gallery item each. e621's are nearly all
+        // explicit; Danbooru's are filtered down to their adult pages.
+        for (host in listOf("e621.net", "danbooru.donmai.us")) for (order in listOf("recent", "new")) add(BooruFeed(host, "pools:$order"))
         for (b in pairBodies) for (a in pairActs) {
             add(BooruFeed("rule34.xxx", "$b $a"))
             add(BooruFeed("gelbooru.com", "$b $a"))

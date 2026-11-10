@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.29.0 — 2026-11-10
+
+Comics are readable; more variety; faster page-to-page.
+
+- **Comics and photo sets are one post you page through.** A Coomer post with 24 images used to become 24 separate feed items, of which the pool kept three and the spacer scattered across your feed — page 7 now, page 22 ten minutes later. Such a post is now a single item: swipe left/right to turn pages (pinch to zoom works on each), with a page counter and a progress line along the top; swipe up to move on. The next two pages are loaded as you read, so turning a page is instant. Its video, if any, stays a separate clip.
+- **Real comics from the boards.** e621 and Danbooru *pools* (their ordered multi-page sets — on e621 nearly all explicit comics) are new built-in feeds, each pool one comic in reading order. Safe pages are dropped, and a blocked tag on any page blocks the whole comic. Library version 9.
+- **More variety.** The spacing rules stop runs but never pulled in places you don't see; with thousands of feeds the same dozen subreddits and sites could still fill every slot. The ranker now gives a bonus to any subreddit, site or server not shown in the last ~80 posts.
+- **Faster from post to post.** The real file is resolved for the next 5 posts instead of 3 (board posts need a page fetch each), and thumbnails for 6 ahead.
+- HEIC/HEIF and .jfif images are recognised.
+
 ## 3.28.0 — 2026-11-10
 
 Coomer: present as a browser so its servers serve the files.

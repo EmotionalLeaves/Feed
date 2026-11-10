@@ -102,6 +102,11 @@ class BooruAdapter @Inject constructor(
         val feed = json.decodeFromString(BooruFeed.serializer(), entry)
         val start = token?.toIntOrNull() ?: Random.nextInt(0, RANDOM_START_PAGES)
         var page = start
+        val poolOrder = feed.tags?.trim()?.removePrefix(POOLS_PREFIX)?.takeIf { feed.tags.trim().startsWith(POOLS_PREFIX) }
+        if (poolOrder != null) {
+            val comics = fetchPools(feed.host, poolOrder, page)
+            return EntryPage(comics, if (comics.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString())
+        }
         var items = fetchPosts(feed.host, feed.tags, page)
         if (items.isEmpty() && token == null && start > 0) {
             page = 0
@@ -237,6 +242,36 @@ class BooruAdapter @Inject constructor(
         return listOfNotNull(base, MinorsFilter.booruNegativeTags.takeIf { longQueries }, notSafe).joinToString(" ")
     }
 
+    /**
+     * Pools are a board's ordered multi-page sets — on e621 and Danbooru, mostly comics. Each pool
+     * becomes one gallery item with its pages in reading order. [order] is "recent" (last updated)
+     * or "new". Two requests per pool (the pool list is shared), spaced out for e621's rate limit.
+     */
+    private suspend fun fetchPools(host: String, order: String, page: Int): List<MediaItem> {
+        val bare = BooruFamily.bareHost(host)
+        if (BooruFamily.of(bare) != BooruFamily.DANBOORU) return emptyList() // e621 and Danbooru share this API
+        val base = BooruFamily.apiBase(bare)
+        val creds = credentialParams(bare)
+        val sort = if (order == "new") "created_at" else "updated_at"
+        val list = http.get(id, "$base/pools.json?search[category]=series&search[order]=$sort&limit=$POOLS_PER_PAGE&page=${page + 1}$creds")
+        val pools = (list as? kotlinx.serialization.json.JsonArray).orEmpty().mapNotNull { it as? kotlinx.serialization.json.JsonObject }
+        val out = ArrayList<MediaItem>()
+        for (pool in pools) {
+            val poolId = (pool["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: continue
+            val count = (pool["post_count"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 0
+            if (count < MIN_POOL_PAGES || count > MAX_POOL_PAGES) continue
+            val name = (pool["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.replace('_', ' ')?.trim()
+            val postIds = (pool["post_ids"] as? kotlinx.serialization.json.JsonArray).orEmpty()
+                .mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() }
+            kotlinx.coroutines.delay(POOL_DELAY_MS)
+            val posts = runCatching {
+                BooruParser.parse(http.get(id, "$base/posts.json?limit=320&tags=" + URLEncoder.encode("pool:$poolId", "UTF-8") + creds), bare)
+            }.getOrDefault(emptyList())
+            poolGallery(bare, poolId, name, postIds, posts)?.let(out::add)
+        }
+        return out
+    }
+
     private fun postsUrl(host: String, tags: String?, page: Int): String {
         val family = BooruFamily.of(host)
         val base = BooruFamily.apiBase(host)
@@ -251,6 +286,45 @@ class BooruAdapter @Inject constructor(
     }
 
     companion object {
+        /** Feed tags "pools:recent" / "pools:new" list a board's pools instead of posts. */
+        const val POOLS_PREFIX = "pools:"
+        private const val POOLS_PER_PAGE = 8
+        private const val MIN_POOL_PAGES = 3
+        private const val MAX_POOL_PAGES = 80
+        private const val POOL_DELAY_MS = 600L
+
+        /**
+         * One gallery for a pool: its posts in the pool's order, keeping only adult image pages (a
+         * comic with a safe cover still reads from the next page), or null if that leaves too few.
+         * The pages' tags are pooled, so a blocked tag on any page blocks the whole comic.
+         */
+        internal fun poolGallery(host: String, poolId: Long, name: String?, order: List<Long>, posts: List<MediaItem>): MediaItem? {
+            val byId = posts.associateBy { it.id.substringAfterLast('/').toLongOrNull() }
+            val ordered = order.mapNotNull { byId[it] }.ifEmpty { posts }
+            val pages = ordered.filter { it.type == dev.pfeed.domain.model.MediaType.IMAGE && dev.pfeed.domain.filter.ContentRating.isAdult(it) }
+            if (pages.size < MIN_POOL_PAGES) return null
+            val first = pages.first()
+            val firstMedia = first.extras["media"] ?: return null
+            return MediaItem(
+                id = "$host/pool/$poolId",
+                sourceId = BooruParser.SOURCE_ID,
+                type = dev.pfeed.domain.model.MediaType.IMAGE,
+                title = name?.takeIf { it.isNotBlank() },
+                creator = first.creator,
+                tags = (listOf("comic") + pages.flatMap { it.tags }).distinct().take(250),
+                durationSec = null,
+                thumbnailUrl = first.thumbnailUrl,
+                pageUrl = "https://$host/pools/$poolId",
+                publishedAt = pages.mapNotNull { it.publishedAt }.maxOrNull(),
+                extras = buildMap {
+                    put("media", firstMedia)
+                    put("rating", "e")
+                    pages.mapNotNull { it.extras["score"]?.toLongOrNull() }.maxOrNull()?.let { put("score", it.toString()) }
+                },
+                pages = pages.mapNotNull { it.extras["media"] },
+            )
+        }
+
         private val WEB_ONLY_WITHOUT_KEY = setOf("rule34.xxx", "gelbooru.com", "realbooru.com")
         private val HOST_IN_ENTRY = Regex(""""host"\s*:\s*"([^"]+)"""")
         private const val RANDOM_START_PAGES = 4

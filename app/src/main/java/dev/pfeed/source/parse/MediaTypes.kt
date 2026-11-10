@@ -21,7 +21,7 @@ object MediaTypes {
             m?.startsWith("video/") == true || m == "application/x-mpegurl" || m == "application/vnd.apple.mpegurl" ||
                 medium == "video" || ext(".mp4", ".webm", ".m4v", ".mov", ".m3u8", ".mpd", ".mkv") -> MediaType.VIDEO
             m?.startsWith("image/") == true || medium == "image" ||
-                ext(".jpg", ".jpeg", ".png", ".webp", ".avif", ".bmp") -> MediaType.IMAGE
+                ext(".jpg", ".jpeg", ".jpe", ".jfif", ".png", ".webp", ".avif", ".heic", ".heif", ".bmp") -> MediaType.IMAGE
             else -> null
         }
     }

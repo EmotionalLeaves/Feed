@@ -393,7 +393,7 @@ private fun FeedPage(
     ) {
         when (type) {
             MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it })
-            MediaType.IMAGE, MediaType.GIF -> ImagePage(item, vm)
+            MediaType.IMAGE, MediaType.GIF -> if (item.isGallery) GalleryPage(item, vm) else ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
 

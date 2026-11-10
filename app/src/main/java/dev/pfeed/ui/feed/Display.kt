@@ -13,6 +13,14 @@ import dev.pfeed.domain.reco.Features
  */
 object Display {
 
+    /** Page [index] of a gallery as a stand-alone image item (so the normal image page can show it). */
+    fun galleryPage(item: MediaItem, index: Int): MediaItem = item.copy(
+        id = "${item.id}#$index",
+        type = MediaType.IMAGE,
+        extras = (item.extras - "full" - "resolve") + ("media" to item.pages[index]),
+        pages = emptyList(),
+    )
+
     /**
      * The type to render an item as once its file is known. Listings often only know a thumbnail:
      * a post listed as an image whose file is really an MP4/WebM must play as a video.

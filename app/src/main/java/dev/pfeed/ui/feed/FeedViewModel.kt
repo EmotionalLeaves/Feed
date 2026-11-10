@@ -114,6 +114,9 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Warms the image cache for a gallery page about to be shown. */
+    fun warmImage(url: String) = preloader.image(url)
+
     /** The post's media actually appeared (first video frame / image drawn). */
     fun markShown(item: MediaItem) = mediaHealth.shown(item)
 
@@ -461,8 +464,8 @@ class FeedViewModel @Inject constructor(
 
     companion object {
         private const val LOAD_AHEAD = 10
-        private const val PRELOAD_AHEAD = 5
-        private const val RESOLVE_AHEAD = 3
+        private const val PRELOAD_AHEAD = 6
+        private const val RESOLVE_AHEAD = 5
         private const val CHAIN_DELAY_MS = 300L
         private const val RETRY_MIN_MS = 2_000L
         private const val RETRY_MAX_MS = 30_000L

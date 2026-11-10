@@ -30,9 +30,17 @@ data class MediaItem(
     val publishedAt: Instant?,
     /** Adapter-private hints (for example a direct media URL found while parsing a feed). */
     val extras: Map<String, String> = emptyMap(),
+    /**
+     * A multi-page post (a comic, a photo set): the image URL of every page, in reading order.
+     * Shown as one feed item you page through sideways, instead of one item per page. Empty for
+     * a single file. `extras["media"]` is the first page.
+     */
+    val pages: List<String> = emptyList(),
 ) {
     /** Globally unique key across sources. */
     val key: String get() = "$sourceId:$id"
+
+    val isGallery: Boolean get() = pages.size > 1
 }
 
 data class Page<T>(val items: List<T>, val nextCursor: String?)

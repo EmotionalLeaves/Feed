@@ -87,7 +87,7 @@ class SettingsRepository @Inject constructor(
 
     companion object {
         /** Version of the built-in source library merged into saved settings (see [migrate]). */
-        const val LIBRARY_VERSION = 8
+        const val LIBRARY_VERSION = 9
         private val MOVED_COOMER = setOf("coomer.su", "coomer.party")
     }
 }

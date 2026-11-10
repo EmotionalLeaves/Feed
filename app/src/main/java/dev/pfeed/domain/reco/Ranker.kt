@@ -22,6 +22,12 @@ data class RankWeights(
     val similarity: Double = 0.45,
     /** Community vote score where the source has one (image boards). */
     val quality: Double = 0.3,
+    /**
+     * Bonus for a subreddit / site / server you haven't seen lately: the spacing rules only stop
+     * runs, they don't pull in places you never see, so with thousands of feeds the same dozen
+     * origins can still take every slot. This spreads the feed across many more of them.
+     */
+    val novelty: Double = 0.2,
     /** Probability that a slot is filled by a random candidate (ε-greedy). */
     val exploration: Double = 0.10,
 ) {
@@ -71,7 +77,10 @@ class Ranker(
         limit: Int = items.size,
         recent: List<MediaItem> = emptyList(),
         allowForcedRun: Boolean = true,
+        /** Origins (see [Spread.origin]) of the last [NOVELTY_WINDOW] or so items shown. */
+        recentOrigins: Collection<String> = emptySet(),
     ): List<MediaItem> {
+        val seenOrigins = HashSet(recentOrigins)
         val pool = items.map { Candidate(it, baseScore(it, tagAffinity, creatorAffinity, now), signature(it)) }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
         val recentSigs = ArrayDeque(recent.takeLast(SIMILARITY_WINDOW).map(::signature))
@@ -88,12 +97,14 @@ class Ranker(
             } else {
                 spread.pick(pool, { it.item }, minLevel) { c ->
                     c.score +
-                        weights.diversity * diversityBonus(c.item.sourceId, window) -
+                        weights.diversity * diversityBonus(c.item.sourceId, window) +
+                        (if (Spread.origin(c.item) in seenOrigins) 0.0 else weights.novelty) -
                         weights.similarity * maxSimilarity(c.sig, recentSigs)
                 }
             }
             if (index < 0) break
             val picked = pool.removeAt(index)
+            seenOrigins += Spread.origin(picked.item)
             spread.add(picked.item)
             out += picked.item
             window.addLast(picked.item.sourceId)
@@ -111,6 +122,8 @@ class Ranker(
 
     companion object {
         const val DIVERSITY_WINDOW = 5
+        /** How many recently shown origins count as "seen lately" for the novelty bonus. */
+        const val NOVELTY_WINDOW = 80
         /** How many just-shown items a candidate is compared with for similarity. */
         const val SIMILARITY_WINDOW = 3
         const val FRESHNESS_TAU_DAYS = 7.0

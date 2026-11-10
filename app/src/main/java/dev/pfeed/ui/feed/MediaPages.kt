@@ -16,10 +16,12 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import kotlinx.coroutines.withTimeoutOrNull
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -195,6 +197,43 @@ fun VideoPage(
  * **Tall images** (comics, manga): drawn at full screen width; the overflow is reachable by zooming.
  * **Normal / wide images**: centred at screen scale.
  */
+/**
+ * A multi-page post (comic, photo set): swipe sideways through its pages, each one the normal
+ * zoomable image page. Vertical swipes still move the feed. The next two pages are warmed as you
+ * read, so turning a page is instant.
+ */
+@Composable
+fun GalleryPage(item: MediaItem, vm: FeedViewModel) {
+    val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { item.pages.size })
+    LaunchedEffect(item.key, pager.currentPage) {
+        item.pages.drop(pager.currentPage + 1).take(2).forEach { vm.warmImage(it) }
+    }
+    Box(Modifier.fillMaxSize()) {
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pager,
+            modifier = Modifier.fillMaxSize(),
+            beyondViewportPageCount = 1,
+            key = { it },
+        ) { index ->
+            ImagePage(Display.galleryPage(item, index), vm)
+        }
+        // Reading position: a thin line along the top edge and a "3 / 24" pill under the top bar.
+        val fraction = (pager.currentPage + 1f) / item.pages.size
+        Box(
+            Modifier.align(Alignment.TopStart).fillMaxWidth(fraction).height(3.dp)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)),
+        )
+        Text(
+            "${pager.currentPage + 1} / ${item.pages.size}",
+            color = androidx.compose.ui.graphics.Color.White,
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 14.dp)
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 4.dp),
+        )
+    }
+}
+
 @Composable
 fun ImagePage(item: MediaItem, vm: FeedViewModel) {
     val stream by produceState<StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }

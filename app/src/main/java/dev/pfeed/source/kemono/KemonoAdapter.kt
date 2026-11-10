@@ -110,68 +110,7 @@ class KemonoAdapter @Inject constructor(
         else -> emptyList()
     }
 
-    private fun itemsFromPost(host: String, post: JsonObject): List<MediaItem> {
-        fun s(key: String) = (post[key] as? JsonPrimitive)?.contentOrNull
 
-        val postId = s("id") ?: return emptyList()
-        val service = s("service")
-        val creator = s("user")
-        val title = s("title")?.takeIf { it.isNotBlank() }
-        val published = s("published")?.let { runCatching { Instant.parse(if (it.endsWith("Z")) it else it + "Z") }.getOrNull() }
-        // Posts have no tag list, but creators write hashtags in the text ("#milf #latina …"). Use
-        // them: they give the recommender and search something real to go on, and let the content
-        // filters see what the post says about itself.
-        val tags = (listOfNotNull(service, creator?.let { "creator:$it" }) + hashtags(listOfNotNull(title, s("substring"), s("content")).joinToString(" "))).distinct()
-
-        // Collect the main file and any attachments.
-        val paths = buildList {
-            (post["file"] as? JsonObject)?.get("path")?.let { (it as? JsonPrimitive)?.contentOrNull?.let(::add) }
-            (post["attachments"] as? JsonArray)?.forEach { att ->
-                ((att as? JsonObject)?.get("path") as? JsonPrimitive)?.contentOrNull?.let(::add)
-            }
-        }.distinct()
-
-        fun clean(path: String) = if (path.startsWith("/")) path else "/$path"
-        // Videos have no server thumbnail. Pointing the thumbnail at the video itself made the image
-        // loader download whole clips (often 100+ MB) just to draw a placeholder, several posts ahead.
-        // Use a still from the same post if there is one, otherwise nothing.
-        val postStill = paths.firstOrNull { classify(it) == MediaType.IMAGE }
-            ?.let { "https://img.$host/thumbnail/data${clean(it)}" }
-
-        return paths.mapIndexedNotNull { index, path ->
-            val type = classify(path) ?: return@mapIndexedNotNull null // skip non-media (pdfs, zips…)
-            val clean = clean(path)
-            val media = "https://$host/data$clean"
-            val thumb = when (type) {
-                MediaType.IMAGE -> "https://img.$host/thumbnail/data$clean"
-                MediaType.GIF -> media
-                else -> postStill
-            }
-            MediaItem(
-                id = "$host/$postId/$index",
-                sourceId = SOURCE_ID,
-                type = type,
-                title = title,
-                creator = creator?.let { "$it@$service" },
-                tags = tags,
-                durationSec = null,
-                thumbnailUrl = thumb,
-                pageUrl = "https://$host/$service/user/$creator/post/$postId",
-                publishedAt = published,
-                extras = mapOf("media" to media),
-            )
-        }
-    }
-
-    private fun classify(path: String): MediaType? {
-        val ext = path.substringAfterLast('.', "").substringBefore('?').lowercase()
-        return when (ext) {
-            "jpg", "jpeg", "png", "webp", "jpe", "bmp" -> MediaType.IMAGE
-            "gif" -> MediaType.GIF
-            "mp4", "webm", "m4v", "mov" -> MediaType.VIDEO
-            else -> null
-        }
-    }
 
     companion object {
         const val SOURCE_ID = "kemono"
@@ -187,6 +126,82 @@ class KemonoAdapter @Inject constructor(
         /** "#Milf #big_tits" → [milf, big_tits] (at most 20). */
         internal fun hashtags(text: String): List<String> =
             HASHTAG.findAll(text).map { it.groupValues[1].lowercase() }.distinct().take(20).toList()
+
+        internal fun itemsFromPost(host: String, post: JsonObject): List<MediaItem> {
+            fun s(key: String) = (post[key] as? JsonPrimitive)?.contentOrNull
+
+            val postId = s("id") ?: return emptyList()
+            val service = s("service")
+            val creator = s("user")
+            val title = s("title")?.takeIf { it.isNotBlank() }
+            val published = s("published")?.let { runCatching { Instant.parse(if (it.endsWith("Z")) it else it + "Z") }.getOrNull() }
+            // Posts have no tag list, but creators write hashtags in the text ("#milf #latina …"). Use
+            // them: they give the recommender and search something real to go on, and let the content
+            // filters see what the post says about itself.
+            val tags = (listOfNotNull(service, creator?.let { "creator:$it" }) + hashtags(listOfNotNull(title, s("substring"), s("content")).joinToString(" "))).distinct()
+
+            // Collect the main file and any attachments.
+            val paths = buildList {
+                (post["file"] as? JsonObject)?.get("path")?.let { (it as? JsonPrimitive)?.contentOrNull?.let(::add) }
+                (post["attachments"] as? JsonArray)?.forEach { att ->
+                    ((att as? JsonObject)?.get("path") as? JsonPrimitive)?.contentOrNull?.let(::add)
+                }
+            }.distinct()
+
+            fun clean(path: String) = if (path.startsWith("/")) path else "/$path"
+            // Videos have no server thumbnail. Pointing the thumbnail at the video itself made the image
+            // loader download whole clips (often 100+ MB) just to draw a placeholder, several posts ahead.
+            // Use a still from the same post if there is one, otherwise nothing.
+            val postStill = paths.firstOrNull { classify(it) == MediaType.IMAGE }
+                ?.let { "https://img.$host/thumbnail/data${clean(it)}" }
+
+            val pageUrl = "https://$host/$service/user/$creator/post/$postId"
+            fun item(id: String, type: MediaType, media: String, thumb: String?, pages: List<String> = emptyList()) = MediaItem(
+                id = id,
+                sourceId = SOURCE_ID,
+                type = type,
+                title = title,
+                creator = creator?.let { "$it@$service" },
+                tags = tags,
+                durationSec = null,
+                thumbnailUrl = thumb,
+                pageUrl = pageUrl,
+                publishedAt = published,
+                extras = mapOf("media" to media),
+                pages = pages,
+            )
+
+            val typed = paths.mapNotNull { path -> classify(path)?.let { it to clean(path) } } // skip pdfs, zips…
+            val images = typed.filter { it.first == MediaType.IMAGE }.map { "https://$host/data${it.second}" }
+            val out = ArrayList<MediaItem>()
+            // A post's images are one set (a comic, a photo shoot): one item you page through, in the
+            // order the creator posted them. Split up, the pool kept three pages and the spacer scattered
+            // them across the feed, which is why comics were unreadable.
+            if (images.size >= 2) {
+                out += item("$host/$postId/set", MediaType.IMAGE, images.first(), "https://img.$host/thumbnail/data${typed.first { it.first == MediaType.IMAGE }.second}", pages = images)
+            }
+            typed.forEachIndexed { index, (type, clean) ->
+                if (type == MediaType.IMAGE && images.size >= 2) return@forEachIndexed // in the set
+                val media = "https://$host/data$clean"
+                val thumb = when (type) {
+                    MediaType.IMAGE -> "https://img.$host/thumbnail/data$clean"
+                    MediaType.GIF -> media
+                    else -> postStill
+                }
+                out += item("$host/$postId/$index", type, media, thumb)
+            }
+            return out
+        }
+
+        private fun classify(path: String): MediaType? {
+            val ext = path.substringAfterLast('.', "").substringBefore('?').lowercase()
+            return when (ext) {
+                "jpg", "jpeg", "png", "webp", "jpe", "bmp" -> MediaType.IMAGE
+                "gif" -> MediaType.GIF
+                "mp4", "webm", "m4v", "mov" -> MediaType.VIDEO
+                else -> null
+            }
+        }
 
         fun canonicalHost(raw: String): String {
             val h = raw.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")

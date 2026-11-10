@@ -98,6 +98,7 @@ class FeedSession(
     private val candidateKeys = HashSet<String>()
     private val dedup = Deduplicator()
     private val recentSources = ArrayList<String>()
+    private val recentOrigins = ArrayDeque<String>()
     private val recentShown = ArrayList<MediaItem>()
     /** Load number each candidate entered the pool, so items passed over again and again age out. */
     private val pooledAt = HashMap<String, Int>()
@@ -360,7 +361,7 @@ class FeedSession(
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
             val ranker = Ranker(settings.get().weights)
-            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun)
+            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins)
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {
                 val pickedKeys = picked.mapTo(HashSet()) { it.key }
@@ -392,7 +393,8 @@ class FeedSession(
         candidates.removeAll { it.key in batchKeys }
         candidateKeys.removeAll(batchKeys)
         batchKeys.forEach { pooledAt.remove(it) }
-        batch.forEach { shown += it.key; recentSources += it.sourceId; recentShown += it }
+        batch.forEach { shown += it.key; recentSources += it.sourceId; recentShown += it; recentOrigins += Spread.origin(it) }
+        while (recentOrigins.size > Ranker.NOVELTY_WINDOW) recentOrigins.removeFirst()
         if (recentSources.size > 50) recentSources.subList(0, recentSources.size - 50).clear()
         if (recentShown.size > Spread.WINDOW) recentShown.subList(0, recentShown.size - Spread.WINDOW).clear()
         return batch
