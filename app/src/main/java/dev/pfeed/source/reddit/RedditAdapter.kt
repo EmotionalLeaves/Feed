@@ -36,8 +36,10 @@ class RedditAdapter @Inject constructor(
     override val id = RedditParser.SOURCE_ID
     override val displayName = "Reddit"
     override val requiresAuth = false
-    override val maxConcurrency = 4
-    override val entriesPerExtend = 10
+    // Reddit rate-limits anonymous readers hard (429 after a handful of quick requests, checked
+    // live). Each request already brings up to 50 posts, so ask for few subreddits at a time.
+    override val maxConcurrency = 2
+    override val entriesPerExtend = 4
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 

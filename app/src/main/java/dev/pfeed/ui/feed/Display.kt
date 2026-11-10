@@ -18,9 +18,17 @@ object Display {
      * a post listed as an image whose file is really an MP4/WebM must play as a video.
      */
     fun effectiveType(item: MediaItem, stream: StreamInfo?): MediaType {
-        val url = (stream as? StreamInfo.Direct)?.url ?: return item.type
-        val actual = MediaTypes.classify(url, (stream as StreamInfo.Direct).mimeType)
-        return if ((item.type == MediaType.IMAGE || item.type == MediaType.GIF) && actual == MediaType.VIDEO) MediaType.VIDEO else item.type
+        val direct = stream as? StreamInfo.Direct ?: return item.type
+        val actual = MediaTypes.classify(direct.url, direct.mimeType) ?: return item.type
+        return when {
+            // Listed as a still, file is a clip → play it.
+            (item.type == MediaType.IMAGE || item.type == MediaType.GIF) && actual == MediaType.VIDEO -> MediaType.VIDEO
+            // Listed as a clip (boards tag GIFs "animated" too), file is a GIF → show it as a GIF;
+            // the video player can't play one and the post was being dropped as broken.
+            item.type == MediaType.VIDEO && actual == MediaType.GIF -> MediaType.GIF
+            item.type == MediaType.IMAGE && actual == MediaType.GIF -> MediaType.GIF
+            else -> item.type
+        }
     }
 
     /** A video post whose only file is a still image (the clip couldn't be found): nothing to play. */

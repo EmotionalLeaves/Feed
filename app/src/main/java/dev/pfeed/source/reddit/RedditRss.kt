@@ -124,9 +124,10 @@ internal object RedditRss {
     private fun isPreview(url: String): Boolean {
         val h = url.substringAfter("://").substringBefore('/').lowercase()
         if (h != "preview.redd.it" && h != "external-preview.redd.it") return false
-        // Reddit sizes previews with ?width=; anything under 320 px is a thumbnail, not worth showing.
+        // Reddit sizes previews with ?width=. Under 640 px they're blurry full-screen, and a blurry
+        // post is worse than no post (checked live: gallery/link posts only offer 320 px here).
         val w = Regex("[?&]width=(\\d+)").find(url)?.groupValues?.get(1)?.toIntOrNull()
-        return w == null || w >= 320
+        return w == null || w >= MIN_PREVIEW_WIDTH
     }
 
     private fun tag(xml: String, name: String): String? {
@@ -163,6 +164,7 @@ internal object RedditRss {
         .replace("&amp;", "&")
 
     const val HLS_MIME = "application/x-mpegURL"
+    private const val MIN_PREVIEW_WIDTH = 640
 
     private val MEDIA_THUMB_RE = Regex("""<media:thumbnail[^>]*\burl="([^"]+)"""")
     private val CATEGORY_RE = Regex("""<category[^>]*\bterm="([^"]+)"""")
