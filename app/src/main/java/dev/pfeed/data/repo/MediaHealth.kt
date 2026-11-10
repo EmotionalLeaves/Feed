@@ -27,8 +27,14 @@ class MediaHealth @Inject constructor() {
     /** How many posts have actually displayed (first video frame / image drawn) since launch. */
     val shownCount = java.util.concurrent.atomic.AtomicInteger(0)
 
+    /** The last few outcomes ("shown booru:x.org IMAGE", "failed redgifs VIDEO: stalled"), for diagnostics. */
+    private val recent = java.util.concurrent.ConcurrentLinkedDeque<String>()
+    fun recentEvents(): List<String> = recent.toList()
+    private fun note(event: String) { recent.addLast(event); while (recent.size > 40) recent.pollFirst() }
+
     fun shown(item: MediaItem) {
         shownCount.incrementAndGet()
+        note("shown ${Spread.origin(item)} ${item.type}")
         val o = Spread.origin(item)
         lastSuccessAt = now()
         lastSuccessOrigin = o
@@ -36,8 +42,9 @@ class MediaHealth @Inject constructor() {
     }
 
     /** @return true if this failure just put the origin to rest. */
-    fun failed(item: MediaItem): Boolean {
+    fun failed(item: MediaItem, reason: String = ""): Boolean {
         val o = Spread.origin(item)
+        note("failed $o ${item.type}: $reason")
         val s = states.getOrPut(o) { State() }
         synchronized(s) {
             if (s.breaks == 0) s.firstBreakAt = now()

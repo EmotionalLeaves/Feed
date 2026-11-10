@@ -95,14 +95,14 @@ class FeedViewModel @Inject constructor(
      * Something about this item doesn't work (dead link, unplayable format, blocked host). Drop it
      * quietly instead of showing an error: the pager slides the next item into its place.
      */
-    fun markBroken(item: MediaItem) {
+    fun markBroken(item: MediaItem, reason: String = "") {
         if (item.key in broken.value) return
         // Only drop what's on screen or ahead. Removing an item behind you would shift the list and
         // jump the page you're looking at; it stays behind you, harmlessly.
         val index = items.value.indexOfFirst { it.key == item.key }
         if (index in 0 until lastSettled) return
         streams.remove(item.key)
-        if (mediaHealth.failed(item)) {
+        if (mediaHealth.failed(item, reason)) {
             // Third post in a row from this site that wouldn't load while others do: its files are
             // down. Drop the rest of it that's queued ahead instead of stalling on each one.
             val origin = dev.pfeed.domain.reco.Spread.origin(item)
@@ -272,7 +272,7 @@ class FeedViewModel @Inject constructor(
             } catch (e: Exception) {
                 null
             }
-            if (resolved == null) markBroken(item)
+            if (resolved == null) markBroken(item, "couldn't find its file")
             resolved
         }
     }

@@ -98,7 +98,7 @@ fun VideoPage(
     LaunchedEffect(player, stream, firstFrame) { onPlayer(if (firstFrame) player else null) }
 
     // A "video" whose only file is a still (the clip couldn't be found) would sit on one frame: skip it.
-    LaunchedEffect(stream) { if (Display.isStillForVideo(item, stream)) vm.markBroken(item) }
+    LaunchedEffect(stream) { if (Display.isStillForVideo(item, stream)) vm.markBroken(item, "video post with only a still") }
 
     LaunchedEffect(player, stream) {
         val p = player ?: return@LaunchedEffect
@@ -131,7 +131,7 @@ fun VideoPage(
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY && p != null && p.duration > 0) stats.durationMs = p.duration
             }
-            override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item) }
+            override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item, "player: ${e.errorCodeName} ${e.cause?.message?.take(80).orEmpty()}") }
             // Headphones unplugged: the player paused itself so nothing played on the speaker.
             // Mute the feed and carry on silently instead of leaving a frozen video.
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -151,7 +151,7 @@ fun VideoPage(
     LaunchedEffect(item.key, play, firstFrame) {
         if (play && !firstFrame) {
             kotlinx.coroutines.delay(STALL_TIMEOUT_MS)
-            if (!firstFrame) vm.markBroken(item)
+            if (!firstFrame) vm.markBroken(item, "no frame after ${STALL_TIMEOUT_MS / 1000}s")
         }
     }
     LaunchedEffect(player, muted) { player?.let { dev.pfeed.player.PlayerPool.applyMute(it, muted) } }
@@ -281,7 +281,7 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
             },
             // Dead image link: drop it from the feed rather than leaving a black page.
             // (A failed full-size load while zoomed isn't a dead post: the sample already showed.)
-            onError = { if (stream != null && !(full != null && scale > ZOOM_FULL_RES)) vm.markBroken(item) },
+            onError = { if (stream != null && !(full != null && scale > ZOOM_FULL_RES)) vm.markBroken(item, "image: ${it.result.throwable.message?.take(100)}") },
             modifier = Modifier
                 .then(if (isTall) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
                 .graphicsLayer {

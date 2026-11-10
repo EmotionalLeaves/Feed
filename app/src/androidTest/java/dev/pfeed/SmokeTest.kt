@@ -86,11 +86,19 @@ class SmokeTest {
     @Test
     fun feedShowsRealPostsAndKeepsScrolling() {
         val shown = rule.activity.mediaHealth.shownCount
-        poll(90_000, "a first post to display") { shown.get() >= 1 }
+        try {
+            poll(90_000, "a first post to display") { shown.get() >= 1 }
+        } catch (e: AssertionError) {
+            throw AssertionError("No post displayed in 90 s. What happened: ${rule.activity.mediaHealth.recentEvents()}")
+        }
         var swipes = 0
-        poll(120_000, "three posts to have displayed while swiping (got ${shown.get()})") {
-            if (swipes < 12) { swipeUpGesture(); swipes++; Thread.sleep(2_500) }
-            shown.get() >= 3
+        try {
+            poll(120_000, "three posts to have displayed while swiping") {
+                if (swipes < 12) { swipeUpGesture(); swipes++; Thread.sleep(2_500) }
+                shown.get() >= 3
+            }
+        } catch (e: AssertionError) {
+            throw AssertionError("Only ${shown.get()} posts displayed after $swipes swipes. What happened: ${rule.activity.mediaHealth.recentEvents()}")
         }
         assertTrue("activity still alive after scrolling", !rule.activity.isFinishing && !rule.activity.isDestroyed)
     }
