@@ -39,6 +39,11 @@ class MastodonAdapter @Inject constructor(
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
+    // Two timelines per server per round, so no server gets a burst of requests.
+    override val maxPerGroupPerExtend = 2
+    override fun groupOf(entry: String): String =
+        Regex(""""host"\s*:\s*"([^"]+)"""").find(entry)?.groupValues?.get(1)?.lowercase() ?: entry
+
     override suspend fun entries(): List<String> =
         settings.get().mastodonFeeds
             .filterNot { isExcluded(it.host) }

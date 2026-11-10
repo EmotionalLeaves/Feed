@@ -275,13 +275,32 @@ abstract class CachingAdapter : SourceAdapter {
         return merged.size
     }
 
+    /**
+     * Entries that hit the same server share a group; at most [maxPerGroupPerExtend] of one group
+     * are fetched per round. With hundreds of feeds on one site, a random pick would send several
+     * requests to it at once (which sites answer with 403/429) and fill the round with one origin.
+     */
+    protected open fun groupOf(entry: String): String = entry
+    protected open val maxPerGroupPerExtend: Int = Int.MAX_VALUE
+
     private fun nextBatch(): List<String> {
         val live = order.filter { it !in done }
         if (live.isEmpty()) return emptyList()
         val n = entriesPerExtend.coerceAtMost(live.size)
-        val start = rr % live.size
-        rr = start + n
-        return List(n) { live[(start + it) % live.size] }
+        val out = ArrayList<String>(n)
+        val perGroup = HashMap<String, Int>()
+        var i = rr % live.size
+        var scanned = 0
+        while (out.size < n && scanned < live.size) {
+            val entry = live[i]
+            val g = groupOf(entry)
+            val used = perGroup[g] ?: 0
+            if (used < maxPerGroupPerExtend) { out += entry; perGroup[g] = used + 1 }
+            i = (i + 1) % live.size
+            scanned++
+        }
+        rr = i
+        return out
     }
 
     companion object {

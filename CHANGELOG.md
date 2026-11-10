@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.21.0 — 2026-11-09
+
+Round 4: every fetch round spans many sites.
+
+- **No more bursts at one site.** With hundreds of feeds on rule34.xxx and gelbooru, a random pick of feeds often sent several requests to the same site at once, which sites answer with 403/429, and filled the round with one site's posts. Each round now asks any one board (or Mastodon server) for at most two feeds, so a round covers many sites: fewer refusals and a more varied pool.
+
 ## 3.20.0 — 2026-11-09
 
 Round 3: source check report.

@@ -110,3 +110,33 @@ class QualityScaleTest {
         assertTrue(kotlin.math.abs(unscored - median) < 0.2)
     }
 }
+
+/** Entries are "host/tag"; each fetch records which entries were asked for. */
+private class GroupedFake(private val names: List<String>) : CachingAdapter() {
+    override val id = "gf"
+    override val displayName = "GF"
+    override val requiresAuth = false
+    override val entriesPerExtend = 6
+    override val maxPerGroupPerExtend = 2
+    override fun groupOf(entry: String) = entry.substringBefore('/')
+    val asked = java.util.Collections.synchronizedList(ArrayList<String>())
+    override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
+    override suspend fun entries() = names
+    override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
+        asked += entry
+        return EntryPage((0 until 30).map { item("$entry-$it", source = id) }, null)
+    }
+}
+
+class GroupedFetchTest {
+    @Test
+    fun `one round asks each server for at most two feeds`() = runBlocking {
+        // 40 feeds on one big site, 2 each on five small ones.
+        val names = (1..40).map { "big/$it" } + (1..5).flatMap { h -> listOf("small$h/a", "small$h/b") }
+        val a = GroupedFake(names)
+        a.fetchFeed(null, FeedPrefs(FeedMode.FOR_YOU))
+        val firstRound = a.asked.take(6)
+        assertTrue("asked: $firstRound", firstRound.count { it.startsWith("big/") } <= 2)
+        assertTrue(firstRound.map { it.substringBefore('/') }.distinct().size >= 3)
+    }
+}

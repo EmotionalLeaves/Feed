@@ -49,6 +49,10 @@ class BooruAdapter @Inject constructor(
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
+    // Two feeds per board per round: polite to each site, and every round spans many boards.
+    override val maxPerGroupPerExtend = 2
+    override fun groupOf(entry: String): String = HOST_IN_ENTRY.find(entry)?.groupValues?.get(1)?.lowercase() ?: entry
+
     /** Cache of post-page → resolved file URL, so replays and re-renders don't re-fetch. */
     private val resolvedCache = java.util.concurrent.ConcurrentHashMap<String, StreamInfo>()
 
@@ -248,6 +252,7 @@ class BooruAdapter @Inject constructor(
 
     companion object {
         private val WEB_ONLY_WITHOUT_KEY = setOf("rule34.xxx", "gelbooru.com", "realbooru.com")
+        private val HOST_IN_ENTRY = Regex(""""host"\s*:\s*"([^"]+)"""")
         private const val RANDOM_START_PAGES = 4
         /** Most boards refuse deep pages for anonymous users (Danbooru: 1000); stop well before. */
         private const val MAX_PAGES = 200
