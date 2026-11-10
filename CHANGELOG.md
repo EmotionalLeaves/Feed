@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.28.0 — 2026-11-10
+
+Coomer: present as a browser so its servers serve the files.
+
+- coomer.st / kemono.cr sit behind DDoS-Guard, which only serves their API and their image/video files to requests that look like a browser on the site. For these hosts (and their `img.`, `n1`–`n4` and `data.` subdomains) the app now sends a browser User-Agent and names the site as the referring page. This covers the post list, thumbnails and video playback, which all share one HTTP client.
+- If Coomer still doesn't load after this, it means its file servers are genuinely down or your network blocks them (not a header the app can change) — the per-source "Check sources" test will say which.
+
 ## 3.27.0 — 2026-11-09
 
 Round 10: the build proves posts really display.

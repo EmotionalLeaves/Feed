@@ -186,6 +186,18 @@ class MediaAndCatalogTest {
     }
 
     @Test
+    fun `archive hosts get browser headers, including file and thumbnail subdomains`() {
+        val h = dev.pfeed.di.ArchiveHeaders
+        assertEquals("coomer.st", h.siteFor("coomer.st"))
+        assertEquals("coomer.st", h.siteFor("img.coomer.st"))
+        assertEquals("coomer.st", h.siteFor("n3.coomer.st"))
+        assertEquals("kemono.cr", h.siteFor("data.kemono.cr"))
+        assertEquals("coomer.su", h.siteFor("coomer.su")) // old alias still recognised
+        assertNull(h.siteFor("gelbooru.com"))
+        assertNull(h.siteFor("notcoomer.st.evil.com"))
+    }
+
+    @Test
     fun `coomer moved domains`() {
         assertEquals("coomer.st", KemonoAdapter.canonicalHost("coomer.su"))
         assertEquals("coomer.st", KemonoAdapter.canonicalHost("https://www.coomer.party/"))

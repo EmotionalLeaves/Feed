@@ -57,7 +57,23 @@ object AppModule {
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(45, TimeUnit.SECONDS)
-        // Default User-Agent
+        // coomer / kemono sit behind DDoS-Guard, which serves their API and files only to clients
+        // that present themselves as a browser on the site. The app reaches the same public pages a
+        // browser does, so for these hosts it sends a browser User-Agent and names the site as the
+        // referring page. One interceptor covers the API, thumbnails (Coil) and video (ExoPlayer),
+        // since they all share this client; the API's Accept: text/css is set where it's called.
+        .addInterceptor { chain ->
+            val request = chain.request()
+            val site = ArchiveHeaders.siteFor(request.url.host)
+            if (site == null) chain.proceed(request)
+            else chain.proceed(
+                request.newBuilder()
+                    .header("User-Agent", ArchiveHeaders.BROWSER_UA)
+                    .apply { if (request.header("Referer") == null) header("Referer", "https://$site/") }
+                    .build(),
+            )
+        }
+        // Default User-Agent for everything else
         .addInterceptor { chain ->
             val request = chain.request()
             if (request.header("User-Agent") != null) chain.proceed(request)
@@ -116,5 +132,19 @@ object AppModule {
 object HotlinkReferer {
     private val SITES = listOf("gelbooru.com", "realbooru.com")
 
+    fun siteFor(host: String): String? = SITES.firstOrNull { host == it || host.endsWith(".$it") }
+}
+
+/**
+ * coomer / kemono and their file and thumbnail subdomains (img., n1–n4., data.), which are behind
+ * DDoS-Guard and expect browser-looking requests.
+ */
+object ArchiveHeaders {
+    private val SITES = listOf("coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party")
+
+    const val BROWSER_UA =
+        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
+
+    /** The site to name as referrer for [host] (covers img./n*./data. subdomains), or null. */
     fun siteFor(host: String): String? = SITES.firstOrNull { host == it || host.endsWith(".$it") }
 }
