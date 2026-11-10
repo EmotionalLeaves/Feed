@@ -91,16 +91,28 @@ class HttpJson @Inject constructor(
         return body
     }
 
-    /** Whether [url] (a media file) answers at all: asks for its first byte only. */
+    /**
+     * Whether [url] (a media file) answers at all. Asks for the first byte only and never reads the
+     * body: a server that ignores the range would otherwise send the whole file.
+     */
     suspend fun reachable(url: String): Boolean {
         val parsed = url.toHttpUrlOrNull() ?: return false
         val call = http.newCall(Request.Builder().url(parsed).header("Range", "bytes=0-0").header("Accept", "*/*").build())
-        return try {
-            call.await().first in 200..399
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: IOException) {
-            false
+        return suspendCancellableCoroutine { cont ->
+            cont.invokeOnCancellation { runCatching { call.cancel() } }
+            call.enqueue(object : Callback {
+                override fun onFailure(call: Call, e: IOException) {
+                    if (cont.isActive) cont.resume(false)
+                }
+
+                override fun onResponse(call: Call, response: Response) {
+                    val type = response.header("Content-Type").orEmpty()
+                    // A web page where a file should be (hotlink refusal, error page) isn't the file.
+                    val ok = response.code in 200..399 && !type.startsWith("text/html")
+                    response.close()
+                    if (cont.isActive) cont.resume(ok)
+                }
+            })
         }
     }
 
