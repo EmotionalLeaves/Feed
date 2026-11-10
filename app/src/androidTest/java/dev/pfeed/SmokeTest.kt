@@ -183,5 +183,11 @@ class SmokeTest {
         val deadline = System.currentTimeMillis() + 5_000
         while (!lockManager.locked.value && System.currentTimeMillis() < deadline) Thread.sleep(100)
         assertTrue("panic gesture should lock the app", lockManager.locked.value)
+        // Tests share one install: leave the app unlocked with no PIN, or every test that runs after
+        // this one would start on the lock screen.
+        runBlocking {
+            lockManager.unlockWithPin(pin.joinToString("").toCharArray())
+            lockManager.disable(pin.joinToString("").toCharArray())
+        }
     }
 }
