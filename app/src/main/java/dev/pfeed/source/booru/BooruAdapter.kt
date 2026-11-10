@@ -260,7 +260,7 @@ class BooruAdapter @Inject constructor(
             val poolId = (pool["id"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() ?: continue
             val count = (pool["post_count"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 0
             if (count < MIN_POOL_PAGES || count > MAX_POOL_PAGES) continue
-            val name = (pool["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.replace('_', ' ')?.trim()
+            val name = (pool["name"] as? kotlinx.serialization.json.JsonPrimitive)?.content
             val postIds = (pool["post_ids"] as? kotlinx.serialization.json.JsonArray).orEmpty()
                 .mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() }
             kotlinx.coroutines.delay(POOL_DELAY_MS)
@@ -309,7 +309,7 @@ class BooruAdapter @Inject constructor(
                 id = "$host/pool/$poolId",
                 sourceId = BooruParser.SOURCE_ID,
                 type = dev.pfeed.domain.model.MediaType.IMAGE,
-                title = name?.takeIf { it.isNotBlank() },
+                title = name?.replace('_', ' ')?.trim()?.takeIf { it.isNotBlank() },
                 creator = first.creator,
                 tags = (listOf("comic") + pages.flatMap { it.tags }).distinct().take(250),
                 durationSec = null,

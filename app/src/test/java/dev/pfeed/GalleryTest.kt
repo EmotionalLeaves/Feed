@@ -104,7 +104,8 @@ class NoveltyTest {
         val recentOrigins = List(30) { "r/gonewild" } + List(30) { "r/nsfw" }
         val ranked = dev.pfeed.domain.reco.Ranker(dev.pfeed.domain.reco.RankWeights(exploration = 0.0), kotlin.random.Random(3))
             .rank(familiar + fresh, emptyMap(), emptyMap(), now, limit = 6, recentOrigins = recentOrigins)
-        val top = ranked.take(4).map { Spread.origin(it) }
-        assertTrue("fresh origins should lead: $top", top.count { it == "r/newsub" || it == "r/othersub" } >= 3)
+        // The bonus is for an origin's first appearance: both unseen subreddits lead, one each.
+        val top = ranked.take(2).map { Spread.origin(it) }.toSet()
+        assertEquals(setOf("r/newsub", "r/othersub"), top)
     }
 }
