@@ -45,7 +45,9 @@ sealed class TubeSite(val host: String, val label: String) {
     open fun streamFromIndex(indexJson: JsonElement): TubeStream? = null
 
     companion object {
-        val ALL: List<TubeSite> = listOf(Xvideos, Pornhub, Xhamster, Redtube, Eporner)
+        // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
+        // initialisation re-enters the class initialiser and reads a null list.
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Pornhub, Xhamster, Redtube, Eporner) }
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { host == it.host || host.endsWith(".${it.host}") }
         internal val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -65,35 +67,62 @@ sealed class TubeSite(val host: String, val label: String) {
             }
         }
 
+        internal fun absolute(url: String, site: String): String {
+            val u = unescape(url)
+            return when {
+                u.startsWith("http") -> u
+                u.startsWith("//") -> "https:$u"
+                u.startsWith("/") -> "https://www.$site$u"
+                else -> u
+            }
+        }
+
+        /** The JSON array (or object) that starts at the first '[' / '{' after [marker], string-aware. */
+        internal fun jsonAfter(html: String, marker: String): String? {
+            val i = html.indexOf(marker)
+            if (i < 0) return null
+            val start = html.indexOfAny(charArrayOf('[', '{'), i)
+            if (start < 0) return null
+            val open = html[start]; val close = if (open == '[') ']' else '}'
+            var depth = 0; var j = start; var inStr = false; var esc = false
+            while (j < html.length) {
+                val c = html[j]
+                if (inStr) { if (esc) esc = false else if (c == '\\') esc = true else if (c == '"') inStr = false }
+                else when (c) { '"' -> inStr = true; open -> depth++; close -> { depth--; if (depth == 0) return html.substring(start, j + 1) } }
+                j++
+            }
+            return null
+        }
+
         /** Highest "quality":"720" style pick from a list of {videoUrl, quality} objects. */
-        internal fun bestOf(list: JsonArray): TubeStream? = list.mapNotNull { it as? JsonObject }
+        internal fun bestOf(list: JsonArray, site: String = ""): TubeStream? = list.mapNotNull { it as? JsonObject }
             .mapNotNull { o ->
-                val url = (o["videoUrl"] ?: o["url"])?.jsonPrimitive?.contentOrNull?.takeIf { it.startsWith("http") } ?: return@mapNotNull null
+                val raw = (o["videoUrl"] ?: o["url"])?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                val url = absolute(raw, site).takeIf { it.startsWith("http") } ?: return@mapNotNull null
                 val q = o["quality"]?.let { q -> (q as? JsonPrimitive)?.contentOrNull?.filter(Char::isDigit)?.toIntOrNull() } ?: 0
                 q to url
             }.maxByOrNull { it.first }?.let { (_, url) -> TubeStream(unescape(url), if (url.contains(".m3u8")) MediaTypes.HLS_MIME else null) }
 
         /** Pornhub-family `"mediaDefinitions":[…]` found in a page's player setup. */
-        internal fun mediaDefinitions(html: String): JsonArray? {
-            val i = html.indexOf("\"mediaDefinitions\":")
-            if (i < 0) return null
-            val start = html.indexOf('[', i)
-            if (start < 0) return null
-            var depth = 0
-            var j = start
-            while (j < html.length) {
-                when (html[j]) { '[' -> depth++; ']' -> { depth--; if (depth == 0) break } }
-                j++
-            }
-            return runCatching { json.parseToJsonElement(html.substring(start, j + 1)).jsonArray }.getOrNull()
+        internal fun mediaDefinitions(html: String): JsonArray? =
+            jsonAfter(html, "\"mediaDefinitions\":")?.let { runCatching { json.parseToJsonElement(it).jsonArray }.getOrNull() }
+
+        /** An entry that lists the real streams behind a second request rather than being one itself. */
+        private fun isIndex(o: JsonObject): Boolean {
+            val url = o["videoUrl"]?.jsonPrimitive?.contentOrNull.orEmpty()
+            return o["quality"] is JsonArray || o["remote"]?.jsonPrimitive?.contentOrNull == "true" ||
+                url.contains("/get_media") || url.contains("/media/")
         }
 
-        /** Pick the stream from media definitions: an hls/mp4 entry with a real URL. */
-        internal fun fromMediaDefinitions(defs: JsonArray): TubeStream? {
-            val objs = defs.mapNotNull { it as? JsonObject }
-            // Entries whose "quality" is a list point to an index that must be fetched (handled by streamIndexUrl).
-            val direct = objs.filter { it["quality"] !is JsonArray }
-            return bestOf(JsonArray(direct))
+        /** Pick the stream from media definitions: a direct hls/mp4 entry with a real URL. */
+        internal fun fromMediaDefinitions(defs: JsonArray, site: String): TubeStream? =
+            bestOf(JsonArray(defs.mapNotNull { it as? JsonObject }.filterNot(::isIndex)), site)
+
+        /** The hls index (preferred) or mp4 index URL to fetch, absolute. */
+        internal fun indexUrl(defs: JsonArray, site: String): String? {
+            val objs = defs.mapNotNull { it as? JsonObject }.filter(::isIndex)
+            val pick = objs.firstOrNull { it["format"]?.jsonPrimitive?.contentOrNull == "hls" } ?: objs.firstOrNull() ?: return null
+            return pick["videoUrl"]?.jsonPrimitive?.contentOrNull?.let { absolute(it, site) }?.takeIf { it.startsWith("http") }
         }
     }
 
@@ -106,9 +135,10 @@ sealed class TubeSite(val host: String, val label: String) {
             else -> "https://www.xvideos.com/?k=${enc(section)}&p=$page"
         }
 
-        private val BLOCK = Regex("""<div[^>]*\bclass="[^"]*thumb-block[^"]*"[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
+        // Attribute order varies (data-id before or after class), hence the lookahead.
+        private val BLOCK = Regex("""<div\b(?=[^>]*\bthumb-block)[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
         private val HREF = Regex("""href="(/video[^"]+)"""")
-        private val IMG = Regex("""<img[^>]*\b(?:data-src|src)="(https?://[^"]+\.(?:jpg|jpeg|webp)[^"]*)"""")
+        private val IMG = Regex("""\bdata-src="(https?://[^"]+)"""")
         private val TITLE = Regex("""<a[^>]*\btitle="([^"]*)"""")
         private val DUR = Regex("""class="duration"[^>]*>([^<]*)<""")
 
@@ -149,7 +179,8 @@ sealed class TubeSite(val host: String, val label: String) {
         }
 
         private val ITEM = Regex("""<li[^>]*\bdata-video-vkey="([^"]+)"[^>]*>(.*?)</li>""", RegexOption.DOT_MATCHES_ALL)
-        private val THUMB = Regex("""\b(?:data-src|data-thumb_url|src)="(https?://[^"]+\.(?:jpg|jpeg|webp)[^"]*)"""")
+        // Thumbs are image-proxy URLs (…/original_123.mp4/plain/…?hash=…), so no extension check.
+        private val THUMB = Regex("""<img\b[^>]*\b(?:data-mediumthumb|data-src|data-thumb_url|src)="(https?://[^"]+)"""")
         private val TITLE = Regex("""<a[^>]*\bhref="/view_video\.php\?viewkey=[^"]+"[^>]*\btitle="([^"]*)"""")
         private val DUR = Regex("""class="duration"[^>]*>([^<]*)<""")
 
@@ -165,14 +196,9 @@ sealed class TubeSite(val host: String, val label: String) {
             )
         }.distinctBy { it.id }.toList()
 
-        override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let(::fromMediaDefinitions)
-
-        override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.mapNotNull { it as? JsonObject }
-            ?.firstOrNull { it["quality"] is JsonArray && it["format"]?.jsonPrimitive?.contentOrNull == "hls" }
-            ?.get("videoUrl")?.jsonPrimitive?.contentOrNull?.let(::unescape)?.takeIf { it.startsWith("http") }
-
-        override fun streamFromIndex(indexJson: JsonElement): TubeStream? = (indexJson as? JsonArray)?.let(::bestOf)
-
+        override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let { fromMediaDefinitions(it, host) }
+        override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.let { indexUrl(it, host) }
+        override fun streamFromIndex(indexJson: JsonElement): TubeStream? = (indexJson as? JsonArray)?.let { bestOf(it, host) }
         override fun embedUrl(id: String) = "https://www.pornhub.com/embed/$id"
     }
 
@@ -185,72 +211,49 @@ sealed class TubeSite(val host: String, val label: String) {
             else -> "https://xhamster.com/search/${enc(section).replace("+", "%20")}?page=${page + 1}"
         }
 
-        /** Listing pages carry their videos as JSON in `window.initials`. */
+        /** Listing pages carry their videos as JSON (`videoThumbProps` inside `window.initials`). */
         override fun parseList(body: String): List<TubeVideo> {
-            val initials = initials(body) ?: return parseListHtml(body)
-            val thumbs = initials["videoListProps"]?.jsonObject?.get("videoThumbProps")?.jsonArray
-                ?: return parseListHtml(body)
-            return thumbs.mapNotNull { it as? JsonObject }.mapNotNull { v ->
+            val arr = jsonAfter(body, "\"videoThumbProps\":")?.let { runCatching { json.parseToJsonElement(it).jsonArray }.getOrNull() }
+            val fromJson = arr?.mapNotNull { it as? JsonObject }?.mapNotNull { v ->
                 val url = v["pageURL"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
-                val id = url.substringAfterLast('-').substringBefore('?').takeIf { it.all(Char::isDigit) } ?: url.substringAfterLast('/')
                 TubeVideo(
-                    id = id,
+                    id = url.substringAfterLast('-').substringBefore('?'),
                     title = v["title"]?.jsonPrimitive?.contentOrNull,
                     pageUrl = url,
                     thumb = v["thumbURL"]?.jsonPrimitive?.contentOrNull,
                     durationSec = (v["duration"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull(),
                 )
-            }
+            }.orEmpty()
+            return if (fromJson.isNotEmpty()) fromJson else parseListHtml(body)
         }
 
-        private val A = Regex("""<a[^>]*\bclass="[^"]*video-thumb__image-container[^"]*"[^>]*\bhref="(https://xhamster\.com/videos/[^"]+)"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
-        private val IMG = Regex("""<img[^>]*\bsrc="(https?://[^"]+)"""")
-        private val DUR = Regex("""data-role="video-duration"[^>]*>\s*([\d:]+)""")
-        private val NAME = Regex("""<a[^>]*\bclass="[^"]*video-thumb-info__name[^"]*"[^>]*\bhref="(https://xhamster\.com/videos/[^"]+)"[^>]*>([^<]*)<""")
+        // Mobile layout: <a href="https://xhamster.com/videos/slug-xhABC" class="thumb-image-container …" aria-label="Title"><img … src="…webp">
+        private val A = Regex("""<a\b[^>]*\bhref="(https://xhamster\.com/videos/[^"]+)"[^>]*\bclass="[^"]*thumb-image-container[^"]*"[^>]*>(.*?)</a>""", RegexOption.DOT_MATCHES_ALL)
+        private val LABEL = Regex("""\baria-label="([^"]*)"""")
+        private val IMG = Regex("""<img\b[^>]*\bsrc="(https?://[^"]+)"""")
+        private val DUR = Regex("""(?:video-duration|duration)[^>]*>\s*([\d:]+)""")
 
-        private fun parseListHtml(body: String): List<TubeVideo> {
-            val names = NAME.findAll(body).associate { it.groupValues[1] to unescape(it.groupValues[2]).trim() }
-            return A.findAll(body).map { m ->
-                val url = m.groupValues[1]
-                TubeVideo(
-                    id = url.substringAfterLast('-'),
-                    title = names[url],
-                    pageUrl = url,
-                    thumb = IMG.find(m.groupValues[2])?.groupValues?.get(1),
-                    durationSec = duration(DUR.find(m.groupValues[2])?.groupValues?.get(1)),
-                )
-            }.distinctBy { it.id }.toList()
-        }
+        private fun parseListHtml(body: String): List<TubeVideo> = A.findAll(body).map { m ->
+            val url = m.groupValues[1]
+            val tag = m.value.substringBefore('>')
+            TubeVideo(
+                id = url.substringAfterLast('-').substringBefore('?'),
+                title = LABEL.find(tag)?.groupValues?.get(1)?.let(::unescape)?.trim(),
+                pageUrl = url,
+                thumb = IMG.find(m.groupValues[2])?.groupValues?.get(1),
+                durationSec = duration(DUR.find(m.groupValues[2])?.groupValues?.get(1)),
+            )
+        }.distinctBy { it.id }.toList()
 
-        internal fun initials(html: String): JsonObject? {
-            val i = html.indexOf("window.initials")
-            if (i < 0) return null
-            val start = html.indexOf('{', i)
-            if (start < 0) return null
-            var depth = 0
-            var j = start
-            var inStr = false
-            var esc = false
-            while (j < html.length) {
-                val c = html[j]
-                if (inStr) {
-                    if (esc) esc = false else if (c == '\\') esc = true else if (c == '"') inStr = false
-                } else when (c) {
-                    '"' -> inStr = true
-                    '{' -> depth++
-                    '}' -> { depth--; if (depth == 0) break }
-                }
-                j++
-            }
-            return runCatching { json.parseToJsonElement(html.substring(start, j + 1)).jsonObject }.getOrNull()
-        }
+        internal fun initials(html: String): JsonObject? =
+            jsonAfter(html, "window.initials")?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
 
         override fun stream(pageHtml: String): TubeStream? {
             val sources = initials(pageHtml)?.get("xplayerSettings")?.jsonObject?.get("sources")?.jsonObject
             if (sources != null) {
                 sources["hls"]?.jsonObject?.values?.mapNotNull { (it as? JsonObject)?.get("url")?.jsonPrimitive?.contentOrNull }
                     ?.firstOrNull { it.startsWith("http") }?.let { return TubeStream(it, MediaTypes.HLS_MIME) }
-                sources["standard"]?.jsonObject?.get("mp4")?.let { it as? JsonArray }?.let(::bestOf)?.let { return it }
+                sources["standard"]?.jsonObject?.get("mp4")?.let { it as? JsonArray }?.let { bestOf(it, host) }?.let { return it }
             }
             Regex(""""url":"(https?:[^"]+\.m3u8[^"]*)"""").find(pageHtml)?.groupValues?.get(1)?.let { return TubeStream(unescape(it), MediaTypes.HLS_MIME) }
             return null
@@ -287,9 +290,9 @@ sealed class TubeSite(val host: String, val label: String) {
             }
         }
 
-        override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let(::fromMediaDefinitions)
-        override fun streamIndexUrl(pageHtml: String): String? = Pornhub.streamIndexUrl(pageHtml)
-        override fun streamFromIndex(indexJson: JsonElement): TubeStream? = Pornhub.streamFromIndex(indexJson)
+        override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let { fromMediaDefinitions(it, host) }
+        override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.let { indexUrl(it, host) }
+        override fun streamFromIndex(indexJson: JsonElement): TubeStream? = (indexJson as? JsonArray)?.let { bestOf(it, host) }
         override fun embedUrl(id: String) = "https://embed.redtube.com/?id=$id"
     }
 

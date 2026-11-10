@@ -21,7 +21,7 @@ class TubeSitesTest {
     @Test
     fun `xvideos listing and player`() {
         val html = """
-            <div id="video_81234567" class="thumb-block  " data-id="81234567"><div class="thumb-inside"><div class="thumb"><a href="/video.ukfhdck1234/hot_title_here"><img src="data:," data-src="https://img-hw.xvideos-cdn.com/videos/thumbs169lll/5c/1f/5c1f/1.jpg" /></a></div></div>
+            <div id="video_81234567" data-id="81234567" class="frame-block thumb-block "><div class="thumb-inside"><div class="thumb"><a href="/video.ukfhdck1234/hot_title_here"><img src="https://static-cdn77.xvideos-cdn.com/v3/img/skins/default/lightbox/lightbox-blk.gif" data-src="https://img-hw.xvideos-cdn.com/videos/thumbs169lll/5c/1f/5c1f/1.jpg" data-pvv="https://cdn77-pic.xvideos-cdn.com/p.mp4" /></a></div></div>
             <div class="thumb-under"><p class="title"><a href="/video.ukfhdck1234/hot_title_here" title="Hot title &amp; more">Hot title &amp; more</a> <span class="duration">12 min</span></p></div></div>
             <div id="video_81234568" class="thumb-block" data-id="81234568"><div class="thumb-inside"><div class="thumb"><a href="/video.abcd/x"><img data-src="https://img.xvideos-cdn.com/t.jpg"/></a></div></div><div class="thumb-under"><p class="title"><a href="/video.abcd/x" title="Second">Second</a> <span class="duration">1 h 2 min</span></p></div></div>
         """
@@ -44,7 +44,7 @@ class TubeSitesTest {
     @Test
     fun `pornhub listing and media definitions`() {
         val html = """
-            <li class="pcVideoListItem js-pop videoblock videoBox" data-video-vkey="ph5f0a1b2c3d4e5"><div class="phimage"><a href="/view_video.php?viewkey=ph5f0a1b2c3d4e5" title="Nice one" class="linkVideoThumb"><img src="data:," data-src="https://ei.phncdn.com/videos/202411/01/abc/original/(m=eaf8Ggaaaa)(mh=x)1.jpg" title="Nice one" /></a><div class="marker-overlays"><var class="duration">10:23</var></div></div></li>
+            <li class="pcVideoListItem js-pop videoblock videoBox" data-video-vkey="ph5f0a1b2c3d4e5"><div class="phimage"><a href="/view_video.php?viewkey=ph5f0a1b2c3d4e5" title="Nice one" class="linkVideoThumb"><img src="https://pix-cdn77.phncdn.com/videos/202411/01/abc/original_1.mp4/plain/1.jpg?hash=abc" data-mediumthumb="https://ei.phncdn.com/videos/202411/01/abc/original/(m=eaf8Ggaaaa)(mh=x)1.jpg" title="Nice one" /></a><div class="marker-overlays"><var class="duration">10:23</var></div></div></li>
             <li class="pcVideoListItem" data-video-vkey="ph999"><a href="/view_video.php?viewkey=ph999" title="Two"><img data-thumb_url="https://ei.phncdn.com/two.jpg"></a><var class="duration">1:00:05</var></li>
         """
         val list = TubeSite.Pornhub.parseList(html)
@@ -52,7 +52,8 @@ class TubeSitesTest {
         assertEquals("Nice one", list[0].title)
         assertEquals(623, list[0].durationSec)
         assertEquals(3605, list[1].durationSec)
-        assertTrue(list[0].thumb!!.startsWith("https://ei.phncdn.com/"))
+        assertTrue(list[0].thumb!!.contains("phncdn.com"))
+        assertTrue(list[1].thumb!!.startsWith("https://ei.phncdn.com/"))
 
         val page = """var flashvars_1 = {"experimentId":0,"mediaDefinitions":[{"defaultQuality":false,"format":"hls","videoUrl":"https:\/\/www.pornhub.com\/video\/get_media?s=abc&f=hls","quality":[240,480,720,1080]},{"format":"mp4","videoUrl":"https:\/\/ev.phncdn.com\/v\/480.mp4?x=1","quality":"480"},{"format":"mp4","videoUrl":"https:\/\/ev.phncdn.com\/v\/720.mp4?x=1","quality":"720"}],"isVertical":"false"};"""
         assertEquals("https://ev.phncdn.com/v/720.mp4?x=1", TubeSite.Pornhub.stream(page)!!.url)
@@ -74,6 +75,13 @@ class TubeSitesTest {
         assertEquals(754, v.durationSec)
         assertEquals("https://ic-vt-nss.xhcdn.com/a/x/1.jpg", v.thumb)
 
+        val mobile = """<li class="thumb-list-mobile-item" data-ecommerce-list-item="31565239"><a href="https://xhamster.com/videos/lets-play-xhE9Dby" class="thumb-image-container mobile-thumb-player-container" aria-label="Let&#39;s Play"><img class="thumb-image-container__no-lazy-thumb" src="https://ic-vt-nss.xhcdn.com/a/b.webp"><div class="video-duration">5:30</div></a></li>"""
+        val m = TubeSite.Xhamster.parseList(mobile).single()
+        assertEquals("xhE9Dby", m.id)
+        assertEquals("Let's Play", m.title)
+        assertEquals("https://ic-vt-nss.xhcdn.com/a/b.webp", m.thumb)
+        assertEquals(330, m.durationSec)
+
         val page = """<script>window.initials={"xplayerSettings":{"sources":{"standard":{"mp4":[{"url":"https://v.xhcdn.com/480.mp4","quality":"480p"},{"url":"https://v.xhcdn.com/720.mp4","quality":"720p"}]},"hls":{"h264":{"url":"https://v.xhcdn.com/m.m3u8","quality":"auto"}}}}};</script>"""
         val s = TubeSite.Xhamster.stream(page)!!
         assertEquals("https://v.xhcdn.com/m.m3u8", s.url)
@@ -89,6 +97,12 @@ class TubeSitesTest {
         assertEquals(600, r.durationSec)
         assertEquals(listOf("milf", "anal"), r.tags)
         assertTrue(r.published != null)
+
+        val page = """"mediaDefinitions":[{"format":"hls","videoUrl":"\/media\/hls?s=abc&v=1","remote":true,"quality":[]},{"format":"mp4","videoUrl":"\/media\/mp4?s=abc","remote":true,"quality":[]}]"""
+        assertNull(TubeSite.Redtube.stream(page))
+        assertEquals("https://www.redtube.com/media/hls?s=abc&v=1", TubeSite.Redtube.streamIndexUrl(page))
+        val idx = Json.parseToJsonElement("""[{"format":"hls","videoUrl":"\/media\/hls\/720.m3u8?x=1","quality":"720"},{"format":"hls","videoUrl":"https://cv.rdtcdn.com/1080.m3u8","quality":"1080"}]""")
+        assertEquals("https://cv.rdtcdn.com/1080.m3u8", TubeSite.Redtube.streamFromIndex(idx)!!.url)
 
         val ep = """{"videos":[{"id":"abCD12ef3","title":"EP one","keywords":"big tits, pov","views":1,"rate":"4.5","url":"https://www.eporner.com/video-abCD12ef3/ep-one/","added":"2026-11-01 10:00:00","length_sec":"601","default_thumb":{"src":"https://static-eu-cdn.eporner.com/thumbs/x.jpg"}}]}"""
         val e = TubeSite.Eporner.parseList(ep).single()
@@ -136,5 +150,18 @@ class TubeSitesTest {
         assertTrue(MinorsFilter.allows(g))
         assertFalse(MinorsFilter.allows(items[1]))
         assertEquals("nhentai", Spread.origin(g))
+    }
+
+    @Test
+    fun `nhentai v2 listing without detail still opens as a comic`() {
+        val root = Json.parseToJsonElement("""{"result":[{"id":4314731,"media_id":"3214567","english_title":"[A] B","japanese_title":"","thumbnail":"galleries/3214567/thumb.webp","thumbnail_width":250,"thumbnail_height":353,"num_pages":3,"num_favorites":7,"tag_ids":[1,2]}],"num_pages":10}""")
+        val g = NhentaiAdapter.parse(root).single()
+        assertEquals("4314731", g.id)
+        assertEquals("[A] B", g.title)
+        assertEquals("https://t.nhentai.net/galleries/3214567/thumb.webp", g.thumbnailUrl)
+        assertEquals(3, g.pages.size)
+        assertEquals("https://i.nhentai.net/galleries/3214567/2.webp", g.pages[1])
+        assertEquals(listOf("comic", "doujinshi"), g.tags)
+        assertEquals("https://nhentai.net/api/v2/galleries?query=tag%3Amilf+-tag%3Alolicon&sort=popular&page=2", NhentaiAdapter.searchUrl("tag:milf -tag:lolicon", "popular", 2))
     }
 }

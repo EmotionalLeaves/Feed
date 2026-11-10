@@ -13,6 +13,11 @@ import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.sync.Semaphore
+import kotlinx.coroutines.sync.withPermit
 import java.net.URLEncoder
 import java.time.Instant
 import javax.inject.Inject
@@ -42,9 +47,8 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
         val query = entry.substringBefore('|')
         val sort = entry.substringAfter('|', "popular")
         val page = token?.toIntOrNull() ?: 1
-        val url = "https://nhentai.net/api/galleries/search?query=${URLEncoder.encode("$query $EXCLUDE", "UTF-8")}&sort=$sort&page=$page"
-        val root = http.get(id, url)
-        val items = parse(root)
+        val root = http.get(id, searchUrl("$query $EXCLUDE", sort, page))
+        val items = enrich(parse(root))
         val pages = ((root as? JsonObject)?.get("num_pages") as? JsonPrimitive)?.contentOrNull?.toIntOrNull() ?: 1
         val next = if (items.isEmpty() || page >= pages || page >= MAX_PAGES) null else (page + 1).toString()
         return EntryPage(items, next)
@@ -53,8 +57,25 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        val url = "https://nhentai.net/api/galleries/search?query=${URLEncoder.encode("$q $EXCLUDE", "UTF-8")}&sort=popular"
-        (runCatching { parse(http.get(id, url)) }.getOrDefault(emptyList()) + poolMatches(query)).distinctBy { it.key }
+        (runCatching { enrich(parse(http.get(id, searchUrl("$q $EXCLUDE", "popular", 1)))) }.getOrDefault(emptyList()) + poolMatches(query))
+            .distinctBy { it.key }
+    }
+
+    /**
+     * v2 listings carry only ids, titles, thumb and page count; tags and per-page image types come from
+     * the gallery endpoint. Fetch those a few at a time; a gallery whose detail fails keeps the listing's
+     * guess (every page the thumb's format) so the comic still opens.
+     */
+    private suspend fun enrich(items: List<MediaItem>): List<MediaItem> = coroutineScope {
+        val gate = Semaphore(DETAIL_CONCURRENCY)
+        items.map { item ->
+            async {
+                if (item.tags.size > TAGLESS_MARKER) item else gate.withPermit {
+                    runCatching { (http.get(id, "https://nhentai.net/api/v2/galleries/${item.id}") as? JsonObject)?.let(::gallery) }
+                        .getOrNull() ?: item
+                }
+            }
+        }.awaitAll()
     }
 
     companion object {
@@ -62,7 +83,13 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
         private const val MAX_PAGES = 25
         internal const val EXCLUDE = "-tag:lolicon -tag:shotacon"
 
+        private const val DETAIL_CONCURRENCY = 4
+        /** Items parsed from a bare listing carry only the two fixed tags. */
+        private const val TAGLESS_MARKER = 2
         private val EXT = mapOf("j" to "jpg", "p" to "png", "g" to "gif", "w" to "webp")
+
+        internal fun searchUrl(query: String, sort: String, page: Int) =
+            "https://nhentai.net/api/v2/galleries?query=${URLEncoder.encode(query.trim(), "UTF-8")}&sort=$sort&page=$page"
 
         /** Galleries from a search / listing response. */
         internal fun parse(root: JsonElement): List<MediaItem> {
@@ -76,11 +103,18 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
             val mediaId = s("media_id") ?: return null
             val titles = g["title"] as? JsonObject
             val title = listOf("pretty", "english", "japanese").firstNotNullOfOrNull { (titles?.get(it) as? JsonPrimitive)?.contentOrNull?.takeIf { t -> t.isNotBlank() } }
+                ?: listOf("english_title", "pretty_title", "japanese_title").firstNotNullOfOrNull { s(it)?.takeIf { t -> t.isNotBlank() } }
             val images = g["images"] as? JsonObject
+            // v2 listing: "thumbnail":"galleries/123/thumb.webp" + num_pages; detail/v1: images.pages[].t
+            val thumbPath = s("thumbnail")
+            val thumbExt = thumbPath?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
             val pageTypes = (images?.get("pages") as? JsonArray).orEmpty().map { ((it as? JsonObject)?.get("t") as? JsonPrimitive)?.contentOrNull ?: "j" }
+                .ifEmpty { List(s("num_pages")?.toIntOrNull() ?: 0) { thumbExt?.let { e -> EXT.entries.firstOrNull { it.value == e }?.key } ?: "w" } }
             if (pageTypes.isEmpty()) return null
             val pages = pageTypes.mapIndexed { i, t -> "https://i.nhentai.net/galleries/$mediaId/${i + 1}.${EXT[t] ?: "jpg"}" }
-            val coverType = ((images?.get("cover") as? JsonObject)?.get("t") as? JsonPrimitive)?.contentOrNull ?: pageTypes.first()
+            val coverType = ((images?.get("cover") as? JsonObject)?.get("t") as? JsonPrimitive)?.contentOrNull
+            val thumbUrl = thumbPath?.let { if (it.startsWith("http")) it else "https://t.nhentai.net/${it.trimStart('/')}" }
+                ?: "https://t.nhentai.net/galleries/$mediaId/thumb.${EXT[coverType ?: pageTypes.first()] ?: "jpg"}"
             val tagObjs = (g["tags"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
             val tags = tagObjs.mapNotNull { t ->
                 val type = (t["type"] as? JsonPrimitive)?.contentOrNull
@@ -104,7 +138,7 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
                 creator = artist,
                 tags = (listOf("comic", "doujinshi") + tags).distinct(),
                 durationSec = null,
-                thumbnailUrl = "https://t.nhentai.net/galleries/$mediaId/thumb.${EXT[coverType] ?: "jpg"}",
+                thumbnailUrl = thumbUrl,
                 pageUrl = "https://nhentai.net/g/$gid/",
                 publishedAt = uploaded,
                 extras = buildMap {
