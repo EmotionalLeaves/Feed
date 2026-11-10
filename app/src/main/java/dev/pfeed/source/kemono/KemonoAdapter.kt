@@ -118,7 +118,10 @@ class KemonoAdapter @Inject constructor(
         val creator = s("user")
         val title = s("title")?.takeIf { it.isNotBlank() }
         val published = s("published")?.let { runCatching { Instant.parse(if (it.endsWith("Z")) it else it + "Z") }.getOrNull() }
-        val tags = listOfNotNull(service, creator?.let { "creator:$it" })
+        // Posts have no tag list, but creators write hashtags in the text ("#milf #latina …"). Use
+        // them: they give the recommender and search something real to go on, and let the content
+        // filters see what the post says about itself.
+        val tags = (listOfNotNull(service, creator?.let { "creator:$it" }) + hashtags(listOfNotNull(title, s("substring"), s("content")).joinToString(" "))).distinct()
 
         // Collect the main file and any attachments.
         val paths = buildList {
@@ -178,6 +181,12 @@ class KemonoAdapter @Inject constructor(
             "coomer.su" to "coomer.st", "coomer.party" to "coomer.st",
             "kemono.su" to "kemono.cr", "kemono.party" to "kemono.cr",
         )
+
+        private val HASHTAG = Regex("""#([\p{L}\p{N}_]{2,30})""")
+
+        /** "#Milf #big_tits" → [milf, big_tits] (at most 20). */
+        internal fun hashtags(text: String): List<String> =
+            HASHTAG.findAll(text).map { it.groupValues[1].lowercase() }.distinct().take(20).toList()
 
         fun canonicalHost(raw: String): String {
             val h = raw.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")

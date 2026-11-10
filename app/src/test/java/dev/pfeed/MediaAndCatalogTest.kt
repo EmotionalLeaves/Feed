@@ -178,6 +178,14 @@ class MediaAndCatalogTest {
     }
 
     @Test
+    fun `coomer hashtags become tags`() {
+        assertEquals(listOf("milf", "big_tits", "latina"), KemonoAdapter.hashtags("New set 🩷 #Milf #big_tits #latina #milf"))
+        assertTrue(KemonoAdapter.hashtags("no tags here, just 5 # signs").isEmpty())
+        // The always-on filter sees them like any other tag.
+        assertFalse(MinorsFilter.allows(item("c1", tags = KemonoAdapter.hashtags("#teen #underage"))))
+    }
+
+    @Test
     fun `coomer moved domains`() {
         assertEquals("coomer.st", KemonoAdapter.canonicalHost("coomer.su"))
         assertEquals("coomer.st", KemonoAdapter.canonicalHost("https://www.coomer.party/"))

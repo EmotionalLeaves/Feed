@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.26.0 — 2026-11-10
+
+Round 9: Coomer posts get real tags.
+
+- **Hashtags in Coomer posts become tags.** Coomer posts had only the platform and creator as tags, so recommendations and search had nothing to match on. Hashtags the creator wrote (#milf, #latina…) are now read as tags, and the content filters see them like any other tag.
+
 ## 3.25.0 — 2026-11-10
 
 Round 8: see what is paused.
