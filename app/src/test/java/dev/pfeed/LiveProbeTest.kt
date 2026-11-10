@@ -32,12 +32,16 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val v = TubeSite.Xhamster.parseList(get("https://xhamster.com/newest/1").second).first()
-        probe("xh id") { v.id }
-        val p = get(v.pageUrl).second
+        val (lc, lb) = get("https://xhamster.com/newest/1")
+        probe("xh list") { "$lc len=${lb.length} n=${TubeSite.Xhamster.parseList(lb).size} title=${around(lb, "<title", 0, 120)} thumbProps=${lb.indexOf("videoThumbProps")} videos=${lb.indexOf("xhamster.com/videos/")}" }
+        val v = TubeSite.Xhamster.parseList(lb).firstOrNull()
+        val url = v?.pageUrl ?: Regex("https://xhamster\\.com/videos/[A-Za-z0-9-]+").find(lb)?.value ?: "https://xhamster.com/videos/xhZlgVu"
+        probe("xh id") { "${v?.id} url=$url" }
+        val (pc, p) = get(url)
+        probe("xh page") { "$pc len=${p.length} title=${around(p, "<title", 0, 120)}" }
         probe("xh xplayer") { around(p, "xplayerSettings", 0, 2500) }
         probe("xh sources") { around(p, "\"sources\"", 0, 1500) }
-        probe("xh initials parse") { TubeSite.Xhamster.initials(p)?.keys?.take(40)?.toString() ?: "null; raw=" + around(p, "window.initials", 0, 120) }
+        probe("xh initials parse") { TubeSite.Xhamster.initials(p)?.keys?.take(40)?.toString() ?: ("null; raw=" + around(p, "window.initials", 0, 120)) }
         probe("xh stream") { TubeSite.Xhamster.stream(p).toString() }
     }
 }
