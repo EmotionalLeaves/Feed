@@ -71,6 +71,25 @@ data class AppSettings(
     val contentFilterVersion: Int = 0,
 )
 
+/**
+ * Hosts that were in earlier libraries and were checked dead or unusable (domain gone, server shut
+ * down, needs an account, or not an engine the app reads). Dropped from defaults and from saved
+ * settings. (Its own object so it's ready before DefaultSources builds its lists.)
+ */
+object RetiredHosts {
+    private val HOSTS = setOf(
+        "rule34.us", "dollbooru.org",
+        "lewd.town", "kinky.business", "bdsmr.com", "sex.social", "kinkies.com", "femdom.social",
+        "kemonodon.space", "latex.social", "lewdland.social", "nsfwdone.social", "mstdn.social",
+        "cum.salon", "sinblr.com",
+    )
+
+    fun contains(host: String): Boolean {
+        val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")
+        return h in HOSTS
+    }
+}
+
 /** Fediverse instances known for hosting sexualized depictions of minors: never seeded, never fetched. */
 object MastodonExclusions {
     private val HOSTS = setOf("pawoo.net", "baraag.net")
@@ -776,22 +795,7 @@ object DefaultSources {
         "sakugabooru.com", "kemono.su", "kemono.party", "kemono.cr",
     )
 
-    /**
-     * Hosts that were in earlier libraries and were checked dead or unusable (domain gone, server
-     * shut down, needs an account, or not an engine the app reads). Dropped from defaults and from
-     * saved settings, and never fetched.
-     */
-    private val RETIRED_HOSTS = setOf(
-        "rule34.us", "dollbooru.org",
-        "lewd.town", "kinky.business", "bdsmr.com", "sex.social", "kinkies.com", "femdom.social",
-        "kemonodon.space", "latex.social", "lewdland.social", "nsfwdone.social", "mstdn.social",
-        "cum.salon", "sinblr.com",
-    )
-
-    fun isRetiredHost(host: String): Boolean {
-        val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")
-        return h in RETIRED_HOSTS
-    }
+    fun isRetiredHost(host: String): Boolean = RetiredHosts.contains(host)
 
     fun isSfwOnlyHost(host: String): Boolean {
         val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")
