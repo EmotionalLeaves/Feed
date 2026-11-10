@@ -63,6 +63,16 @@ object AppModule {
             if (request.header("User-Agent") != null) chain.proceed(request)
             else chain.proceed(request.newBuilder().header("User-Agent", "PrivateFeed/${BuildConfig.VERSION_NAME} (Android)").build())
         }
+        // gelbooru.com and realbooru.com only serve their images and videos to requests that name
+        // the site as the referring page (hotlink protection); without it the file URL returns an
+        // HTML page, so nothing from those boards ever displayed. The app does get these links from
+        // the site's own pages, so say so. Covers thumbnails (Coil), playback (ExoPlayer), preloads.
+        .addInterceptor { chain ->
+            val request = chain.request()
+            val site = HotlinkReferer.siteFor(request.url.host)
+            if (site == null || request.header("Referer") != null) chain.proceed(request)
+            else chain.proceed(request.newBuilder().header("Referer", "https://$site/").build())
+        }
         // 429 / 503 retry: honour Retry-After header, back off up to 2 times
         .addInterceptor { chain ->
             var response = chain.proceed(chain.request())
@@ -100,4 +110,11 @@ object AppModule {
     @Provides fun followDao(db: AppDatabase): FollowDao = db.followDao()
     @Provides fun blockDao(db: AppDatabase): BlockDao = db.blockDao()
     @Provides fun credentialDao(db: AppDatabase): CredentialDao = db.credentialDao()
+}
+
+/** Boards whose file hosts require the board itself as the referring page. */
+object HotlinkReferer {
+    private val SITES = listOf("gelbooru.com", "realbooru.com")
+
+    fun siteFor(host: String): String? = SITES.firstOrNull { host == it || host.endsWith(".$it") }
 }
