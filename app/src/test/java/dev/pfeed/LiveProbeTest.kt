@@ -32,22 +32,18 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val (xc, xb) = get("https://www.xnxx.com/new/0")
-        probe("xnxx new") { "$xc len=${xb.length} xvParse=${TubeSite.Xvideos.parseList(xb).size} " + around(xb, "thumb-block", 100, 900) }
-        probe("xnxx search") { get("https://www.xnxx.com/search/milf/0").let { "${it.first} n=${TubeSite.Xvideos.parseList(it.second).size}" } }
-        probe("xnxx page") { val u = Regex("href=\"(/video-[^\"]+)\"").find(xb)?.groupValues?.get(1) ?: return@probe "no href"
-            val (c, p) = get("https://www.xnxx.com$u"); "$c " + TubeSite.Xvideos.stream(p) + " | " + around(p, "setVideoHLS", 50, 160) }
-        for (u in listOf(
-            "https://www.youporn.com/api/webmasters/search/?query=milf&page=1",
-            "https://www.youporn.com/api/webmasters/listing/?page=1",
-            "https://www.youporn.com/api/webmasters/search/?page=1",
-            "https://api.tube8.com/api.php?action=searchVideos&output=json&search=milf&page=1",
-            "https://api.tube8.com/api.php?action=getVideosList&output=json&page=1",
-            "https://www.pornhub.com/webmasters/search?search=milf&page=1",
-            "https://www.pornhub.com/webmasters/video_by_id?id=6acf3013d23d9",
-            "https://www.youporn.com/api/webmasters/video_by_id/?id=1",
-        )) probe("api $u") { get(u, "application/json").let { "${it.first} ${it.second.take(700)}" } }
-        probe("youporn html") { get("https://www.youporn.com/browse/time/").let { "${it.first} len=${it.second.length} " + around(it.second, "data-video-id", 200, 900) } }
-        probe("tube8 html") { get("https://www.tube8.com/latest/").let { "${it.first} len=${it.second.length} " + around(it.second, "video-", 200, 900) } }
+        for (site in TubeSite.ALL) for (sec in listOf("new", "milf")) probe("list ${site.host} $sec") {
+            val u = site.listUrl(sec, 1)
+            val (code, body) = get(u, if (u.contains("api")) "application/json" else "text/html")
+            val l = site.parseList(body)
+            "$code n=${l.size} thumbs=${l.count { it.thumb != null }} durs=${l.count { it.durationSec != null }} first=${l.firstOrNull()?.let { "${it.id} | ${it.title?.take(40)} | ${it.pageUrl}" }}"
+        }
+        for (site in listOf(TubeSite.Xnxx, TubeSite.Youporn, TubeSite.Tube8)) probe("stream ${site.host}") {
+            val v = site.parseList(get(site.listUrl("milf", 1)).second).firstOrNull() ?: return@probe "no videos"
+            val (code, page) = get(v.pageUrl)
+            val direct = site.stream(page); val index = site.streamIndexUrl(page)
+            val pick = direct ?: index?.let { ix -> runCatching { site.streamFromIndex(Json.parseToJsonElement(get(ix, "application/json", v.pageUrl).second)) }.getOrNull() }
+            "page=$code len=${page.length} direct=$direct index=$index head=${pick?.let { head(it.url) }} defs=${page.indexOf("mediaDefinitions")} " + around(page, "mediaDefinition", 0, 300)
+        }
     }
 }

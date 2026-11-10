@@ -147,15 +147,18 @@ object ArchiveHeaders {
     /** Site → the domain its files/CDN are served from, when different. */
     private val CDN = mapOf(
         "xvideos-cdn.com" to "xvideos.com", "phncdn.com" to "pornhub.com", "xhcdn.com" to "xhamster.com",
-        "rdtcdn.com" to "redtube.com", "nhentai.net" to "nhentai.net",
+        "rdtcdn.com" to "redtube.com", "nhentai.net" to "nhentai.net", "xnxx-cdn.com" to "xnxx.com",
+        "ypncdn.com" to "youporn.com", "t8cdn.com" to "tube8.com",
     )
     private val SITES = listOf(
         "coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party",
-        "nhentai.net", "xvideos.com", "pornhub.com", "xhamster.com", "redtube.com", "eporner.com",
+        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "redtube.com", "eporner.com",
     )
     private val COOKIES = mapOf(
         "pornhub.com" to "age_verified=1; accessAgeDisclaimerPH=1; accessAgeDisclaimerUK=1; accessPH=1; platform=pc; hasVisited=1; cookiesBannerSeen=1",
         "redtube.com" to "age_verified=1; accessAgeDisclaimerRT=1; platform=pc",
+        "youporn.com" to "age_verified=1; platform=pc",
+        "tube8.com" to "age_verified=1; platform=pc",
         "xhamster.com" to "xh_mobile_ver=1; lang=en",
     )
 

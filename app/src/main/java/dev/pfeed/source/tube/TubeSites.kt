@@ -47,7 +47,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Pornhub, Xhamster, Redtube, Eporner) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner) }
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { host == it.host || host.endsWith(".${it.host}") }
         internal val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
@@ -128,12 +128,24 @@ sealed class TubeSite(val host: String, val label: String) {
 
     // ── xvideos ─────────────────────────────────────────────────────────────
 
-    object Xvideos : TubeSite("xvideos.com", "XVideos") {
+    object Xvideos : XvEngine("xvideos.com", "XVideos") {
         override fun listUrl(section: String, page: Int): String = when (section) {
-            "new" -> "https://www.xvideos.com/new/$page"
+            "new" -> "https://www.xvideos.com/new/${page + 1}"
             "top" -> "https://www.xvideos.com/best"
             else -> "https://www.xvideos.com/?k=${enc(section)}&p=$page"
         }
+    }
+
+    /** XNXX runs the same engine as XVideos (same listing blocks, same html5player). */
+    object Xnxx : XvEngine("xnxx.com", "XNXX") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.xnxx.com/search/new/$page"
+            "top" -> "https://www.xnxx.com/search/best/$page"
+            else -> "https://www.xnxx.com/search/${enc(section).replace("+", "+")}/$page"
+        }
+    }
+
+    sealed class XvEngine(host: String, label: String) : TubeSite(host, label) {
 
         // Attribute order varies (data-id before or after class), hence the lookahead.
         private val BLOCK = Regex("""<div\b(?=[^>]*\bthumb-block)[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
@@ -150,7 +162,7 @@ sealed class TubeSite(val host: String, val label: String) {
             TubeVideo(
                 id = id,
                 title = TITLE.find(under)?.groupValues?.get(1)?.let(::unescape)?.trim(),
-                pageUrl = "https://www.xvideos.com" + unescape(href),
+                pageUrl = "https://www.$host" + unescape(href),
                 thumb = IMG.find(thumbPart)?.groupValues?.get(1)?.let(::unescape),
                 durationSec = duration(DUR.find(under)?.groupValues?.get(1)),
             )
@@ -166,7 +178,7 @@ sealed class TubeSite(val host: String, val label: String) {
             return null
         }
 
-        override fun embedUrl(id: String) = "https://www.xvideos.com/embedframe/$id"
+        override fun embedUrl(id: String) = "https://www.$host/embedframe/$id"
     }
 
     // ── Pornhub ─────────────────────────────────────────────────────────────
@@ -200,6 +212,52 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.let { indexUrl(it, host) }
         override fun streamFromIndex(indexJson: JsonElement): TubeStream? = (indexJson as? JsonArray)?.let { bestOf(it, host) }
         override fun embedUrl(id: String) = "https://www.pornhub.com/embed/$id"
+    }
+
+    // ── YouPorn / Tube8 (Pornhub network: <article data-video-id> listings, mediaDefinitions player) ──
+
+    sealed class ArticleEngine(host: String, label: String, private val watchPath: String) : TubeSite(host, label) {
+        private val ARTICLE = Regex("""<article\b[^>]*\bdata-video-id="(\d+)"[^>]*>(.*?)</article>""", RegexOption.DOT_MATCHES_ALL)
+        private val LABEL = Regex("""\baria-label="([^"]*)"""")
+        private val HREF = Regex("""<a\b[^>]*\bhref="(/(?:watch|porn-video)/\d+/?[^"]*)"""")
+        private val POSTER = Regex("""\bdata-(?:poster|thumbnail|src)=['"](https?://[^'"]+)['"]""")
+        private val IMG = Regex("""<img\b[^>]*\bsrc="(https?://[^"]+)"""")
+        private val DUR = Regex("""(?:duration|video-duration)[^>]*>\s*([\d:]+)""")
+
+        override fun parseList(body: String): List<TubeVideo> = ARTICLE.findAll(body).map { m ->
+            val id = m.groupValues[1]
+            val head = m.value.substringBefore('>')
+            val block = m.groupValues[2]
+            val href = HREF.find(block)?.groupValues?.get(1)?.let(::unescape)
+            TubeVideo(
+                id = id,
+                title = LABEL.find(head)?.groupValues?.get(1)?.let(::unescape)?.trim(),
+                pageUrl = if (href != null) "https://www.$host$href" else "https://www.$host$watchPath$id/",
+                thumb = (POSTER.find(block) ?: IMG.find(block))?.groupValues?.get(1)?.let(::unescape),
+                durationSec = duration(DUR.find(block)?.groupValues?.get(1)),
+            )
+        }.distinctBy { it.id }.toList()
+
+        override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let { fromMediaDefinitions(it, host) }
+        override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.let { indexUrl(it, host) }
+        override fun streamFromIndex(indexJson: JsonElement): TubeStream? = (indexJson as? JsonArray)?.let { bestOf(it, host) }
+        override fun embedUrl(id: String) = "https://www.$host/embed/$id/"
+    }
+
+    object Youporn : ArticleEngine("youporn.com", "YouPorn", "/watch/") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.youporn.com/browse/time/?page=${page + 1}"
+            "top" -> "https://www.youporn.com/top_rated/?page=${page + 1}"
+            else -> "https://www.youporn.com/search/?query=${enc(section)}&page=${page + 1}"
+        }
+    }
+
+    object Tube8 : ArticleEngine("tube8.com", "Tube8", "/porn-video/") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.tube8.com/latest/page/${page + 1}/"
+            "top" -> "https://www.tube8.com/top.html/"
+            else -> "https://www.tube8.com/searches.html?q=${enc(section)}&page=${page + 1}"
+        }
     }
 
     // ── xHamster ────────────────────────────────────────────────────────────

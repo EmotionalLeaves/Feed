@@ -42,6 +42,36 @@ class TubeSitesTest {
     }
 
     @Test
+    fun `xnxx shares the xvideos engine but keeps its own host`() {
+        val html = """<div id="video_1" data-id="1" class="thumb-block"><div class="thumb-inside"><div class="thumb"><a href="/video-abc12/slug"><img data-src="https://img.xnxx-cdn.com/t.jpg"/></a></div></div><div class="thumb-under"><p class="title"><a href="/video-abc12/slug" title="T">T</a> <span class="duration">5 min</span></p></div></div>"""
+        val v = TubeSite.Xnxx.parseList(html).single()
+        assertEquals("https://www.xnxx.com/video-abc12/slug", v.pageUrl)
+        assertEquals(300, v.durationSec)
+        assertEquals("https://www.xnxx.com/embedframe/1", TubeSite.Xnxx.embedUrl("1"))
+        assertEquals("https://www.xnxx.com/search/big+tits/2", TubeSite.Xnxx.listUrl("big tits", 2))
+        assertEquals(TubeSite.Xnxx, TubeSite.byHost("www.xnxx.com"))
+    }
+
+    @Test
+    fun `youporn and tube8 article listings`() {
+        val yp = """<article class="video-box mobile js_video-box js-pop" data-video-id="308517921" data-uploader-name="miss frog" aria-label="Rainbow socks &amp; more"><a href="/watch/308517921/" class="tm_video_link" data-webm='https://ev-ph.ypncdn.com/x_fb.mp4' data-poster='https://pix-cdn77.ypncdn.com/c6531/videos/202611/10/68672575/original_68672575.mp4/plain/a?hash=1'><img src="https://pix-cdn77.ypncdn.com/other.jpg"></a><div class="video-duration">12:34</div></article>"""
+        val v = TubeSite.Youporn.parseList(yp).single()
+        assertEquals("308517921", v.id)
+        assertEquals("Rainbow socks & more", v.title)
+        assertEquals("https://www.youporn.com/watch/308517921/", v.pageUrl)
+        assertTrue(v.thumb!!.startsWith("https://pix-cdn77.ypncdn.com/c6531"))
+        assertEquals(754, v.durationSec)
+
+        val t8 = """<article class="video-box" data-video-id="184522501" aria-label="nubilefilms - x"><a href="/porn-video/39030671/" data-poster='https://ci.t8cdn.com/p.jpg'></a><span class="duration">1:00</span></article>"""
+        val t = TubeSite.Tube8.parseList(t8).single()
+        assertEquals("https://www.tube8.com/porn-video/39030671/", t.pageUrl)
+        assertEquals(60, t.durationSec)
+        assertEquals("https://www.tube8.com/embed/184522501/", TubeSite.Tube8.embedUrl("184522501"))
+        val page = """"mediaDefinitions":[{"format":"mp4","videoUrl":"https:\/\/ev.ypncdn.com\/720.mp4","quality":"720"}]"""
+        assertEquals("https://ev.ypncdn.com/720.mp4", TubeSite.Youporn.stream(page)!!.url)
+    }
+
+    @Test
     fun `pornhub listing and media definitions`() {
         val html = """
             <li class="pcVideoListItem js-pop videoblock videoBox" data-video-vkey="ph5f0a1b2c3d4e5"><div class="phimage"><a href="/view_video.php?viewkey=ph5f0a1b2c3d4e5" title="Nice one" class="linkVideoThumb"><img src="https://pix-cdn77.phncdn.com/videos/202411/01/abc/original_1.mp4/plain/1.jpg?hash=abc" data-mediumthumb="https://ei.phncdn.com/videos/202411/01/abc/original/(m=eaf8Ggaaaa)(mh=x)1.jpg" title="Nice one" /></a><div class="marker-overlays"><var class="duration">10:23</var></div></div></li>
