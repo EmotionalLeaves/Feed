@@ -270,7 +270,7 @@ abstract class CachingAdapter : SourceAdapter {
                 val n = (failures[entry] ?: 0) + 1
                 failures[entry] = n
                 // Entries of a resting site keep their place; they're just not asked meanwhile.
-                if (n >= MAX_ENTRY_FAILURES && groupOf(entry) !in groupRestUntil) done += entry
+                if (n >= MAX_ENTRY_FAILURES && !groupRestUntil.containsKey(groupOf(entry))) done += entry
             }
         }
         // Strike only when other entries in this batch did return content: if everything came back
