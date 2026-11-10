@@ -25,29 +25,26 @@ class LiveProbeTest {
     private fun head(url: String): String = client.newCall(Request.Builder().url(url).header("Range", "bytes=0-0").build()).execute().use { "${it.code} ${it.header("Content-Type")}" }
     private fun probe(name: String, block: () -> String) = println("PROBE|$name|" + try { block() } catch (e: Throwable) { "EXC ${e.javaClass.simpleName}: ${e.message?.take(200)}" }.replace('\n', ' '))
 
+    private fun around(s: String, marker: String, before: Int, after: Int): String {
+        val i = s.indexOf(marker); if (i < 0) return "<no '$marker'>"
+        return s.substring((i - before).coerceAtLeast(0), (i + after).coerceAtMost(s.length))
+    }
+
     @Test
     fun probe() {
-        for (site in TubeSite.ALL) {
-            for (section in listOf("new", "milf")) probe("${site.label} $section") {
-                val (code, body) = get(site.listUrl(section, 0), if (site is TubeSite.Redtube || site is TubeSite.Eporner) "application/json" else "text/html")
-                val list = site.parseList(body)
-                if (list.isEmpty()) return@probe "$code len=${body.length} items=0 title=${Regex("<title>([^<]*)").find(body)?.groupValues?.get(1)} snippet=${body.take(300)}"
-                val v = list.first()
-                Thread.sleep(1500)
-                val (pc, page) = get(v.pageUrl)
-                val stream = site.stream(page)
-                val index = site.streamIndexUrl(page)
-                val fromIndex = index?.let { runCatching { site.streamFromIndex(Json.parseToJsonElement(get(it, "application/json", v.pageUrl).second)) }.getOrNull() }
-                "$code items=${list.size} first=${v.id} '${v.title?.take(30)}' dur=${v.durationSec} thumb=${v.thumb?.let { head(it) }} | page $pc len=${page.length} stream=${stream?.url?.take(90)} -> ${stream?.let { head(it.url) }} | index=${index?.take(60)} -> ${fromIndex?.url?.take(80)} ${fromIndex?.let { head(it.url) }}" +
-                    if (stream == null && fromIndex == null) " | pageTitle=${Regex("<title>([^<]*)").find(page)?.groupValues?.get(1)} hasMediaDefs=${page.contains("mediaDefinitions")} hasInitials=${page.contains("window.initials")} hasHtml5=${page.contains("html5player")}" else ""
-            }
-        }
-        probe("nhentai") {
-            val (code, body) = get("https://nhentai.net/api/galleries/search?query=" + java.net.URLEncoder.encode("tag:milf language:english ${NhentaiAdapter.EXCLUDE}", "UTF-8") + "&sort=popular", "application/json")
-            val items = runCatching { NhentaiAdapter.parse(Json.parseToJsonElement(body)) }.getOrDefault(emptyList())
-            if (items.isEmpty()) return@probe "$code len=${body.length} ${body.take(300)}"
-            val g = items.first()
-            "$code items=${items.size} '${g.title}' pages=${g.pages.size} thumb=${head(g.thumbnailUrl!!)} p1=${head(g.pages.first())} p2=${head(g.pages[1])}"
-        }
+        probe("xvideos new/1") { get("https://www.xvideos.com/new/1").let { "${it.first} items=${TubeSite.Xvideos.parseList(it.second).size}" } }
+        probe("xvideos search block") { around(get("https://www.xvideos.com/?k=milf&p=0").second, "thumb-block", 100, 1600) }
+        probe("pornhub item") { around(get("https://www.pornhub.com/video?o=cm&page=1").second, "data-video-vkey", 150, 1400) }
+        val xh = get("https://xhamster.com/newest/1").second
+        probe("xhamster markers") { listOf("videoThumbProps", "__NUXT__", "thumbURL", "x-api", "initials", "/videos/", "application/ld+json", "window.__").joinToString(" ") { "$it=${xh.indexOf(it)}" } + " len=${xh.length}" }
+        probe("xhamster href") { around(xh, "xhamster.com/videos/", 400, 900) }
+        probe("xhamster ld") { around(xh, "application/ld+json", 0, 1500) }
+        probe("redtube defs") { around(get("https://www.redtube.com/308514911").second, "mediaDefinitions", 50, 1500) }
+        probe("nhentai docs") { get("https://nhentai.net/api/v2/docs", "text/html").let { "${it.first} " + it.second.replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(3500) } }
+        for (u in listOf(
+            "https://nhentai.net/api/v2/galleries/search?query=milf&sort=popular",
+            "https://nhentai.net/api/v2/galleries?query=milf",
+            "https://nhentai.net/api/v2/search?query=milf",
+        )) probe("nhentai $u") { get(u, "application/json").let { "${it.first} ${it.second.take(400)}" } }
     }
 }
