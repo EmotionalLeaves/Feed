@@ -32,16 +32,22 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val (lc, lb) = get("https://xhamster.com/newest/1")
-        probe("xh list") { "$lc len=${lb.length} n=${TubeSite.Xhamster.parseList(lb).size} title=${around(lb, "<title", 0, 120)} thumbProps=${lb.indexOf("videoThumbProps")} videos=${lb.indexOf("xhamster.com/videos/")}" }
-        val v = TubeSite.Xhamster.parseList(lb).firstOrNull()
-        val url = v?.pageUrl ?: Regex("https://xhamster\\.com/videos/[A-Za-z0-9-]+").find(lb)?.value ?: "https://xhamster.com/videos/xhZlgVu"
-        probe("xh id") { "${v?.id} url=$url" }
-        val (pc, p) = get(url)
-        probe("xh page") { "$pc len=${p.length} title=${around(p, "<title", 0, 120)}" }
-        probe("xh xplayer") { around(p, "xplayerSettings", 0, 2500) }
-        probe("xh sources") { around(p, "\"sources\"", 0, 1500) }
-        probe("xh initials parse") { TubeSite.Xhamster.initials(p)?.keys?.take(40)?.toString() ?: ("null; raw=" + around(p, "window.initials", 0, 120)) }
-        probe("xh stream") { TubeSite.Xhamster.stream(p).toString() }
+        val (xc, xb) = get("https://www.xnxx.com/new/0")
+        probe("xnxx new") { "$xc len=${xb.length} xvParse=${TubeSite.Xvideos.parseList(xb).size} " + around(xb, "thumb-block", 100, 900) }
+        probe("xnxx search") { get("https://www.xnxx.com/search/milf/0").let { "${it.first} n=${TubeSite.Xvideos.parseList(it.second).size}" } }
+        probe("xnxx page") { val u = Regex("href=\"(/video-[^\"]+)\"").find(xb)?.groupValues?.get(1) ?: return@probe "no href"
+            val (c, p) = get("https://www.xnxx.com$u"); "$c " + TubeSite.Xvideos.stream(p) + " | " + around(p, "setVideoHLS", 50, 160) }
+        for (u in listOf(
+            "https://www.youporn.com/api/webmasters/search/?query=milf&page=1",
+            "https://www.youporn.com/api/webmasters/listing/?page=1",
+            "https://www.youporn.com/api/webmasters/search/?page=1",
+            "https://api.tube8.com/api.php?action=searchVideos&output=json&search=milf&page=1",
+            "https://api.tube8.com/api.php?action=getVideosList&output=json&page=1",
+            "https://www.pornhub.com/webmasters/search?search=milf&page=1",
+            "https://www.pornhub.com/webmasters/video_by_id?id=6acf3013d23d9",
+            "https://www.youporn.com/api/webmasters/video_by_id/?id=1",
+        )) probe("api $u") { get(u, "application/json").let { "${it.first} ${it.second.take(700)}" } }
+        probe("youporn html") { get("https://www.youporn.com/browse/time/").let { "${it.first} len=${it.second.length} " + around(it.second, "data-video-id", 200, 900) } }
+        probe("tube8 html") { get("https://www.tube8.com/latest/").let { "${it.first} len=${it.second.length} " + around(it.second, "video-", 200, 900) } }
     }
 }
