@@ -23,6 +23,7 @@ class PoolCache @Inject constructor(
 
     /** Returns the saved posts once (then forgets them), if they're recent enough to still load. */
     suspend fun take(now: Long = System.currentTimeMillis()): List<MediaItem> {
+        if (!enabled) return emptyList()
         val row = runCatching { dao.get(ROW) }.getOrNull() ?: return emptyList()
         runCatching { dao.delete(ROW) }
         val saved = runCatching { json.decodeFromString(Saved.serializer(), row.json) }.getOrNull() ?: return emptyList()
@@ -38,6 +39,8 @@ class PoolCache @Inject constructor(
     }
 
     companion object {
+        /** Tests turn this off so each launch starts from an empty screen. */
+        @Volatile var enabled = true
         private const val ROW = "__pool_cache"
         /** Older than this and links may have expired; start fresh instead. */
         const val MAX_AGE_MS = 6 * 60 * 60_000L

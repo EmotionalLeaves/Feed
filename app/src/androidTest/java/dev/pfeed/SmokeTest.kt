@@ -8,10 +8,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -27,6 +24,16 @@ import org.junit.runner.RunWith
 @OptIn(ExperimentalTestApi::class)
 @RunWith(AndroidJUnit4::class)
 class SmokeTest {
+
+    companion object {
+        /**
+         * Start every launch from an empty feed: with instant start a video can be playing the
+         * moment the app opens, and the test framework can't inspect the screen while one plays.
+         */
+        @JvmStatic
+        @org.junit.BeforeClass
+        fun noInstantStart() { dev.pfeed.data.repo.PoolCache.enabled = false }
+    }
 
     @get:Rule
     val rule = createAndroidComposeRule<MainActivity>()
@@ -45,19 +52,47 @@ class SmokeTest {
     }
 
 
+    /** Polls without touching the Compose tree (which can't be inspected while a video plays). */
+    private fun poll(timeoutMs: Long, what: String, condition: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            if (condition()) return
+            Thread.sleep(250)
+        }
+        throw AssertionError("Timed out waiting for: $what")
+    }
+
+    /** A real finger swipe up through the Activity, the same path a physical touch takes. */
+    private fun swipeUpGesture() {
+        val activity = rule.activity
+        val w = activity.window.decorView.width.toFloat()
+        val h = activity.window.decorView.height.toFloat()
+        val down = SystemClock.uptimeMillis()
+        fun ev(action: Int, y: Float, t: Long) = MotionEvent.obtain(down, t, action, w / 2f, y, 0).apply { source = InputDevice.SOURCE_TOUCHSCREEN }
+        val steps = 10
+        rule.runOnUiThread { ev(MotionEvent.ACTION_DOWN, h * 0.75f, down).let { activity.dispatchTouchEvent(it); it.recycle() } }
+        for (i in 1..steps) {
+            Thread.sleep(16)
+            val y = h * (0.75f - 0.5f * i / steps)
+            rule.runOnUiThread { ev(MotionEvent.ACTION_MOVE, y, SystemClock.uptimeMillis()).let { activity.dispatchTouchEvent(it); it.recycle() } }
+        }
+        rule.runOnUiThread { ev(MotionEvent.ACTION_UP, h * 0.25f, SystemClock.uptimeMillis()).let { activity.dispatchTouchEvent(it); it.recycle() } }
+    }
+
     /**
-     * The thing the app is for: with the built-in sources and a real network, posts actually appear
-     * and you can keep swiping through them. (Every post page has the "More" button.)
+     * The thing the app is for: with the built-in sources and a real network, posts actually
+     * display (an image drawn or a video's first frame), and keep displaying as you swipe.
      */
     @Test
     fun feedShowsRealPostsAndKeepsScrolling() {
-        waitFor(timeoutMs = 20_000, what = "feed tab") { exists("For You") }
-        waitFor(timeoutMs = 60_000, what = "a first post from the built-in sources") { exists("More") }
-        repeat(8) { n ->
-            rule.onRoot().performTouchInput { swipeUp() }
-            waitFor(timeoutMs = 30_000, what = "a post after swipe ${n + 1}") { exists("More") }
+        val shown = rule.activity.mediaHealth.shownCount
+        poll(90_000, "a first post to display") { shown.get() >= 1 }
+        var swipes = 0
+        poll(120_000, "three posts to have displayed while swiping (got ${shown.get()})") {
+            if (swipes < 12) { swipeUpGesture(); swipes++; Thread.sleep(2_500) }
+            shown.get() >= 3
         }
-        assertTrue("activity still alive after scrolling", !rule.activity.isFinishing)
+        assertTrue("activity still alive after scrolling", !rule.activity.isFinishing && !rule.activity.isDestroyed)
     }
 
     /** Search finds real results and plays them. */

@@ -21,6 +21,7 @@ import javax.inject.Inject
 class MainActivity : FragmentActivity() {
 
     @Inject lateinit var lockManager: AppLockManager
+    @Inject lateinit var mediaHealth: dev.pfeed.data.repo.MediaHealth
     @Inject lateinit var playerPool: PlayerPool
 
     override fun onCreate(savedInstanceState: Bundle?) {

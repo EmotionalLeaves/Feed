@@ -24,7 +24,11 @@ class MediaHealth @Inject constructor() {
     @Volatile private var lastSuccessAt = 0L
     @Volatile private var lastSuccessOrigin: String? = null
 
+    /** How many posts have actually displayed (first video frame / image drawn) since launch. */
+    val shownCount = java.util.concurrent.atomic.AtomicInteger(0)
+
     fun shown(item: MediaItem) {
+        shownCount.incrementAndGet()
         val o = Spread.origin(item)
         lastSuccessAt = now()
         lastSuccessOrigin = o

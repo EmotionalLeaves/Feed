@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.27.0 — 2026-11-09
+
+Round 10: the build proves posts really display.
+
+- **The end-to-end test now counts posts that actually displayed** (an image drawn or a video's first frame) on a real emulator with a real network: one within 90 s of launch and at least three while swiping. The earlier version only checked that a post page existed, and could hang while a video played.
+- Check sources no longer flags sources that are simply empty because you haven't added anything to them (RSS, local files, direct links).
+
 ## 3.26.0 — 2026-11-10
 
 Round 9: Coomer posts get real tags.

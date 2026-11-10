@@ -30,7 +30,10 @@ class SourceChecker @Inject constructor(private val http: HttpJson) {
         } catch (e: Exception) {
             return Result(false, e.message?.take(140) ?: e.javaClass.simpleName)
         }
-        if (listed.isEmpty()) return Result(false, "Answered, but with no posts")
+        if (listed.isEmpty()) {
+            // Sources that only show what you add yourself are fine when empty.
+            return if (a.id in USER_FILLED) Result(true, "Nothing added to it yet") else Result(false, "Answered, but with no posts")
+        }
 
         // Try up to three posts' files: one dead link shouldn't condemn a source.
         var tried = 0
@@ -54,6 +57,7 @@ class SourceChecker @Inject constructor(private val http: HttpJson) {
 
     companion object {
         private const val PROBE_QUERY = "sex"
+        private val USER_FILLED = setOf("rss", "local", "direct", "json", "api")
         private const val LIST_TIMEOUT_MS = 25_000L
         private const val FILE_TIMEOUT_MS = 10_000L
     }
