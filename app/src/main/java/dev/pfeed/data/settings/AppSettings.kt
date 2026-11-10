@@ -755,9 +755,10 @@ object DefaultSources {
     /** Hand-picked feeds first, then the generated [SourceCatalog]; de-duplicated. */
     val redditSubs: List<String> = (curatedRedditSubs + SourceCatalog.redditSubs).distinctBy { it.trim().lowercase() }
     val mastodonFeeds: List<MastodonFeed> = (curatedMastodonFeeds + SourceCatalog.mastodonFeeds)
-        .filterNot { MastodonExclusions.isExcluded(it.host) }
+        .filterNot { MastodonExclusions.isExcluded(it.host) || isRetiredHost(it.host) }
         .distinctBy { it.host.trim().lowercase() + "|" + (it.tag?.trim()?.lowercase() ?: "") }
     val booruFeeds: List<BooruFeed> = (curatedBooruFeeds + SourceCatalog.booruFeeds)
+        .filterNot { isRetiredHost(it.host) }
         .distinctBy { it.host.trim().lowercase() + "|" + (it.tags?.trim()?.lowercase() ?: "") }
 
     /**
@@ -774,6 +775,23 @@ object DefaultSources {
         "safebooru.donmai.us", "safebooru.org", "e926.net", "konachan.net", "idol.sankakucomplex.com",
         "sakugabooru.com", "kemono.su", "kemono.party", "kemono.cr",
     )
+
+    /**
+     * Hosts that were in earlier libraries and were checked dead or unusable (domain gone, server
+     * shut down, needs an account, or not an engine the app reads). Dropped from defaults and from
+     * saved settings, and never fetched.
+     */
+    private val RETIRED_HOSTS = setOf(
+        "rule34.us", "dollbooru.org",
+        "lewd.town", "kinky.business", "bdsmr.com", "sex.social", "kinkies.com", "femdom.social",
+        "kemonodon.space", "latex.social", "lewdland.social", "nsfwdone.social", "mstdn.social",
+        "cum.salon", "sinblr.com",
+    )
+
+    fun isRetiredHost(host: String): Boolean {
+        val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")
+        return h in RETIRED_HOSTS
+    }
 
     fun isSfwOnlyHost(host: String): Boolean {
         val h = host.trim().lowercase().removePrefix("https://").removePrefix("http://").substringBefore('/').removePrefix("www.")

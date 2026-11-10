@@ -14,6 +14,7 @@ import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
 import dev.pfeed.source.parse.BooruFamily
+import dev.pfeed.source.parse.BooruHtml
 import dev.pfeed.source.parse.BooruParser
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -71,20 +72,8 @@ class BooruAdapter @Inject constructor(
 
     private suspend fun resolvePostPage(page: String): StreamInfo {
         val html = http.getRaw(id, page)
-        // Video first: <source src> / <video ... src>. Then full image: #image, "Original image" link.
-        val video = VIDEO_SRC_RE.find(html)?.groupValues?.get(1)
-        if (video != null) return StreamInfo.Direct(absolute(video, page), mimeType = null)
-        val original = ORIGINAL_LINK_RE.find(html)?.groupValues?.get(1)
-            ?: IMAGE_SRC_RE.find(html)?.groupValues?.get(1)
-            ?: throw SourceException(id, "No media on post page")
-        return StreamInfo.Direct(absolute(original, page), mimeType = null)
-    }
-
-    private fun absolute(url: String, page: String): String = when {
-        url.startsWith("//") -> "https:$url"
-        url.startsWith("http") -> url
-        url.startsWith("/") -> "https://" + BooruFamily.bareHost(page).removePrefix("api.") + url
-        else -> url
+        val media = BooruHtml.mediaFromPostPage(html, page) ?: throw SourceException(id, "No media on post page")
+        return StreamInfo.Direct(media.url, mimeType = null)
     }
 
     /** Encoded entries for the last feed list seen (by identity): there are a thousand-plus of them. */
@@ -159,21 +148,25 @@ class BooruAdapter @Inject constructor(
     private suspend fun fetchPosts(host: String, tags: String?, page: Int): List<MediaItem> {
         val bare = BooruFamily.bareHost(host)
         val creds = credentialParams(bare)
-        val url = postsUrl(bare, tags, page) + creds
+        val canUseHtml = creds.isEmpty() && BooruFamily.of(bare) == BooruFamily.GELBOORU
+        // These boards' APIs answer nothing useful without a key (rule34.xxx: "Missing
+        // authentication", gelbooru.com: 401, realbooru.com: API offline), so go straight to the web
+        // page instead of spending a request to find that out every time.
+        if (canUseHtml && bare in WEB_ONLY_WITHOUT_KEY) return fetchPostsHtml(bare, tags, page)
 
-        return try {
+        val url = postsUrl(bare, tags, page) + creds
+        val api = try {
             BooruParser.parse(http.get(id, url), bare)
         } catch (e: SourceException) {
-            // API refused (non-JSON error or 403) and we had no key → try the HTML fallback.
-            val isAuthIssue = e.isAuthError || e.message?.contains("non-JSON") == true
-            if (isAuthIssue && creds.isEmpty() && BooruFamily.of(bare) == BooruFamily.GELBOORU) {
-                fetchPostsHtml(bare, tags, page)
-            } else if (isAuthIssue && creds.isNotEmpty()) {
+            if (creds.isNotEmpty() && e.isAuthError) {
                 throw SourceException(id, "$bare rejected the API key. Check it in Settings → Sources.", isAuthError = true, cause = e)
-            } else {
-                throw e
             }
+            if (!canUseHtml) throw e
+            return runCatching { fetchPostsHtml(bare, tags, page) }.getOrElse { throw e }
         }
+        // An answer with no posts can also be "need a key" said as valid JSON; the page knows better.
+        if (api.isEmpty() && canUseHtml && page == 0) return runCatching { fetchPostsHtml(bare, tags, page) }.getOrDefault(api)
+        return api
     }
 
     /**
@@ -194,7 +187,7 @@ class BooruAdapter @Inject constructor(
         } catch (e: SourceException) {
             throw e
         }
-        return parseHtmlThumbnails(html, host)
+        return BooruHtml.parseListing(html, host)
     }
 
     private suspend fun credentialParams(host: String): String {
@@ -253,68 +246,8 @@ class BooruAdapter @Inject constructor(
         }
     }
 
-    /**
-     * Parses post thumbnails from a gelbooru-engine HTML listing page. The thumbnails live in
-     * `<span class="thumb">` blocks, each containing an `<a href>` (post page link) and an
-     * `<img src>` (thumbnail URL). From these we build a MediaItem whose `extras["media"]` points
-     * to the thumbnail initially; the full-size URL resolves on play via the post page.
-     *
-     * This is the fallback when the JSON API needs a key the user hasn't provided. It's less data
-     * than the API (no tags, no full-size URL until play time) but it gets content on screen.
-     */
-    private fun parseHtmlThumbnails(html: String, host: String): List<MediaItem> {
-        val items = ArrayList<MediaItem>()
-        // Pattern: <span ...class="thumb"...><a id="p{id}" href="index.php?page=post&s=view&id={id}"><img ...src="{thumb}"...></a></span>
-        val thumbRegex = Regex(
-            """<span[^>]*class="thumb"[^>]*>.*?<a[^>]*href="[^"]*[?&]id=(\d+)[^"]*"[^>]*>.*?<img[^>]*src="([^"]+)"[^>]*>""",
-            RegexOption.DOT_MATCHES_ALL,
-        )
-        val tagRegex = Regex("""alt="[^"]*\btags=([^"&]+)""")
-        val titleRegex = Regex("""title="([^"]+)"""")
-        for (m in thumbRegex.findAll(html)) {
-            val postId = m.groupValues[1]
-            val thumbUrl = m.groupValues[2].let {
-                if (it.startsWith("//")) "https:$it" else it
-            }
-            // Try to extract tags from alt/title attributes in the same <span> block
-            val block = m.value
-            val tagsRaw = tagRegex.find(block)?.groupValues?.get(1)
-                ?: titleRegex.find(block)?.groupValues?.get(1)
-            // Keep rating:… (the content filter reads it); drop score:… (bookkeeping, not a topic).
-            val tags = tagsRaw?.split(Regex("[\\s+]+"))?.filter { it.isNotBlank() && !it.startsWith("score:") }?.take(50).orEmpty()
-
-            // The listing only gives a still thumbnail, so classify by the post's tags instead of the
-            // thumbnail extension: video/webm/mp4 → VIDEO, (animated) gif → GIF, else IMAGE. The real
-            // file URL is fetched from the post page on play (resolveStream below).
-            val lower = tags.map { it.lowercase() }
-            val type = when {
-                lower.any { it == "video" || it == "webm" || it == "mp4" || it == "animated" || it == "sound" } ->
-                    dev.pfeed.domain.model.MediaType.VIDEO
-                lower.any { it == "gif" || it == "animated_gif" } -> dev.pfeed.domain.model.MediaType.GIF
-                else -> dev.pfeed.domain.model.MediaType.IMAGE
-            }
-            items += MediaItem(
-                id = "$host/$postId",
-                sourceId = BooruParser.SOURCE_ID,
-                type = type,
-                title = null,
-                creator = null,
-                tags = tags,
-                durationSec = null,
-                thumbnailUrl = thumbUrl,
-                pageUrl = BooruFamily.postPage(host, postId),
-                publishedAt = null,
-                // Marked for lazy resolution: resolveStream fetches the post page for the full file.
-                extras = mapOf("media" to thumbUrl, "resolve" to "page", "host" to host),
-            )
-        }
-        return items
-    }
-
     companion object {
-        private val VIDEO_SRC_RE = Regex("""<(?:source|video)[^>]*\bsrc="([^"]+\.(?:mp4|webm|m4v)[^"]*)"""", RegexOption.IGNORE_CASE)
-        private val ORIGINAL_LINK_RE = Regex("""<a[^>]*\bhref="([^"]+)"[^>]*>\s*Original image""", RegexOption.IGNORE_CASE)
-        private val IMAGE_SRC_RE = Regex("""<img[^>]*\bid="image"[^>]*\bsrc="([^"]+)"""", RegexOption.IGNORE_CASE)
+        private val WEB_ONLY_WITHOUT_KEY = setOf("rule34.xxx", "gelbooru.com", "realbooru.com")
         private const val RANDOM_START_PAGES = 4
         /** Most boards refuse deep pages for anonymous users (Danbooru: 1000); stop well before. */
         private const val MAX_PAGES = 200

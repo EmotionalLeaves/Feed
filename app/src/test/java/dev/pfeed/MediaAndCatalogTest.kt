@@ -127,7 +127,7 @@ class MediaAndCatalogTest {
     fun `built-in library has thousands of feeds and nothing excluded`() {
         val total = DefaultSources.redditSubs.size + DefaultSources.booruFeeds.size +
             DefaultSources.mastodonFeeds.size + SourceCatalog.redgifsTerms.size
-        assertTrue("expected thousands of feeds, got $total", total >= 5800)
+        assertTrue("expected thousands of feeds, got $total", total >= 5300)
         assertTrue(DefaultSources.mastodonFeeds.none { MastodonExclusions.isExcluded(it.host) })
         assertTrue(DefaultSources.booruFeeds.none { DefaultSources.isSfwOnlyHost(it.host) })
         assertTrue(DefaultSources.kemonoHosts.none { DefaultSources.isSfwOnlyHost(it) })

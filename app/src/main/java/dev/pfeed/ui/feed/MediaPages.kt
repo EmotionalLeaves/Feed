@@ -120,7 +120,7 @@ fun VideoPage(
     DisposableEffect(player) {
         val p = player
         val listener = object : Player.Listener {
-            override fun onRenderedFirstFrame() { firstFrame = true }
+            override fun onRenderedFirstFrame() { firstFrame = true; vm.markShown(item) }
             override fun onPositionDiscontinuity(old: Player.PositionInfo, new: Player.PositionInfo, reason: Int) {
                 // A clip looping on its own only counts as a rewatch when it's long enough that
                 // sitting through it again is a choice. Short loops (most RedGIFs clips) repeat
@@ -277,6 +277,7 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
             onSuccess = { state ->
                 val d = state.result.drawable
                 imageSize = androidx.compose.ui.unit.IntSize(d.intrinsicWidth, d.intrinsicHeight)
+                if (stream != null) vm.markShown(item)
             },
             // Dead image link: drop it from the feed rather than leaving a black page.
             // (A failed full-size load while zoomed isn't a dead post: the sample already showed.)

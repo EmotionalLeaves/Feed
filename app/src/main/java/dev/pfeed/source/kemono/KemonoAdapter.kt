@@ -55,6 +55,7 @@ class KemonoAdapter @Inject constructor(
         val root = api("https://$host/api/v1/posts?o=$offset")
         val posts = postsArray(root)
         val items = posts.flatMap { post -> itemsFromPost(host, post) }
+        requireFilesReachable(host, items)
         // Stop when the API returns an empty page; otherwise step one page deeper.
         val next = if (posts.isEmpty() || offset >= MAX_OFFSET) null else (offset + PAGE).toString()
         return EntryPage(items, next)
@@ -71,6 +72,24 @@ class KemonoAdapter @Inject constructor(
             }.getOrDefault(emptyList())
         }
         (remote + poolMatches(query)).distinctBy { it.key }
+    }
+
+    private val filesOk = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Boolean>>()
+
+    /**
+     * The post list and the files live on different servers, and the file servers have long outages
+     * while the list keeps answering. Handing out posts whose files can't load just fills the feed
+     * with spinners, so check one file (first byte only) every few minutes and report the outage
+     * as what it is instead.
+     */
+    private suspend fun requireFilesReachable(host: String, items: List<MediaItem>) {
+        val sample = items.firstOrNull { it.type == MediaType.IMAGE }?.extras?.get("media")
+            ?: items.firstOrNull()?.extras?.get("media") ?: return
+        val now = System.currentTimeMillis()
+        val cached = filesOk[host]?.takeIf { now - it.first < FILE_CHECK_EVERY_MS }
+        val ok = cached?.second ?: (kotlinx.coroutines.withTimeoutOrNull(FILE_CHECK_TIMEOUT_MS) { http.reachable(sample) } ?: false)
+            .also { filesOk[host] = now to it }
+        if (!ok) throw dev.pfeed.source.SourceException(id, "$host lists posts, but its file servers aren't responding (an outage on their side). Retrying every few minutes.")
     }
 
     /**
@@ -164,6 +183,8 @@ class KemonoAdapter @Inject constructor(
             return MOVED[h] ?: h
         }
         private const val PAGE = 50
+        private const val FILE_CHECK_EVERY_MS = 5 * 60_000L
+        private const val FILE_CHECK_TIMEOUT_MS = 8_000L
         /** Don't page past this; the recent feed that deep is rarely useful and ages out. */
         private const val MAX_OFFSET = 50_000
     }

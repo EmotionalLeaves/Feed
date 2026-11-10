@@ -70,10 +70,10 @@ class SettingsRepository @Inject constructor(
                 redditSubs = (out.redditSubs + DefaultSources.redditSubs)
                     .distinctBy { it.trim().lowercase() },
                 mastodonFeeds = (out.mastodonFeeds + DefaultSources.mastodonFeeds)
-                    .filterNot { MastodonExclusions.isExcluded(it.host) }
+                    .filterNot { MastodonExclusions.isExcluded(it.host) || DefaultSources.isRetiredHost(it.host) }
                     .distinctBy { it.host.trim().lowercase() + "|" + (it.tag?.trim()?.lowercase() ?: "") },
                 booruFeeds = (out.booruFeeds + DefaultSources.booruFeeds)
-                    .filterNot { DefaultSources.isSfwOnlyHost(it.host) }
+                    .filterNot { DefaultSources.isSfwOnlyHost(it.host) || DefaultSources.isRetiredHost(it.host) }
                     .distinctBy { it.host.trim().lowercase() + "|" + (it.tags?.trim()?.lowercase() ?: "") },
                 // coomer.su stopped resolving in 2025; the site lives on at coomer.st.
                 kemonoHosts = (out.kemonoHosts.map { if (it.trim().lowercase().removePrefix("https://").removePrefix("www.").trim('/') in MOVED_COOMER) "coomer.st" else it } + DefaultSources.kemonoHosts)
@@ -87,7 +87,7 @@ class SettingsRepository @Inject constructor(
 
     companion object {
         /** Version of the built-in source library merged into saved settings (see [migrate]). */
-        const val LIBRARY_VERSION = 7
+        const val LIBRARY_VERSION = 8
         private val MOVED_COOMER = setOf("coomer.su", "coomer.party")
     }
 }

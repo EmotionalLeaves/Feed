@@ -13,7 +13,7 @@ object SourceCatalog {
     // ── Image boards ────────────────────────────────────────────────────────────
 
     /** Gelbooru-engine anime/art boards: they share the Danbooru-style tag vocabulary. */
-    private val ANIME_GELBOORU_HOSTS = listOf("rule34.xxx", "gelbooru.com", "tbib.org", "xbooru.com", "rule34.us")
+    private val ANIME_GELBOORU_HOSTS = listOf("rule34.xxx", "gelbooru.com", "tbib.org", "xbooru.com")
 
     /** Danbooru-engine boards: anonymous searches allow two tags, so it's always "rating:explicit TAG". */
     private val DANBOORU_HOSTS = listOf("danbooru.donmai.us", "aibooru.online")
@@ -149,7 +149,7 @@ object SourceCatalog {
             add(BooruFeed("rule34.xxx", "$b $a"))
             add(BooruFeed("gelbooru.com", "$b $a"))
             add(BooruFeed("tbib.org", "$b $a"))
-            add(BooruFeed("rule34.us", "$b $a"))
+            add(BooruFeed("xbooru.com", "$b $a"))
             // Danbooru: two tags is the anonymous limit; the post-level rating filter drops safe ones.
             add(BooruFeed("danbooru.donmai.us", "$b $a"))
         }
@@ -247,7 +247,8 @@ object SourceCatalog {
         "femdom", "amateur", "boobs", "ass", "pussy", "cock", "blowjob", "anal", "cum", "milf", "feet",
         "latex", "cosplay", "furry", "yiff", "futanari", "yuri", "gay", "trans", "selfie", "nsfwart",
     )
-    private val MASTODON_HOSTS = listOf("mastodon.social", "mstdn.social", "mas.to", "lewd.town", "kinky.business", "sinblr.com")
+    /** Servers checked to answer tag timelines without an account. */
+    private val MASTODON_HOSTS = listOf("mastodon.social", "mas.to", "mstdn.jp", "kinktroet.social", "rubber.social")
 
     val mastodonFeeds: List<MastodonFeed> = buildList {
         for (tag in mastodonTags) for (host in MASTODON_HOSTS) add(MastodonFeed(host, tag))

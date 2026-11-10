@@ -48,9 +48,18 @@ object BooruParser {
             val sampleObj = p["sample"] as? JsonObject
             fun nonBlank(v: String?) = v?.takeIf { it.isNotBlank() }
             // The original file decides what the post is (a GIF's or video's "sample" is a still).
-            val file = nonBlank(str("file_url")) ?: nonBlank((fileObj?.get("url") as? JsonPrimitive)?.contentOrNull)
+            // Older gelbooru-engine boards (tbib) give no URLs at all, only "directory" + "image":
+            // files live at /images/{dir}/{image}, samples and thumbnails beside them.
+            val dir = nonBlank(str("directory"))
+            val image = nonBlank(str("image"))
+            val stem = image?.substringBeforeLast('.')
+            val built = if (dir != null && image != null) "https://$board/images/$dir/$image" else null
+            val builtSample = if (dir != null && stem != null && str("sample") == "true") "https://$board/samples/$dir/sample_$stem.jpg" else null
+            val builtPreview = if (dir != null && stem != null) "https://$board/thumbnails/$dir/thumbnail_$stem.jpg" else null
+
+            val file = nonBlank(str("file_url")) ?: nonBlank((fileObj?.get("url") as? JsonPrimitive)?.contentOrNull) ?: built
             val sample = nonBlank(str("large_file_url")) ?: nonBlank(str("sample_url"))
-                ?: nonBlank((sampleObj?.get("url") as? JsonPrimitive)?.contentOrNull)
+                ?: nonBlank((sampleObj?.get("url") as? JsonPrimitive)?.contentOrNull) ?: builtSample
             val type = MediaTypes.classify(file ?: sample ?: return@mapNotNull null) ?: return@mapNotNull null
             // Stills: show the board's sample (~850–1500 px, a few hundred KB) rather than the original,
             // which is often a 5–20 MB PNG and made images slow to appear. The original is kept for zoom.
@@ -61,6 +70,7 @@ object BooruParser {
 
             val preview = str("preview_file_url") ?: str("preview_url")
                 ?: ((p["preview"] as? JsonObject)?.get("url") as? JsonPrimitive)?.contentOrNull
+                ?: builtPreview
 
             // e621 groups tags by category; use every category (general, species, character, …).
             val tagGroups = p["tags"] as? JsonObject

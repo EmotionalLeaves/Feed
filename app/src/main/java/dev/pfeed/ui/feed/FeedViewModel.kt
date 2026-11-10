@@ -69,6 +69,7 @@ class FeedViewModel @Inject constructor(
     private val preloader: Preloader,
     private val seen: SeenItems,
     private val dwellBaseline: DwellBaseline,
+    private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
     holder: TransientFeedHolder,
     val playerPool: PlayerPool,
 ) : ViewModel() {
@@ -100,9 +101,21 @@ class FeedViewModel @Inject constructor(
         // jump the page you're looking at; it stays behind you, harmlessly.
         val index = items.value.indexOfFirst { it.key == item.key }
         if (index in 0 until lastSettled) return
-        broken.update { it + item.key }
         streams.remove(item.key)
+        if (mediaHealth.failed(item)) {
+            // Third post in a row from this site that wouldn't load while others do: its files are
+            // down. Drop the rest of it that's queued ahead instead of stalling on each one.
+            val origin = dev.pfeed.domain.reco.Spread.origin(item)
+            val ahead = items.value.drop(lastSettled + 1).filter { dev.pfeed.domain.reco.Spread.origin(it) == origin }.map { it.key }
+            broken.update { it + item.key + ahead }
+            _messages.tryEmit("${Display.source(item, item.sourceId)} isn't loading right now, skipping it for a while")
+        } else {
+            broken.update { it + item.key }
+        }
     }
+
+    /** The post's media actually appeared (first video frame / image drawn). */
+    fun markShown(item: MediaItem) = mediaHealth.shown(item)
 
     val liked: StateFlow<Set<String>> = library.keys(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val saved: StateFlow<Set<String>> = library.keys(LibraryKind.SAVED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())

@@ -91,6 +91,19 @@ class HttpJson @Inject constructor(
         return body
     }
 
+    /** Whether [url] (a media file) answers at all: asks for its first byte only. */
+    suspend fun reachable(url: String): Boolean {
+        val parsed = url.toHttpUrlOrNull() ?: return false
+        val call = http.newCall(Request.Builder().url(parsed).header("Range", "bytes=0-0").header("Accept", "*/*").build())
+        return try {
+            call.await().first in 200..399
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: IOException) {
+            false
+        }
+    }
+
     private suspend fun Call.await(): Pair<Int, String> = suspendCancellableCoroutine { cont ->
         cont.invokeOnCancellation { runCatching { cancel() } }
         enqueue(object : Callback {

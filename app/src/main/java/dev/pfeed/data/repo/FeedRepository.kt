@@ -48,9 +48,10 @@ class FeedSessionFactory @Inject constructor(
     private val signals: SignalRepository,
     private val hasher: ThumbnailHasher,
     private val seen: SeenItems,
+    private val mediaHealth: MediaHealth,
 ) {
     fun create(spec: FeedSpec, scope: CoroutineScope) =
-        FeedSession(spec, scope, registry, settings, blocks, library, signals, hasher, seen)
+        FeedSession(spec, scope, registry, settings, blocks, library, signals, hasher, seen, mediaHealth)
 }
 
 /**
@@ -75,6 +76,7 @@ class FeedSession(
     private val signals: SignalRepository,
     private val hasher: ThumbnailHasher,
     private val seen: SeenItems,
+    private val mediaHealth: MediaHealth,
 ) {
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext.job))
 
@@ -330,7 +332,9 @@ class FeedSession(
         val blocklist = blocks.current()
         // Also age out candidates the ranker has passed over for many loads: they're the leftovers.
         val dropped = candidates.filter {
-            !blocklist.allows(it) || seen.isSeen(it.key) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS
+            !blocklist.allows(it) || seen.isSeen(it.key) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS ||
+                // A site whose files aren't loading right now: don't hand out more of it.
+                mediaHealth.isResting(it)
         }
         if (dropped.isNotEmpty()) {
             candidates.removeAll(dropped.toSet())
