@@ -43,14 +43,29 @@ class SmokeTest {
     private fun exists(text: String, substring: Boolean = false) =
         rule.onAllNodes(hasText(text, substring = substring), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 
+    /**
+     * Waits by polling. A busy screen (loading bars, thumbnails arriving, a playing video) makes the
+     * framework refuse to inspect it for a moment; that counts as "not yet", not as a failure.
+     */
     private fun waitFor(timeoutMs: Long = 15_000, what: String, condition: () -> Boolean) {
-        try {
-            rule.waitUntil(timeoutMs, condition)
-        } catch (e: Throwable) {
-            throw AssertionError("Failed waiting for: $what [${e.javaClass.simpleName}: ${e.message?.take(300)}]", e)
+        var last: Throwable? = null
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (System.currentTimeMillis() < deadline) {
+            try {
+                if (condition()) return
+            } catch (e: Throwable) {
+                last = e
+            }
+            Thread.sleep(300)
         }
+        throw AssertionError("Failed waiting for: $what [${last?.javaClass?.simpleName}: ${last?.message?.take(200)}]", last)
     }
 
+    /** Taps a text, retrying while the screen is too busy to be inspected. */
+    private fun tap(text: String) = waitFor(timeoutMs = 30_000, what = "tap '$text'") {
+        rule.onAllNodes(hasText(text), useUnmergedTree = true)[0].performClick()
+        true
+    }
 
     /** Polls without touching the Compose tree (which can't be inspected while a video plays). */
     private fun poll(timeoutMs: Long, what: String, condition: () -> Boolean) {
@@ -111,21 +126,25 @@ class SmokeTest {
     /** Search finds real results and plays them. */
     @Test
     fun searchFindsPlaysAndSaves() {
-        waitFor(timeoutMs = 20_000, what = "feed tab") { exists("For You") }
-        rule.onNodeWithText("Search").performClick()
-        waitFor(what = "search screen") { exists("Popular") }
-        rule.onNodeWithText("anal").performClick()
+        waitFor(timeoutMs = 30_000, what = "feed tab") { exists("For You") }
+        tap("Search")
+        waitFor(timeoutMs = 30_000, what = "search screen") { exists("Popular") }
+        tap("anal")
         // Results stream in as sources answer. On a slow test machine every source can miss its
         // deadline; that's a finished search with nothing found, not a failure of the app.
         waitFor(timeoutMs = 120_000, what = "search to return results or finish") {
             exists("Play all") || (!exists("Searching every source…") && !exists("still searching", substring = true))
         }
         if (!exists("Play all")) return
-        rule.onNodeWithText("Play all").performClick()
-        // The viewer usually opens on a playing video, whose progress bar redraws every frame; the
-        // test framework treats that as "never idle" and refuses to inspect the screen. So here it
-        // only checks that opening and playing results doesn't crash.
-        repeat(40) { rule.mainClock.advanceTimeBy(250); Thread.sleep(150) }
+        tap("Play all")
+        // Results must really display in the viewer.
+        val shown = rule.activity.mediaHealth.shownCount
+        val before = shown.get()
+        try {
+            poll(90_000, "a search result to display") { shown.get() > before }
+        } catch (e: AssertionError) {
+            throw AssertionError("No search result displayed in 90 s. What happened: ${rule.activity.mediaHealth.recentEvents()}")
+        }
         assertTrue("viewer still alive after playing search results", !rule.activity.isFinishing && !rule.activity.isDestroyed)
     }
 
