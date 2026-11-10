@@ -57,7 +57,9 @@ class SmokeTest {
         val deadline = System.currentTimeMillis() + timeoutMs
         while (System.currentTimeMillis() < deadline) {
             if (condition()) return
-            Thread.sleep(250)
+            // Under a test rule the UI only draws frames when the test drives its clock.
+            rule.mainClock.advanceTimeBy(250)
+            Thread.sleep(150)
         }
         throw AssertionError("Timed out waiting for: $what")
     }
@@ -94,7 +96,10 @@ class SmokeTest {
         var swipes = 0
         try {
             poll(120_000, "three posts to have displayed while swiping") {
-                if (swipes < 12) { swipeUpGesture(); swipes++; Thread.sleep(2_500) }
+                if (swipes < 12) {
+                swipeUpGesture(); swipes++
+                repeat(8) { rule.mainClock.advanceTimeBy(250); Thread.sleep(150) }
+            }
                 shown.get() >= 3
             }
         } catch (e: AssertionError) {
@@ -120,7 +125,7 @@ class SmokeTest {
         // The viewer usually opens on a playing video, whose progress bar redraws every frame; the
         // test framework treats that as "never idle" and refuses to inspect the screen. So here it
         // only checks that opening and playing results doesn't crash.
-        Thread.sleep(10_000)
+        repeat(40) { rule.mainClock.advanceTimeBy(250); Thread.sleep(150) }
         assertTrue("viewer still alive after playing search results", !rule.activity.isFinishing && !rule.activity.isDestroyed)
     }
 
