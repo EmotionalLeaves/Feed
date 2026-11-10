@@ -257,6 +257,33 @@ object SourceCatalog {
         for (tag in mastodonTags) for (host in MASTODON_HOSTS) add(MastodonFeed(host, tag))
     }
 
+    // ── Tube sites ──────────────────────────────────────────────────────────────
+
+    /** Sections every tube site rotates through: its new and top lists, then category searches. */
+    val tubeSections: List<String> = listOf(
+        "new", "top",
+        "amateur", "milf", "anal", "blowjob", "creampie", "threesome", "lesbian", "big tits", "big ass",
+        "pov", "rough", "squirt", "asian", "latina", "ebony", "redhead", "cosplay", "hentai", "public",
+        "massage", "bondage", "femdom", "trans", "homemade", "orgasm", "deepthroat", "cuckold",
+    )
+
+    // ── nhentai ─────────────────────────────────────────────────────────────────
+
+    /** "query|sort" in the site's own search syntax. Nothing age-adjacent; lolicon/shotacon are excluded on every query. */
+    val nhentaiQueries: List<String> = buildList {
+        for (sort in listOf("popular-week", "popular", "recent")) add("language:english|$sort")
+        val tags = listOf(
+            "milf", "big-breasts", "anal", "nakadashi", "sole-female", "group", "ahegao", "netorare", "yuri",
+            "futanari", "stockings", "glasses", "bondage", "cheating", "swimsuit", "full-color", "uncensored",
+            "sex-toys", "dark-skin", "gyaru", "elf", "monster-girl", "catgirl", "demon-girl", "maid", "nurse",
+            "office-lady", "blowjob", "paizuri", "double-penetration", "mind-control", "femdom", "tomboy",
+            "muscle", "huge-breasts", "big-ass", "ponytail", "kimono", "bikini", "x-ray", "cunnilingus",
+            "multi-work-series", "western", "3d", "bbw", "mature", "harem", "mind-break", "drugs",
+        )
+        for (t in tags) add("tag:$t language:english|popular")
+        for (t in tags.take(16)) add("tag:$t|popular-week")
+    }
+
     // ── Reddit ──────────────────────────────────────────────────────────────────
 
     /** Additional well-known NSFW subreddits (dead or renamed ones are dropped after a few failures). */

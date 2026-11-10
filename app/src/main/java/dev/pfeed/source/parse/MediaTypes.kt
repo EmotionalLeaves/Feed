@@ -11,6 +11,8 @@ import java.time.format.DateTimeFormatter
  * and durations, and small HTML/entity cleanup. No Android dependencies, so it is unit-tested directly.
  */
 object MediaTypes {
+    const val HLS_MIME = "application/x-mpegURL"
+
 
     fun classify(url: String?, mime: String? = null, medium: String? = null): MediaType? {
         val m = mime?.lowercase()

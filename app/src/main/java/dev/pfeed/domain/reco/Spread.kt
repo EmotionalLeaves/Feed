@@ -81,7 +81,7 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         /** Where an item comes from, at the level you'd notice: subreddit, board site, server, site. */
         fun origin(item: MediaItem): String = when (item.sourceId) {
             "reddit" -> "r/" + (item.tags.firstOrNull()?.lowercase() ?: "")
-            "booru", "philomena", "mastodon", "kemono" ->
+            "booru", "philomena", "mastodon", "kemono", "tube" ->
                 item.sourceId + ":" + item.id.substringBefore('/', "").removePrefix("api.").lowercase()
             else -> item.sourceId
         }

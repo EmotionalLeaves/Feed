@@ -69,7 +69,11 @@ object AppModule {
             else chain.proceed(
                 request.newBuilder()
                     .header("User-Agent", ArchiveHeaders.BROWSER_UA)
-                    .apply { if (request.header("Referer") == null) header("Referer", "https://$site/") }
+                    .apply {
+                        if (request.header("Referer") == null) header("Referer", "https://$site/")
+                        // Sites that put an "are you 18?" page in front of everything until this is set.
+                        ArchiveHeaders.cookiesFor(site)?.let { if (request.header("Cookie") == null) header("Cookie", it) }
+                    }
                     .build(),
             )
         }
@@ -136,15 +140,33 @@ object HotlinkReferer {
 }
 
 /**
- * coomer / kemono and their file and thumbnail subdomains (img., n1–n4., data.), which are behind
- * DDoS-Guard and expect browser-looking requests.
+ * Sites that only serve their pages, API and files to browser-looking requests (DDoS-Guard /
+ * Cloudflare in front of coomer, kemono, nhentai and the tube sites), plus their CDN domains.
  */
 object ArchiveHeaders {
-    private val SITES = listOf("coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party")
+    /** Site → the domain its files/CDN are served from, when different. */
+    private val CDN = mapOf(
+        "xvideos-cdn.com" to "xvideos.com", "phncdn.com" to "pornhub.com", "xhcdn.com" to "xhamster.com",
+        "rdtcdn.com" to "redtube.com", "nhentai.net" to "nhentai.net",
+    )
+    private val SITES = listOf(
+        "coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party",
+        "nhentai.net", "xvideos.com", "pornhub.com", "xhamster.com", "redtube.com", "eporner.com",
+    )
+    private val COOKIES = mapOf(
+        "pornhub.com" to "age_verified=1; accessAgeDisclaimerPH=1; accessAgeDisclaimerUK=1; accessPH=1; platform=pc; hasVisited=1; cookiesBannerSeen=1",
+        "redtube.com" to "age_verified=1; accessAgeDisclaimerRT=1; platform=pc",
+        "xhamster.com" to "xh_mobile_ver=1; lang=en",
+    )
+
+    fun cookiesFor(site: String): String? = COOKIES[site]
 
     const val BROWSER_UA =
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
-    /** The site to name as referrer for [host] (covers img./n*./data. subdomains), or null. */
-    fun siteFor(host: String): String? = SITES.firstOrNull { host == it || host.endsWith(".$it") }
+    /** The site to name as referrer for [host] (covers subdomains and the sites' CDN domains), or null. */
+    fun siteFor(host: String): String? {
+        SITES.firstOrNull { host == it || host.endsWith(".$it") }?.let { return it }
+        return CDN.entries.firstOrNull { (cdn, _) -> host == cdn || host.endsWith(".$cdn") }?.value
+    }
 }

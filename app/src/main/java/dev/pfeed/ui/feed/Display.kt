@@ -26,6 +26,8 @@ object Display {
      * a post listed as an image whose file is really an MP4/WebM must play as a video.
      */
     fun effectiveType(item: MediaItem, stream: StreamInfo?): MediaType {
+        // A video whose page didn't expose a stream plays in the site's own embed player.
+        if (stream is StreamInfo.Embed) return MediaType.EMBED
         val direct = stream as? StreamInfo.Direct ?: return item.type
         val actual = MediaTypes.classify(direct.url, direct.mimeType) ?: return item.type
         return when {
@@ -53,6 +55,8 @@ object Display {
         return when (item.sourceId) {
             "reddit" -> item.tags.firstOrNull()?.takeIf { it.isNotBlank() }?.let { "r/$it" } ?: "Reddit"
             "redgifs" -> "RedGIFs"
+            "nhentai" -> "nhentai"
+            "tube" -> dev.pfeed.source.tube.TubeSite.byHost(host)?.label ?: host
             "kemono" -> when {
                 host.startsWith("coomer") -> "Coomer"
                 host.startsWith("kemono") -> "Kemono"

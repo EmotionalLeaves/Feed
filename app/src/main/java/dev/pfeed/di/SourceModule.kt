@@ -54,4 +54,10 @@ abstract class SourceModule {
 
     @Binds @IntoSet
     abstract fun genericJson(adapter: GenericJsonAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun tube(adapter: dev.pfeed.source.tube.TubeAdapter): SourceAdapter
+
+    @Binds @IntoSet
+    abstract fun nhentai(adapter: dev.pfeed.source.nhentai.NhentaiAdapter): SourceAdapter
 }

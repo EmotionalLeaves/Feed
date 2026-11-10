@@ -588,6 +588,8 @@ private fun feedCount(id: String, s: dev.pfeed.data.settings.AppSettings): Int? 
     "local" -> s.localFolders.size
     "kemono" -> s.kemonoHosts.size
     "redgifs" -> dev.pfeed.data.settings.SourceCatalog.redgifsTerms.size
+    "tube" -> dev.pfeed.source.tube.TubeSite.ALL.size * dev.pfeed.data.settings.SourceCatalog.tubeSections.size
+    "nhentai" -> dev.pfeed.data.settings.SourceCatalog.nhentaiQueries.size
     else -> null
 }
 
@@ -604,6 +606,8 @@ private fun feedSummary(id: String, s: dev.pfeed.data.settings.AppSettings): Str
     }
     "kemono" -> s.kemonoHosts.joinToString(" + ").ifBlank { null }
     "redgifs" -> "${dev.pfeed.data.settings.SourceCatalog.redgifsTerms.size} trending category feeds"
+    "tube" -> dev.pfeed.source.tube.TubeSite.ALL.joinToString(", ") { it.label } + " · ${dev.pfeed.data.settings.SourceCatalog.tubeSections.size} sections each"
+    "nhentai" -> "${dev.pfeed.data.settings.SourceCatalog.nhentaiQueries.size} tag feeds, each gallery a comic"
     "philomena" -> "derpibooru.org + furbooru.org"
     "rss" -> if (s.rssFeeds.isEmpty()) "Add any RSS/Atom feed below" else "${s.rssFeeds.size} feeds"
     "direct" -> if (s.directUrls.isEmpty()) "Paste a video or image link below" else "${s.directUrls.size} links"

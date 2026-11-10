@@ -152,7 +152,7 @@ class Ranker(
             return (ln(1 + score) / ln(1 + ref)).coerceIn(0.0, 1.0)
         }
 
-        private val QUALITY_REFS = mapOf("redgifs" to 20_000.0, "philomena" to 500.0, "booru" to QUALITY_REF)
+        private val QUALITY_REFS = mapOf("redgifs" to 20_000.0, "philomena" to 500.0, "booru" to QUALITY_REF, "nhentai" to 8_000.0)
 
         /** The features that make an item "the same kind of thing" as another. */
         internal fun signature(item: MediaItem): Set<String> = Features.of(item).take(SIG_FEATURES).toHashSet()
