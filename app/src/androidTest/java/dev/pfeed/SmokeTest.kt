@@ -41,7 +41,7 @@ class SmokeTest {
         try {
             rule.waitUntil(timeoutMs, condition)
         } catch (e: Throwable) {
-            throw AssertionError("Timed out waiting for: $what", e)
+            throw AssertionError("Failed waiting for: $what [${e.javaClass.simpleName}: ${e.message?.take(300)}]", e)
         }
     }
 
