@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.23.0 — 2026-11-09
+
+Round 6: the build is now tested on what the app is for.
+
+- **New end-to-end test on every build:** on a real emulator with a real network, the feed must show a post from the built-in sources within a minute, and keep showing posts through eight swipes. Before, the automated test only checked that screens opened; a build where nothing loaded would still pass.
+
 ## 3.22.0 — 2026-11-09
 
 Round 5: sites that are down stop costing time.

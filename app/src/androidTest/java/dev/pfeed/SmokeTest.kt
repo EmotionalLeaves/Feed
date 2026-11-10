@@ -8,7 +8,10 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -41,6 +44,21 @@ class SmokeTest {
         }
     }
 
+
+    /**
+     * The thing the app is for: with the built-in sources and a real network, posts actually appear
+     * and you can keep swiping through them. (Every post page has the "More" button.)
+     */
+    @Test
+    fun feedShowsRealPostsAndKeepsScrolling() {
+        waitFor(timeoutMs = 20_000, what = "feed tab") { exists("For You") }
+        waitFor(timeoutMs = 60_000, what = "a first post from the built-in sources") { exists("More") }
+        repeat(8) { n ->
+            rule.onRoot().performTouchInput { swipeUp() }
+            waitFor(timeoutMs = 30_000, what = "a post after swipe ${n + 1}") { exists("More") }
+        }
+        assertTrue("activity still alive after scrolling", !rule.activity.isFinishing)
+    }
 
     @Test
     fun launchUnlockNavigateAndPanic() {
