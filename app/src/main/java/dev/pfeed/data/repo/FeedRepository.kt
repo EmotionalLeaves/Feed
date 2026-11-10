@@ -122,14 +122,24 @@ class FeedSession(
         // Pick up anything that finished in the background since the last call.
         val errors = collect(follows, tag, mode).toMutableList()
         val forYou = spec is FeedSpec.Main && mode == FeedMode.FOR_YOU
+        // Following: the general feeds rarely happen to carry the exact creators/tags you follow
+        // among thousands of feeds, so search every source for each of them directly.
+        val following = spec is FeedSpec.Main && mode == FeedMode.FOLLOWING
+        val searches: List<String>? = when {
+            forYou -> interestQueries()
+            // Coomer creators are stored as "name@service"; search by the name.
+            following -> (follows.creators.map { it.substringBefore('@') } + follows.tags)
+                .map { it.replace('_', ' ').trim() }.filter { it.length >= 2 }.distinct()
+            else -> null
+        }
         // Keep fresh candidates flowing every time, not only when the pool runs low: otherwise the
         // ranker ends up choosing among leftovers it already passed over.
         if (candidates.size < POOL_MAX) launchFetches(adapters, prefs)
-        if (forYou) launchInterestFetches(adapters)
+        if (searches != null) launchInterestFetches(adapters, searches)
         var rounds = 0
         while (candidates.size < POOL_TARGET && rounds < MAX_ROUNDS) {
             rounds++
-            val launched = launchFetches(adapters, prefs) + if (forYou) launchInterestFetches(adapters) else 0
+            val launched = launchFetches(adapters, prefs) + if (searches != null) launchInterestFetches(adapters, searches) else 0
             if (launched == 0 && inFlight.isEmpty()) break
             // First screen: wait for at least something. Later: don't hold up scrolling for stragglers.
             val budget = if (candidates.size < BATCH) FIRST_WAIT_MS else TOP_UP_WAIT_MS
@@ -172,8 +182,7 @@ class FeedSession(
      * rotating), so candidates aren't limited to whatever the general feeds happen to return.
      * Each (source, interest) pair is paged deeper on later loads. Failures stay silent.
      */
-    private suspend fun launchInterestFetches(adapters: List<SourceAdapter>): Int {
-        val queries = interestQueries()
+    private fun launchInterestFetches(adapters: List<SourceAdapter>, queries: List<String>): Int {
         if (queries.isEmpty()) return 0
         val picks = List(minOf(INTERESTS_PER_LOAD, queries.size)) { queries[(interestRound + it) % queries.size] }.distinct()
         interestRound += picks.size

@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.16.0 — 2026-11-09
+
+Round 10: Following feed.
+
+- **Following actually fills.** It only filtered whatever the general feeds happened to bring in, and among thousands of feeds the creators and tags you follow rarely show up that way, so it could sit loading. It now searches every source for each followed creator and tag directly, paging deeper each time.
+
 ## 3.15.0 — 2026-11-09
 
 Round 9: library growth.
