@@ -6,6 +6,7 @@ import android.view.MotionEvent
 import androidx.compose.ui.test.ExperimentalTestApi
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
@@ -70,7 +71,8 @@ class SmokeTest {
         waitFor(timeoutMs = 60_000, what = "search results") { exists("Play all") }
         rule.onNodeWithText("Play all").performClick()
         waitFor(timeoutMs = 30_000, what = "a result opens in the viewer") { exists("More") && exists("Save") }
-        rule.onNodeWithText("Save").performClick()
+        // The pager also composes the next page, so there can be two Save buttons; the first is on screen.
+        rule.onAllNodes(hasText("Save"), useUnmergedTree = true)[0].performClick()
         waitFor(what = "post saved") { exists("Saved") }
         repeat(3) { n ->
             rule.onRoot().performTouchInput { swipeUp() }
