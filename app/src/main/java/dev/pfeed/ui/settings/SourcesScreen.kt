@@ -176,6 +176,14 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (src.enabled) 0.75f else 0.5f),
                             )
+                            val resting = remember(sources, healthTick, checks) { if (src.enabled) vm.restingSites(a.id) else emptyList() }
+                            if (resting.isNotEmpty()) {
+                                Text(
+                                    "Paused for a few minutes (not responding): " + resting.take(4).joinToString(", ") + if (resting.size > 4) " +${resting.size - 4}" else "",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            }
                             if (src.enabled && a.id in checks) {
                                 val r = checks[a.id]
                                 Text(

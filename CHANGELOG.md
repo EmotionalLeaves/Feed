@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.25.0 — 2026-11-10
+
+Round 8: see what is paused.
+
+- **Sources shows which sites are paused right now** (not answering, rate-limiting, or files not loading) under each source. They resume on their own after about 10 minutes.
+
 ## 3.24.0 — 2026-11-09
 
 Round 7: search is tested end to end too.

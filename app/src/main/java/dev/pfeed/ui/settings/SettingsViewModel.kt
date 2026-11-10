@@ -65,7 +65,20 @@ class SettingsViewModel @Inject constructor(
     private val booruKeys: BooruKeys,
     private val feedHealth: dev.pfeed.data.repo.FeedHealthStore,
     private val checker: dev.pfeed.source.SourceChecker,
+    private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
 ) : ViewModel() {
+
+    /**
+     * Sites of [sourceId] being left alone right now: not answering requests (down, rate-limiting),
+     * or answering but with files that won't load. They're retried automatically after ~10 minutes.
+     */
+    fun restingSites(sourceId: String): List<String> {
+        val adapter = sources.value.firstOrNull { it.adapter.id == sourceId }?.adapter
+        val notAnswering = (adapter as? dev.pfeed.source.net.CachingAdapter)?.restingGroups().orEmpty()
+        val filesDown = mediaHealth.resting().filter { it == sourceId || it.startsWith("$sourceId:") || (sourceId == "reddit" && it.startsWith("r/")) }
+            .map { it.substringAfter(':') }
+        return (notAnswering + filesDown).distinct()
+    }
 
     /** Results of "Check sources", by source id; null value = being checked right now. */
     private val _checks = MutableStateFlow<Map<String, dev.pfeed.source.SourceChecker.Result?>>(emptyMap())
