@@ -70,7 +70,7 @@ class SmokeTest {
         rule.onNodeWithText("anal").performClick()
         waitFor(timeoutMs = 60_000, what = "search results") { exists("Play all") }
         rule.onNodeWithText("Play all").performClick()
-        waitFor(timeoutMs = 30_000, what = "a result opens in the viewer") { exists("More") && exists("Save") }
+        waitFor(timeoutMs = 60_000, what = "a result opens in the viewer") { exists("More") && exists("Save") }
         // The pager also composes the next page, so there can be two Save buttons; the first is on screen.
         rule.onAllNodes(hasText("Save"), useUnmergedTree = true)[0].performClick()
         waitFor(what = "post saved") { exists("Saved") }

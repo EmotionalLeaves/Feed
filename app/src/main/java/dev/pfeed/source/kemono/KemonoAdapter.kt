@@ -68,7 +68,8 @@ class KemonoAdapter @Inject constructor(
         val remote = hosts.flatMap { host ->
             runCatching {
                 val root = api("https://$host/api/v1/posts?q=${URLEncoder.encode(q, "UTF-8")}&o=0")
-                postsArray(root).flatMap { itemsFromPost(host, it) }
+                // Same check as the feed: don't return results whose files can't load right now.
+                postsArray(root).flatMap { itemsFromPost(host, it) }.also { requireFilesReachable(host, it) }
             }.getOrDefault(emptyList())
         }
         (remote + poolMatches(query)).distinctBy { it.key }
