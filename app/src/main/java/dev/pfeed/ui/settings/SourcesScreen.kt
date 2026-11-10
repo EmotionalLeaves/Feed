@@ -115,6 +115,16 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 )
                 TextButton(onClick = { reorder = !reorder }) { Text(if (reorder) "Done" else "Reorder") }
             }
+            val checks by vm.checks.collectAsStateWithLifecycle()
+            Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    "Something not showing up? Test each source from this phone.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    modifier = Modifier.weight(1f),
+                )
+                TextButton(onClick = { vm.checkSources() }) { Text(if (checks.values.any { it == null }) "Checking…" else "Check sources") }
+            }
             if (totalSkipped > 0) {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -147,6 +157,19 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = if (src.enabled) 0.75f else 0.5f),
                             )
+                            if (src.enabled && a.id in checks) {
+                                val r = checks[a.id]
+                                Text(
+                                    r?.detail ?: "Checking…",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = when {
+                                        r == null -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                                        r.ok -> MaterialTheme.colorScheme.primary
+                                        else -> MaterialTheme.colorScheme.error
+                                    },
+                                )
+                            }
                         }
                         if (reorder) {
                             IconButton(onClick = { vm.moveSource(a.id, -1) }, enabled = index > 0) {

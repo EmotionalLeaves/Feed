@@ -64,7 +64,36 @@ class SettingsViewModel @Inject constructor(
     private val discovery: SourceDiscovery,
     private val booruKeys: BooruKeys,
     private val feedHealth: dev.pfeed.data.repo.FeedHealthStore,
+    private val checker: dev.pfeed.source.SourceChecker,
 ) : ViewModel() {
+
+    /** Results of "Check sources", by source id; null value = being checked right now. */
+    private val _checks = MutableStateFlow<Map<String, dev.pfeed.source.SourceChecker.Result?>>(emptyMap())
+    val checks: StateFlow<Map<String, dev.pfeed.source.SourceChecker.Result?>> = _checks
+    private var checkJob: kotlinx.coroutines.Job? = null
+
+    /** Tests every enabled source from this phone, a few at a time, filling [checks] as they finish. */
+    fun checkSources() {
+        checkJob?.cancel()
+        checkJob = viewModelScope.launch {
+            val enabled = sources.value.filter { it.enabled }.map { it.adapter }
+            _checks.value = enabled.associate { it.id to null }
+            val gate = kotlinx.coroutines.sync.Semaphore(3)
+            kotlinx.coroutines.coroutineScope {
+                enabled.forEach { a ->
+                    launch {
+                        gate.acquire()
+                        try {
+                            val r = checker.check(a)
+                            _checks.update { it + (a.id to r) }
+                        } finally {
+                            gate.release()
+                        }
+                    }
+                }
+            }
+        }
+    }
 
     /** Feeds of [sourceId] currently skipped because they kept answering "not found" or empty. */
     fun skippedFeeds(sourceId: String): Int = feedHealth.deadCount(sourceId)

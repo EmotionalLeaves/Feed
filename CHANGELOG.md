@@ -1,5 +1,20 @@
 # Changelog
 
+## 3.17.0 — 2026-11-09
+
+Sources fixed against the live sites (each claim below was checked by asking the real site, not assumed).
+
+- **rule34.xxx returned nothing.** Without a key its API answers with a text message that parsed as "no posts", and the web-page fallback never ran. It now reads the web page directly.
+- **gelbooru.com and realbooru.com returned nothing you could see.** Both changed their page layout (posts weren't found), and both only serve images and videos to requests naming the site as the referring page, so every file came back as a web page. New page reader for all three layouts; requests for their files now name the site.
+- **tbib returned nothing.** Its API gives no file addresses, only a folder and file name; they're now built from those.
+- **GIFs tagged "animated" were dropped as broken videos.** They show as GIFs.
+- **Dead sites removed** (domain gone, shut down, or needs an account): rule34.us, dollbooru, and 13 Mastodon servers. Removed from saved settings too. Mastodon tag feeds now use five servers verified to answer.
+- **Coomer:** its post list answers, but its file servers (n1–n4.coomer.st) did not respond at all when checked, which matches public reports of long outages. The app now tests one file before handing out Coomer posts, and says so instead of filling the feed with spinners.
+- **A site whose files stop loading is rested** for 10 minutes after 3 failures in a row (while other sites load fine), instead of stalling on each of its posts.
+- **Reddit:** blurry 320 px previews are no longer shown as posts (640 px minimum); fewer subreddits are asked at once, because Reddit rate-limits quickly.
+- **Check sources** (Settings → Sources): tests every source from your phone and connection and shows, per source, whether it lists posts and whether their files load.
+- Verified working as-is: RedGIFs, e621, e6ai, yande.re, Konachan, xbooru, hypnohub, Derpibooru, Furbooru. Danbooru was down for maintenance during the check; aibooru and Sankaku refused the test machine, which may differ on a phone.
+
 ## 3.16.0 — 2026-11-09
 
 Round 10: Following feed.
