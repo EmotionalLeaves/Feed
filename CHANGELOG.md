@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.18.0 — 2026-11-09
+
+Round 1: pruning no longer switches off working feeds.
+
+- **Feeds wrongly marked dead are restored.** Earlier versions saw rule34.xxx, gelbooru, realbooru and tbib as empty (app bugs) and marked hundreds of their feeds dead for a week. That record is wiped once on update.
+- **A 403 no longer counts against a feed.** Sites answer 403 at random when busy; only 404/410 (really gone) and repeatedly empty first pages count. Skipped feeds are retried after two days instead of seven.
+
 ## 3.17.0 — 2026-11-09
 
 Sources fixed against the live sites (each claim below was checked by asking the real site, not assumed).

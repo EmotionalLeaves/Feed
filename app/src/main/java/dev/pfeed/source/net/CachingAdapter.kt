@@ -187,7 +187,7 @@ abstract class CachingAdapter : SourceAdapter {
         signature = sig
         pool.clear(); poolKeys.clear()
         poolSnapshot = emptyList()
-        // Skip entries that keep failing or returning nothing (they get another try after a week).
+        // Skip entries that keep failing or returning nothing (they get another try after two days).
         // If somehow everything is marked dead, try them all rather than show nothing.
         val distinct = sig.distinct()
         order = distinct.filterNot { health.isDead(id, it) }.ifEmpty { distinct }.shuffled()
@@ -293,7 +293,9 @@ abstract class CachingAdapter : SourceAdapter {
         private const val POOL_SEARCH_LIMIT = 100
         private const val SEARCH_CACHE_MS = 120_000L
 
-        private val PERMANENT_HTTP = Regex("""HTTP (400|403|404|410|451)\b""")
+        // Only "gone" answers. 403 is not one: rule34.xxx and others answer 403 at random when busy
+        // (seen live), and counting those switched off hundreds of working feeds.
+        private val PERMANENT_HTTP = Regex("""HTTP (404|410)\b""")
 
         /** A "doesn't exist / not allowed" answer, as opposed to a timeout, network error or 429/5xx. */
         internal fun isPermanentFailure(e: Throwable): Boolean =

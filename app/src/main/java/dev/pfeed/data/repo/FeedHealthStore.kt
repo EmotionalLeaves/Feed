@@ -12,6 +12,9 @@ class FeedHealthStore @Inject constructor(@ApplicationContext context: Context) 
     private val prefs = context.getSharedPreferences("feed_health", Context.MODE_PRIVATE)
 
     init {
+        // Records from before the board fixes are wrong: rule34.xxx, gelbooru, realbooru and tbib
+        // feeds all looked empty because of app bugs, and were marked dead. Start clean once.
+        if (prefs.getInt(RULES_KEY, 0) < RULES_VERSION) prefs.edit().clear().putInt(RULES_KEY, RULES_VERSION).apply()
         prefs.all.forEach { (k, v) ->
             val parts = (v as? String)?.split(':') ?: return@forEach
             val strikes = parts.getOrNull(0)?.toIntOrNull() ?: return@forEach
@@ -29,6 +32,11 @@ class FeedHealthStore @Inject constructor(@ApplicationContext context: Context) 
 
     fun clear() {
         records.clear()
-        prefs.edit().clear().apply()
+        prefs.edit().clear().putInt(RULES_KEY, RULES_VERSION).apply()
+    }
+
+    private companion object {
+        const val RULES_KEY = "__rules_version"
+        const val RULES_VERSION = 2
     }
 }

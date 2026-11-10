@@ -128,7 +128,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             if (totalSkipped > 0) {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        "$totalSkipped feeds kept answering \"not found\" or had nothing to show, so they're skipped for a week.",
+                        "$totalSkipped feeds kept answering \"not found\" or had nothing to show, so they're skipped for two days, then retried.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                         modifier = Modifier.weight(1f),

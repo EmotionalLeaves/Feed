@@ -3,7 +3,7 @@ package dev.pfeed.source
 /**
  * Remembers which feed entries (a subreddit, a board tag, a RedGIFs term…) keep failing or coming
  * back empty, so a library of thousands doesn't spend requests on dead ones every session. A dead
- * entry is skipped for [RETRY_AFTER_MS], then gets one more try.
+ * entry is skipped for [RETRY_AFTER_MS] (two days), then gets one more try.
  */
 interface FeedHealth {
     fun isDead(source: String, entry: String): Boolean
@@ -14,7 +14,7 @@ interface FeedHealth {
 
     companion object {
         const val STRIKES_TO_DEAD = 3
-        const val RETRY_AFTER_MS = 7L * 24 * 60 * 60 * 1000
+        const val RETRY_AFTER_MS = 2L * 24 * 60 * 60 * 1000
 
         val NONE = object : FeedHealth {
             override fun isDead(source: String, entry: String) = false

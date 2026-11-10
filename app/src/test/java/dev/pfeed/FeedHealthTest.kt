@@ -71,7 +71,8 @@ class FeedHealthTest {
     @Test
     fun `only doesn't-exist answers are permanent`() {
         assertTrue(CachingAdapter.isPermanentFailure(SourceException("s", "HTTP 404 from x")))
-        assertTrue(CachingAdapter.isPermanentFailure(SourceException("s", "HTTP 403 from x")))
+        assertFalse(CachingAdapter.isPermanentFailure(SourceException("s", "HTTP 403 from x"))) // busy/WAF, not gone
+        assertTrue(CachingAdapter.isPermanentFailure(SourceException("s", "HTTP 410 from x")))
         assertFalse(CachingAdapter.isPermanentFailure(SourceException("s", "HTTP 503 from x")))
         assertFalse(CachingAdapter.isPermanentFailure(SourceException("s", "x is rate-limiting, backing off")))
         assertFalse(CachingAdapter.isPermanentFailure(SourceException("s", "Timed out")))
