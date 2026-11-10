@@ -217,7 +217,7 @@ sealed class TubeSite(val host: String, val label: String) {
             val fromJson = arr?.mapNotNull { it as? JsonObject }?.mapNotNull { v ->
                 val url = v["pageURL"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 TubeVideo(
-                    id = url.substringAfterLast('-').substringBefore('?'),
+                    id = videoId(url),
                     title = v["title"]?.jsonPrimitive?.contentOrNull,
                     pageUrl = url,
                     thumb = v["thumbURL"]?.jsonPrimitive?.contentOrNull,
@@ -237,13 +237,16 @@ sealed class TubeSite(val host: String, val label: String) {
             val url = m.groupValues[1]
             val tag = m.value.substringBefore('>')
             TubeVideo(
-                id = url.substringAfterLast('-').substringBefore('?'),
+                id = videoId(url),
                 title = LABEL.find(tag)?.groupValues?.get(1)?.let(::unescape)?.trim(),
                 pageUrl = url,
                 thumb = IMG.find(m.groupValues[2])?.groupValues?.get(1),
                 durationSec = duration(DUR.find(m.groupValues[2])?.groupValues?.get(1)),
             )
         }.distinctBy { it.id }.toList()
+
+        /** …/videos/some-slug-xhABC or …/videos/xhABC → xhABC. */
+        internal fun videoId(url: String): String = url.substringBefore('?').trimEnd('/').substringAfterLast('/').substringAfterLast('-')
 
         internal fun initials(html: String): JsonObject? =
             jsonAfter(html, "window.initials")?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
