@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.20.0 — 2026-11-09
+
+Round 3: source check report.
+
+- **Check sources** now ends with a summary ("7 of 9 sources working from this phone") and a **Copy report** button, so the exact per-source results can be pasted into a bug report.
+
 ## 3.19.0 — 2026-11-09
 
 Round 2: instant start.

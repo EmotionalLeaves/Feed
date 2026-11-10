@@ -125,6 +125,25 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 )
                 TextButton(onClick = { vm.checkSources() }) { Text(if (checks.values.any { it == null }) "Checking…" else "Check sources") }
             }
+            if (checks.isNotEmpty() && checks.values.none { it == null }) {
+                val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+                val working = checks.values.count { it?.ok == true }
+                Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "$working of ${checks.size} sources working from this phone.",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = {
+                        val report = sources.filter { it.adapter.id in checks }.joinToString("\n") { src ->
+                            val r = checks[src.adapter.id]
+                            "${if (r?.ok == true) "OK  " else "FAIL"} ${src.adapter.displayName}: ${r?.detail}"
+                        }
+                        clipboard.setText(androidx.compose.ui.text.AnnotatedString(report))
+                    }) { Text("Copy report") }
+                }
+            }
             if (totalSkipped > 0) {
                 Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
