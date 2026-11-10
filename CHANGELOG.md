@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.24.0 — 2026-11-09
+
+Round 7: search is tested end to end too.
+
+- **New end-to-end test:** search a popular term against the live sources, get results, open them in the viewer, save a post, and swipe on through the results.
+
 ## 3.23.0 — 2026-11-09
 
 Round 6: the build is now tested on what the app is for.

@@ -60,6 +60,24 @@ class SmokeTest {
         assertTrue("activity still alive after scrolling", !rule.activity.isFinishing)
     }
 
+    /** Search finds real results, plays them, and saving a post works. */
+    @Test
+    fun searchFindsPlaysAndSaves() {
+        waitFor(timeoutMs = 20_000, what = "feed tab") { exists("For You") }
+        rule.onNodeWithText("Search").performClick()
+        waitFor(what = "search screen") { exists("Popular") }
+        rule.onNodeWithText("anal").performClick()
+        waitFor(timeoutMs = 60_000, what = "search results") { exists("Play all") }
+        rule.onNodeWithText("Play all").performClick()
+        waitFor(timeoutMs = 30_000, what = "a result opens in the viewer") { exists("More") && exists("Save") }
+        rule.onNodeWithText("Save").performClick()
+        waitFor(what = "post saved") { exists("Saved") }
+        repeat(3) { n ->
+            rule.onRoot().performTouchInput { swipeUp() }
+            waitFor(timeoutMs = 30_000, what = "next result after swipe ${n + 1}") { exists("More") }
+        }
+    }
+
     @Test
     fun launchUnlockNavigateAndPanic() {
         // 1–2. The app lock is optional and off by default: no PIN screen, straight to the feed.
