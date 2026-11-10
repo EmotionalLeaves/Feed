@@ -40,6 +40,8 @@ class RedditAdapter @Inject constructor(
     // live). Each request already brings up to 50 posts, so ask for few subreddits at a time.
     override val maxConcurrency = 2
     override val entriesPerExtend = 4
+    // All subreddits are one site: when Reddit starts answering 429, rest it as a whole.
+    override fun groupOf(entry: String) = "reddit.com"
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 

@@ -245,6 +245,7 @@ abstract class CachingAdapter : SourceAdapter {
             result.onSuccess { page ->
                 anyOk = true
                 failures.remove(entry)
+                groupFailures.remove(groupOf(entry))
                 // A first page with nothing we can show (dead tag, text-only subreddit…) counts
                 // against the entry; anything usable clears its record.
                 if (page.items.isNotEmpty()) { health.ok(id, entry); anyContent = true } else if (firstPage) strikes += entry
@@ -254,9 +255,22 @@ abstract class CachingAdapter : SourceAdapter {
                 lastError = e
                 // Only "this doesn't exist" answers count; network trouble and rate limits don't.
                 if (isPermanentFailure(e)) strikes += entry
+                // A whole site that's down, rate-limiting or unreachable: after a few failures in a
+                // row with no success, stop asking it for a while instead of spending part of every
+                // round on it (Danbooru in maintenance, Reddit answering 429…).
+                if (!isPermanentFailure(e)) {
+                    val g = groupOf(entry)
+                    val gf = (groupFailures[g] ?: 0) + 1
+                    groupFailures[g] = gf
+                    if (gf >= GROUP_FAILURES_TO_REST) {
+                        groupRestUntil[g] = clock() + GROUP_REST_MS
+                        groupFailures.remove(g)
+                    }
+                }
                 val n = (failures[entry] ?: 0) + 1
                 failures[entry] = n
-                if (n >= MAX_ENTRY_FAILURES) done += entry
+                // Entries of a resting site keep their place; they're just not asked meanwhile.
+                if (n >= MAX_ENTRY_FAILURES && groupOf(entry) !in groupRestUntil) done += entry
             }
         }
         // Strike only when other entries in this batch did return content: if everything came back
@@ -283,8 +297,23 @@ abstract class CachingAdapter : SourceAdapter {
     protected open fun groupOf(entry: String): String = entry
     protected open val maxPerGroupPerExtend: Int = Int.MAX_VALUE
 
+    private val groupFailures = HashMap<String, Int>()
+    private val groupRestUntil = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    internal var clock: () -> Long = System::currentTimeMillis
+
+    private fun resting(group: String): Boolean {
+        val until = groupRestUntil[group] ?: return false
+        if (clock() >= until) { groupRestUntil.remove(group); return false }
+        return true
+    }
+
+    /** Sites (groups) currently being left alone after repeated failures. */
+    fun restingGroups(): List<String> = groupRestUntil.keys.filter { resting(it) }.sorted()
+
     private fun nextBatch(): List<String> {
-        val live = order.filter { it !in done }
+        val notDone = order.filter { it !in done }
+        // Leave resting sites alone, unless that would leave nothing to ask at all.
+        val live = notDone.filterNot { resting(groupOf(it)) }.ifEmpty { notDone }
         if (live.isEmpty()) return emptyList()
         val n = entriesPerExtend.coerceAtMost(live.size)
         val out = ArrayList<String>(n)
@@ -309,6 +338,8 @@ abstract class CachingAdapter : SourceAdapter {
         /** How many times the whole entry list may start over within one generation. */
         private const val MAX_RECYCLES = 2
         private const val MAX_ENTRY_FAILURES = 3
+        private const val GROUP_FAILURES_TO_REST = 4
+        private const val GROUP_REST_MS = 10 * 60_000L
         private const val POOL_SEARCH_LIMIT = 100
         private const val SEARCH_CACHE_MS = 120_000L
 

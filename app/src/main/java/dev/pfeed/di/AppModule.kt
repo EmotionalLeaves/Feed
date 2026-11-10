@@ -73,19 +73,19 @@ object AppModule {
             if (site == null || request.header("Referer") != null) chain.proceed(request)
             else chain.proceed(request.newBuilder().header("Referer", "https://$site/").build())
         }
-        // 429 / 503 retry: honour Retry-After header, back off up to 2 times
+        // 429 / 503: one quick retry, and only when the server asks for a short wait. Longer
+        // back-off is handled per site by the sources themselves; sleeping here for up to 20 s held
+        // a network thread (and whatever was waiting on it, including video) for nothing.
         .addInterceptor { chain ->
-            var response = chain.proceed(chain.request())
-            var tries = 0
-            while ((response.code == 429 || response.code == 503) && tries < 2) {
-                val retryAfterSec = response.header("Retry-After")?.toLongOrNull() ?: (2L shl tries)
-                val delayMs = max(retryAfterSec * 1_000L, 1_000L).coerceAtMost(10_000L)
+            val response = chain.proceed(chain.request())
+            val retryAfterSec = response.header("Retry-After")?.toLongOrNull()
+            if ((response.code == 429 || response.code == 503) && retryAfterSec != null && retryAfterSec <= 2) {
                 response.close()
-                Thread.sleep(delayMs)
-                response = chain.proceed(chain.request())
-                tries++
+                Thread.sleep(max(retryAfterSec * 1_000L, 500L))
+                chain.proceed(chain.request())
+            } else {
+                response
             }
-            response
         }
         .build()
 

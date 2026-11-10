@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.22.0 — 2026-11-09
+
+Round 5: sites that are down stop costing time.
+
+- **A site that's down or rate-limiting is left alone for 10 minutes** after four failures in a row, then tried again. Checked live: Danbooru was in maintenance (every one of its ~500 feeds answering 503) and Reddit answers 429 after a few quick requests; before, part of every fetch round kept going to them.
+- **No more 20-second sleeps on network threads.** A 429/503 used to be retried twice with waits of up to 10 s each, on the same threads video and images use. Now it's one retry, only when the server asks for 2 s or less.
+
 ## 3.21.0 — 2026-11-09
 
 Round 4: every fetch round spans many sites.

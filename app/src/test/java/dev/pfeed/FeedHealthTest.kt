@@ -9,6 +9,7 @@ import dev.pfeed.source.FeedHealthMemory
 import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -138,5 +139,42 @@ class GroupedFetchTest {
         val firstRound = a.asked.take(6)
         assertTrue("asked: $firstRound", firstRound.count { it.startsWith("big/") } <= 2)
         assertTrue(firstRound.map { it.substringBefore('/') }.distinct().size >= 3)
+    }
+}
+
+/** "down/…" entries always fail with a 503; others return posts. */
+private class OutageFake(private val names: List<String>) : CachingAdapter() {
+    override val id = "of"
+    override val displayName = "OF"
+    override val requiresAuth = false
+    override val entriesPerExtend = 4
+    override val maxPerGroupPerExtend = 2
+    override fun groupOf(entry: String) = entry.substringBefore('/')
+    val asked = java.util.Collections.synchronizedList(ArrayList<String>())
+    override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
+    override suspend fun entries() = names
+    override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
+        asked += entry
+        if (entry.startsWith("down/")) throw SourceException(id, "HTTP 503 from down")
+        val page = token?.toInt() ?: 0
+        return EntryPage((0 until 3).map { item("$entry-$page-$it", source = id) }, (page + 1).toString())
+    }
+}
+
+class SiteOutageTest {
+    @Test
+    fun `a site that keeps failing is left alone for a while, then tried again`() = runBlocking {
+        var now = 0L
+        val a = OutageFake((1..20).map { "down/$it" } + (1..3).flatMap { h -> (1..4).map { "up$h/$it" } })
+        a.clock = { now }
+        var cursor: String? = null
+        repeat(8) { cursor = a.fetchFeed(cursor, FeedPrefs(FeedMode.FOR_YOU)).nextCursor }
+        assertTrue(a.restingGroups().contains("down"))
+        val before = a.asked.count { it.startsWith("down/") }
+        repeat(6) { cursor = a.fetchFeed(cursor, FeedPrefs(FeedMode.FOR_YOU)).nextCursor }
+        assertEquals(before, a.asked.count { it.startsWith("down/") })
+        now += 11 * 60_000L
+        repeat(3) { cursor = a.fetchFeed(cursor, FeedPrefs(FeedMode.FOR_YOU)).nextCursor }
+        assertTrue(a.asked.count { it.startsWith("down/") } > before)
     }
 }
