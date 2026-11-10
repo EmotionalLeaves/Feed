@@ -49,9 +49,10 @@ class FeedSessionFactory @Inject constructor(
     private val hasher: ThumbnailHasher,
     private val seen: SeenItems,
     private val mediaHealth: MediaHealth,
+    private val poolCache: PoolCache,
 ) {
     fun create(spec: FeedSpec, scope: CoroutineScope) =
-        FeedSession(spec, scope, registry, settings, blocks, library, signals, hasher, seen, mediaHealth)
+        FeedSession(spec, scope, registry, settings, blocks, library, signals, hasher, seen, mediaHealth, poolCache)
 }
 
 /**
@@ -77,7 +78,11 @@ class FeedSession(
     private val hasher: ThumbnailHasher,
     private val seen: SeenItems,
     private val mediaHealth: MediaHealth,
+    private val poolCache: PoolCache,
 ) {
+    /** Unshown posts saved by the previous session, fed into the pool on the first load. */
+    private val seed = ArrayList<MediaItem>()
+
     private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext.job))
 
     private val cursors = HashMap<String, String?>()
@@ -121,8 +126,14 @@ class FeedSession(
         val tag = (spec as? FeedSpec.Tag)?.tag?.let(Blocklist::normalize)
         val prefs = FeedPrefs(mode, tag, follows.creators, follows.tags)
 
+        val forYouMain = spec is FeedSpec.Main && mode == FeedMode.FOR_YOU
+        // Very first load of the main feed: start from what last session fetched but never showed,
+        // so there's a first screen right away while fresh fetches (launched below) catch up.
+        if (loads == 1 && forYouMain) seed += poolCache.take()
+
         // Pick up anything that finished in the background since the last call.
         val errors = collect(follows, tag, mode).toMutableList()
+        val instantStart = loads == 1 && candidates.size >= BATCH
         val forYou = spec is FeedSpec.Main && mode == FeedMode.FOR_YOU
         // Following: the general feeds rarely happen to carry the exact creators/tags you follow
         // among thousands of feeds, so search every source for each of them directly.
@@ -139,7 +150,7 @@ class FeedSession(
         if (candidates.size < POOL_MAX) launchFetches(adapters, prefs)
         if (searches != null) launchInterestFetches(adapters, searches)
         var rounds = 0
-        while (candidates.size < POOL_TARGET && rounds < MAX_ROUNDS) {
+        while (!instantStart && candidates.size < POOL_TARGET && rounds < MAX_ROUNDS) {
             rounds++
             val launched = launchFetches(adapters, prefs) + if (searches != null) launchInterestFetches(adapters, searches) else 0
             if (launched == 0 && inFlight.isEmpty()) break
@@ -157,7 +168,9 @@ class FeedSession(
         val allDone = adapters.all { it.id in exhausted } && inFlight.isEmpty()
         val poolOrigins = candidates.mapTo(HashSet()) { Spread.origin(it) }.size
         val allowForcedRun = allDone || (inFlight.isEmpty() && poolOrigins <= 1)
-        val batch = takeBatch(mode, allowForcedRun = allowForcedRun)
+        // The saved posts may be all there is for a moment; show them rather than hold out for variety.
+        val batch = takeBatch(mode, allowForcedRun = allowForcedRun || instantStart)
+        if (forYouMain) poolCache.save(candidates)
         val end = allDone && candidates.isEmpty() && batch.isEmpty()
         val hint = if (end && shown.isEmpty()) {
             if (errors.isNotEmpty()) "Couldn't load anything. Check Settings → Sources." else "You have seen everything new for now. Tap Refresh in a bit."
@@ -238,6 +251,7 @@ class FeedSession(
     private suspend fun collect(follows: Follows, tag: String?, mode: FeedMode): List<String> {
         val errors = mutableListOf<String>()
         val incoming = mutableListOf<MediaItem>()
+        if (seed.isNotEmpty()) { incoming += seed; seed.clear() }
         val done = inFlight.filterValues { it.isCompleted }
         for ((id, deferred) in done) {
             inFlight.remove(id)

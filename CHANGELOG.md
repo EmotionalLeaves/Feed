@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.19.0 — 2026-11-09
+
+Round 2: instant start.
+
+- **The feed opens with posts already there.** Posts that were fetched and ranked last session but never shown are kept (encrypted, up to 36, for up to 6 hours) and shown immediately on the next launch, while fresh ones load behind them. Before, every launch waited on the network for its first screen. RedGIFs clips aren't kept because their links expire.
+
 ## 3.18.0 — 2026-11-09
 
 Round 1: pruning no longer switches off working feeds.

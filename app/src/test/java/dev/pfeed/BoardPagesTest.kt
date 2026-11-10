@@ -113,3 +113,16 @@ class BoardPagesTest {
         assertFalse(h.isResting(c[4]))
     }
 }
+
+class PoolCacheRulesTest {
+    @Test
+    fun `only posts whose links will still work are kept for next launch`() {
+        val redgifs = item("rg1", source = "redgifs")
+        val board = item("gelbooru.com/1", source = "booru")
+        val many = (1..60).map { item("x.org/$it", source = "booru") }
+        val kept = dev.pfeed.data.repo.PoolCache.cacheable(listOf(redgifs, board) + many)
+        assertFalse(kept.any { it.sourceId == "redgifs" })
+        assertEquals(dev.pfeed.data.repo.PoolCache.MAX_ITEMS, kept.size)
+        assertEquals(board.key, kept.first().key)
+    }
+}
