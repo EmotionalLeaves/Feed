@@ -1,5 +1,14 @@
 # Changelog
 
+## 3.30.0 — 2026-11-10
+
+Tube sites and nhentai
+
+- New **tube** source: XVideos, XNXX, Pornhub, YouPorn, Tube8, RedTube, xHamster and Eporner, each rotated through 30 sections (newest, top, 28 categories). Videos play as real HLS/MP4 streams pulled from the video page (Pornhub-family index requests handled); when a site hides its stream the in-app embed player is used instead (Eporner always, xHamster when it serves its challenge page).
+- New **nhentai** source on the site's v2 API: 67 queries across languages, tags and sorts; every gallery opens as a swipeable comic with the real per-page image types and tags fetched from the gallery endpoint. lolicon/shotacon are excluded in every query and again by the minors filter.
+- Every site is one origin for spacing and novelty, so the feed mixes sites instead of running one.
+- Browser disguise extended to all new hosts and their CDNs (age-gate cookies for the Pornhub network).
+
 ## 3.29.0 — 2026-11-10
 
 Comics are readable; more variety; faster page-to-page.
