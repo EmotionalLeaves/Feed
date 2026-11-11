@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.30.1 — 2026-11-10
+
+Reddit pacing, Coomer outage check
+
+- Reddit: requests are spaced 2.5 s apart, one at a time, so the anonymous limit is never hit; any 429 from a site now rests that site for 3 minutes immediately instead of after four failures.
+- Coomer/Kemono: the file-server check tries two files from different posts and a thumbnail before declaring an outage, so one deleted upload no longer hides the whole site.
+
 ## 3.30.0 — 2026-11-10
 
 Tube sites and nhentai

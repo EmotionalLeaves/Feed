@@ -36,6 +36,8 @@ class SourceException(
     message: String,
     val isAuthError: Boolean = false,
     cause: Throwable? = null,
+    /** HTTP status when the failure was a non-2xx answer (429 = rate-limited). */
+    val httpCode: Int? = null,
 ) : Exception(message, cause)
 
 /** Offset-based paging helper for adapters that hold a full in-memory list. */

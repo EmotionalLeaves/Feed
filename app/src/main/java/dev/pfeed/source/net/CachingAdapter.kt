@@ -262,7 +262,11 @@ abstract class CachingAdapter : SourceAdapter {
                     val g = groupOf(entry)
                     val gf = (groupFailures[g] ?: 0) + 1
                     groupFailures[g] = gf
-                    if (gf >= GROUP_FAILURES_TO_REST) {
+                    // An explicit 429 is the site saying "stop": rest at once rather than after four.
+                    if ((e as? SourceException)?.httpCode == 429) {
+                        groupRestUntil[g] = clock() + RATE_LIMIT_REST_MS
+                        groupFailures.remove(g)
+                    } else if (gf >= GROUP_FAILURES_TO_REST) {
                         groupRestUntil[g] = clock() + GROUP_REST_MS
                         groupFailures.remove(g)
                     }
@@ -339,6 +343,7 @@ abstract class CachingAdapter : SourceAdapter {
         private const val MAX_RECYCLES = 2
         private const val MAX_ENTRY_FAILURES = 3
         private const val GROUP_FAILURES_TO_REST = 4
+        private const val RATE_LIMIT_REST_MS = 3 * 60_000L
         private const val GROUP_REST_MS = 10 * 60_000L
         private const val POOL_SEARCH_LIMIT = 100
         private const val SEARCH_CACHE_MS = 120_000L

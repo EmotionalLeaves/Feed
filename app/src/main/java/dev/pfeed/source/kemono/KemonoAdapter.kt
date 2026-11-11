@@ -84,12 +84,15 @@ class KemonoAdapter @Inject constructor(
      * as what it is instead.
      */
     private suspend fun requireFilesReachable(host: String, items: List<MediaItem>) {
-        val sample = items.firstOrNull { it.type == MediaType.IMAGE }?.extras?.get("media")
-            ?: items.firstOrNull()?.extras?.get("media") ?: return
+        // Two files from different posts (plus a thumbnail): one deleted upload isn't an outage.
+        val samples = (items.filter { it.type == MediaType.IMAGE } + items).mapNotNull { it.extras["media"] }.distinct().take(2) +
+            items.mapNotNull { it.thumbnailUrl }.filter { it.contains("/thumbnail/") }.take(1)
+        if (samples.isEmpty()) return
         val now = System.currentTimeMillis()
         val cached = filesOk[host]?.takeIf { now - it.first < FILE_CHECK_EVERY_MS }
-        val ok = cached?.second ?: (kotlinx.coroutines.withTimeoutOrNull(FILE_CHECK_TIMEOUT_MS) { http.reachable(sample) } ?: false)
-            .also { filesOk[host] = now to it }
+        val ok = cached?.second ?: samples.any { sample ->
+            kotlinx.coroutines.withTimeoutOrNull(FILE_CHECK_TIMEOUT_MS) { http.reachable(sample) } ?: false
+        }.also { filesOk[host] = now to it }
         if (!ok) throw dev.pfeed.source.SourceException(id, "$host lists posts, but its file servers aren't responding (an outage on their side). Retrying every few minutes.")
     }
 

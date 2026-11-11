@@ -56,6 +56,7 @@ class HttpJson @Inject constructor(
                 sourceId,
                 if (code == 429) "${parsed.host} is rate-limiting, backing off" else "HTTP $code from ${parsed.host}",
                 isAuthError = code in 401..403,
+                httpCode = code,
             )
         }
         // Some boards (rule34.xxx) answer "no results" with an empty body.
@@ -86,6 +87,7 @@ class HttpJson @Inject constructor(
                 sourceId,
                 if (code == 429) "${parsed.host} is rate-limiting, backing off" else "HTTP $code from ${parsed.host}",
                 isAuthError = code in 401..403,
+                httpCode = code,
             )
         }
         return body

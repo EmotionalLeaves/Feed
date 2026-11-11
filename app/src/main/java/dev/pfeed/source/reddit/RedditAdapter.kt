@@ -16,6 +16,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import java.net.URLEncoder
+import kotlinx.coroutines.sync.withLock
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -38,14 +39,27 @@ class RedditAdapter @Inject constructor(
     override val requiresAuth = false
     // Reddit rate-limits anonymous readers hard (429 after a handful of quick requests, checked
     // live). Each request already brings up to 50 posts, so ask for few subreddits at a time.
-    override val maxConcurrency = 2
-    override val entriesPerExtend = 4
+    override val maxConcurrency = 1
+    override val entriesPerExtend = 3
     // All subreddits are one site: when Reddit starts answering 429, rest it as a whole.
     override fun groupOf(entry: String) = "reddit.com"
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
     override suspend fun entries(): List<String> = settings.get().redditSubs
+
+    private val pace = kotlinx.coroutines.sync.Mutex()
+    private var lastRequestAt = 0L
+
+    /**
+     * Reddit's anonymous limit is roughly ten requests a minute per address and it answers 429 well
+     * before the feed would notice on its own; space requests out so the limit is never hit.
+     */
+    private suspend fun paced(url: String): String = pace.withLock {
+        val wait = MIN_GAP_MS - (System.currentTimeMillis() - lastRequestAt)
+        if (wait > 0) kotlinx.coroutines.delay(wait)
+        try { http.getRaw(id, url) } finally { lastRequestAt = System.currentTimeMillis() }
+    }
 
     /** Token = "listing|after|depth", so each subreddit keeps paging the same listing deeper. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
@@ -57,11 +71,11 @@ class RedditAdapter @Inject constructor(
         val after = parts?.getOrNull(1)?.takeIf { it.isNotBlank() }
         val depth = parts?.getOrNull(2)?.toIntOrNull() ?: 0
         val xml = try {
-            http.getRaw(id, listingUrl(sub, listing, after))
+            paced(listingUrl(sub, listing, after))
         } catch (e: SourceException) {
             // "top"/"new" can fail on tiny or quarantined subs; fall back to hot once on a fresh start.
             if (token == null && listing != "hot") {
-                runCatching { http.getRaw(id, listingUrl(sub, "hot", null)) }.getOrNull()
+                runCatching { paced(listingUrl(sub, "hot", null)) }.getOrNull()
                     ?.let { return page(it, sub, "hot", depth = 0, previousAfter = null) }
             }
             throw e
@@ -97,7 +111,7 @@ class RedditAdapter @Inject constructor(
         if (q.isEmpty()) return@cachedSearch emptyList()
         val enc = URLEncoder.encode(q, "UTF-8")
         val items = runCatching {
-            RedditRss.parse(http.getRaw(id, "https://www.reddit.com/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100"), "search")
+            RedditRss.parse(paced("https://www.reddit.com/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100"), "search")
         }.getOrDefault(emptyList())
         // Also search inside the configured subs, a few dozen per multireddit request.
         val subs = entries().map { it.trim().removePrefix("/").removePrefix("r/").trim('/') }.filter { it.isNotEmpty() }.distinct()
@@ -109,7 +123,7 @@ class RedditAdapter @Inject constructor(
                         val multi = chunk.joinToString("+")
                         val url = "https://www.reddit.com/r/$multi/search/.rss?q=$enc&restrict_sr=on&sort=relevance&t=all&include_over_18=on&limit=100"
                         // Each result is tagged with its own subreddit (from the entry's <category>).
-                        runCatching { RedditRss.parse(http.getRaw(id, url), "search") }.getOrDefault(emptyList())
+                        runCatching { RedditRss.parse(paced(url), "search") }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()
@@ -118,6 +132,7 @@ class RedditAdapter @Inject constructor(
     }
 
     companion object {
+        private const val MIN_GAP_MS = 2_500L
         private val LISTINGS = listOf("hot", "hot", "top", "new")
         private val TOP_WINDOWS = listOf("week", "month", "year", "all")
         private const val PAGE = 50
