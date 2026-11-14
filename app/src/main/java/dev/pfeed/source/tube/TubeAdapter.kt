@@ -88,7 +88,9 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
                         if (items.isEmpty()) {
                             val raw = attempt { http.getRaw(id, site.listUrl("new", 0)) }.getOrElse { return@attempt "lists nothing (${it.message?.take(60)})" }
                             val title = Regex("<title[^>]*>([^<]{0,60})", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.get(1)?.trim()
-                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\")"
+                            val text = raw.replace(Regex("<(script|style)[^>]*>.*?</\\1>", RegexOption.DOT_MATCHES_ALL), " ")
+                                .replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim().take(160)
+                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\": $text)"
                         }
                         val first = items.first()
                         val how = when (val st = resolveStream(first)) {
