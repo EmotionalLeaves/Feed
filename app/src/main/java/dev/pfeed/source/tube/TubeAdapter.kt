@@ -109,9 +109,10 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         val site = TubeSite.byHost(item.id.substringBefore('/')) ?: throw SourceException(id, "Unknown site")
         val vid = item.extras["vid"] ?: item.id.substringAfter('/')
         val stream: StreamInfo = try {
-            val html = http.getRaw(id, item.pageUrl)
+            val page = site.streamPageUrl(item.pageUrl, vid)
+            val html = http.getRaw(id, page)
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
-                attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to item.pageUrl))) }.getOrNull()
+                attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             }
             direct?.let { StreamInfo.Direct(it.url, it.mime) } ?: StreamInfo.Embed(site.embedUrl(vid))
         } catch (e: SourceException) {

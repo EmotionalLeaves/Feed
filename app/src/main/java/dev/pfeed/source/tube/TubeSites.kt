@@ -50,6 +50,8 @@ sealed class TubeSite(val host: String, val label: String) {
     abstract fun embedUrl(id: String): String
     /** Video pages whose stream is hidden behind a second request (Pornhub/RedTube get_media). */
     open fun streamIndexUrl(pageHtml: String): String? = null
+    /** The page whose HTML holds the stream (or the index URL); usually the video page itself. */
+    open fun streamPageUrl(pageUrl: String, id: String): String = pageUrl
     open fun streamFromIndex(indexJson: JsonElement): TubeStream? = null
 
     companion object {
@@ -411,6 +413,36 @@ sealed class TubeSite(val host: String, val label: String) {
 
         override fun stream(pageHtml: String): TubeStream? = null
         override fun embedUrl(id: String) = "https://www.eporner.com/embed/$id/"
+
+        // The video page is an age check; the embed page carries the player's id and hash, and the
+        // player asks /xhr/video for its MP4s with that hash re-encoded (four 8-hex-digit chunks, each
+        // in base 36). Checked live: returns 360p–1080p MP4 links.
+        override fun streamPageUrl(pageUrl: String, id: String) = embedUrl(id)
+
+        private val VID = Regex("""EP\.video\.player\.vid\s*=\s*'([^']+)'""")
+        private val HASH = Regex("""EP\.video\.player\.hash\s*=\s*'([0-9a-f]{32})'""")
+
+        internal fun encodeHash(hash: String): String =
+            (0 until 32 step 8).joinToString("") { java.lang.Long.toString(hash.substring(it, it + 8).toLong(16), 36) }
+
+        override fun streamIndexUrl(pageHtml: String): String? {
+            val vid = VID.find(pageHtml)?.groupValues?.get(1) ?: return null
+            val hash = HASH.find(pageHtml)?.groupValues?.get(1) ?: return null
+            return "https://www.eporner.com/xhr/video/$vid?hash=${encodeHash(hash)}&domain=www.eporner.com&fallback=false&embed=true&supportedFormats=mp4"
+        }
+
+        override fun streamFromIndex(indexJson: JsonElement): TubeStream? {
+            val mp4 = ((indexJson as? JsonObject)?.get("sources") as? JsonObject)?.get("mp4") as? JsonObject ?: return null
+            return mp4.entries
+                .mapNotNull { (label, v) ->
+                    val src = ((v as? JsonObject)?.get("src") as? JsonPrimitive)?.contentOrNull?.takeIf { it.startsWith("http") } ?: return@mapNotNull null
+                    (Regex("""\d+""").find(label)?.value?.toIntOrNull() ?: 0) to src
+                }
+                // Up to 1080p: 4K files are huge for a phone feed.
+                .filter { it.first <= 1080 }
+                .maxByOrNull { it.first }
+                ?.let { TubeStream(it.second, "video/mp4") }
+        }
     }
 }
 
