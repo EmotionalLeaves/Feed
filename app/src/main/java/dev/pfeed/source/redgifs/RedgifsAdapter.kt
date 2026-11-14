@@ -1,5 +1,6 @@
 package dev.pfeed.source.redgifs
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.SourceCatalog
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -64,7 +65,7 @@ class RedgifsAdapter @Inject constructor(
         } catch (e: SourceException) {
             if (e.isAuthError) {
                 invalidateToken()
-                runCatching { http.get(this.id, url, authHeaders(token())) }.getOrNull()
+                attempt { http.get(this.id, url, authHeaders(token())) }.getOrNull()
             } else null
         } ?: return null
         val gif = (root as? JsonObject)?.get("gif") as? JsonObject ?: return null
@@ -85,9 +86,10 @@ class RedgifsAdapter @Inject constructor(
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        // Three pages at once: RedGIFs is usually the richest source of clips for a search.
+        // Three pages at once: RedGIFs is usually the richest source of clips for a search. Order must be
+        // one of top, top7, top28, latest, score, trending ("best" was rejected with 400, so search found nothing).
         val pages = kotlinx.coroutines.coroutineScope {
-            (1..SEARCH_PAGES).map { p -> async { runCatching { searchGifs(q, p, "best") }.getOrDefault(emptyList()) } }.awaitAll()
+            (1..SEARCH_PAGES).map { p -> async { attempt { searchGifs(q, p, "top") }.getOrDefault(emptyList()) } }.awaitAll()
         }
         (pages.flatten() + poolMatches(query)).distinctBy { it.key }
     }

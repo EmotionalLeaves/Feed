@@ -1,5 +1,6 @@
 package dev.pfeed.source.generic
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.JsonFeed
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
@@ -46,7 +47,7 @@ class GenericJsonAdapter @Inject constructor(
         val feeds = settings.get().jsonFeeds.filter { !it.searchTemplate.isNullOrBlank() }
         val merged = feeds.flatMap { feed ->
             val url = feed.searchTemplate!!.replace("{query}", q).replace("{cursor}", "")
-            runCatching { GenericJsonMapper.map(http.get(id, url), feed) }.getOrDefault(emptyList())
+            attempt { GenericJsonMapper.map(http.get(id, url), feed) }.getOrDefault(emptyList())
         }.distinctBy { it.key }
         return if (feeds.isEmpty()) super.search(query, cursor) else merged.pageAt(cursor, pageSize)
     }

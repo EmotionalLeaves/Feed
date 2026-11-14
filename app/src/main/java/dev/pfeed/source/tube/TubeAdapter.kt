@@ -1,5 +1,6 @@
 package dev.pfeed.source.tube
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.SourceCatalog
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -82,12 +83,12 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         TubeSite.ALL.map { site ->
             async {
                 site.label to (withTimeoutOrNull(30_000) {
-                    runCatching {
+                    attempt {
                         val items = site.items(listWithMirrors(site, site.listUrl("new", 0)), "new")
                         if (items.isEmpty()) {
-                            val raw = runCatching { http.getRaw(id, site.listUrl("new", 0)) }.getOrElse { return@runCatching "lists nothing (${it.message?.take(60)})" }
+                            val raw = attempt { http.getRaw(id, site.listUrl("new", 0)) }.getOrElse { return@attempt "lists nothing (${it.message?.take(60)})" }
                             val title = Regex("<title[^>]*>([^<]{0,60})", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.get(1)?.trim()
-                            return@runCatching "lists nothing (page ${raw.length / 1024} KB, \"$title\")"
+                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\")"
                         }
                         val first = items.first()
                         val how = when (val st = resolveStream(first)) {
@@ -110,7 +111,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         val stream: StreamInfo = try {
             val html = http.getRaw(id, item.pageUrl)
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
-                runCatching { site.streamFromIndex(http.get(id, index, mapOf("Referer" to item.pageUrl))) }.getOrNull()
+                attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to item.pageUrl))) }.getOrNull()
             }
             direct?.let { StreamInfo.Direct(it.url, it.mime) } ?: StreamInfo.Embed(site.embedUrl(vid))
         } catch (e: SourceException) {
@@ -128,7 +129,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             TubeSite.ALL.map { site ->
                 async {
                     withTimeoutOrNull(SEARCH_TIMEOUT_MS) {
-                        runCatching { site.items(listWithMirrors(site, site.listUrl(q, 0)), q) }.getOrDefault(emptyList())
+                        attempt { site.items(listWithMirrors(site, site.listUrl(q, 0)), q) }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()

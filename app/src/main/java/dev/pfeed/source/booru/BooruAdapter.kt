@@ -1,5 +1,6 @@
 package dev.pfeed.source.booru
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.repo.BooruKeys
 import dev.pfeed.data.settings.BooruFeed
 import dev.pfeed.data.settings.DefaultSources
@@ -66,7 +67,7 @@ class BooruAdapter @Inject constructor(
         if (item.extras["resolve"] != "page") return super.resolveStream(item)
         val page = item.pageUrl.takeIf { it.startsWith("http") } ?: return super.resolveStream(item)
         resolvedCache[page]?.let { return it }
-        val resolved = runCatching { resolvePostPage(page) }.getOrNull() ?: run {
+        val resolved = attempt { resolvePostPage(page) }.getOrNull() ?: run {
             // Couldn't fetch/parse the page: fall back to the thumbnail so something still shows.
             return super.resolveStream(item)
         }
@@ -137,7 +138,7 @@ class BooruAdapter @Inject constructor(
             hosts.flatMap { host -> queries.map { host to it } }.map { (host, q) ->
                 async {
                     withTimeoutOrNull(SEARCH_HOST_TIMEOUT_MS) {
-                        runCatching { fetchPosts(host, q, 0) }.getOrDefault(emptyList())
+                        attempt { fetchPosts(host, q, 0) }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()
@@ -171,10 +172,10 @@ class BooruAdapter @Inject constructor(
                 throw SourceException(id, "$bare rejected the API key. Check it in Settings → Sources.", isAuthError = true, cause = e)
             }
             if (!canUseHtml) throw e
-            return runCatching { fetchPostsHtml(bare, tags, page) }.getOrElse { throw e }
+            return attempt { fetchPostsHtml(bare, tags, page) }.getOrElse { throw e }
         }
         // An answer with no posts can also be "need a key" said as valid JSON; the page knows better.
-        if (api.isEmpty() && canUseHtml && page == 0) return runCatching { fetchPostsHtml(bare, tags, page) }.getOrDefault(api)
+        if (api.isEmpty() && canUseHtml && page == 0) return attempt { fetchPostsHtml(bare, tags, page) }.getOrDefault(api)
         return api
     }
 
@@ -264,7 +265,7 @@ class BooruAdapter @Inject constructor(
             val postIds = (pool["post_ids"] as? kotlinx.serialization.json.JsonArray).orEmpty()
                 .mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.content?.toLongOrNull() }
             kotlinx.coroutines.delay(POOL_DELAY_MS)
-            val posts = runCatching {
+            val posts = attempt {
                 BooruParser.parse(http.get(id, "$base/posts.json?limit=320&tags=" + URLEncoder.encode("pool:$poolId", "UTF-8") + creds), bare)
             }.getOrDefault(emptyList())
             poolGallery(bare, poolId, name, postIds, posts)?.let(out::add)

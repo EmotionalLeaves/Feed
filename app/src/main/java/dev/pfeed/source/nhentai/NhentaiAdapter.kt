@@ -1,5 +1,6 @@
 package dev.pfeed.source.nhentai
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.SourceCatalog
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -57,7 +58,7 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        (runCatching { enrich(parse(http.get(id, searchUrl("$q $EXCLUDE", "popular", 1)))) }.getOrDefault(emptyList()) + poolMatches(query))
+        (attempt { enrich(parse(http.get(id, searchUrl("$q $EXCLUDE", "popular", 1)))) }.getOrDefault(emptyList()) + poolMatches(query))
             .distinctBy { it.key }
     }
 
@@ -71,11 +72,12 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
         items.map { item ->
             async {
                 if (item.tags.size > TAGLESS_MARKER) item else gate.withPermit {
-                    runCatching { (http.get(id, "https://nhentai.net/api/v2/galleries/${item.id}") as? JsonObject)?.let(::gallery) }
-                        .getOrNull() ?: item
+                    attempt { (http.get(id, "https://nhentai.net/api/v2/galleries/${item.id}") as? JsonObject)?.let(::gallery) }.getOrNull()
                 }
             }
-        }.awaitAll()
+        // A gallery whose tags couldn't be read is dropped, never shown: the always-on minors
+        // filter works on tags, and a listing alone doesn't carry them.
+        }.awaitAll().filterNotNull().filter { it.tags.size > TAGLESS_MARKER }
     }
 
     companion object {

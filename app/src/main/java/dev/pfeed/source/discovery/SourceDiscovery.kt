@@ -1,5 +1,6 @@
 package dev.pfeed.source.discovery
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.AppSettings
 import dev.pfeed.data.settings.BooruFeed
 import dev.pfeed.data.settings.MastodonFeed
@@ -129,7 +130,7 @@ class SourceDiscovery @Inject constructor(
             candidates.map { name ->
                 async {
                     val rssUrl = "https://www.reddit.com/r/$name/hot/.rss"
-                    val exists = runCatching { http.getRaw(SRC, rssUrl) }.getOrNull()
+                    val exists = attempt { http.getRaw(SRC, rssUrl) }.getOrNull()
                         ?.let { it.contains("<entry>") } == true
                     if (exists) DiscoveredSource(
                         type = "reddit",
@@ -145,13 +146,13 @@ class SourceDiscovery @Inject constructor(
 
     // ── Mastodon hashtag search ───────────────────────────────────────────────
 
-    private suspend fun searchMastodon(query: String): List<DiscoveredSource> = runCatching {
+    private suspend fun searchMastodon(query: String): List<DiscoveredSource> = attempt {
         val tag = query.replace(Regex("\\s+"), "_").removePrefix("#")
         // Check the main instance for the tag, then produce entries for all known instances
         val checkUrl = "https://mastodon.social/api/v1/timelines/tag/$tag?limit=1&only_media=true"
-        val exists = runCatching { http.get(SRC, checkUrl) }.getOrNull()
+        val exists = attempt { http.get(SRC, checkUrl) }.getOrNull()
         val hasContent = exists is JsonArray && exists.size > 0
-        if (!hasContent) return@runCatching emptyList()
+        if (!hasContent) return@attempt emptyList()
 
         // Tag exists on Mastodon — suggest it on all known adult instances
         MASTODON_INSTANCES.map { host ->
@@ -168,13 +169,13 @@ class SourceDiscovery @Inject constructor(
 
     // ── Booru tag search ──────────────────────────────────────────────────────
 
-    private suspend fun searchBooru(query: String): List<DiscoveredSource> = runCatching {
+    private suspend fun searchBooru(query: String): List<DiscoveredSource> = attempt {
         val tag = query.replace(Regex("\\s+"), "_").lowercase()
         // Try autocomplete on Danbooru to confirm the tag exists and get its post count
         val autoUrl = "https://danbooru.donmai.us/tags.json?search[name_matches]=${
             java.net.URLEncoder.encode("*${tag}*", "UTF-8")
         }&search[order]=count&limit=5"
-        val autoRoot = runCatching { http.get(SRC, autoUrl) }.getOrNull()
+        val autoRoot = attempt { http.get(SRC, autoUrl) }.getOrNull()
         val tagNames: List<String> = if (autoRoot is JsonArray) {
             autoRoot.mapNotNull { el ->
                 (el as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull

@@ -32,14 +32,13 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val tok = Regex("\"token\":\"([^\"]+)").find(get("https://api.redgifs.com/v2/auth/temporary", "application/json").second)?.groupValues?.get(1)
-        probe("rg token") { tok?.take(10) ?: "none" }
-        for (order in listOf("best", "trending", "top", "latest")) for (p in 1..2)
-            probe("rg $order p$p") {
-                client.newCall(Request.Builder().url("https://api.redgifs.com/v2/gifs/search?search_text=milf&order=$order&count=40&page=$p").header("Authorization", "Bearer $tok").build()).execute().use { r ->
-                    val b = r.body!!.string(); "${r.code} gifs=${b.split("\"id\":").size - 1} ${b.take(160)}" }
-            }
-        for (q in listOf("milf", "tag:milf", "tag:\"milf\"", "milf -tag:lolicon -tag:shotacon", "tag:milf -tag:lolicon -tag:shotacon"))
-            probe("nh $q") { get(NhentaiAdapter.searchUrl(q, "popular", 1), "application/json").let { (c, b) -> "$c results=${b.split("\"media_id\"").size - 1} num_pages=${Regex("\"num_pages\":(\\d+)\\}?$").find(b.trim())?.groupValues?.get(1)} tail=${b.takeLast(80)}" } }
+        val api = get("https://nhentai.net/api/v2/openapi.json", "application/json").second
+        for (path in listOf("\"/api/v2/search\"", "\"/api/v2/galleries\"", "\"/api/v2/galleries/tagged\"", "\"/api/v2/tags/search\""))
+            probe("spec $path") { around(api, path, 0, 1600).replace(Regex("\\s+"), " ") }
+        for (u in listOf(
+            "https://nhentai.net/api/v2/search?query=tag%3Amilf&sort=popular&page=1",
+            "https://nhentai.net/api/v2/search?query=milf+-tag%3Alolicon&sort=popular&page=1",
+            "https://nhentai.net/api/v2/search?query=tag%3A%22big+breasts%22&page=1",
+        )) probe("nh $u") { get(u, "application/json").let { (c, b) -> "$c results=${b.split("\"media_id\"").size - 1} tail=${b.takeLast(90)}" } }
     }
 }

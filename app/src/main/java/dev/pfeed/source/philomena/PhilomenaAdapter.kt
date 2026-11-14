@@ -1,5 +1,6 @@
 package dev.pfeed.source.philomena
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
 import dev.pfeed.domain.model.MediaItem
@@ -59,7 +60,7 @@ class PhilomenaAdapter @Inject constructor(
         if (q.isEmpty()) return@cachedSearch emptyList()
         val remote = HOSTS.keys.flatMap { host ->
             // Combine the user's query with the explicit rating so results are on-topic.
-            runCatching { fetch(host, "explicit, $q", 1, sort = "score") }.getOrDefault(emptyList())
+            attempt { fetch(host, "explicit, $q", 1, sort = "score") }.getOrDefault(emptyList())
         }
         (remote + poolMatches(query)).distinctBy { it.key }
     }
@@ -91,7 +92,7 @@ class PhilomenaAdapter @Inject constructor(
         val media = if (type == MediaType.IMAGE) rep("large") ?: full else full
         val tags = (img["tags"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull }?.take(MAX_TAGS).orEmpty()
         val score = (img["score"] as? JsonPrimitive)?.contentOrNull
-        val created = s("created_at")?.let { runCatching { Instant.parse(it) }.getOrNull() }
+        val created = s("created_at")?.let { attempt { Instant.parse(it) }.getOrNull() }
         return MediaItem(
             id = "$host/$imgId",
             sourceId = SOURCE_ID,

@@ -1,5 +1,6 @@
 package dev.pfeed.source.rss
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -81,7 +82,7 @@ class RssAdapter @Inject constructor(
             return cache
         }
         val results = coroutineScope {
-            feeds.map { url -> async(Dispatchers.IO) { runCatching { fetchOne(url) } } }.awaitAll()
+            feeds.map { url -> async(Dispatchers.IO) { attempt { fetchOne(url) } } }.awaitAll()
         }
         val ok = results.mapNotNull { it.getOrNull() }
         if (ok.isEmpty()) {

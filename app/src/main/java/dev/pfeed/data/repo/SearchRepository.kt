@@ -140,7 +140,7 @@ class SearchRepository @Inject constructor(
     }
 
     companion object {
-        private const val PER_SOURCE_TIMEOUT_MS = 10_000L
+        private const val PER_SOURCE_TIMEOUT_MS = 14_000L
         private const val MAX_PER_SOURCE = 150
     }
 }

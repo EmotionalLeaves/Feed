@@ -1,5 +1,6 @@
 package dev.pfeed.source.reddit
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
 import dev.pfeed.domain.model.AuthResult
@@ -78,7 +79,7 @@ class RedditAdapter @Inject constructor(
         } catch (e: SourceException) {
             // "top"/"new" can fail on tiny or quarantined subs; fall back to hot once on a fresh start.
             if (token == null && listing != "hot") {
-                runCatching { paced(listingUrl(sub, "hot", null)) }.getOrNull()
+                attempt { paced(listingUrl(sub, "hot", null)) }.getOrNull()
                     ?.let { return page(it, sub, "hot", depth = 0, previousAfter = null) }
             }
             throw e
@@ -113,7 +114,7 @@ class RedditAdapter @Inject constructor(
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
         val enc = URLEncoder.encode(q, "UTF-8")
-        val items = runCatching {
+        val items = attempt {
             RedditRss.parse(paced("https://$HOST/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100"), "search")
         }.getOrDefault(emptyList())
         // Also search inside the configured subs, a few dozen per multireddit request.
@@ -126,7 +127,7 @@ class RedditAdapter @Inject constructor(
                         val multi = chunk.joinToString("+")
                         val url = "https://$HOST/r/$multi/search/.rss?q=$enc&restrict_sr=on&sort=relevance&t=all&include_over_18=on&limit=100"
                         // Each result is tagged with its own subreddit (from the entry's <category>).
-                        runCatching { RedditRss.parse(paced(url), "search") }.getOrDefault(emptyList())
+                        attempt { RedditRss.parse(paced(url), "search") }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()

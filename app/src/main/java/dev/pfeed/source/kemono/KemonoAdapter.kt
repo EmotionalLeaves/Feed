@@ -1,5 +1,6 @@
 package dev.pfeed.source.kemono
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.DefaultSources
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.AuthContext
@@ -68,7 +69,7 @@ class KemonoAdapter @Inject constructor(
         if (q.isEmpty()) return@cachedSearch emptyList()
         val hosts = entries()
         val remote = hosts.flatMap { host ->
-            runCatching {
+            attempt {
                 val root = api("https://$host/api/v1/posts?q=${URLEncoder.encode(q, "UTF-8")}&o=0")
                 // Same check as the feed: don't return results whose files can't load right now.
                 playable(host, postsArray(root).flatMap { itemsFromPost(host, it) })
@@ -110,7 +111,7 @@ class KemonoAdapter @Inject constructor(
         val ok = cached?.second ?: (kotlinx.coroutines.withTimeoutOrNull(FILE_CHECK_TIMEOUT_MS) {
             kotlinx.coroutines.channels.Channel<Boolean>(samples.size).let { ch ->
                 kotlinx.coroutines.coroutineScope {
-                    val jobs = samples.map { url -> launch { ch.send(runCatching { http.reachable(url) }.getOrDefault(false)) } }
+                    val jobs = samples.map { url -> launch { ch.send(attempt { http.reachable(url) }.getOrDefault(false)) } }
                     var any = false
                     repeat(samples.size) { if (!any && ch.receive()) any = true }
                     jobs.forEach { it.cancel() }
@@ -129,7 +130,7 @@ class KemonoAdapter @Inject constructor(
         try {
             http.get(id, url, mapOf("Accept" to "text/css"))
         } catch (e: dev.pfeed.source.SourceException) {
-            runCatching { http.get(id, url) }.getOrElse { throw e }
+            attempt { http.get(id, url) }.getOrElse { throw e }
         }
 
     private fun postsArray(root: kotlinx.serialization.json.JsonElement): List<JsonObject> = when {
@@ -179,7 +180,7 @@ class KemonoAdapter @Inject constructor(
             val service = s("service")
             val creator = s("user")
             val title = s("title")?.takeIf { it.isNotBlank() }
-            val published = s("published")?.let { runCatching { Instant.parse(if (it.endsWith("Z")) it else it + "Z") }.getOrNull() }
+            val published = s("published")?.let { attempt { Instant.parse(if (it.endsWith("Z")) it else it + "Z") }.getOrNull() }
             // Posts have no tag list, but creators write hashtags in the text ("#milf #latina …"). Use
             // them: they give the recommender and search something real to go on, and let the content
             // filters see what the post says about itself.

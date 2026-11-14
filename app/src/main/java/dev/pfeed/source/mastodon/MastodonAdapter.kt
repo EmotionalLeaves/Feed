@@ -1,5 +1,6 @@
 package dev.pfeed.source.mastodon
 
+import dev.pfeed.source.net.attempt
 import dev.pfeed.data.settings.MastodonExclusions
 import dev.pfeed.data.settings.MastodonFeed
 import dev.pfeed.data.settings.SettingsRepository
@@ -74,7 +75,7 @@ class MastodonAdapter @Inject constructor(
             hosts.map { host ->
                 async {
                     withTimeoutOrNull(SEARCH_HOST_TIMEOUT_MS) {
-                        runCatching { MastodonParser.parse(http.get(id, timelineUrl(host, tag)), host) }.getOrDefault(emptyList())
+                        attempt { MastodonParser.parse(http.get(id, timelineUrl(host, tag)), host) }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()
