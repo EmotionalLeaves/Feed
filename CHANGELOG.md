@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.13.0 — 2026-11-14
+
+Video-first For You
+
+- **Fresh installs now open on mostly video.** Measured on a test device, For You's first 60 posts went from 35% video / 20% comics / 10% tube sites to **65% video**, with tube sites and RedGIFs the largest sources and comics a few percent. It's a small lean that your own taste overrides quickly: For You now learns formats (videos, pictures, comics) like it learns tags.
+- Tube sites can hold more of the candidate pool (eleven sites behind one source).
+- Comics count once when shown, not once per page, so spacing and health stats see them correctly.
+- Verified: 45-swipe session, memory steady (java ~45–70 MB), no failures.
+
 ## 4.12.0 — 2026-11-14
 
 Crash reports
