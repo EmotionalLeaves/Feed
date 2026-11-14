@@ -128,7 +128,7 @@ class SourceDiscovery @Inject constructor(
         return coroutineScope {
             candidates.map { name ->
                 async {
-                    val rssUrl = "https://www.reddit.com/r/$name/hot/.rss"
+                    val rssUrl = "https://old.reddit.com/r/$name/hot/.rss"
                     val exists = runCatching { http.getRaw(SRC, rssUrl) }.getOrNull()
                         ?.let { it.contains("<entry>") } == true
                     if (exists) DiscoveredSource(

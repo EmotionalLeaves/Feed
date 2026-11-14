@@ -41,7 +41,7 @@ class RedditAdapter @Inject constructor(
     // live). Each request already brings up to 50 posts, so ask for few subreddits at a time.
     override val maxConcurrency = 1
     override val entriesPerExtend = 2
-    // Requests wait their turn (one every 6 s); allow for that on top of the request itself.
+    // Requests wait their turn (one every 3 s); allow for that on top of the request itself.
     override val entryTimeoutMs = 20_000L
     // All subreddits are one site: when Reddit starts answering 429, rest it as a whole.
     override fun groupOf(entry: String) = "reddit.com"
@@ -54,9 +54,9 @@ class RedditAdapter @Inject constructor(
     private var lastRequestAt = 0L
 
     /**
-     * Reddit's anonymous limit is ten requests a minute per address and it answers 429 well before
-     * the feed would notice on its own; one request every 6 s never hits it. Each brings up to 100
-     * posts, so that's still far more than anyone scrolls.
+     * Reddit's anonymous budget is a few hundred requests per ten minutes per address, and it answers
+     * 429 well before the feed would notice on its own; one request every 3 s stays inside it. Each
+     * brings up to 100 posts, far more than anyone scrolls.
      */
     private suspend fun paced(url: String): String = pace.withLock {
         val wait = MIN_GAP_MS - (System.currentTimeMillis() - lastRequestAt)
@@ -97,7 +97,7 @@ class RedditAdapter @Inject constructor(
     private fun listingUrl(sub: String, listing: String, after: String?): String {
         val t = if (listing == "top") "&t=${TOP_WINDOWS.random()}" else ""
         val a = after?.let { "&after=$it" } ?: ""
-        return "https://www.reddit.com/r/$sub/$listing/.rss?limit=$PAGE$t$a"
+        return "https://$HOST/r/$sub/$listing/.rss?limit=$PAGE$t$a"
     }
 
     override suspend fun resolveStream(item: MediaItem): StreamInfo {
@@ -114,7 +114,7 @@ class RedditAdapter @Inject constructor(
         if (q.isEmpty()) return@cachedSearch emptyList()
         val enc = URLEncoder.encode(q, "UTF-8")
         val items = runCatching {
-            RedditRss.parse(paced("https://www.reddit.com/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100"), "search")
+            RedditRss.parse(paced("https://$HOST/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100"), "search")
         }.getOrDefault(emptyList())
         // Also search inside the configured subs, a few dozen per multireddit request.
         val subs = entries().map { it.trim().removePrefix("/").removePrefix("r/").trim('/') }.filter { it.isNotEmpty() }.distinct()
@@ -124,7 +124,7 @@ class RedditAdapter @Inject constructor(
                 async {
                     withTimeoutOrNull(SEARCH_TIMEOUT_MS) {
                         val multi = chunk.joinToString("+")
-                        val url = "https://www.reddit.com/r/$multi/search/.rss?q=$enc&restrict_sr=on&sort=relevance&t=all&include_over_18=on&limit=100"
+                        val url = "https://$HOST/r/$multi/search/.rss?q=$enc&restrict_sr=on&sort=relevance&t=all&include_over_18=on&limit=100"
                         // Each result is tagged with its own subreddit (from the entry's <category>).
                         runCatching { RedditRss.parse(paced(url), "search") }.getOrDefault(emptyList())
                     }.orEmpty()
@@ -135,7 +135,12 @@ class RedditAdapter @Inject constructor(
     }
 
     companion object {
-        private const val MIN_GAP_MS = 6_000L
+        /**
+         * Feeds are read from old.reddit.com: same Atom feeds, but its own request budget (checked
+         * live: www.reddit.com answered 429 with 0 requests left while old.reddit.com had 200).
+         */
+        private const val HOST = "old.reddit.com"
+        private const val MIN_GAP_MS = 3_000L
         private val LISTINGS = listOf("hot", "hot", "top", "new")
         private val TOP_WINDOWS = listOf("week", "month", "year", "all")
         private const val PAGE = 100

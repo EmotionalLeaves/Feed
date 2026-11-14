@@ -37,15 +37,11 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val uas = mapOf(
-            "app" to "PrivateFeed/4.1.0 (Android)",
-            "browser" to ArchiveHeaders.BROWSER_UA,
-            "reddit-style" to "android:dev.pfeed:v4.1.0 (by /u/pfeed_app)",
-        )
-        val subs = listOf("gonewild", "nsfw", "RealGirls", "holdthemoan", "pawg", "milf", "cumsluts", "LegalTeens", "boobs", "ass", "BustyPetite", "asstastic")
-        for ((name, ua) in uas) for (host in listOf("www.reddit.com", "old.reddit.com")) {
-            probe("$name $host") { subs.joinToString(" ") { s -> runCatching { code("https://$host/r/$s/new/.rss?limit=100", ua) }.getOrElse { "E" } } }
-            Thread.sleep(3_000)
-        }
+        val ua = "PrivateFeed/4.1.0 (Android)"
+        probe("sub search rss") { plain.newCall(Request.Builder().url("https://old.reddit.com/subreddits/search.rss?q=milf&include_over_18=on&limit=25").header("User-Agent", ua).build()).execute().use { r ->
+            val b = r.body!!.string(); "${r.code} len=${b.length} " + Regex("<title>([^<]+)</title>").findAll(b).take(12).joinToString(" | ") { it.groupValues[1] } + " :: " + around(b, "<entry>", 0, 700) } }
+        probe("sub search json") { plain.newCall(Request.Builder().url("https://old.reddit.com/subreddits/search.json?q=milf&include_over_18=on&limit=5").header("User-Agent", ua).build()).execute().use { r -> "${r.code} ${r.body!!.string().take(300)}" } }
+        for (h in listOf("xhamster.com", "xhamster2.com", "xhamster3.com", "xhamster.desi", "xhamster19.com", "xhamster.one", "ru.xhamster.com"))
+            probe("xh $h") { get("https://$h/newest/1").let { (c, b) -> "$c len=${b.length} thumbProps=${b.indexOf("videoThumbProps")} n=${TubeSite.Xhamster.parseList(b).size}" } }
     }
 }
