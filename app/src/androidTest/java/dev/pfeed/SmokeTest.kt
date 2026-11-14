@@ -137,10 +137,16 @@ class SmokeTest {
         }
         // Keep scrolling a while and log what showed and what failed: the mix of sites and the
         // failure rate are what using the app feels like.
-        repeat(15) { swipeUpGesture(); repeat(8) { rule.mainClock.advanceTimeBy(250); Thread.sleep(150) } }
+        fun mem(): String {
+            val rt = Runtime.getRuntime()
+            return "java ${(rt.totalMemory() - rt.freeMemory()) / 1_048_576} MB, native ${android.os.Debug.getNativeHeapAllocatedSize() / 1_048_576} MB"
+        }
+        android.util.Log.i("PFHEALTH", "feed: memory after ${swipes} swipes: ${mem()}")
+        repeat(45) { swipeUpGesture(); repeat(6) { rule.mainClock.advanceTimeBy(250); Thread.sleep(120) } }
+        android.util.Log.i("PFHEALTH", "feed: memory after ${swipes + 45} swipes: ${mem()}")
         val events = rule.activity.mediaHealth.recentEvents()
         events.forEach { android.util.Log.i("PFHEALTH", "  feed $it") }
-        android.util.Log.i("PFHEALTH", "feed: ${shown.get()} shown after ${swipes + 15} swipes, " +
+        android.util.Log.i("PFHEALTH", "feed: ${shown.get()} shown after ${swipes + 45} swipes, " +
             "${events.count { it.startsWith("failed") }} of the last ${events.size} events failed, " +
             "${events.filter { it.startsWith("shown") }.map { it.split(' ').getOrElse(1) { "" } }.distinct().size} different origins")
         assertTrue("activity still alive after scrolling", !rule.activity.isFinishing && !rule.activity.isDestroyed)
