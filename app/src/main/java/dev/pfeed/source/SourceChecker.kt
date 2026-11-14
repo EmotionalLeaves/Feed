@@ -58,7 +58,7 @@ class SourceChecker @Inject constructor(private val http: HttpJson) {
     companion object {
         private const val PROBE_QUERY = "sex"
         private val USER_FILLED = setOf("rss", "local", "direct", "json", "api")
-        private const val LIST_TIMEOUT_MS = 25_000L
+        private const val LIST_TIMEOUT_MS = 30_000L
         private const val FILE_TIMEOUT_MS = 10_000L
     }
 }

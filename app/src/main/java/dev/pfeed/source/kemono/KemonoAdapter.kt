@@ -13,6 +13,7 @@ import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import java.time.Instant
 import javax.inject.Inject
@@ -41,6 +42,8 @@ class KemonoAdapter @Inject constructor(
     override val requiresAuth = false
     override val maxConcurrency = 3
     override val entriesPerExtend = 4
+    // The posts API answers with large JSON pages and can be slow; plus the file-server check.
+    override val entryTimeoutMs = 25_000L
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
@@ -90,9 +93,19 @@ class KemonoAdapter @Inject constructor(
         if (samples.isEmpty()) return
         val now = System.currentTimeMillis()
         val cached = filesOk[host]?.takeIf { now - it.first < FILE_CHECK_EVERY_MS }
-        val ok = cached?.second ?: samples.any { sample ->
-            kotlinx.coroutines.withTimeoutOrNull(FILE_CHECK_TIMEOUT_MS) { http.reachable(sample) } ?: false
-        }.also { filesOk[host] = now to it }
+        // All samples at once, first success wins: checking them one after another could take
+        // longer than the whole request is allowed (seen on CI: "Timed out" with servers fine).
+        val ok = cached?.second ?: (kotlinx.coroutines.withTimeoutOrNull(FILE_CHECK_TIMEOUT_MS) {
+            kotlinx.coroutines.channels.Channel<Boolean>(samples.size).let { ch ->
+                kotlinx.coroutines.coroutineScope {
+                    val jobs = samples.map { url -> launch { ch.send(runCatching { http.reachable(url) }.getOrDefault(false)) } }
+                    var any = false
+                    repeat(samples.size) { if (!any && ch.receive()) any = true }
+                    jobs.forEach { it.cancel() }
+                    any
+                }
+            }
+        } ?: false).also { filesOk[host] = now to it }
         if (!ok) throw dev.pfeed.source.SourceException(id, "$host lists posts, but its file servers aren't responding (an outage on their side). Retrying every few minutes.")
     }
 
@@ -212,7 +225,7 @@ class KemonoAdapter @Inject constructor(
         }
         private const val PAGE = 50
         private const val FILE_CHECK_EVERY_MS = 5 * 60_000L
-        private const val FILE_CHECK_TIMEOUT_MS = 8_000L
+        private const val FILE_CHECK_TIMEOUT_MS = 7_000L
         /** Don't page past this; the recent feed that deep is rarely useful and ages out. */
         private const val MAX_OFFSET = 50_000
     }
