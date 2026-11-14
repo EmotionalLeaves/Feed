@@ -32,10 +32,17 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val v = TubeSite.Xhamster.parseList(get("https://xhamster2.com/newest/1").second).first()
-        val h = get(v.pageUrl).second
-        probe("xplayer") { around(h, "xplayerSettings", 0, 2500).replace("\\/", "/") }
-        probe("sources") { Regex("\"sources\"\\s*:").findAll(h).map { it.range.first }.toList().toString() + " " + around(h, "\"sources\"", 0, 1500).replace("\\/", "/") }
-        probe("embed") { get("https://xhamster2.com/embed/${v.id}").second.let { e -> "${e.length} " + around(e, "sources", 100, 1200).replace("\\/", "/") } }
+        for (mirror in listOf("xhamster2.com", "xhamster.desi")) {
+            val v = TubeSite.Xhamster.parseList(get("https://$mirror/newest/1").second).firstOrNull() ?: continue
+            val h = get(v.pageUrl).second
+            val arr = Regex("\"h264\":(\\[.*?\\])").find(h)?.groupValues?.get(1)
+            probe("algos $mirror") { Regex("\"url\":\"([0-9a-f]{2})").findAll(arr ?: "").map { it.groupValues[1] }.toList().toString() }
+            Regex("\"url\":\"([0-9a-f]+)\"").findAll(arr ?: "").take(4).forEach { m ->
+                probe("decode ${m.groupValues[1].take(2)}") { TubeSite.Xhamster.decipher(m.groupValues[1])?.take(160) ?: "null" }
+            }
+            val st = TubeSite.Xhamster.stream(h)
+            probe("stream $mirror") { "$st ${st?.let { head(it.url) }}" }
+            break
+        }
     }
 }

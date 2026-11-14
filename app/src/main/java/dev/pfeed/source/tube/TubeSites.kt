@@ -341,12 +341,78 @@ sealed class TubeSite(val host: String, val label: String) {
                 (sources["hls"] as? JsonObject)?.values?.mapNotNull { (it as? JsonObject)?.get("url")?.jsonPrimitive?.contentOrNull }
                     ?.firstOrNull { it.startsWith("http") }?.let { return TubeStream(it, MediaTypes.HLS_MIME) }
                 (sources["standard"] as? JsonObject)?.get("mp4")?.let { it as? JsonArray }?.let { bestOf(it, host) }?.let { return it }
+                // Since 2025 the URLs come enciphered: standard.h264[] = {url: hex, quality: "auto"|"720p"…}.
+                ((sources["standard"] as? JsonObject)?.get("h264") as? JsonArray)?.let { list -> fromEnciphered(list)?.let { return it } }
             }
             Regex(""""url":"(https?:[^"]+\.m3u8[^"]*)"""").find(pageHtml)?.groupValues?.get(1)?.let { return TubeStream(unescape(it), MediaTypes.HLS_MIME) }
             return null
         }
 
         override fun embedUrl(id: String) = "https://xhamster.com/embed/$id"
+
+        /** The "auto" entry is the adaptive HLS playlist; otherwise the best MP4 up to 1080p. */
+        internal fun fromEnciphered(list: JsonArray): TubeStream? {
+            val entries = list.mapNotNull { it as? JsonObject }.mapNotNull { o ->
+                val raw = o["url"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
+                val url = if (raw.startsWith("http")) raw else decipher(raw) ?: return@mapNotNull null
+                if (!url.startsWith("http")) return@mapNotNull null
+                (o["quality"]?.jsonPrimitive?.contentOrNull ?: "") to url
+            }
+            entries.firstOrNull { it.first == "auto" || it.second.contains(".m3u8") }?.let {
+                return TubeStream(it.second, if (it.second.contains(".m3u8")) MediaTypes.HLS_MIME else null)
+            }
+            return entries.mapNotNull { (q, u) -> Regex("""\d+""").find(q)?.value?.toIntOrNull()?.let { it to u } }
+                .filter { it.first <= 1080 }.maxByOrNull { it.first }?.let { TubeStream(it.second) }
+        }
+
+        /**
+         * Hex string → URL. Byte 0 picks a generator, bytes 1–4 are its seed (little-endian), and the
+         * rest is the URL XORed with the generator's output, one byte per step.
+         */
+        internal fun decipher(hex: String): String? {
+            if (hex.length < 12 || hex.length % 2 != 0 || !hex.all { it in '0'..'9' || it in 'a'..'f' }) return null
+            val bytes = ByteArray(hex.length / 2) { hex.substring(it * 2, it * 2 + 2).toInt(16).toByte() }
+            val seed = (bytes[1].toInt() and 0xff) or ((bytes[2].toInt() and 0xff) shl 8) or
+                ((bytes[3].toInt() and 0xff) shl 16) or ((bytes[4].toInt() and 0xff) shl 24)
+            val gen = ByteGenerator(bytes[0].toInt() and 0xff, seed)
+            if (!gen.known) return null
+            val out = StringBuilder(bytes.size - 5)
+            for (i in 5 until bytes.size) out.append(((bytes[i].toInt() and 0xff) xor gen.next()).toChar())
+            return out.toString()
+        }
+
+        private class ByteGenerator(private val algo: Int, private var s: Int) {
+            val known get() = algo in 1..7
+
+            fun next(): Int = step() and 0xff
+
+            private fun step(): Int = when (algo) {
+                1 -> { s = s * 1664525 + 1013904223; s }
+                2 -> { var t = s xor (s shl 13); t = t xor (t ushr 17); t = t xor (t shl 5); s = t; t }
+                3 -> {
+                    s += 0x9e3779b9.toInt()
+                    var t = s xor (s ushr 16); t *= 0x85ebca77.toInt(); t = t xor (t ushr 13); t *= 0xc2b2ae3d.toInt()
+                    t xor (t ushr 16)
+                }
+                4 -> {
+                    s += 0x6d2b79f5
+                    var t = (s shl 7) or (s ushr 25); t += 0x9e3779b9.toInt(); t = t xor (t ushr 11)
+                    t * 0x27d4eb2d
+                }
+                5 -> { var t = s xor (s shl 7); t = t xor (t ushr 9); t = t xor (t shl 8); t += 0xa5a5a5a5.toInt(); s = t; t }
+                6 -> {
+                    s = s * 0x2c9277b5 + 0xac564b05.toInt()
+                    val t = s xor (s ushr 18)
+                    t ushr ((s ushr 27) and 31)
+                }
+                7 -> {
+                    s += 0x9e3779b9.toInt()
+                    var e = s xor (s shl 5); e *= 0x7feb352d; e = e xor (e ushr 15)
+                    e * 0x846ca68b.toInt()
+                }
+                else -> 0
+            }
+        }
     }
 
     // ── RedTube (official listing API; player setup like Pornhub) ───────────
