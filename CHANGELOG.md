@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.2.0 — 2026-11-14
+
+Coomer loads, creator pages, sturdier sources
+
+- **Coomer / Kemono load again.** Their file servers time out from many networks (checked: nN.coomer.st unreachable while the rest of the site answers), so pictures are now shown from the site's thumbnail server (up to 800 px) whenever the originals can't be reached, and the original is used again as soon as it can. File checks run in parallel and the slow API gets more time.
+- **Creator pages.** Tap @name on any post to see everything by them from every source, with a Follow button. Following → creators open the same page.
+- **xHamster** falls back to its mirror domains when the main one answers with a bot check.
+- **Reddit** requests are paced to Reddit's real anonymous limit (one every 6 s, 100 posts each), and a rate-limit answer pauses Reddit for 3 minutes at once instead of after several failures.
+- **Tube sites sheet** has *Check each site*: whether each of the 8 sites lists videos and plays them directly or in its own player.
+- First run shows the gestures once (swipe, double-tap, hold right for 2×, long-press, three fingers), then never again.
+- Bolder loading screen and clearer empty-feed messages.
+
 ## 4.1.0 — 2026-11-14
 
 Reddit galleries, durations, viewer titles
