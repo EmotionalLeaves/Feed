@@ -35,18 +35,19 @@ class LiveProbeTest {
         "$hops type=${r.header("Content-Type")} len=${r.header("Content-Length")} final=${r.request.url.toString().take(120)}"
     }
 
+    private fun noFollow(url: String): String = client.newBuilder().followRedirects(false).followSslRedirects(false).build()
+        .newCall(Request.Builder().url(url).header("Range", "bytes=0-0").build()).execute().use { "${it.code} loc=${it.header("Location")}" }
+
     @Test
     fun probe() {
-        for (host in listOf("coomer.st", "kemono.cr")) {
-            val (code, body) = get("https://$host/api/v1/posts?o=0", "text/css")
-            probe("$host api") { "$code len=${body.length} ${body.take(300)}" }
-            val paths = Regex("\"path\":\"(/[^\"]+)\"").findAll(body).map { it.groupValues[1] }.distinct().take(4).toList()
-            probe("$host paths") { paths.toString() }
-            paths.take(3).forEach { pth ->
-                probe("$host file $pth") { chain("https://$host/data$pth") }
-                probe("$host thumb $pth") { chain("https://img.$host/thumbnail/data$pth") }
-            }
-            paths.firstOrNull()?.let { pth -> for (n in 1..4) probe("$host n$n") { chain("https://n$n.$host/data$pth") } }
+        val path = "/56/0b/560b7d65dc462caebf9a1530d95bd47374a0fdf2e40a585c83f3046b4ab1ba1e.jpg"
+        probe("redirect") { noFollow("https://coomer.st/data$path") }
+        for (h in listOf("coomer.st", "n1.coomer.st", "n2.coomer.st", "n3.coomer.st", "n4.coomer.st", "img.coomer.st", "kemono.cr", "n1.kemono.cr", "n4.kemono.cr"))
+            probe("dns $h") { java.net.InetAddress.getAllByName(h).joinToString { it.hostAddress ?: "?" } }
+        probe("v4 only n1") {
+            val v4 = client.newBuilder().dns { host -> okhttp3.Dns.SYSTEM.lookup(host).filterIsInstance<java.net.Inet4Address>() }.build()
+            v4.newCall(Request.Builder().url("https://n1.coomer.st/data$path").header("Range", "bytes=0-0").build()).execute().use { "${it.code} ${it.header("Content-Type")}" }
         }
+        probe("with server param") { noFollow("https://coomer.st/data$path?f=x.jpg") }
     }
 }
