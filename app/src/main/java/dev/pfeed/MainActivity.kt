@@ -28,6 +28,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var sourceRegistry: dev.pfeed.source.SourceRegistry
     @Inject lateinit var tubeAdapter: dev.pfeed.source.tube.TubeAdapter
     @Inject lateinit var httpJson: dev.pfeed.source.net.HttpJson
+    @Inject lateinit var searchRepository: dev.pfeed.data.repo.SearchRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.

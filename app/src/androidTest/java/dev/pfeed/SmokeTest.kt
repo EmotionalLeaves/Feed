@@ -12,6 +12,7 @@ import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -281,5 +282,19 @@ class SmokeTest {
         runBlocking { rule.activity.tubeAdapter.siteReport() }.forEach { (site, line) -> android.util.Log.i("PFHEALTH", "  tube $site: $line") }
         val working = results.count { it.second?.ok == true && it.second?.detail?.startsWith("Nothing added") != true }
         assertTrue("only $working sources working: " + results.joinToString { "${it.first}=${it.second?.detail}" }, working >= 3)
+    }
+
+    /** Search across every source for a few common terms; logs results per site and timing. */
+    @Test
+    fun searchReachesManySources() {
+        val repo = rule.activity.searchRepository
+        var total = 0
+        for (q in listOf("milf", "cosplay", "hentai")) {
+            val last = runBlocking { kotlinx.coroutines.withTimeoutOrNull(60_000) { repo.search(q).toList().lastOrNull() } }
+            val bySource = last?.items.orEmpty().groupingBy { dev.pfeed.domain.reco.Spread.origin(it).substringBefore(':') }.eachCount()
+            total += last?.items?.size ?: 0
+            android.util.Log.i("PFHEALTH", "search \"$q\": ${last?.items?.size ?: 0} results in ${last?.elapsedMs} ms from $bySource; errors=${last?.errors?.take(4)}")
+        }
+        assertTrue("searches found nothing at all", total > 0)
     }
 }
