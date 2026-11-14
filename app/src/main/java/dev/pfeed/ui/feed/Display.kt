@@ -91,6 +91,7 @@ object Display {
             .map { it.trim() }
             .filter { it.length in 2..28 }
             .filterNot { it.startsWith("creator:") }
+            .map { t -> if (t.contains(':') && t.substringBefore(':').lowercase() in NAME_PREFIXES) t.substringAfter(':') else t }
             .filterNot { it.contains(':') && it.substringBefore(':').lowercase() in META_PREFIXES }
             .filterNot { Features.isGeneric(it) }
             .filterNot { Features.normalizeTag(it) in BOOKKEEPING }
@@ -130,7 +131,10 @@ object Display {
         "mstdn.jp" to "mstdn.jp",
     )
 
-    private val META_PREFIXES = setOf("rating", "score", "order", "sort", "source", "md5", "id", "width", "height", "status")
+    private val META_PREFIXES = setOf("rating", "score", "order", "sort", "source", "md5", "id", "width", "height", "status", "language", "artist", "group")
+
+    /** Named-thing prefixes (nhentai, boards): shown and searched without the prefix. */
+    private val NAME_PREFIXES = setOf("parody", "character", "series", "copyright")
 
     /** Booru housekeeping tags: about the upload, not the content. */
     private val BOOKKEEPING = setOf(

@@ -185,6 +185,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 canRefresh = !vm.isViewer,
                 onRefresh = vm::refresh,
                 onSources = { nav.navigate(Routes.SOURCES) },
+                // An empty Following feed needs something to follow, not a retry.
+                onBrowse = if (mode == FeedMode.FOLLOWING && vm.tag == null && !vm.isViewer) ({ vm.setMode(FeedMode.FOR_YOU) }) else null,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -227,6 +229,7 @@ private fun FeedEmptyState(
     canRefresh: Boolean,
     onRefresh: () -> Unit,
     onSources: () -> Unit,
+    onBrowse: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -249,10 +252,14 @@ private fun FeedEmptyState(
             )
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (canRefresh) {
-                    Button(onClick = onRefresh, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Try again") }
+                if (onBrowse != null) {
+                    Button(onClick = onBrowse, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Browse For You") }
+                } else {
+                    if (canRefresh) {
+                        Button(onClick = onRefresh, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Try again") }
+                    }
+                    OutlinedButton(onClick = onSources) { Text("Sources", color = Color.White) }
                 }
-                OutlinedButton(onClick = onSources) { Text("Sources", color = Color.White) }
             }
         }
     }
