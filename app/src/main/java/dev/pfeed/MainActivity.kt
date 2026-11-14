@@ -23,6 +23,9 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var lockManager: AppLockManager
     @Inject lateinit var mediaHealth: dev.pfeed.data.repo.MediaHealth
     @Inject lateinit var playerPool: PlayerPool
+    /** For the on-device health test: the same check Settings → Sources runs. */
+    @Inject lateinit var sourceChecker: dev.pfeed.source.SourceChecker
+    @Inject lateinit var sourceRegistry: dev.pfeed.source.SourceRegistry
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.

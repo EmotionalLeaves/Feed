@@ -11,6 +11,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -232,5 +233,36 @@ class SmokeTest {
             lockManager.unlockWithPin(pin.joinToString("").toCharArray())
             lockManager.disable(pin.joinToString("").toCharArray())
         }
+    }
+
+    /**
+     * Every enabled source, checked from the test device's network exactly as Settings → Sources
+     * does: posts listed and their files reachable. Each result is logged (tag PFHEALTH) so CI shows
+     * a health report; the test fails only if the app is broadly broken.
+     */
+    @Test
+    fun sourcesAnswerFromThisNetwork() {
+        val checker = rule.activity.sourceChecker
+        val adapters = runBlocking { rule.activity.sourceRegistry.enabledAdapters() }
+        val gate = kotlinx.coroutines.sync.Semaphore(4)
+        val results = runBlocking {
+            kotlinx.coroutines.coroutineScope {
+                adapters.map { a ->
+                    async(kotlinx.coroutines.Dispatchers.IO) {
+                        gate.acquire()
+                        try {
+                            val t0 = System.currentTimeMillis()
+                            val r = kotlinx.coroutines.withTimeoutOrNull(90_000) { checker.check(a) }
+                            Triple(a.displayName, r, System.currentTimeMillis() - t0)
+                        } finally { gate.release() }
+                    }
+                }.map { it.await() }
+            }
+        }
+        results.forEach { (name, r, ms) ->
+            android.util.Log.i("PFHEALTH", "${if (r?.ok == true) "OK  " else "FAIL"} $name (${ms} ms): ${r?.detail ?: "no answer in 90 s"}")
+        }
+        val working = results.count { it.second?.ok == true && it.second?.detail?.startsWith("Nothing added") != true }
+        assertTrue("only $working sources working: " + results.joinToString { "${it.first}=${it.second?.detail}" }, working >= 3)
     }
 }
