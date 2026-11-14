@@ -27,7 +27,7 @@ android {
         targetSdk = 36
         // Always higher than the last CI build, so Android accepts every new APK as an update.
         versionCode = 100 + (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0)
-        versionName = "4.2.0"
+        versionName = "4.3.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API source adapter configuration (see SOURCES.md). Empty = adapter stays disabled.

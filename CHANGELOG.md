@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.3.0 — 2026-11-14
+
+Comics fixed, Help, cleaner grids
+
+- **nhentai pages no longer 404.** Every page now comes from its exact file on the site's current image servers, instead of a guessed extension.
+- **Settings → Help → Gestures** lists everything you can do on a post, for when you've missed the first-run tips.
+- Grids in Library and Search run edge to edge with bold length badges on a soft gradient; filter chips use the accent.
+- Measured on a test device after this release: 25 posts shown in 19 swipes from 16 different sites, none failed to load.
+
 ## 4.2.0 — 2026-11-14
 
 Coomer loads, creator pages, sturdier sources
