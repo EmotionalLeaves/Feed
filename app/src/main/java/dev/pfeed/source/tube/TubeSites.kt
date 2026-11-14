@@ -37,6 +37,14 @@ sealed class TubeSite(val host: String, val label: String) {
     /** Sections to rotate through: "new", "top", or a search/tag term. */
     abstract fun listUrl(section: String, page: Int): String
     abstract fun parseList(body: String): List<TubeVideo>
+    /**
+     * Same site under other domains, tried in order when the main one answers with nothing usable
+     * (xHamster sometimes serves a bot check instead of its listing; its mirrors don't at the same time).
+     */
+    open val mirrors: List<String> = emptyList()
+
+    /** [url] on [mirror] instead of the main domain. */
+    fun onMirror(url: String, mirror: String): String = url.replaceFirst("://$host", "://$mirror").replaceFirst("://www.$host", "://www.$mirror")
     /** Direct stream from the video page, or null to fall back to [embedUrl]. */
     abstract fun stream(pageHtml: String): TubeStream?
     abstract fun embedUrl(id: String): String
@@ -48,7 +56,9 @@ sealed class TubeSite(val host: String, val label: String) {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
         val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner) }
-        fun byHost(host: String): TubeSite? = ALL.firstOrNull { host == it.host || host.endsWith(".${it.host}") }
+        fun byHost(host: String): TubeSite? = ALL.firstOrNull { site ->
+            (listOf(site.host) + site.mirrors).any { host == it || host.endsWith(".$it") }
+        }
         internal val json = Json { ignoreUnknownKeys = true; isLenient = true }
 
         internal fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
@@ -276,6 +286,7 @@ sealed class TubeSite(val host: String, val label: String) {
     // ── xHamster ────────────────────────────────────────────────────────────
 
     object Xhamster : TubeSite("xhamster.com", "xHamster") {
+        override val mirrors = listOf("xhamster2.com", "xhamster.desi", "xhamster19.com")
         override fun listUrl(section: String, page: Int): String = when (section) {
             "new" -> "https://xhamster.com/newest/${page + 1}"
             "top" -> "https://xhamster.com/best/weekly/${page + 1}"

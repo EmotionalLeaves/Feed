@@ -152,7 +152,7 @@ object ArchiveHeaders {
     )
     private val SITES = listOf(
         "coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party",
-        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "redtube.com", "eporner.com",
+        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "xhamster2.com", "xhamster.desi", "xhamster19.com", "redtube.com", "eporner.com",
     )
     private val COOKIES = mapOf(
         "pornhub.com" to "age_verified=1; accessAgeDisclaimerPH=1; accessAgeDisclaimerUK=1; accessPH=1; platform=pc; hasVisited=1; cookiesBannerSeen=1",
@@ -160,6 +160,9 @@ object ArchiveHeaders {
         "youporn.com" to "age_verified=1; platform=pc",
         "tube8.com" to "age_verified=1; platform=pc",
         "xhamster.com" to "xh_mobile_ver=1; lang=en",
+        "xhamster2.com" to "xh_mobile_ver=1; lang=en",
+        "xhamster.desi" to "xh_mobile_ver=1; lang=en",
+        "xhamster19.com" to "xh_mobile_ver=1; lang=en",
     )
 
     fun cookiesFor(site: String): String? = COOKIES[site]

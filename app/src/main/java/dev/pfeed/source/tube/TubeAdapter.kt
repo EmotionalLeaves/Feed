@@ -43,13 +43,36 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         val site = TubeSite.byHost(entry.substringBefore('|')) ?: return EntryPage(emptyList(), null)
         val section = entry.substringAfter('|', "new")
         val page = token?.toIntOrNull() ?: 0
-        val videos = site.parseList(http.getRaw(id, site.listUrl(section, page)))
-        val items = site.items(videos, section)
+        val items = site.items(listWithMirrors(site, site.listUrl(section, page)), section)
         val next = if (items.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString()
         return EntryPage(items, next)
     }
 
     private val resolved = ConcurrentHashMap<String, StreamInfo>()
+
+    /** Mirror that last answered for a site; tried first next time. */
+    private val workingMirror = ConcurrentHashMap<String, String>()
+
+    /** The listing at [url], from the site or, if it answers with nothing usable, one of its mirrors. */
+    private suspend fun listWithMirrors(site: TubeSite, url: String): List<TubeVideo> {
+        val order = listOfNotNull(workingMirror[site.host]) + (listOf(site.host) + site.mirrors).filter { it != workingMirror[site.host] }
+        var lastError: Exception? = null
+        for (domain in order) {
+            val u = if (domain == site.host) url else site.onMirror(url, domain)
+            try {
+                val videos = site.parseList(http.getRaw(id, u))
+                if (videos.isNotEmpty()) {
+                    if (domain != site.host) workingMirror[site.host] = domain else workingMirror.remove(site.host)
+                    return videos
+                }
+            } catch (e: SourceException) {
+                lastError = e
+            }
+            if (site.mirrors.isEmpty()) break
+        }
+        lastError?.let { throw it }
+        return emptyList()
+    }
 
     /**
      * One line per site: does its newest page list videos, and does the first one play directly
@@ -60,7 +83,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             async {
                 site.label to (withTimeoutOrNull(30_000) {
                     runCatching {
-                        val items = site.items(site.parseList(http.getRaw(id, site.listUrl("new", 0))), "new")
+                        val items = site.items(listWithMirrors(site, site.listUrl("new", 0)), "new")
                         if (items.isEmpty()) return@runCatching "lists nothing"
                         val first = items.first()
                         val how = when (val st = resolveStream(first)) {
@@ -101,7 +124,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             TubeSite.ALL.map { site ->
                 async {
                     withTimeoutOrNull(SEARCH_TIMEOUT_MS) {
-                        runCatching { site.items(site.parseList(http.getRaw(id, site.listUrl(q, 0))), q) }.getOrDefault(emptyList())
+                        runCatching { site.items(listWithMirrors(site, site.listUrl(q, 0)), q) }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()

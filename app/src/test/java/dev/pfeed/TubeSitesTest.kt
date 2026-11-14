@@ -195,4 +195,12 @@ class TubeSitesTest {
         assertEquals(listOf("comic", "doujinshi"), g.tags)
         assertEquals("https://nhentai.net/api/v2/galleries?query=tag%3Amilf+-tag%3Alolicon&sort=popular&page=2", NhentaiAdapter.searchUrl("tag:milf -tag:lolicon", "popular", 2))
     }
+
+    @Test
+    fun `xhamster can be read from a mirror domain`() {
+        assertEquals("https://xhamster2.com/newest/1", TubeSite.Xhamster.onMirror(TubeSite.Xhamster.listUrl("new", 0), "xhamster2.com"))
+        assertEquals(TubeSite.Xhamster, TubeSite.byHost("xhamster.desi"))
+        assertEquals(TubeSite.Xhamster, TubeSite.byHost("ru.xhamster.com"))
+        assertTrue(TubeSite.Xvideos.mirrors.isEmpty())
+    }
 }
