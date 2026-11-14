@@ -320,6 +320,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
         ModalBottomSheet(
             onDismissRequest = { showFilters = false },
             properties = ModalBottomSheetProperties(securePolicy = SecureFlagPolicy.SecureOn),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
         ) {
             FiltersSheet(
                 filters = filters,
@@ -475,7 +476,10 @@ private fun FiltersSheet(
         SectionTitle("Length")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DurationFilter.entries.forEach { d ->
-                FilterChip(selected = filters.duration == d, onClick = { onDuration(d) }, label = { Text(d.label) })
+                FilterChip(
+                    selected = filters.duration == d, onClick = { onDuration(d) }, label = { Text(d.label) },
+                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
+                )
             }
         }
         SectionTitle("Sources")
@@ -487,7 +491,10 @@ private fun FiltersSheet(
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             sources.forEach { (id, name) ->
-                FilterChip(selected = id in filters.sources, onClick = { onToggleSource(id) }, label = { Text(name) })
+                FilterChip(
+                    selected = id in filters.sources, onClick = { onToggleSource(id) }, label = { Text(name) },
+                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
+                )
             }
         }
         Spacer(Modifier.height(24.dp))

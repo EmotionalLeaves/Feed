@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -76,12 +77,12 @@ fun MediaGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 6.dp, end = 6.dp, top = 2.dp, bottom = 12.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
-            val shape = RoundedCornerShape(8.dp)
+            val shape = RoundedCornerShape(4.dp)
             Box(
                 Modifier
                     .fillMaxWidth()
@@ -109,20 +110,21 @@ fun MediaGrid(
                     MediaType.IMAGE -> null
                 }
                 if (badge != null) {
+                    Box(
+                        Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)
+                            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))),
+                    )
                     Row(
                         Modifier
                             .align(Alignment.BottomStart)
-                            .padding(5.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Color.Black.copy(alpha = 0.6f))
-                            .padding(horizontal = 4.dp, vertical = 1.dp),
+                            .padding(6.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         if (item.type != MediaType.GIF) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                         }
                         if (badge.isNotEmpty()) {
-                            Text(badge, style = MaterialTheme.typography.labelSmall, color = Color.White)
+                            Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         }
                     }
                 }
