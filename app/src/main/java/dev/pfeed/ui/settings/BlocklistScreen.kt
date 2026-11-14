@@ -62,12 +62,13 @@ fun BlocklistScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel())
     val origins = entries.filter { it.kind == BlockKind.ORIGIN.name }
     val hiddenCount = entries.count { it.kind == BlockKind.ITEM.name }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize()) {
         ScreenHeader(
             "Hidden & blocked",
             subtitle = "Kept out of every feed and search the moment you add them.",
             onBack = { nav.popBackStack() },
         )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         AddBlock { kind, value -> vm.block(kind, value) }
 
         if (tags.isEmpty() && creators.isEmpty() && origins.isEmpty() && hiddenCount == 0) {
@@ -87,6 +88,7 @@ fun BlocklistScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel())
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
     }
 }
 

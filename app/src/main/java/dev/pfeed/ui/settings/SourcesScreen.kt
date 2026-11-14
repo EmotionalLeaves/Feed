@@ -155,12 +155,13 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val feeds = on.sumOf { feedCount(it.adapter.id, s) ?: 1 }
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize()) {
             ScreenHeader(
                 "Sources",
                 subtitle = "${"%,d".format(feeds)} feeds from ${on.size} sources",
                 onBack = { nav.popBackStack() },
             )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
             HealthCard(
                 sources = listed,
@@ -188,6 +189,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             }
             Spacer(Modifier.height(24.dp))
         }
+    }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 

@@ -512,23 +512,27 @@ private fun Overlay(
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(
-                sourceLabel,
-                color = Color.White.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                modifier = Modifier
-                    .background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 3.dp),
-            )
+            Row(
+                Modifier.background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.size(6.dp).background(Accent, CircleShape))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    sourceLabel,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                )
+            }
             if (creator != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         "@$creator",
                         color = Color.White,
-                        style = MaterialTheme.typography.titleSmall.shadowed(),
-                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.titleMedium.shadowed(),
+                        fontWeight = FontWeight.ExtraBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false),

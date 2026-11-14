@@ -105,8 +105,9 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val feeds = on.sumOf { feedCount(it.adapter.id, s) ?: 1 }
 
     Box(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxSize()) {
             ScreenHeader("Settings")
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
             Section {
                 SettingRow(
@@ -215,6 +216,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             )
             Spacer(Modifier.height(24.dp))
         }
+    }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 

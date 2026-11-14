@@ -73,12 +73,13 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     var confirmReset by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.loadInterests() }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+    Column(Modifier.fillMaxSize()) {
         ScreenHeader(
             "Your taste",
             subtitle = "Learned from what you watch to the end, replay, like, save and follow, and from what you skip. Interests fade when you stop engaging.",
             onBack = { nav.popBackStack() },
         )
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         val (likes, dislikes) = interests ?: (emptyList<Pair<String, Double>>() to emptyList())
         if (interests != null && likes.isEmpty() && dislikes.isEmpty()) {
             EmptyState(Icons.Filled.AutoAwesome, "Still learning", "Watch, like and skip a few dozen posts and this fills in.")
@@ -133,6 +134,7 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             )
         }
         Spacer(Modifier.height(24.dp))
+    }
     }
 
     if (confirmReset) {
