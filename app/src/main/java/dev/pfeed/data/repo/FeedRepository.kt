@@ -83,7 +83,10 @@ class FeedSession(
     /** Unshown posts saved by the previous session, fed into the pool on the first load. */
     private val seed = ArrayList<MediaItem>()
 
-    private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext.job))
+    // Fetches run on the background pool; everything that touches this session's state runs on
+    // one background thread (see [loadMore]). Before, both ran on the main thread, so ranking,
+    // dedup and thumbnail hashing competed with drawing the feed.
+    private val scope = CoroutineScope(parentScope.coroutineContext + SupervisorJob(parentScope.coroutineContext.job) + kotlinx.coroutines.Dispatchers.Default)
 
     private val cursors = HashMap<String, String?>()
     private val started = HashSet<String>()
@@ -113,7 +116,9 @@ class FeedSession(
     /** Stop background fetches; call when the session is replaced. */
     fun close() = scope.cancel()
 
-    suspend fun loadMore(): LoadResult {
+    suspend fun loadMore(): LoadResult = kotlinx.coroutines.withContext(SESSION_THREAD) { loadMoreHere() }
+
+    private suspend fun loadMoreHere(): LoadResult {
         loads++
         val adapters = registry.enabledAdapters()
         if (adapters.isEmpty()) {
@@ -438,3 +443,8 @@ class FeedSession(
         private const val INTEREST_MIN_WEIGHT = 0.6
     }
 }
+
+/** One background thread shared by feed sessions: their state is only ever touched from here. */
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+private val SESSION_THREAD = kotlinx.coroutines.Dispatchers.Default.limitedParallelism(1)
+

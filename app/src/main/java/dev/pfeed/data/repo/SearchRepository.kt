@@ -10,6 +10,7 @@ import dev.pfeed.source.SourceRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -113,7 +114,7 @@ class SearchRepository @Inject constructor(
                 send(snapshot)
             }
         }
-    }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default) // dedup and ranking stay off the caller's thread (the UI), and timers fire on time
 
     /**
      * One source's results within [PER_SOURCE_TIMEOUT_MS], hard. The work runs detached and is only
