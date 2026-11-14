@@ -200,7 +200,7 @@ class SmokeTest {
             true
         }
         waitFor(what = "reddit sheet") { exists("Subreddit") || exists("subreddits", substring = true) && exists("Find one") }
-        androidx.test.espresso.Espresso.pressBack()
+        androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
         waitFor(what = "sheet closed, still on sources") { !exists("Subreddit") && exists("Check sources") }
         waitFor(what = "tap back") { rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back"), useUnmergedTree = true)[0].performClick(); true }
         waitFor(what = "back to settings") { exists("App lock") }
