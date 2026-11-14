@@ -291,7 +291,7 @@ class SmokeTest {
         var total = 0
         for (q in listOf("milf", "cosplay", "hentai")) {
             val last = runBlocking { kotlinx.coroutines.withTimeoutOrNull(60_000) { repo.search(q).toList().lastOrNull() } }
-            val bySource = last?.items.orEmpty().groupingBy { dev.pfeed.domain.reco.Spread.origin(it).substringBefore(':') }.eachCount()
+            val bySource = last?.items.orEmpty().groupingBy { it.sourceId }.eachCount()
             total += last?.items?.size ?: 0
             android.util.Log.i("PFHEALTH", "search \"$q\": ${last?.items?.size ?: 0} results in ${last?.elapsedMs} ms from $bySource; errors=${last?.errors?.take(4)}")
         }
