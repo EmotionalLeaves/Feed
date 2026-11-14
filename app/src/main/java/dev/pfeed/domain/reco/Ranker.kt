@@ -50,6 +50,7 @@ class Ranker(
         tagAffinity: Map<String, Double>,
         creatorAffinity: Map<String, Double>,
         now: Instant,
+        qualityValue: Double = quality(item),
     ): Double {
         val tagScore = TasteModel.score(Features.of(item), tagAffinity)
         val creatorScore = item.creator
@@ -59,7 +60,7 @@ class Ranker(
             exp(-ageDays / FRESHNESS_TAU_DAYS)
         } ?: UNKNOWN_FRESHNESS
         return weights.tag * tagScore + weights.creator * creatorScore +
-            weights.quality * quality(item) + weights.freshness * freshness
+            weights.quality * qualityValue + weights.freshness * freshness
     }
 
     /**
@@ -81,7 +82,8 @@ class Ranker(
         recentOrigins: Collection<String> = emptySet(),
     ): List<MediaItem> {
         val seenOrigins = HashSet(recentOrigins)
-        val pool = items.map { Candidate(it, baseScore(it, tagAffinity, creatorAffinity, now), signature(it)) }.toMutableList()
+        val relative = relativeQuality(items)
+        val pool = items.map { Candidate(it, baseScore(it, tagAffinity, creatorAffinity, now, relative[it.key] ?: UNKNOWN_QUALITY), signature(it)) }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
         val recentSigs = ArrayDeque(recent.takeLast(SIMILARITY_WINDOW).map(::signature))
         val out = ArrayList<MediaItem>(limit.coerceIn(0, items.size))
@@ -117,6 +119,26 @@ class Ranker(
 
     private class Candidate(val item: MediaItem, val score: Double, val sig: Set<String>)
 
+    /**
+     * Quality as a percentile within each source's own candidates. Vote scales differ wildly
+     * (a Derpibooru post has thousands, a good Rule34 post a few hundred, Reddit RSS none), and on an
+     * absolute scale the big-number sites maxed out the bonus and outranked everything (that is how
+     * My Little Pony took over). Within a source, the best still rise; across sources it's even.
+     */
+    internal fun relativeQuality(items: List<MediaItem>): Map<String, Double> {
+        val out = HashMap<String, Double>(items.size)
+        items.groupBy { it.sourceId }.forEach { (_, group) ->
+            val scored = group.mapNotNull { i -> i.extras["score"]?.toDoubleOrNull()?.let { i.key to it } }.sortedBy { it.second }
+            if (scored.size < MIN_FOR_PERCENTILE) {
+                scored.forEach { (k, _) -> out[k] = quality(group.first { it.key == k }) }
+            } else {
+                val n = scored.size - 1
+                scored.forEachIndexed { rank, (k, _) -> out[k] = 0.1 + 0.9 * rank / n }
+            }
+        }
+        return out
+    }
+
     private fun diversityBonus(sourceId: String, window: Collection<String>): Double =
         1.0 - window.count { it == sourceId }.toDouble() / DIVERSITY_WINDOW
 
@@ -127,7 +149,8 @@ class Ranker(
         /** How many just-shown items a candidate is compared with for similarity. */
         const val SIMILARITY_WINDOW = 3
         const val FRESHNESS_TAU_DAYS = 7.0
-        const val UNKNOWN_FRESHNESS = 0.3
+        /** No date (tube and comic listings): treated as middling, not as old. */
+        const val UNKNOWN_FRESHNESS = 0.45
         const val SQUASH_SCALE = 5.0
         /** Vote score treated as "top quality" (1.0). Typical good board posts score 20–300. */
         private const val QUALITY_REF = 300.0
@@ -137,6 +160,8 @@ class Ranker(
          */
         const val UNKNOWN_QUALITY = 0.55
         private const val SIG_FEATURES = 20
+        /** Fewer scored candidates than this from one source: use the absolute scale instead. */
+        private const val MIN_FOR_PERCENTILE = 5
 
         fun squash(x: Double): Double = tanh(x / SQUASH_SCALE)
 
