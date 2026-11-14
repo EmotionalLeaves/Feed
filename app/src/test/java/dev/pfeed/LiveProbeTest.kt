@@ -32,16 +32,10 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val xl = TubeSite.Xhamster.parseList(get("https://xhamster2.com/newest/1").second)
-        probe("xh list") { "n=${xl.size} first=${xl.firstOrNull()?.pageUrl}" }
-        xl.firstOrNull()?.let { v ->
-            for (u in listOf("https://xhamster.com/embed/${v.id}", "https://xhamster2.com/embed/${v.id}", v.pageUrl)) probe("xh $u") {
-                val (c, h) = get(u)
-                "$c len=${h.length} m3u8=${Regex("https?:[^\"' ]+\\.m3u8[^\"' ]*").find(h.replace("\\/", "/"))?.value?.take(140)} mp4=${Regex("https?:[^\"' ]+\\.mp4[^\"' ]*").find(h.replace("\\/", "/"))?.value?.take(140)} stream=${TubeSite.Xhamster.stream(h)}"
-            }
-        }
-        for (u in listOf("https://www.youporn.com/browse/time/?page=1", "https://www.tube8.com/latest/page/1/", "https://www.redtube.com/")) probe("shell $u") {
-            val (c, h) = get(u); "$c len=${h.length} " + h.replace(Regex("<script.*?</script>", RegexOption.DOT_MATCHES_ALL), " ").replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").take(400)
-        }
+        val v = TubeSite.Xhamster.parseList(get("https://xhamster2.com/newest/1").second).first()
+        val h = get(v.pageUrl).second
+        probe("xplayer") { around(h, "xplayerSettings", 0, 2500).replace("\\/", "/") }
+        probe("sources") { Regex("\"sources\"\\s*:").findAll(h).map { it.range.first }.toList().toString() + " " + around(h, "\"sources\"", 0, 1500).replace("\\/", "/") }
+        probe("embed") { get("https://xhamster2.com/embed/${v.id}").second.let { e -> "${e.length} " + around(e, "sources", 100, 1200).replace("\\/", "/") } }
     }
 }

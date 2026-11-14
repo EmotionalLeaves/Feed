@@ -336,11 +336,11 @@ sealed class TubeSite(val host: String, val label: String) {
             jsonAfter(html, "window.initials")?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
 
         override fun stream(pageHtml: String): TubeStream? {
-            val sources = initials(pageHtml)?.get("xplayerSettings")?.jsonObject?.get("sources")?.jsonObject
+            val sources = (initials(pageHtml)?.get("xplayerSettings") as? JsonObject)?.get("sources") as? JsonObject
             if (sources != null) {
-                sources["hls"]?.jsonObject?.values?.mapNotNull { (it as? JsonObject)?.get("url")?.jsonPrimitive?.contentOrNull }
+                (sources["hls"] as? JsonObject)?.values?.mapNotNull { (it as? JsonObject)?.get("url")?.jsonPrimitive?.contentOrNull }
                     ?.firstOrNull { it.startsWith("http") }?.let { return TubeStream(it, MediaTypes.HLS_MIME) }
-                sources["standard"]?.jsonObject?.get("mp4")?.let { it as? JsonArray }?.let { bestOf(it, host) }?.let { return it }
+                (sources["standard"] as? JsonObject)?.get("mp4")?.let { it as? JsonArray }?.let { bestOf(it, host) }?.let { return it }
             }
             Regex(""""url":"(https?:[^"]+\.m3u8[^"]*)"""").find(pageHtml)?.groupValues?.get(1)?.let { return TubeStream(unescape(it), MediaTypes.HLS_MIME) }
             return null
