@@ -22,17 +22,18 @@ class Spread(recent: List<MediaItem> = emptyList()) {
 
     private val tail = ArrayDeque<Keys>(WINDOW + 1).apply { recent.takeLast(WINDOW).forEach { addLast(keys(it)) } }
 
-    /** Strictest level [item] passes: 3 = all rules, 2 = not back-to-back + one per post, 1 = not back-to-back, 0 = none. */
+    /** Strictest level [item] passes: 4 = balanced too, 3 = all hard rules, 2 = not back-to-back + one per post, 1 = not back-to-back, 0 = none. */
     fun level(item: MediaItem): Int = level(keys(item))
 
     private fun level(k: Keys): Int {
         if (tail.lastOrNull()?.origin == k.origin) return 0
         if (k.post != null && tail.any { it.post == k.post }) return 1
         if (tail.count { it.origin == k.origin } >= MAX_PER_ORIGIN) return 2
-        if (tail.count { it.source == k.source } >= MAX_PER_SOURCE) return 2
         if (k.creator != null && tail.count { it.creator == k.creator } >= MAX_PER_CREATOR) return 2
-        if (k.niche != null && k.niche !in openNiches && tail.count { it.niche == k.niche } >= MAX_PER_NICHE) return 2
-        return 3
+        // Soft rules: kept whenever any candidate can keep them, never a reason to stop a batch.
+        if (tail.count { it.source == k.source } >= MAX_PER_SOURCE) return ALL_RULES
+        if (k.niche != null && k.niche !in openNiches && tail.count { it.niche == k.niche } >= MAX_PER_NICHE) return ALL_RULES
+        return BALANCED
     }
 
     fun add(item: MediaItem) {
@@ -90,6 +91,9 @@ class Spread(recent: List<MediaItem> = emptyList()) {
 
         /** [level] value meaning every spacing rule is satisfied (no run, no over-used origin/creator/post). */
         const val ALL_RULES = 3
+
+        /** [ALL_RULES] and the soft balance rules too (per-source and niche shares). */
+        const val BALANCED = 4
 
         /** Where an item comes from, at the level you'd notice: subreddit, board site, server, site. */
         fun origin(item: MediaItem): String = when (item.sourceId) {

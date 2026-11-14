@@ -27,8 +27,8 @@ class NicheTest {
     @Test
     fun `the mlp niche gets one slot per window unless the user wants it`() {
         // Pony posts from many different origins, so only the niche rule can hold them back.
-        val pony = (1..6).map { item("site$it.org/$it", listOf("pony")) }
-        val other = (1..11).map { item("other$it.org/$it", listOf("milf")) }
+        val pony = (1..6).map { item("site$it.org/$it", listOf("pony"), source = "p$it") }
+        val other = (1..11).map { item("other$it.org/$it", listOf("milf"), source = "o$it") }
         val out = Spread.order(pony + other, emptyList(), limit = 12, allowForcedRun = false)
         assertEquals(1, out.take(12).count { Niche.of(it) != null })
 
