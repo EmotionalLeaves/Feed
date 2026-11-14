@@ -189,6 +189,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             )
         }
 
+        // First run: show the gestures once, out of the way, until the first swipe.
+        if (items.isNotEmpty() && !landscape && !vm.isViewer && vm.tag == null) {
+            GestureTips(page = pagerState.settledPage, modifier = Modifier.align(Alignment.Center))
+        }
+
         if (!landscape) TopBar(
             title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.tag == null && !vm.isViewer,
@@ -624,3 +629,43 @@ private fun LikeButton(liked: Boolean, onLike: () -> Unit) {
         iconScale = pop.value,
     )
 }
+
+/**
+ * A one-time card that teaches the gestures (double-tap, hold, long-press). It never takes touches,
+ * so it can't get in the way, and it goes away for good after the first swipe or ten seconds.
+ */
+@Composable
+private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE) }
+    var show by remember { mutableStateOf(!prefs.getBoolean("gestures_seen", false)) }
+    val startPage = remember { page }
+    fun done() { if (show) { show = false; prefs.edit().putBoolean("gestures_seen", true).apply() } }
+    LaunchedEffect(page) { if (page != startPage) done() }
+    LaunchedEffect(Unit) { kotlinx.coroutines.delay(10_000); done() }
+    androidx.compose.animation.AnimatedVisibility(
+        visible = show,
+        enter = androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.fadeOut(),
+        modifier = modifier,
+    ) {
+        Column(
+            Modifier.padding(horizontal = 40.dp).clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.72f)).padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            listOf(
+                "Swipe up" to "next post",
+                "Double-tap" to "like",
+                "Hold the right side" to "play at 2×",
+                "Press and hold" to "more options",
+                "Three fingers" to "leave instantly",
+            ).forEach { (gesture, what) ->
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(gesture, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(150.dp))
+                    Text(what, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium)
+                }
+            }
+        }
+    }
+}
+
