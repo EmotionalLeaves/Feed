@@ -308,7 +308,7 @@ private fun TopBar(
 private fun ModeTab(label: String, selected: Boolean, onClick: () -> Unit) {
     val indicator by animateDpAsState(if (selected) 22.dp else 0.dp, label = "modeIndicator")
     Column(
-        Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 4.dp, vertical = 6.dp),
+        Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 10.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
@@ -334,7 +334,7 @@ private fun FollowPill(following: Boolean, onClick: () -> Unit, modifier: Modifi
             .clip(shape)
             .then(if (following) Modifier.border(1.dp, Color.White.copy(alpha = 0.5f), shape) else Modifier.background(Accent))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
     )
 }
 
@@ -569,7 +569,7 @@ private fun Overlay(
                                 .clip(RoundedCornerShape(50))
                                 .background(Color.Black.copy(alpha = 0.4f))
                                 .clickable { onTag(raw) }
-                                .padding(horizontal = 10.dp, vertical = 4.dp),
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
                         )
                     }
                 }

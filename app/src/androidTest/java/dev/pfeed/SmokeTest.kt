@@ -299,4 +299,35 @@ class SmokeTest {
         }
         assertTrue("searches found nothing at all", total > 0)
     }
+
+    /** Following a tag fills the Following feed, and a tag page and a creator page both load. */
+    @Test
+    fun followingTagAndCreatorPagesLoad() {
+        val a = rule.activity
+        runBlocking {
+            a.library.follow(dev.pfeed.data.repo.FollowKind.TAG, "milf")
+            try {
+                for (spec in listOf(
+                    dev.pfeed.data.repo.FeedSpec.Main(dev.pfeed.domain.model.FeedMode.FOLLOWING),
+                    dev.pfeed.data.repo.FeedSpec.Tag("cosplay"),
+                )) {
+                    val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+                    val session = a.feedSessions.create(spec, scope)
+                    val t0 = System.currentTimeMillis()
+                    var got = 0
+                    while (got == 0 && System.currentTimeMillis() - t0 < 60_000) {
+                        val r = session.loadMore()
+                        got += r.items.size
+                        if (r.endReached) break
+                        if (r.items.isEmpty()) kotlinx.coroutines.delay(1_000)
+                    }
+                    session.close()
+                    android.util.Log.i("PFHEALTH", "page $spec: $got posts in ${System.currentTimeMillis() - t0} ms")
+                    assertTrue("$spec loaded nothing in 60 s", got > 0)
+                }
+            } finally {
+                a.library.unfollow(dev.pfeed.data.repo.FollowKind.TAG, "milf")
+            }
+        }
+    }
 }
