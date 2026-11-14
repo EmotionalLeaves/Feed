@@ -93,7 +93,10 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
                         val first = items.first()
                         val how = when (val st = resolveStream(first)) {
                             is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load"
-                            is StreamInfo.Embed -> "plays in embed"
+                            is StreamInfo.Embed -> {
+                                val page = attempt { http.getRaw(id, first.pageUrl) }.getOrNull()
+                                "plays in embed (video page ${page?.length?.div(1024) ?: "?"} KB, \"${page?.let { Regex("<title[^>]*>([^<]{0,50})", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1)?.trim() }}\")"
+                            }
                             else -> st.javaClass.simpleName
                         }
                         "${items.size} videos, $how"
