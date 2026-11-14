@@ -26,6 +26,7 @@ class MainActivity : FragmentActivity() {
     /** For the on-device health test: the same check Settings → Sources runs. */
     @Inject lateinit var sourceChecker: dev.pfeed.source.SourceChecker
     @Inject lateinit var sourceRegistry: dev.pfeed.source.SourceRegistry
+    @Inject lateinit var tubeAdapter: dev.pfeed.source.tube.TubeAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.

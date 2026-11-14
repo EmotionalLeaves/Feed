@@ -40,7 +40,9 @@ class RedditAdapter @Inject constructor(
     // Reddit rate-limits anonymous readers hard (429 after a handful of quick requests, checked
     // live). Each request already brings up to 50 posts, so ask for few subreddits at a time.
     override val maxConcurrency = 1
-    override val entriesPerExtend = 3
+    override val entriesPerExtend = 2
+    // Requests wait their turn (one every 6 s); allow for that on top of the request itself.
+    override val entryTimeoutMs = 20_000L
     // All subreddits are one site: when Reddit starts answering 429, rest it as a whole.
     override fun groupOf(entry: String) = "reddit.com"
 
@@ -52,8 +54,9 @@ class RedditAdapter @Inject constructor(
     private var lastRequestAt = 0L
 
     /**
-     * Reddit's anonymous limit is roughly ten requests a minute per address and it answers 429 well
-     * before the feed would notice on its own; space requests out so the limit is never hit.
+     * Reddit's anonymous limit is ten requests a minute per address and it answers 429 well before
+     * the feed would notice on its own; one request every 6 s never hits it. Each brings up to 100
+     * posts, so that's still far more than anyone scrolls.
      */
     private suspend fun paced(url: String): String = pace.withLock {
         val wait = MIN_GAP_MS - (System.currentTimeMillis() - lastRequestAt)
@@ -132,10 +135,10 @@ class RedditAdapter @Inject constructor(
     }
 
     companion object {
-        private const val MIN_GAP_MS = 2_500L
+        private const val MIN_GAP_MS = 6_000L
         private val LISTINGS = listOf("hot", "hot", "top", "new")
         private val TOP_WINDOWS = listOf("week", "month", "year", "all")
-        private const val PAGE = 50
+        private const val PAGE = 100
         /** Pages deep per subreddit per pass (~500 posts). */
         private const val MAX_DEPTH = 10
         private const val SUBS_PER_SEARCH = 50

@@ -262,6 +262,7 @@ class SmokeTest {
         results.forEach { (name, r, ms) ->
             android.util.Log.i("PFHEALTH", "${if (r?.ok == true) "OK  " else "FAIL"} $name (${ms} ms): ${r?.detail ?: "no answer in 90 s"}")
         }
+        runBlocking { rule.activity.tubeAdapter.siteReport() }.forEach { (site, line) -> android.util.Log.i("PFHEALTH", "  tube $site: $line") }
         val working = results.count { it.second?.ok == true && it.second?.detail?.startsWith("Nothing added") != true }
         assertTrue("only $working sources working: " + results.joinToString { "${it.first}=${it.second?.detail}" }, working >= 3)
     }

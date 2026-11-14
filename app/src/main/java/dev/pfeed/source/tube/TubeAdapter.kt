@@ -51,6 +51,30 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
 
     private val resolved = ConcurrentHashMap<String, StreamInfo>()
 
+    /**
+     * One line per site: does its newest page list videos, and does the first one play directly
+     * (or only through the site's embed)? For diagnostics (the on-device health test).
+     */
+    suspend fun siteReport(): List<Pair<String, String>> = coroutineScope {
+        TubeSite.ALL.map { site ->
+            async {
+                site.label to (withTimeoutOrNull(30_000) {
+                    runCatching {
+                        val items = site.items(site.parseList(http.getRaw(id, site.listUrl("new", 0))), "new")
+                        if (items.isEmpty()) return@runCatching "lists nothing"
+                        val first = items.first()
+                        val how = when (val st = resolveStream(first)) {
+                            is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load"
+                            is StreamInfo.Embed -> "plays in embed"
+                            else -> st.javaClass.simpleName
+                        }
+                        "${items.size} videos, $how"
+                    }.getOrElse { "error: ${it.message?.take(80)}" }
+                } ?: "no answer in 30 s")
+            }
+        }.awaitAll()
+    }
+
     override suspend fun resolveStream(item: MediaItem): StreamInfo {
         if (item.extras["resolve"] != "tube") return super.resolveStream(item)
         resolved[item.key]?.let { return it }
