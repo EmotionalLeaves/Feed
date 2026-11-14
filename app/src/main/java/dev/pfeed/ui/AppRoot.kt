@@ -39,8 +39,7 @@ import dev.pfeed.ui.feed.FeedScreen
 import dev.pfeed.ui.library.LibraryScreen
 import dev.pfeed.ui.lock.LockScreen
 import dev.pfeed.ui.search.SearchScreen
-import dev.pfeed.ui.settings.AdvancedScreen
-import dev.pfeed.ui.settings.InterestsScreen
+import dev.pfeed.ui.settings.TasteScreen
 import dev.pfeed.ui.settings.BlocklistScreen
 import dev.pfeed.ui.settings.SettingsScreen
 import dev.pfeed.ui.settings.SourcesScreen
@@ -54,8 +53,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val SOURCES = "settings/sources"
     const val BLOCKLIST = "settings/blocklist"
-    const val ADVANCED = "settings/advanced"
-    const val INTERESTS = "settings/interests"
+    const val TASTE = "settings/taste"
 
     fun tag(tag: String) = "tag/" + Uri.encode(tag)
     fun viewer(token: String) = "viewer/$token"
@@ -151,8 +149,7 @@ private fun MainNav(locked: Boolean) {
             composable(Routes.SETTINGS) { SettingsScreen(nav) }
             composable(Routes.SOURCES) { SourcesScreen(nav) }
             composable(Routes.BLOCKLIST) { BlocklistScreen(nav) }
-            composable(Routes.ADVANCED) { AdvancedScreen(nav) }
-            composable(Routes.INTERESTS) { InterestsScreen(nav) }
+            composable(Routes.TASTE) { TasteScreen(nav) }
         }
     }
 }

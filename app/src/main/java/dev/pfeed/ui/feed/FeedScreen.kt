@@ -209,8 +209,6 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     menuFor?.let { item ->
         ItemMenuSheet(
             item = item,
-            saved = item.key in saved,
-            followingCreator = vm.isFollowingCreator(item, follows),
             vm = vm,
             onDismiss = { menuFor = null },
         )
@@ -442,7 +440,8 @@ private fun FeedPage(
             muted = muted,
             followingCreator = followingCreator,
             isVideo = isVideo,
-            canFullscreen = true,
+            // Turning sideways is for video; a still or a comic page reads fine upright.
+            canFullscreen = isVideo || type == MediaType.EMBED,
             onLike = { vm.toggleLike(item) },
             onSave = { vm.toggleSave(item) },
             onMute = vm::toggleMute,

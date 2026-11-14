@@ -163,16 +163,21 @@ class SmokeTest {
         waitFor(what = "search screen") { exists("Search every source") && exists("Popular") }
 
         rule.onNodeWithText("Library").performClick()
-        waitFor(what = "library screen") { exists("Saved", substring = true) && exists("Blocked", substring = true) }
+        waitFor(what = "library screen") { exists("Saved", substring = true) && exists("Following", substring = true) }
 
         rule.onNodeWithText("Settings").performClick()
-        waitFor(what = "settings screen") { exists("Sources") && exists("Privacy") }
+        waitFor(what = "settings screen") { exists("Sources") && exists("App lock") }
 
-        // 5. Sources screen lists adapters and the quick-add bar.
+        // 5. Sources screen lists every source, the health check and the topic finder.
         rule.onNodeWithText("Sources").performClick()
-        waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Add more") && exists("feeds from", substring = true) }
+        waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Check sources") && exists("feeds from", substring = true) }
+        // Tapping a source opens its sheet with the one way to add to it.
+        tap("Reddit")
+        waitFor(what = "reddit sheet") { exists("Subreddit") }
+        androidx.test.espresso.Espresso.pressBack()
+        waitFor(what = "sheet closed") { !exists("Subreddit") }
         rule.onNodeWithContentDescription("Back").performClick()
-        waitFor(what = "back to settings") { exists("Privacy") }
+        waitFor(what = "back to settings") { exists("App lock") }
 
         rule.onNodeWithText("Feed").performClick()
         waitFor(what = "back on feed") { exists("For You") }

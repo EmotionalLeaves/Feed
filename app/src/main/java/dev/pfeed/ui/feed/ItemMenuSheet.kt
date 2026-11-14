@@ -56,13 +56,11 @@ import dev.pfeed.ui.common.openExternal
 @Composable
 fun ItemMenuSheet(
     item: MediaItem,
-    saved: Boolean,
-    followingCreator: Boolean,
     vm: FeedViewModel,
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var pickTag by remember { mutableStateOf<String?>(null) } // "block" | "follow"
+    var pickTag by remember { mutableStateOf<String?>(null) } // "block" while picking a tag to hide
     val creator = remember(item.key) { Display.creator(item) }
     val tags = remember(item.key) { Display.tags(item, max = 24) }
     val source = Display.source(item, vm.sourceName(item.sourceId))
@@ -70,14 +68,13 @@ fun ItemMenuSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         properties = ModalBottomSheetProperties(securePolicy = SecureFlagPolicy.SecureOn),
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 8.dp)) {
             val mode = pickTag
             if (mode != null) {
                 ListItem(
-                    headlineContent = {
-                        Text(if (mode == "block") "Hide posts tagged…" else "Follow a tag", fontWeight = FontWeight.Bold)
-                    },
+                    headlineContent = { Text("Hide posts tagged…", fontWeight = FontWeight.Bold) },
                     leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
                     modifier = Modifier.clickable { pickTag = null },
                 )
@@ -90,7 +87,7 @@ fun ItemMenuSheet(
                     tags.forEach { (label, raw) ->
                         AssistChip(
                             onClick = {
-                                if (mode == "block") vm.blockTag(raw) else vm.toggleFollowTag(raw)
+                                vm.blockTag(raw)
                                 onDismiss()
                             },
                             label = { Text("#$label") },
@@ -117,21 +114,14 @@ fun ItemMenuSheet(
             }
             HorizontalDivider()
 
-            MenuRow(if (saved) "Remove from saved" else "Save", Icons.Filled.Bookmark) { vm.toggleSave(item); onDismiss() }
+            // Save, like and follow live on the post itself; this menu is for the rest.
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
-            if (creator != null) {
-                MenuRow(if (followingCreator) "Unfollow @$creator" else "Follow @$creator", Icons.Filled.PersonAdd) {
-                    vm.toggleFollowCreator(item); onDismiss()
-                }
-            }
-            if (tags.isNotEmpty()) MenuRow("Follow a tag…", Icons.Filled.Tag) { pickTag = "follow" }
-            HorizontalDivider()
+            if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
             if (creator != null) {
                 MenuRow("Block @$creator", Icons.Filled.PersonOff, "Never show their posts") { vm.blockCreator(item); onDismiss() }
             }
-            if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
             MenuRow("Hide $source", Icons.Filled.VisibilityOff, "Never show posts from it") { vm.hideOrigin(item, source); onDismiss() }
-            HorizontalDivider()
+            HorizontalDivider(Modifier.padding(vertical = 4.dp))
             MenuRow("Open on $source", Icons.AutoMirrored.Filled.OpenInNew) { openExternal(context, item.pageUrl); onDismiss() }
             val report = vm.reportUrl(item)
             if (report != null) {

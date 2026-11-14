@@ -50,16 +50,17 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dev.pfeed.data.db.BlockEntity
 import dev.pfeed.data.db.FollowEntity
-import dev.pfeed.data.repo.BlockRepository
 import dev.pfeed.data.repo.FollowKind
 import dev.pfeed.data.repo.LibraryKind
 import dev.pfeed.data.repo.LibraryRepository
 import dev.pfeed.data.repo.TransientFeedHolder
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.ui.Routes
+import dev.pfeed.ui.common.EmptyState
 import dev.pfeed.ui.common.MediaGrid
+import dev.pfeed.ui.common.ScreenHeader
+import dev.pfeed.ui.common.SettingRow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -69,22 +70,19 @@ import javax.inject.Inject
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val library: LibraryRepository,
-    private val blocks: BlockRepository,
     private val holder: TransientFeedHolder,
 ) : ViewModel() {
     val saved: StateFlow<List<MediaItem>> = library.items(LibraryKind.SAVED).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val liked: StateFlow<List<MediaItem>> = library.items(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val history: StateFlow<List<MediaItem>> = library.items(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val follows: StateFlow<List<FollowEntity>> = library.followRows.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-    val blocked: StateFlow<List<BlockEntity>> = blocks.entries.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun open(items: List<MediaItem>, index: Int) = holder.put(items, index)
     fun unfollow(row: FollowEntity) = viewModelScope.launch { library.unfollow(FollowKind.valueOf(row.kind), row.value) }
-    fun unblock(row: BlockEntity) = viewModelScope.launch { blocks.unblock(row.kind, row.value) }
     fun clearHistory() = viewModelScope.launch { library.clearHistory() }
 }
 
-private val tabs = listOf("Saved", "Liked", "History", "Following", "Blocked")
+private val tabs = listOf("Saved", "Liked", "History", "Following")
 
 @Composable
 fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
@@ -94,17 +92,12 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     val liked by vm.liked.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
     val follows by vm.follows.collectAsStateWithLifecycle()
-    val blocked by vm.blocked.collectAsStateWithLifecycle()
-
-    val counts = listOf(saved.size, liked.size, history.size, follows.size, blocked.size)
+    val counts = listOf(saved.size, liked.size, history.size, follows.size)
 
     Column(Modifier.fillMaxSize()) {
-        Text(
-            "Library",
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp),
-        )
+        ScreenHeader("Library") {
+            if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
+        }
         ScrollableTabRow(
             selectedTabIndex = tab,
             edgePadding = 8.dp,
@@ -128,59 +121,27 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
         }
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index))) } }
         when (tab) {
-            0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on anything in the feed to keep it here.", openGrid(saved))
-            1 -> Grid(liked, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post, or tap the heart, to like it.", openGrid(liked))
-            2 -> Column {
-                if (history.isNotEmpty()) {
-                    TextButton(onClick = { confirmClear = true }, modifier = Modifier.padding(horizontal = 8.dp)) { Text("Clear history") }
+            0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here for later.", openGrid(saved))
+            1 -> Grid(liked, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(liked))
+            2 -> Grid(history, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(history))
+            else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
+                if (follows.isEmpty()) item {
+                    EmptyState(Icons.Filled.PersonAdd, "Not following anyone", "Tap Follow next to a creator, or open a tag and follow it. Their posts fill the Following feed.")
                 }
-                Grid(history, Icons.Filled.History, "No history", "Posts you watch show up here.", openGrid(history))
-            }
-            3 -> LazyColumn {
-                if (follows.isEmpty()) item { Empty(Icons.Filled.PersonAdd, "Not following anything", "Tap Follow next to a creator, or open a tag and follow it.") }
                 items(follows, key = { it.kind + ":" + it.value }) { row ->
                     val isTag = row.kind == FollowKind.TAG.name
-                    ListItem(
-                        headlineContent = { Text(if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}") },
-                        supportingContent = { Text(if (isTag) "Tag" else "Creator") },
-                        leadingContent = { Icon(if (isTag) Icons.Filled.Tag else Icons.Filled.Person, contentDescription = null) },
-                        trailingContent = { TextButton(onClick = { vm.unfollow(row) }) { Text("Unfollow") } },
+                    SettingRow(
+                        if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}",
+                        subtitle = if (isTag) "Tag" else "Creator",
+                        icon = if (isTag) Icons.Filled.Tag else Icons.Filled.Person,
                         // Tags open their feed; creators open a feed searching every source for them.
-                        modifier = Modifier.clickable { nav.navigate(Routes.tag(row.value)) },
-                    )
-                }
-            }
-            else -> LazyColumn {
-                if (blocked.isEmpty()) item { Empty(Icons.Filled.Block, "Nothing blocked", "Hide a tag, creator or source from the ⋯ menu on any post.") }
-                items(blocked, key = { it.kind + ":" + it.value }) { row ->
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                when (row.kind) {
-                                    "TAG" -> "#${row.value.replace('_', ' ')}"
-                                    "CREATOR" -> "@${row.value}"
-                                    "ORIGIN" -> row.value.substringAfter(':')
-                                    else -> "A post you hid"
-                                },
-                            )
-                        },
-                        supportingContent = {
-                            Text(
-                                when (row.kind) {
-                                    "ITEM" -> "Not interested"
-                                    "TAG" -> "Blocked tag"
-                                    "ORIGIN" -> "Hidden source"
-                                    else -> "Blocked creator"
-                                },
-                            )
-                        },
-                        trailingContent = { TextButton(onClick = { vm.unblock(row) }) { Text("Unblock") } },
+                        onClick = { nav.navigate(Routes.tag(row.value)) },
+                        trailing = { TextButton(onClick = { vm.unfollow(row) }) { Text("Unfollow") } },
                     )
                 }
             }
         }
     }
-
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
@@ -195,19 +156,5 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
 
 @Composable
 private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit) {
-    if (items.isEmpty()) Empty(icon, title, hint) else MediaGrid(items, onOpen)
-}
-
-@Composable
-private fun Empty(icon: ImageVector, title: String, hint: String) {
-    Column(
-        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Icon(icon, contentDescription = null, tint = Color.White.copy(alpha = 0.35f), modifier = Modifier.size(48.dp))
-        Spacer(Modifier.height(12.dp))
-        Text(title, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(4.dp))
-        Text(hint, style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f), textAlign = TextAlign.Center)
-    }
+    if (items.isEmpty()) EmptyState(icon, title, hint) else MediaGrid(items, onOpen)
 }
