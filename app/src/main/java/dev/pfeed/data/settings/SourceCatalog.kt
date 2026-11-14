@@ -270,18 +270,20 @@ object SourceCatalog {
     // ── nhentai ─────────────────────────────────────────────────────────────────
 
     /** "query|sort" in the site's own search syntax. Nothing age-adjacent; lolicon/shotacon are excluded on every query. */
-    val nhentaiQueries: List<String> = buildList {
-        for (sort in listOf("popular-week", "popular", "recent")) add("language:english|$sort")
-        val tags = listOf(
+    /** Comic tags (nhentai's slugs), shared by the comic sites. */
+    val comicTags: List<String> = listOf(
             "milf", "big-breasts", "anal", "nakadashi", "sole-female", "group", "ahegao", "netorare", "yuri",
             "futanari", "stockings", "glasses", "bondage", "cheating", "swimsuit", "full-color", "uncensored",
             "sex-toys", "dark-skin", "gyaru", "elf", "monster-girl", "catgirl", "demon-girl", "maid", "nurse",
             "office-lady", "blowjob", "paizuri", "double-penetration", "mind-control", "femdom", "tomboy",
             "muscle", "huge-breasts", "big-ass", "ponytail", "kimono", "bikini", "x-ray", "cunnilingus",
             "multi-work-series", "western", "3d", "bbw", "mature", "harem", "mind-break", "drugs",
-        )
-        for (t in tags) add("tag:$t language:english|popular")
-        for (t in tags.take(16)) add("tag:$t|popular-week")
+    )
+
+    val nhentaiQueries: List<String> = buildList {
+        for (sort in listOf("popular-week", "popular", "recent")) add("language:english|$sort")
+        for (t in comicTags) add("tag:$t language:english|popular")
+        for (t in comicTags.take(16)) add("tag:$t|popular-week")
     }
 
     // ── Reddit ──────────────────────────────────────────────────────────────────

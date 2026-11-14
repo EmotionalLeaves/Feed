@@ -33,14 +33,16 @@ class LiveProbeTest {
     private fun flat(h: String) = h.replace(Regex("\\s+"), " ")
     @Test
     fun probe() {
-        for (u in listOf("https://imhentai.xxx/", "https://imhentai.xxx/search/?key=milf&page=1", "https://e-hentai.org/?f_search=milf", "https://hitomi.la/", "https://hentai2read.com/hentai-list/", "https://www.hentaifox.com/", "https://nhentai.to/")) probe("list $u") {
-            val (c, h) = get(u); "$c len=${h.length} title=${Regex("<title>([^<]{0,60})").find(h)?.groupValues?.get(1)} :: " + flat(around(h, "/gallery/", 300, 500))
+        for (site in dev.pfeed.source.comics.ComicSite.ALL) for (term in listOf("", "milf", "big breasts")) probe("${site.label} '$term'") {
+            val (c, h) = get(site.listUrl(term, 1))
+            val l = dev.pfeed.source.comics.ComicSite.parseList(site, h)
+            val first = l.firstOrNull()
+            val g = first?.let { dev.pfeed.source.comics.ComicSite.gallery(site, it, get(site.galleryUrl(it.id)).second) }
+            "$c n=${l.size} first=$first gallery=${g?.title} pages=${g?.pages?.size} p1=${g?.pages?.firstOrNull()} ${g?.pages?.firstOrNull()?.let { head(it) }} tags=${g?.tags?.take(12)}"
         }
-        val home = get("https://imhentai.xxx/").second
-        val g = Regex("href=\"(/gallery/\\d+/)\"").find(home)?.groupValues?.get(1)
-        if (g != null) probe("imh gallery") { val h = get("https://imhentai.xxx$g").second; "len=${h.length} " + flat(around(h, "load_dir", 200, 600)) + " || " + flat(around(h, "g_th", 0, 400)) }
-        val fox = get("https://www.hentaifox.com/").second
-        val fg = Regex("href=\"(/gallery/\\d+/)\"").find(fox)?.groupValues?.get(1)
-        if (fg != null) probe("fox gallery") { val h = get("https://www.hentaifox.com$fg").second; "len=${h.length} " + flat(around(h, "load_dir", 200, 600)) + " || " + flat(around(h, "g_th", 0, 400)) }
+        val h = get("https://imhentai.xxx/gallery/1778947/").second
+        probe("imh tags area") { flat(around(h, "/tag/", 600, 900)) }
+        val f = get("https://hentaifox.com/gallery/177483/").second
+        probe("fox fields") { flat(around(f, "load_", 100, 900)) + " :: " + flat(around(f, "/tag/", 300, 500)) + " :: pages " + flat(around(f, "Pages", 100, 200)) }
     }
 }

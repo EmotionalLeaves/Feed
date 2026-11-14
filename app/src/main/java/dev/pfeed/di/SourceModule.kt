@@ -59,5 +59,8 @@ abstract class SourceModule {
     abstract fun tube(adapter: dev.pfeed.source.tube.TubeAdapter): SourceAdapter
 
     @Binds @IntoSet
+    abstract fun comics(adapter: dev.pfeed.source.comics.ComicAdapter): SourceAdapter
+
+    @Binds @IntoSet
     abstract fun nhentai(adapter: dev.pfeed.source.nhentai.NhentaiAdapter): SourceAdapter
 }

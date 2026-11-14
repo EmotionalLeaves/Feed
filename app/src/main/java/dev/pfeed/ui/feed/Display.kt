@@ -57,6 +57,7 @@ object Display {
             "redgifs" -> "RedGIFs"
             "nhentai" -> "nhentai"
             "tube" -> dev.pfeed.source.tube.TubeSite.byHost(host)?.label ?: host
+            "comics" -> dev.pfeed.source.comics.ComicSite.byHost(host)?.label ?: host
             "kemono" -> when {
                 host.startsWith("coomer") -> "Coomer"
                 host.startsWith("kemono") -> "Kemono"

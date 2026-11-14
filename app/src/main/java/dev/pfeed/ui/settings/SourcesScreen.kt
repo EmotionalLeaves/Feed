@@ -110,7 +110,7 @@ import dev.pfeed.ui.theme.Warn
 private val USER_FILLED = listOf("rss", "direct", "json", "local")
 
 /** Display order: the big built-in sources first, in roughly the order people use them. */
-private val ORDER = listOf("tube", "reddit", "redgifs", "booru", "kemono", "nhentai", "philomena", "mastodon", "api") + USER_FILLED
+private val ORDER = listOf("tube", "reddit", "redgifs", "booru", "kemono", "nhentai", "comics", "philomena", "mastodon", "api") + USER_FILLED
 
 private fun iconFor(id: String): ImageVector = when (id) {
     "tube" -> Icons.Filled.Videocam
@@ -118,7 +118,7 @@ private fun iconFor(id: String): ImageVector = when (id) {
     "redgifs" -> Icons.Filled.Gif
     "booru" -> Icons.Filled.Image
     "kemono" -> Icons.Filled.Person
-    "nhentai" -> Icons.AutoMirrored.Filled.MenuBook
+    "nhentai", "comics" -> Icons.AutoMirrored.Filled.MenuBook
     "philomena" -> Icons.Filled.Brush
     "mastodon" -> Icons.Filled.Public
     "rss" -> Icons.Filled.RssFeed
@@ -528,6 +528,7 @@ private fun BuiltInContents(id: String) {
     val lines: List<String> = when (id) {
         "redgifs" -> listOf("${SourceCatalog.redgifsTerms.size} trending category feeds.")
         "nhentai" -> listOf("${SourceCatalog.nhentaiQueries.size} tag feeds. Every gallery opens as a comic you swipe through.")
+        "comics" -> listOf(dev.pfeed.source.comics.ComicSite.ALL.joinToString(" · ") { it.label } + ": newest and ${SourceCatalog.comicTags.size} tags each. Every gallery opens as a comic.")
         "kemono" -> listOf("Creator posts from coomer and kemono, including image sets as galleries.")
         "philomena" -> listOf("derpibooru.org and furbooru.org.")
         else -> emptyList()
@@ -765,6 +766,7 @@ internal fun feedCount(id: String, s: AppSettings): Int? = when (id) {
     "redgifs" -> SourceCatalog.redgifsTerms.size
     "tube" -> TubeSite.ALL.size * SourceCatalog.tubeSections.size
     "nhentai" -> SourceCatalog.nhentaiQueries.size
+    "comics" -> dev.pfeed.source.comics.ComicSite.ALL.size * (SourceCatalog.comicTags.size + 1)
     else -> null
 }
 
@@ -783,6 +785,7 @@ internal fun feedSummary(id: String, s: AppSettings): String? = when (id) {
     "redgifs" -> "${SourceCatalog.redgifsTerms.size} trending categories"
     "tube" -> "${TubeSite.ALL.size} video sites"
     "nhentai" -> "${SourceCatalog.nhentaiQueries.size} comic feeds"
+    "comics" -> dev.pfeed.source.comics.ComicSite.ALL.joinToString(" + ") { it.label }
     "philomena" -> "derpibooru + furbooru"
     "rss" -> if (s.rssFeeds.isEmpty()) "Add any RSS or Atom feed" else "${s.rssFeeds.size} feeds"
     "direct" -> if (s.directUrls.isEmpty()) "Paste a video or image link" else "${s.directUrls.size} links"
