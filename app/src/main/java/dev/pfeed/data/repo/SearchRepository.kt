@@ -10,6 +10,7 @@ import dev.pfeed.source.SourceRegistry
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.channelFlow
+import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -114,10 +115,15 @@ class SearchRepository @Inject constructor(
         }
     }
 
-    private suspend fun searchOne(a: SourceAdapter, query: String): Result<List<MediaItem>> = try {
-        val got = ArrayList<MediaItem>()
+    /**
+     * One source's results within [PER_SOURCE_TIMEOUT_MS], hard. The work runs detached and is only
+     * awaited for that long: a source busy parsing (or ignoring cancellation) can't hold the search
+     * past its budget, and whatever pages it already returned are kept.
+     */
+    private suspend fun searchOne(a: SourceAdapter, query: String): Result<List<MediaItem>> {
+        val got = java.util.Collections.synchronizedList(ArrayList<MediaItem>())
         var failure: Exception? = null
-        val finished = withTimeoutOrNull(PER_SOURCE_TIMEOUT_MS) {
+        val work = detached.async {
             var cursor: String? = null
             do {
                 val page = try {
@@ -131,19 +137,20 @@ class SearchRepository @Inject constructor(
                 got += page.items
                 cursor = page.nextCursor
             } while (cursor != null && got.size < MAX_PER_SOURCE)
-            true
         }
-        when {
-            got.isNotEmpty() -> Result.success(got.toList())
+        val finished = withTimeoutOrNull(PER_SOURCE_TIMEOUT_MS) { work.await(); true }
+        if (finished == null) work.cancel()
+        val items = synchronized(got) { got.toList() }
+        return when {
+            items.isNotEmpty() -> Result.success(items)
             failure != null -> Result.failure(failure!!)
             finished == null -> Result.failure(Exception("didn't answer in time"))
             else -> Result.success(emptyList())
         }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        Result.failure(e)
     }
+
+    /** Where per-source search work runs, outside the search's own scope (see [searchOne]). */
+    private val detached = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
     companion object {
         private const val PER_SOURCE_TIMEOUT_MS = 14_000L
