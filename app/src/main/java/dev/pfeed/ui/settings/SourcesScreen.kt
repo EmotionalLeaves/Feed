@@ -463,7 +463,7 @@ private fun SourceSheet(
             AddTo(a.id, vm, onPickFolder)
             if (a.id == "booru") BoardKeys(vm, keyHosts) { openExternal(context, it) }
             Entries(a.id, s, vm)
-            BuiltInContents(a.id)
+            if (a.id == "tube") TubeSites(vm) else BuiltInContents(a.id)
         }
     }
 }
@@ -496,10 +496,36 @@ private fun AddSection(title: String, content: @Composable () -> Unit) {
 
 /** What a built-in source pulls from, for the ones whose list isn't editable. */
 @Composable
+private fun TubeSites(vm: SettingsViewModel) {
+    val report by vm.tubeReport.collectAsStateWithLifecycle()
+    val checking = report.isNotEmpty() && report.values.any { it == null }
+    Section(
+        "Sites",
+        footer = "Each site in ${SourceCatalog.tubeSections.size} sections: newest, top and ${SourceCatalog.tubeSections.size - 2} categories. " +
+            "Sites that hide their stream play in their own player.",
+    ) {
+        TubeSite.ALL.forEachIndexed { i, site ->
+            if (i > 0) RowDivider(indent = false)
+            val r = report[site.label]
+            SettingRow(
+                site.label,
+                below = when {
+                    report.isEmpty() -> null
+                    r == null -> ({ StatusLine("Checking…", TextLow) })
+                    else -> ({ StatusLine(r, if (r.contains("plays")) Good else Bad) })
+                },
+            )
+        }
+        RowDivider(indent = false)
+        Row(Modifier.padding(12.dp)) {
+            OutlinedButton(onClick = vm::checkTubeSites, enabled = !checking) { Text(if (checking) "Checking…" else "Check each site") }
+        }
+    }
+}
+
+@Composable
 private fun BuiltInContents(id: String) {
     val lines: List<String> = when (id) {
-        "tube" -> TubeSite.ALL.map { it.label }.let { listOf(it.joinToString(" · ")) } +
-            "Each in ${SourceCatalog.tubeSections.size} sections: newest, top and ${SourceCatalog.tubeSections.size - 2} categories."
         "redgifs" -> listOf("${SourceCatalog.redgifsTerms.size} trending category feeds.")
         "nhentai" -> listOf("${SourceCatalog.nhentaiQueries.size} tag feeds. Every gallery opens as a comic you swipe through.")
         "kemono" -> listOf("Creator posts from coomer and kemono, including image sets as galleries.")

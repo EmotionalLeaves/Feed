@@ -66,7 +66,17 @@ class SettingsViewModel @Inject constructor(
     private val feedHealth: dev.pfeed.data.repo.FeedHealthStore,
     private val checker: dev.pfeed.source.SourceChecker,
     private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
+    private val tube: dev.pfeed.source.tube.TubeAdapter,
 ) : ViewModel() {
+
+    /** Per-site result of checking the tube sites, by site label; null while checking. */
+    private val _tubeReport = MutableStateFlow<Map<String, String?>>(emptyMap())
+    val tubeReport: StateFlow<Map<String, String?>> = _tubeReport
+
+    fun checkTubeSites() {
+        _tubeReport.value = dev.pfeed.source.tube.TubeSite.ALL.associate { it.label to null }
+        viewModelScope.launch { _tubeReport.value = tube.siteReport().toMap() }
+    }
 
     /**
      * Sites of [sourceId] being left alone right now: not answering requests (down, rate-limiting),
