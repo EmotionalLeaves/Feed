@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.SdStorage
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
@@ -75,6 +76,7 @@ private sealed interface PendingDialog {
     data object PickDisguise : PendingDialog
     data object PickHistory : PendingDialog
     data object PickCache : PendingDialog
+    data object Gestures : PendingDialog
     data class ExportPassword(val uri: Uri) : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
@@ -207,6 +209,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SettingRow("Import settings", icon = Icons.Filled.Download, iconTint = TextLow, onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
             }
 
+            Section("Help") {
+                SettingRow("Gestures", subtitle = "Everything you can do on a post", icon = Icons.Filled.TouchApp, iconTint = TextLow, chevron = true, onClick = { dialog = PendingDialog.Gestures })
+            }
+
             Text(
                 "Feed ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
@@ -266,6 +272,31 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         is PendingDialog.ImportPassword -> PasswordDialog("Decrypt import", confirmTwice = false, onDismiss = { dialog = null }) {
             vm.importSettings(d.uri, it); dialog = null
         }
+        PendingDialog.Gestures -> AlertDialog(
+            onDismissRequest = { dialog = null },
+            properties = SecureDialog,
+            title = { Text("Gestures") },
+            text = {
+                Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                    listOf(
+                        "Swipe up / down" to "Next or previous post",
+                        "Tap" to "Pause or play",
+                        "Double-tap" to "Like",
+                        "Hold the right side of a video" to "Play at 2× while held",
+                        "Press and hold" to "More: hide, block, open, report",
+                        "Swipe left / right on a comic" to "Turn the page",
+                        "Tap @name or #tag" to "Everything by them, or with that tag",
+                        "Three fingers anywhere" to "Leave the app instantly",
+                    ).forEach { (g, what) ->
+                        Column {
+                            Text(g, style = MaterialTheme.typography.titleSmall)
+                            Text(what, style = MaterialTheme.typography.bodyMedium, color = dev.pfeed.ui.theme.TextMid)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { dialog = null }) { Text("Done") } },
+        )
         null -> Unit
     }
 }
