@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.1.0 — 2026-11-14
+
+Reddit galleries, durations, viewer titles
+
+- Reddit gallery posts now appear (their first picture at full size) instead of being skipped.
+- Video lengths show for XNXX, YouPorn and Tube8, and XVideos lengths over an hour are read correctly.
+- A list opened from Library or Search says what it is at the top ("Saved", "“milf”").
+- The home-screen name shows as Feed everywhere in Settings.
+
 ## 4.0.0 — 2026-11-14
 
 Redesign: fewer screens, one way to everything
