@@ -242,7 +242,8 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     val run: (String) -> Unit = { q -> focus.clearFocus(); vm.search(q) }
 
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(start = 12.dp, end = 4.dp, top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        dev.pfeed.ui.common.ScreenHeader("Search")
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextField(
                 value = ui.query,
                 onValueChange = vm::setQuery,
@@ -259,6 +260,9 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent,
                     disabledIndicatorColor = Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    cursorColor = Accent,
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { run(ui.query) }),
@@ -272,11 +276,19 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
         }
 
         Row(
-            Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp),
+            Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             TypeFilter.entries.forEach { t ->
-                FilterChip(selected = filters.type == t, onClick = { vm.setType(t) }, label = { Text(t.label) })
+                FilterChip(
+                    selected = filters.type == t,
+                    onClick = { vm.setType(t) },
+                    label = { Text(t.label) },
+                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = Accent,
+                        selectedLabelColor = Color.White,
+                    ),
+                )
             }
         }
 

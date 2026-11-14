@@ -62,7 +62,10 @@ class SmokeTest {
         val onScreen = runCatching {
             rule.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).fetchSemanticsNodes().flatMap { root ->
                 fun walk(n: androidx.compose.ui.semantics.SemanticsNode): List<String> =
-                    (n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.map { it.text } ?: emptyList()) + n.children.flatMap(::walk)
+                    run {
+                        val key = androidx.compose.ui.semantics.SemanticsProperties.Text
+                        if (key in n.config) n.config[key].map { t -> t.text } else emptyList()
+                    } + n.children.flatMap { c -> walk(c) }
                 walk(root)
             }.distinct().take(40).joinToString(" | ")
         }.getOrDefault("?")
