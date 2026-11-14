@@ -140,7 +140,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: ./gradlew --no-daemon connectedDebugAndroidTest || (adb logcat -d -s PFHEALTH:I; exit 1); adb logcat -d -s PFHEALTH:I
+          script: ./gradlew --no-daemon connectedDebugAndroidTest; code=$?; adb logcat -d -s PFHEALTH:I AndroidRuntime:E TestRunner:E; exit $code
 
       - name: Upload test reports
         if: always()
