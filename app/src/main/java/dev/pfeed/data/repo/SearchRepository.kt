@@ -81,6 +81,10 @@ class SearchRepository @Inject constructor(
         }
 
         val lock = Mutex()
+        // Each result is scored once. Sorting with relevance() as the comparator key re-scored items
+        // on every comparison, on every update: enough work to starve the whole background pool
+        // (measured: empty sources taking 9 s to answer, deadlines firing 40 s late).
+        val scores = HashMap<String, Double>()
         val collected = ArrayList<MediaItem>()
         val errors = ArrayList<String>()
         var pending = adapters.size
@@ -99,11 +103,12 @@ class SearchRepository @Inject constructor(
                         val allowed = list.filter(blocklist::allows)
                         if (allowed.isNotEmpty()) withResults++
                         collected += allowed
+                        allowed.forEach { item -> if (item.key !in scores) scores[item.key] = relevance(item) }
                     }.onFailure { e -> errors += "${a.displayName}: ${e.message ?: "failed"}" }
                     // Search is latency-bound: dedup on titles/durations plus any hashes already memoised.
                     val unique = Deduplicator().filter(collected, hasher.cached(collected))
                     SearchResult(
-                        items = unique.sortedByDescending(::relevance),
+                        items = unique.sortedByDescending { scores[it.key] ?: 0.0 },
                         errors = errors.toList(),
                         elapsedMs = System.currentTimeMillis() - started,
                         pending = pending,
