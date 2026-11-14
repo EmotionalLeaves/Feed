@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.10.0 — 2026-11-14
+
+Much less My Little Pony
+
+- **Why there was so much MLP:** the built-in *Derpibooru / Furbooru* source includes Derpibooru, which is a My Little Pony board (measured: every post is MLP; 66–78% even match an explicit pony-tag list). It's fast and never fails, so it always had items ready, and its very high community scores maxed out the For You quality bonus, so pony posts ranked above almost everything. Every search was also sent to Derpibooru ("milf" returned dozens of pony milfs). Furbooru adds more (6–22% of its explicit posts are MLP).
+- **Now:** My Little Pony is a niche that gets at most one slot in any 12 posts, wherever it comes from (Derpibooru, or MLP-tagged posts on any board). Derpibooru's scores no longer max out the quality bonus, and it's searched only when the search is about ponies. Nothing is removed: if you like, save or follow pony posts, For You opens the niche back up, and a pony tag page shows everything.
+- Comic sites and Eporner/xHamster/TNAFlix stream fixes from the last releases are all verified on the test device: all 13 sources and all 11 tube sites working.
+
 ## 4.9.0 — 2026-11-14
 
 More comics: IMHentai and HentaiFox
