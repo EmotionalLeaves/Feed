@@ -116,8 +116,10 @@ class SmokeTest {
     @Test
     fun feedShowsRealPostsAndKeepsScrolling() {
         val shown = rule.activity.mediaHealth.shownCount
+        val t0 = System.currentTimeMillis()
         try {
             poll(90_000, "a first post to display") { shown.get() >= 1 }
+            android.util.Log.i("PFHEALTH", "feed: first post on screen ${System.currentTimeMillis() - t0} ms after launch (cold, no saved posts)")
         } catch (e: AssertionError) {
             throw AssertionError("No post displayed in 90 s. What happened: ${rule.activity.mediaHealth.recentEvents()}")
         }
