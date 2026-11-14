@@ -27,6 +27,8 @@ data class SearchResult(
     val elapsedMs: Long,
     val pending: Int = 0,
     val sourcesWithResults: Int = 0,
+    /** How long each source took to answer (or give up), for diagnostics. */
+    val timings: Map<String, Long> = emptyMap(),
 ) {
     val done: Boolean get() = pending == 0
 }
@@ -81,12 +83,15 @@ class SearchRepository @Inject constructor(
         val errors = ArrayList<String>()
         var pending = adapters.size
         var withResults = 0
+        val timings = LinkedHashMap<String, Long>()
 
         send(SearchResult(emptyList(), emptyList(), 0, pending = pending))
         adapters.forEach { a ->
             launch {
+                val t0 = System.currentTimeMillis()
                 val r = searchOne(a, query)
                 val snapshot = lock.withLock {
+                    timings[a.id] = System.currentTimeMillis() - t0
                     pending--
                     r.onSuccess { list ->
                         val allowed = list.filter(blocklist::allows)
@@ -101,6 +106,7 @@ class SearchRepository @Inject constructor(
                         elapsedMs = System.currentTimeMillis() - started,
                         pending = pending,
                         sourcesWithResults = withResults,
+                        timings = LinkedHashMap(timings),
                     )
                 }
                 send(snapshot)

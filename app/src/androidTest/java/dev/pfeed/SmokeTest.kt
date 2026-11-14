@@ -293,7 +293,7 @@ class SmokeTest {
             val last = runBlocking { kotlinx.coroutines.withTimeoutOrNull(60_000) { repo.search(q).toList().lastOrNull() } }
             val bySource = last?.items.orEmpty().groupingBy { it.sourceId }.eachCount()
             total += last?.items?.size ?: 0
-            android.util.Log.i("PFHEALTH", "search \"$q\": ${last?.items?.size ?: 0} results in ${last?.elapsedMs} ms from $bySource; errors=${last?.errors?.take(4)}")
+            android.util.Log.i("PFHEALTH", "search \"$q\": ${last?.items?.size ?: 0} results in ${last?.elapsedMs} ms from $bySource; errors=${last?.errors?.take(4)} timings=${last?.timings}")
         }
         assertTrue("searches found nothing at all", total > 0)
     }

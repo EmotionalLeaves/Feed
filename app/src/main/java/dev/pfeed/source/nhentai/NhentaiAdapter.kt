@@ -38,8 +38,8 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
     override val id = SOURCE_ID
     override val displayName = "nhentai"
     override val requiresAuth = false
-    // The API allows about ten searches and fifteen gallery reads a minute per address; one
-    // request every 6.5 s keeps well inside both, and each listing brings 25 galleries.
+    // The API allows ten searches and fifteen gallery reads a minute per address; each endpoint is
+    // paced to its own limit, and each listing brings 25 galleries.
     override val maxConcurrency = 1
     override val entriesPerExtend = 1
     override val entryTimeoutMs = 40_000L
@@ -49,14 +49,21 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
 
     override suspend fun entries(): List<String> = SourceCatalog.nhentaiQueries
 
-    private val pace = kotlinx.coroutines.sync.Mutex()
-    private var lastRequestAt = 0L
-
-    private suspend fun paced(url: String): JsonElement = pace.withLock {
-        val wait = MIN_GAP_MS - (System.currentTimeMillis() - lastRequestAt)
-        if (wait > 0) kotlinx.coroutines.delay(wait)
-        try { http.get(id, url) } finally { lastRequestAt = System.currentTimeMillis() }
+    /** One request at a time per endpoint, spaced to that endpoint's limit. */
+    private class Pacer(private val gapMs: Long) {
+        private val lock = kotlinx.coroutines.sync.Mutex()
+        private var last = 0L
+        suspend fun <T> run(block: suspend () -> T): T = lock.withLock {
+            val wait = gapMs - (System.currentTimeMillis() - last)
+            if (wait > 0) kotlinx.coroutines.delay(wait)
+            try { block() } finally { last = System.currentTimeMillis() }
+        }
     }
+    private val searches = Pacer(SEARCH_GAP_MS)   // 10 a minute
+    private val details = Pacer(DETAIL_GAP_MS)    // 15 a minute
+
+    private suspend fun paced(url: String): JsonElement =
+        (if (url.contains("/api/v2/search")) searches else details).run { http.get(id, url) }
 
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         val query = entry.substringBefore('|')
@@ -72,7 +79,8 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        (attempt { enrich(parse(paced(searchUrl("$q $EXCLUDE", "popular", 1)))) }.getOrDefault(emptyList()) + poolMatches(query))
+        // No full reads here: search has to answer within seconds, and the listing is enough to open.
+        (attempt { parse(paced(searchUrl("$q $EXCLUDE", "popular", 1))) }.getOrDefault(emptyList()) + poolMatches(query))
             .distinctBy { it.key }
     }
 
@@ -93,7 +101,8 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
         internal const val EXCLUDE = "-tag:lolicon -tag:shotacon"
 
         private const val ENRICH_PER_PAGE = 2
-        private const val MIN_GAP_MS = 6_500L
+        private const val SEARCH_GAP_MS = 6_200L
+        private const val DETAIL_GAP_MS = 4_200L
 
         /**
          * Tag ids of "lolicon" and "shotacon" (looked up from /api/v2/tags/tag/{slug}). Listings
