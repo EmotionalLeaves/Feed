@@ -313,7 +313,7 @@ class FeedSession(
         val perOrigin = candidates.groupingBy { Spread.origin(it) }.eachCount().toMutableMap()
         items.shuffled().forEach { item ->
             val n = perSource[item.sourceId] ?: 0
-            if (n >= PER_SOURCE_POOL_CAP) return@forEach
+            if (n >= (SOURCE_POOL_CAPS[item.sourceId] ?: PER_SOURCE_POOL_CAP)) return@forEach
             val origin = Spread.origin(item)
             val o = perOrigin[origin] ?: 0
             if (o >= PER_ORIGIN_POOL_CAP) return@forEach
@@ -429,6 +429,12 @@ class FeedSession(
         private const val POOL_MAX = 120
         /** Most candidates one source may hold at once (~40% of POOL_TARGET), to keep the feed mixed. */
         private const val PER_SOURCE_POOL_CAP = 20
+        /**
+         * Tube sites are eleven sites behind one source and the app's main video supply; capped like a
+         * single site they made up about one post in eight. Each site is still held to
+         * [PER_ORIGIN_POOL_CAP], and For You learns from there whether you want videos.
+         */
+        private val SOURCE_POOL_CAPS = mapOf("tube" to 40)
         /** Most candidates one subreddit / board site / server may hold at once. */
         private const val PER_ORIGIN_POOL_CAP = 10
         /** Most images taken from one multi-image post per session. */
