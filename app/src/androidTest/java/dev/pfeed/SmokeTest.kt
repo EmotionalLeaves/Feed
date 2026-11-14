@@ -132,6 +132,14 @@ class SmokeTest {
         } catch (e: AssertionError) {
             throw AssertionError("Only ${shown.get()} posts displayed after $swipes swipes. What happened: ${rule.activity.mediaHealth.recentEvents()}")
         }
+        // Keep scrolling a while and log what showed and what failed: the mix of sites and the
+        // failure rate are what using the app feels like.
+        repeat(15) { swipeUpGesture(); repeat(8) { rule.mainClock.advanceTimeBy(250); Thread.sleep(150) } }
+        val events = rule.activity.mediaHealth.recentEvents()
+        events.forEach { android.util.Log.i("PFHEALTH", "  feed $it") }
+        android.util.Log.i("PFHEALTH", "feed: ${shown.get()} shown after ${swipes + 15} swipes, " +
+            "${events.count { it.startsWith("failed") }} of the last ${events.size} events failed, " +
+            "${events.filter { it.startsWith("shown") }.map { it.split(' ').getOrElse(1) { "" } }.distinct().size} different origins")
         assertTrue("activity still alive after scrolling", !rule.activity.isFinishing && !rule.activity.isDestroyed)
     }
 
