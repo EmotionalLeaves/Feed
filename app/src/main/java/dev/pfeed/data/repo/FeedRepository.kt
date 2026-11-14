@@ -331,7 +331,7 @@ class FeedSession(
      */
     private suspend fun fetch(a: SourceAdapter, cursor: String?, prefs: FeedPrefs): Result<Page<MediaItem>> = try {
         val tag = (spec as? FeedSpec.Tag)?.tag
-        Result.success(if (tag != null) a.search(tag.replace('_', ' '), cursor) else a.fetchFeed(cursor, prefs))
+        Result.success(if (tag != null) a.search(tag.removePrefix("@").replace('_', ' '), cursor) else a.fetchFeed(cursor, prefs))
     } catch (e: CancellationException) {
         throw e
     } catch (e: SourceException) {
@@ -375,9 +375,14 @@ class FeedSession(
             picked
         } else if (spec is FeedSpec.Tag) {
             val t = Features.normalizeTag(spec.tag)
+            // "@name" is a creator page: their own posts first, then what searching their name found.
+            val creatorName = spec.tag.takeIf { it.startsWith("@") }?.removePrefix("@")?.let(Blocklist::normalize)
             Spread.order(
                 candidates.sortedWith(
-                    compareByDescending<MediaItem> { item -> item.tags.any { Features.normalizeTag(it) == t } }
+                    compareByDescending<MediaItem> { item ->
+                        if (creatorName != null) item.creator?.let(Blocklist::normalize) == creatorName
+                        else item.tags.any { Features.normalizeTag(it) == t }
+                    }
                         .thenByDescending { it.publishedAt ?: Instant.EPOCH },
                 ),
                 recentShown,

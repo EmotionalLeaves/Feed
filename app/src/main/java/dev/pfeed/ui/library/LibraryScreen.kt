@@ -134,8 +134,8 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                         if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}",
                         subtitle = if (isTag) "Tag" else "Creator",
                         icon = if (isTag) Icons.Filled.Tag else Icons.Filled.Person,
-                        // Tags open their feed; creators open a feed searching every source for them.
-                        onClick = { nav.navigate(Routes.tag(row.value)) },
+                        // Tags open their feed; creators open their page (everything by them, every source).
+                        onClick = { nav.navigate(Routes.tag(if (isTag) row.value else "@" + row.value)) },
                         trailing = { TextButton(onClick = { vm.unfollow(row) }) { Text("Unfollow") } },
                     )
                 }

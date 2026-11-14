@@ -451,7 +451,20 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Whether the open tag page (or creator page, "@name") is followed. */
+    fun isFollowingPage(page: String, f: Follows): Boolean =
+        if (page.startsWith("@")) Blocklist.normalize(page.removePrefix("@")) in f.creators
+        else Blocklist.normalize(page) in f.tags
+
     fun toggleFollowTag(tag: String) {
+        if (tag.startsWith("@")) {
+            val name = tag.removePrefix("@")
+            viewModelScope.launch {
+                if (Blocklist.normalize(name) in follows.value.creators) library.unfollow(FollowKind.CREATOR, name)
+                else { library.follow(FollowKind.CREATOR, name); _messages.tryEmit("Following @$name") }
+            }
+            return
+        }
         viewModelScope.launch {
             if (Blocklist.normalize(tag) in follows.value.tags) {
                 library.unfollow(FollowKind.TAG, tag)

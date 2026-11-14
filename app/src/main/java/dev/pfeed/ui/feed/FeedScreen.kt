@@ -190,12 +190,12 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
 
         if (!landscape) TopBar(
-            title = vm.tag?.let { "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
+            title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.tag == null && !vm.isViewer,
             mode = mode,
             onMode = vm::setMode,
             onBack = if (vm.tag != null || vm.isViewer) ({ nav.popBackStack(); Unit }) else null,
-            followTag = vm.tag?.let { t -> (t to (t.lowercase() in follows.tags)) },
+            followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
         )
 
@@ -535,7 +535,8 @@ private fun Overlay(
                         fontWeight = FontWeight.ExtraBold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false),
+                        // Tap the name for everything by them, from every source.
+                        modifier = Modifier.weight(1f, fill = false).clip(RoundedCornerShape(6.dp)).clickable { onTag("@" + (item.creator ?: creator)) },
                     )
                     Spacer(Modifier.width(10.dp))
                     FollowPill(following = followingCreator, onClick = onFollow)
