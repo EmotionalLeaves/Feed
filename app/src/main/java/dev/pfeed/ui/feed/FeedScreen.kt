@@ -231,23 +231,23 @@ private fun FeedEmptyState(
 ) {
     Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (loading || hint == null) {
-            CircularProgressIndicator(color = Accent, strokeWidth = 3.dp)
-            Spacer(Modifier.height(20.dp))
-            Text("Loading your feed…", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            CircularProgressIndicator(Modifier.size(44.dp), color = Accent, strokeWidth = 4.dp, trackColor = Color.White.copy(alpha = 0.08f))
+            Spacer(Modifier.height(24.dp))
+            Text("Loading your feed", color = Color.White, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(6.dp))
             Text(
                 "Pulling from thousands of feeds",
-                color = Color.White.copy(alpha = 0.5f),
+                color = Color.White.copy(alpha = 0.55f),
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
             Text(
                 hint,
                 color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleLarge,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (canRefresh) {
                     Button(onClick = onRefresh, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Try again") }

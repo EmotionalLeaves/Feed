@@ -45,7 +45,9 @@ class LiveProbeTest {
         for (h in listOf("coomer.st", "n1.coomer.st", "n2.coomer.st", "n3.coomer.st", "n4.coomer.st", "img.coomer.st", "kemono.cr", "n1.kemono.cr", "n4.kemono.cr"))
             probe("dns $h") { java.net.InetAddress.getAllByName(h).joinToString { it.hostAddress ?: "?" } }
         probe("v4 only n1") {
-            val v4 = client.newBuilder().dns { host -> okhttp3.Dns.SYSTEM.lookup(host).filterIsInstance<java.net.Inet4Address>() }.build()
+            val v4 = client.newBuilder().dns(object : okhttp3.Dns {
+                override fun lookup(hostname: String): List<java.net.InetAddress> = okhttp3.Dns.SYSTEM.lookup(hostname).filterIsInstance<java.net.Inet4Address>()
+            }).build()
             v4.newCall(Request.Builder().url("https://n1.coomer.st/data$path").header("Range", "bytes=0-0").build()).execute().use { "${it.code} ${it.header("Content-Type")}" }
         }
         probe("with server param") { noFollow("https://coomer.st/data$path?f=x.jpg") }
