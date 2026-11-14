@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.9.0 — 2026-11-14
+
+More comics: IMHentai and HentaiFox
+
+- **New source: Comic sites** — IMHentai and HentaiFox, newest plus 60 tags each, alongside nhentai. Every gallery opens as a comic you swipe through, in the right format page by page.
+- Each gallery's own tag list is read before it's shown; anything the minors filter rejects (checked live: lolicon/shotacon galleries do appear in their listings) is dropped, and a gallery whose tags can't be read is never shown.
+- Searched by every search, too.
+
 ## 4.8.0 — 2026-11-14
 
 11 video sites
