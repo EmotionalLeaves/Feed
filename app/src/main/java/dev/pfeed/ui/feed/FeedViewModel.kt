@@ -77,6 +77,8 @@ class FeedViewModel @Inject constructor(
     val tag: String? = savedState.get<String>("tag")
     private val viewerToken: String? = savedState.get<String>("token")
     val isViewer: Boolean = viewerToken != null
+    /** Heading for a viewer opened from Library or Search. */
+    val viewerTitle: String? = viewerToken?.let { holder.title(it) }
 
     private val _mode = MutableStateFlow(FeedMode.FOR_YOU)
     val mode: StateFlow<FeedMode> = _mode

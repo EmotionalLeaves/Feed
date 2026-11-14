@@ -13,19 +13,28 @@ import javax.inject.Singleton
 class TransientFeedHolder @Inject constructor() {
     private val lists = LinkedHashMap<String, Pair<List<MediaItem>, Int>>()
     private val continuations = HashMap<String, String>()
+    private val titles = HashMap<String, String>()
 
     /**
      * [continueWith]: a search to keep going with once the list runs out (search results play on
      * as an endless feed of the same query instead of stopping at the last result).
      */
     @Synchronized
-    fun put(items: List<MediaItem>, start: Int, continueWith: String? = null): String {
+    fun put(items: List<MediaItem>, start: Int, continueWith: String? = null, title: String? = null): String {
         val token = UUID.randomUUID().toString()
         lists[token] = items to start
         if (continueWith != null) continuations[token] = continueWith
-        while (lists.size > 8) lists.remove(lists.keys.first()).also { continuations.keys.retainAll(lists.keys) }
+        if (title != null) titles[token] = title
+        while (lists.size > 8) lists.remove(lists.keys.first()).also {
+            continuations.keys.retainAll(lists.keys)
+            titles.keys.retainAll(lists.keys)
+        }
         return token
     }
+
+    /** What the list is ("Saved", a search), shown at the top of the viewer. */
+    @Synchronized
+    fun title(token: String): String? = titles[token]
 
     @Synchronized
     fun get(token: String): Pair<List<MediaItem>, Int>? = lists[token]

@@ -190,7 +190,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
 
         if (!landscape) TopBar(
-            title = vm.tag?.let { "#" + it.replace('_', ' ') },
+            title = vm.tag?.let { "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.tag == null && !vm.isViewer,
             mode = mode,
             onMode = vm::setMode,

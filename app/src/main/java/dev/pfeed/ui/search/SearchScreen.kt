@@ -218,7 +218,12 @@ class SearchViewModel @Inject constructor(
     fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY) }
 
     /** Opens the results at [index]; past the last one it keeps going as an endless feed of the search. */
-    fun open(index: Int): String = holder.put(visible.value, index, continueWith = _ui.value.searched?.takeIf { !_filters.value.active })
+    fun open(index: Int): String = holder.put(
+        visible.value,
+        index,
+        continueWith = _ui.value.searched?.takeIf { !_filters.value.active },
+        title = _ui.value.searched?.let { "“$it”" },
+    )
 }
 
 /** Shown before the first search when nothing has been learned yet. */

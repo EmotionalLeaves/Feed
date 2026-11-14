@@ -100,7 +100,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         if (uri != null) dialog = PendingDialog.ImportPassword(uri)
     }
 
-    val disguiseOptions = listOf(Disguise.NONE to "PrivateFeed", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator")
+    val disguiseOptions = listOf(Disguise.NONE to "Feed", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator")
     val on = sources.filter { it.enabled }
     val feeds = on.sumOf { feedCount(it.adapter.id, s) ?: 1 }
 
@@ -186,7 +186,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 RowDivider()
                 SettingRow(
                     "Home screen icon",
-                    value = disguiseOptions.firstOrNull { it.first == s.disguise }?.second ?: "PrivateFeed",
+                    value = disguiseOptions.firstOrNull { it.first == s.disguise }?.second ?: "Feed",
                     icon = Icons.Filled.Apps,
                     iconTint = Good,
                     onClick = { dialog = PendingDialog.PickDisguise },
@@ -202,13 +202,13 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             Section("Backup", footer = "Saved as a file encrypted with a password you choose. Your PIN, sign-ins and history aren't included.") {
-                SettingRow("Export settings", icon = Icons.Filled.Upload, iconTint = TextLow, onClick = { exportLauncher.launch("privatefeed-settings.json") })
+                SettingRow("Export settings", icon = Icons.Filled.Upload, iconTint = TextLow, onClick = { exportLauncher.launch("feed-settings.json") })
                 RowDivider()
                 SettingRow("Import settings", icon = Icons.Filled.Download, iconTint = TextLow, onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
             }
 
             Text(
-                "PrivateFeed ${BuildConfig.VERSION_NAME}",
+                "Feed ${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextLow,
                 textAlign = TextAlign.Center,

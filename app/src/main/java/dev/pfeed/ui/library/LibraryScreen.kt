@@ -77,7 +77,7 @@ class LibraryViewModel @Inject constructor(
     val history: StateFlow<List<MediaItem>> = library.items(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val follows: StateFlow<List<FollowEntity>> = library.followRows.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun open(items: List<MediaItem>, index: Int) = holder.put(items, index)
+    fun open(items: List<MediaItem>, index: Int, title: String) = holder.put(items, index, title = title)
     fun unfollow(row: FollowEntity) = viewModelScope.launch { library.unfollow(FollowKind.valueOf(row.kind), row.value) }
     fun clearHistory() = viewModelScope.launch { library.clearHistory() }
 }
@@ -119,7 +119,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                 )
             }
         }
-        val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index))) } }
+        val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
         when (tab) {
             0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here for later.", openGrid(saved))
             1 -> Grid(liked, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(liked))
