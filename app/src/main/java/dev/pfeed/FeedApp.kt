@@ -29,6 +29,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
 
     override fun onCreate() {
         super.onCreate()
+        CrashLog.install(this)
         lockManager.attach()
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {
             settings.flow.collect { dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns }
