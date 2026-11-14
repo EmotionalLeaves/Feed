@@ -38,6 +38,8 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.layout.width
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
@@ -134,29 +136,32 @@ fun LockScreen(lock: AppLockManager) {
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(Icons.Filled.Lock, contentDescription = null, modifier = Modifier.size(40.dp))
-            Spacer(Modifier.height(16.dp))
+            Box(
+                Modifier.size(64.dp).background(dev.pfeed.ui.theme.AccentSoft, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Filled.Lock, contentDescription = null, tint = dev.pfeed.ui.theme.Accent, modifier = Modifier.size(30.dp)) }
+            Spacer(Modifier.height(20.dp))
             Text(
                 when (stage) {
                     Stage.ENTER -> "Enter PIN"
                     Stage.CREATE -> "Create a PIN"
                     Stage.CONFIRM -> "Confirm PIN"
                 },
-                style = MaterialTheme.typography.titleLarge,
+                style = MaterialTheme.typography.headlineSmall,
             )
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 repeat(maxOf(MIN_PIN, pin.length)) { i ->
                     Box(
                         Modifier
                             .size(14.dp)
-                            .border(1.dp, MaterialTheme.colorScheme.onBackground, CircleShape)
-                            .background(if (i < pin.length) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.background, CircleShape),
+                            .border(1.5.dp, if (i < pin.length) dev.pfeed.ui.theme.Accent else dev.pfeed.ui.theme.TextLow, CircleShape)
+                            .background(if (i < pin.length) dev.pfeed.ui.theme.Accent else Color.Transparent, CircleShape),
                     )
                 }
             }
             Spacer(Modifier.height(12.dp))
-            Text(message ?: " ", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+            Text(message ?: " ", color = dev.pfeed.ui.theme.Bad, style = MaterialTheme.typography.bodyMedium)
             Spacer(Modifier.height(24.dp))
             val rows = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("bio", "0", "del"))
             rows.forEach { row ->
@@ -172,17 +177,22 @@ fun LockScreen(lock: AppLockManager) {
                                 }
                                 else -> TextButton(
                                     onClick = { if (pin.length < MAX_PIN) pin += key },
-                                    modifier = Modifier.size(72.dp),
+                                    modifier = Modifier.size(72.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
                                     shape = CircleShape,
-                                ) { Text(key, fontSize = 28.sp, fontWeight = FontWeight.Light) }
+                                ) { Text(key, fontSize = 28.sp, fontWeight = FontWeight.Normal, color = MaterialTheme.colorScheme.onBackground) }
                             }
                         }
                     }
                 }
             }
             Spacer(Modifier.height(8.dp))
-            TextButton(onClick = ::submit, enabled = pin.isNotEmpty() && !busy) {
-                Text(if (stage == Stage.ENTER) "Unlock" else "OK", style = MaterialTheme.typography.titleMedium)
+            androidx.compose.material3.Button(
+                onClick = ::submit,
+                enabled = pin.length >= MIN_PIN && !busy,
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = dev.pfeed.ui.theme.Accent),
+                modifier = Modifier.width(220.dp).height(50.dp),
+            ) {
+                Text(if (stage == Stage.ENTER) "Unlock" else "Continue", style = MaterialTheme.typography.titleMedium)
             }
         }
     }

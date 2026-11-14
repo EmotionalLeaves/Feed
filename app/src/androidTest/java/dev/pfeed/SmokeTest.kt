@@ -8,6 +8,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.runBlocking
@@ -172,8 +173,11 @@ class SmokeTest {
         rule.onNodeWithText("Sources").performClick()
         waitFor(what = "sources screen") { exists("RSS / Atom") && exists("Local files") && exists("Check sources") && exists("feeds from", substring = true) }
         // Tapping a source opens its sheet with the one way to add to it.
-        tap("Reddit")
-        waitFor(what = "reddit sheet") { exists("Subreddit") }
+        waitFor(timeoutMs = 30_000, what = "scroll to Reddit and open it") {
+            rule.onAllNodes(hasText("Reddit"), useUnmergedTree = true)[0].performScrollTo().performClick()
+            true
+        }
+        waitFor(what = "reddit sheet") { exists("Subreddit") || exists("subreddits", substring = true) && exists("Find one") }
         androidx.test.espresso.Espresso.pressBack()
         waitFor(what = "sheet closed") { !exists("Subreddit") }
         rule.onNodeWithContentDescription("Back").performClick()

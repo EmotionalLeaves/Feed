@@ -2,6 +2,9 @@ package dev.pfeed.ui
 
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -107,10 +110,13 @@ private fun MainNav(locked: Boolean) {
 
     Scaffold(
         bottomBar = {
-            if (currentTab != null) {
+            if (currentTab != null) Column {
+                // Flat bar on the app background with a hairline on top: reads as part of the app,
+                // not a separate slab, and turns pure black over the feed.
+                if (!immersive) HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 NavigationBar(
-                    containerColor = if (immersive) Color.Black else NavigationBarDefaults.containerColor,
-                    tonalElevation = if (immersive) 0.dp else NavigationBarDefaults.Elevation,
+                    containerColor = if (immersive) Color.Black else MaterialTheme.colorScheme.background,
+                    tonalElevation = 0.dp,
                 ) {
                     tabs.forEach { tab ->
                         NavigationBarItem(
@@ -121,7 +127,7 @@ private fun MainNav(locked: Boolean) {
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Color.White,
                                 selectedTextColor = Color.White,
-                                indicatorColor = Accent.copy(alpha = 0.35f),
+                                indicatorColor = Accent.copy(alpha = 0.22f),
                                 unselectedIconColor = Color.White.copy(alpha = 0.55f),
                                 unselectedTextColor = Color.White.copy(alpha = 0.55f),
                             ),
