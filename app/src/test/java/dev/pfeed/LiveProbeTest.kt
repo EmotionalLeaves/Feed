@@ -45,7 +45,9 @@ class LiveProbeTest {
             "4tube" to "https://www.4tube.com/videos",
         )
         for ((name, url) in pages) {
-            val (c, h) = runCatching { get(url) }.getOrElse { probe(name) { "EXC ${it.message}" }; continue }
+            val got = runCatching { get(url) }
+            if (got.isFailure) { probe(name) { "EXC ${got.exceptionOrNull()?.message}" }; continue }
+            val (c, h) = got.getOrThrow()
             probe("$name list") { "$c len=${h.length} title=${Regex("<title>([^<]{0,60})").find(h)?.groupValues?.get(1)}" }
             val href = when (name) {
                 "motherless" -> Regex("href=\"(https://motherless.com/[A-Z0-9]{7})\"").find(h)?.groupValues?.get(1)
@@ -59,7 +61,9 @@ class LiveProbeTest {
             }
             probe("$name item") { "$href :: " + flat(around(h, href?.substringAfter(".com")?.take(30) ?: "zzzz", 400, 700)) }
             if (href != null) {
-                val (c2, p) = runCatching { get(href) }.getOrElse { probe("$name page") { "EXC ${it.message}" }; continue }
+                val pg = runCatching { get(href) }
+                if (pg.isFailure) { probe("$name page") { "EXC ${pg.exceptionOrNull()?.message}" }; continue }
+                val (c2, p) = pg.getOrThrow()
                 probe("$name page") { "$c2 len=${p.length} m3u8=${Regex("https?:[^\"' ]+\\.m3u8[^\"' ]*").find(p.replace("\\/", "/"))?.value?.take(150)} mp4=${Regex("https?:[^\"' ]+\\.mp4[^\"' ]*").find(p.replace("\\/", "/"))?.value?.take(150)}" }
             }
         }
