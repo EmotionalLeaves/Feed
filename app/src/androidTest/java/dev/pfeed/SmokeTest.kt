@@ -341,9 +341,9 @@ class SmokeTest {
     @Test
     fun forYouMix() {
         val a = rule.activity
-        runBlocking {
+        for (mode in listOf(dev.pfeed.domain.model.FeedMode.FOR_YOU, dev.pfeed.domain.model.FeedMode.LATEST)) runBlocking {
             val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
-            val session = a.feedSessions.create(dev.pfeed.data.repo.FeedSpec.Main(dev.pfeed.domain.model.FeedMode.FOR_YOU), scope)
+            val session = a.feedSessions.create(dev.pfeed.data.repo.FeedSpec.Main(mode), scope)
             val got = ArrayList<dev.pfeed.domain.model.MediaItem>()
             val t0 = System.currentTimeMillis()
             while (got.size < 60 && System.currentTimeMillis() - t0 < 90_000) {
@@ -354,7 +354,7 @@ class SmokeTest {
             session.close()
             val bySource = got.groupingBy { it.sourceId }.eachCount().entries.sortedByDescending { it.value }.joinToString { "${it.key}=${it.value}" }
             val byType = got.groupingBy { if (it.isGallery) "comic" else it.type.name.lowercase() }.eachCount()
-            android.util.Log.i("PFHEALTH", "for you: ${got.size} posts in ${System.currentTimeMillis() - t0} ms; by source: $bySource; by type: $byType; origins: ${got.map { dev.pfeed.domain.reco.Spread.origin(it) }.distinct().size}")
+            android.util.Log.i("PFHEALTH", "$mode: ${got.size} posts in ${System.currentTimeMillis() - t0} ms; by source: $bySource; by type: $byType; origins: ${got.map { dev.pfeed.domain.reco.Spread.origin(it) }.distinct().size}")
             assertTrue("For You served nothing", got.isNotEmpty())
         }
     }
