@@ -370,9 +370,12 @@ class FeedSession(
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {
                 val pickedKeys = picked.mapTo(HashSet()) { it.key }
+                // Score each once; as a sort key it would be recomputed on every comparison.
                 val keep = candidates.filter { it.key !in pickedKeys }
-                    .sortedByDescending { ranker.baseScore(it, aff.tags, aff.creators, now) }
+                    .map { it to ranker.baseScore(it, aff.tags, aff.creators, now) }
+                    .sortedByDescending { it.second }
                     .take(POOL_MAX)
+                    .map { it.first }
                 candidates.clear(); candidateKeys.clear()
                 keep.forEach { candidates += it; candidateKeys += it.key }
                 pooledAt.keys.retainAll(candidateKeys)
