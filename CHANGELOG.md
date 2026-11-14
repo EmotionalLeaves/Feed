@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.5.0 — 2026-11-14
+
+Faster search, smoother feed
+
+- **Search is about 5× faster.** Sorting results re-scored every item on every comparison, which ate the phone's background threads: empty sources took 9 s to answer and a search could run a minute. Each result is now scored once, and each source gets a hard deadline. Measured on a test device: 600–670 results from 7 sources in 10–14 s, most sources answering in under 6 s.
+- **The feed's own work moved off the main thread** (ranking, de-duplication, thumbnail matching), so swiping isn't competing with it.
+- An empty **Following** feed offers *Browse For You* instead of a retry button.
+- Tag chips drop prefixes like language:, artist:, parody: (comic tags read and search as plain names).
+
 ## 4.4.0 — 2026-11-14
 
 Search works across every source
