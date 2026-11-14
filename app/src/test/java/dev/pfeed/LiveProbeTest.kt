@@ -34,20 +34,15 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val tl = get("https://www.tnaflix.com/new/1").second
-        probe("tna block") { flat(around(tl, "data-vid=", 0, 1800)) }
-        val th = Regex("href=\"(https://www.tnaflix.com/[^\"]+/video\\d+)\"").find(tl)!!.groupValues[1]
-        val tp = get(th).second
-        probe("tna mp4s") { Regex("https?:[^\"' ]+\\.mp4[^\"' ]*").findAll(tp).map { it.value.take(130) }.distinct().take(8).toList().toString() }
-        probe("tna source") { flat(around(tp, "<source", 0, 700)) }
-        val pl = get("https://www.porntrex.com/latest-updates/").second
-        probe("ptx block") { flat(around(pl, "data-item-id=", 0, 2200)) }
-        val ph = Regex("href=\"(https://www.porntrex.com/video/[^\"]+)\"").find(pl)!!.groupValues[1]
-        val pp = get(ph).second
-        probe("ptx flashvars") { flat(around(pp, "flashvars", 0, 1600)) }
-        val yl = get("https://www.youjizz.com/newest-clips/1.html").second
-        probe("yj block") { flat(around(yl, "class=\"video-thumb\"", 0, 1800)) }
-        val yh = "https://www.youjizz.com" + Regex("href=\"(/videos/[^\"]+\\.html)\"").find(yl)!!.groupValues[1]
-        probe("yj enc") { flat(around(get(yh).second, "dataEncodings", 0, 900)) }
+        for (site in listOf(TubeSite.Tnaflix, TubeSite.Porntrex, TubeSite.Youjizz)) for (sec in listOf("new", "top", "milf", "big tits")) probe("${site.label} $sec") {
+            val (c, b) = get(site.listUrl(sec, 1))
+            val l = site.parseList(b)
+            "$c n=${l.size} durs=${l.count { it.durationSec != null }} thumbs=${l.count { it.thumb != null }} first=${l.firstOrNull()?.let { "${it.title?.take(30)} ${it.pageUrl}" }}"
+        }
+        for (site in listOf(TubeSite.Tnaflix, TubeSite.Porntrex, TubeSite.Youjizz)) probe("${site.label} stream") {
+            val v = site.parseList(get(site.listUrl("new", 0)).second).first()
+            val st = site.stream(get(v.pageUrl).second)
+            "$st ${st?.let { head(it.url) }}"
+        }
     }
 }

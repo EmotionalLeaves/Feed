@@ -57,7 +57,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz) }
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { site ->
             (listOf(site.host) + site.mirrors).any { host == it || host.endsWith(".$it") }
         }
@@ -449,7 +449,98 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun embedUrl(id: String) = "https://embed.redtube.com/?id=$id"
     }
 
-    // ── Eporner (official API; plays through its embed) ─────────────────────
+    // ── TNAFlix, Porntrex, YouJizz (HTML listings; plain MP4s on the video page) ──
+
+    /** Listing pages split into one chunk per video at each [marker] occurrence. */
+    protected fun chunks(body: String, marker: Regex): List<Pair<String, String>> {
+        val hits = marker.findAll(body).toList()
+        return hits.mapIndexed { i, m ->
+            m.groupValues[1] to body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 6000))
+        }
+    }
+
+    /** Best "quality → url" pick up to 1080p (4K is too heavy for a phone feed). */
+    protected fun best(options: List<Pair<Int, String>>): TubeStream? =
+        options.filter { it.first in 1..1080 && it.second.startsWith("http") }.maxByOrNull { it.first }?.let { TubeStream(it.second, "video/mp4") }
+
+    object Tnaflix : TubeSite("tnaflix.com", "TNAFlix") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.tnaflix.com/new/${page + 1}"
+            "top" -> "https://www.tnaflix.com/toprated/${page + 1}"
+            else -> "https://www.tnaflix.com/search?what=${enc(section)}&page=${page + 1}"
+        }
+        private val MARK = Regex("""<div data-vid="(\d+)"""")
+        private val HREF = Regex("""href="(https://www\.tnaflix\.com/[^"]+/video\d+)"""")
+        private val IMG = Regex("""<img[^>]*\bsrc="(https://[^"]+\.jpg[^"]*)"""")
+        private val ALT = Regex("""<img[^>]*\balt="([^"]*)"""")
+        private val DUR = Regex("""video-duration">\s*([\d:]+)""")
+        private val SOURCE = Regex("""<source src="([^"]+)" type="video/mp4" size="(\d+)"""")
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
+            val href = HREF.find(c)?.groupValues?.get(1) ?: return@mapNotNull null
+            TubeVideo(id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let(::unescape), duration(DUR.find(c)?.groupValues?.get(1)))
+        }.distinctBy { it.id }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            best(SOURCE.findAll(pageHtml).map { it.groupValues[2].toInt() to unescape(it.groupValues[1]) }.toList())
+        override fun embedUrl(id: String) = "https://player.tnaflix.com/video/$id"
+    }
+
+    object Porntrex : TubeSite("porntrex.com", "Porntrex") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.porntrex.com/latest-updates/${page + 1}/"
+            "top" -> "https://www.porntrex.com/top-rated/${page + 1}/"
+            else -> "https://www.porntrex.com/search/${enc(section).replace("+", "-")}/${page + 1}/"
+        }
+        private val MARK = Regex("""data-item-id="(\d+)"""")
+        private val HREF = Regex("""href="(https://www\.porntrex\.com/video/[^"]+)"""")
+        private val IMG = Regex("""data-src="(//[^"]+\.jpg[^"]*)"""")
+        private val ALT = Regex("""\balt="([^"]*)"""")
+        private val DUR = Regex("""class="durations">(?:<i[^>]*></i>)?\s*([\d:]+)""")
+        // KVS flashvars: video_url / video_alt_url / video_alt_url2… with matching *_text "720p HD"
+        private val URLS = Regex("""\b(video(?:_alt)?_url\d*):\s*'(https://[^']+)'""")
+        private fun textOf(html: String, key: String) =
+            Regex("""\b${key}_text:\s*'(\d+)p""").find(html)?.groupValues?.get(1)?.toIntOrNull()
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
+            val href = HREF.find(c)?.groupValues?.get(1) ?: return@mapNotNull null
+            TubeVideo(id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let { "https:" + unescape(it) }, duration(DUR.find(c)?.groupValues?.get(1)))
+        }.distinctBy { it.id }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            best(URLS.findAll(pageHtml).mapNotNull { m -> textOf(pageHtml, m.groupValues[1])?.let { it to m.groupValues[2] } }.toList())
+        override fun embedUrl(id: String) = "https://www.porntrex.com/embed/$id"
+    }
+
+    object Youjizz : TubeSite("youjizz.com", "YouJizz") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.youjizz.com/newest-clips/${page + 1}.html"
+            "top" -> "https://www.youjizz.com/top-rated-week/${page + 1}.html"
+            else -> "https://www.youjizz.com/search/${enc(section).replace("+", "-")}-${page + 1}.html"
+        }
+        private val MARK = Regex("""<a data-video-id="(\d+)"""")
+        private val HREF = Regex("""href=['"](/videos/[^'"]+\.html)['"]""")
+        private val IMG = Regex("""data-original="(//[^"]+)"""")
+        private val TITLE = Regex("""agego-content-title">([^<]+)<""")
+        private val DUR = Regex("""class="time">.*?([\d:]{4,})""", RegexOption.DOT_MATCHES_ALL)
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
+            val href = HREF.find(c)?.groupValues?.get(1) ?: return@mapNotNull null
+            TubeVideo(id, TITLE.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), "https://www.youjizz.com$href", IMG.find(c)?.groupValues?.get(1)?.let { "https:" + unescape(it) }, duration(DUR.find(c)?.groupValues?.get(1)))
+        }.distinctBy { it.id }
+
+        override fun stream(pageHtml: String): TubeStream? {
+            val arr = jsonAfter(pageHtml, "dataEncodings")?.let { runCatching { json.parseToJsonElement(it).jsonArray }.getOrNull() } ?: return null
+            return best(arr.mapNotNull { it as? JsonObject }.mapNotNull { o ->
+                val f = o["filename"]?.jsonPrimitive?.contentOrNull?.let(::unescape)?.takeIf { !it.contains(".m3u8") } ?: return@mapNotNull null
+                val q = o["quality"]?.jsonPrimitive?.contentOrNull?.toIntOrNull() ?: return@mapNotNull null
+                q to (if (f.startsWith("//")) "https:$f" else f)
+            })
+        }
+        override fun embedUrl(id: String) = "https://www.youjizz.com/videos/embed/$id"
+    }
+
+    // ── Eporner (official API; plays its MP4s via the embed page's hash) ───
 
     object Eporner : TubeSite("eporner.com", "Eporner") {
         override fun listUrl(section: String, page: Int): String {

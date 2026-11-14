@@ -232,4 +232,31 @@ class TubeSitesTest {
         val hex = "01" + "39300000" + enc.joinToString("") { "%02x".format(it) }
         assertEquals(url, TubeSite.Xhamster.decipher(hex))
     }
+
+    @Test
+    fun `tnaflix porntrex youjizz listings and streams`() {
+        val tna = """<div data-vid="26301181" data-num="1" class="col-xs-6"> <a class="thumb" href="https://www.tnaflix.com/amateur-porn/How-Do-I/video26301181" data-trailer="https://cdnl.tnaflix.com/t.mp4"> <img fetchpriority="high" src="https://cdnl.tnaflix.com/thumb/a/10.jpg" alt="How Do I Taste" width="300" /> <div class="thumb-icon video-duration">04:52</div> </a></div> <div data-vid="2" class="x"><a href="https://www.tnaflix.com/a/b/video2"><img src="https://c/2.jpg" alt="Two"></a></div>"""
+        val t = TubeSite.Tnaflix.parseList(tna)
+        assertEquals(listOf("26301181", "2"), t.map { it.id })
+        assertEquals("How Do I Taste", t[0].title)
+        assertEquals(292, t[0].durationSec)
+        assertEquals("https://cdnl.tnaflix.com/thumb/a/10.jpg", t[0].thumb)
+        val tp = """<source src="https://c/a-720p.mp4?s=1" type="video/mp4" size="720"> <source src="https://c/a-480p.mp4" type="video/mp4" size="480">"""
+        assertEquals("https://c/a-720p.mp4?s=1", TubeSite.Tnaflix.stream(tp)!!.url)
+
+        val ptx = """<div class="video-item" data-item-id="3401497"><a href="https://www.porntrex.com/video/3401497/aliya" class="thumb"><img class="cover lazyload"data-src="//ptx.cdntrex.com/s/5.jpg?v=3" alt="Aliya Brynn" /></a><div class="durations"><i class="fa fa-clock-o"></i> 36:17</div></div>"""
+        val p = TubeSite.Porntrex.parseList(ptx).single()
+        assertEquals("https://ptx.cdntrex.com/s/5.jpg?v=3", p.thumb)
+        assertEquals(36 * 60 + 17, p.durationSec)
+        val fv = """flashvars = { video_url: 'https://www.porntrex.com/get_file/4/a/1.mp4/', video_url_text: '480p', video_alt_url: 'https://www.porntrex.com/get_file/4/b/1_720p.mp4/', video_alt_url_text: '720p HD', video_alt_url2: 'https://www.porntrex.com/get_file/4/c/1_1080p.mp4/', video_alt_url2_text: '1080p FHD', video_alt_url3: 'https://www.porntrex.com/get_file/4/d/1_2160p.mp4/', video_alt_url3_text: '2160p 4K' }"""
+        assertEquals("https://www.porntrex.com/get_file/4/c/1_1080p.mp4/", TubeSite.Porntrex.stream(fv)!!.url)
+
+        val yj = """<div class="video-thumb" data-videoId="128969651"> <a data-video-id="128969651" class="frame video" href="/videos/had-a-date-128969651.html"> <img class="img-responsive lazy" src="spacer.gif" data-original="//cdne-pics.youjizz.com/c/5.jpg" alt="" /></a> <div class="video-title"> <a href='/videos/had-a-date-128969651.html' class="agego-content-title">Had a date</a> </div> <span class="time"><i class="fa fa-clock-o"></i>&nbsp;29:50</span>"""
+        val y = TubeSite.Youjizz.parseList(yj).single()
+        assertEquals("Had a date", y.title)
+        assertEquals("https://www.youjizz.com/videos/had-a-date-128969651.html", y.pageUrl)
+        assertEquals(29 * 60 + 50, y.durationSec)
+        val enc = """var dataEncodings = [{"quality":"360","filename":"\/\/cdne-mobile.youjizz.com\/v-360.mp4?h=1"},{"quality":"1080","filename":"\/\/cdne-mobile.youjizz.com\/v-1080.mp4?h=2"},{"quality":"360","filename":"\/\/abre.youjizz.com\/_hls\/master.m3u8"}];"""
+        assertEquals("https://cdne-mobile.youjizz.com/v-1080.mp4?h=2", TubeSite.Youjizz.stream(enc)!!.url)
+    }
 }
