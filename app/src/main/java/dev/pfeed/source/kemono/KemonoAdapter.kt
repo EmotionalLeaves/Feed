@@ -57,8 +57,7 @@ class KemonoAdapter @Inject constructor(
         val offset = token?.toIntOrNull() ?: 0
         val root = api("https://$host/api/v1/posts?o=$offset")
         val posts = postsArray(root)
-        val items = posts.flatMap { post -> itemsFromPost(host, post) }
-        requireFilesReachable(host, items)
+        val items = playable(host, posts.flatMap { post -> itemsFromPost(host, post) })
         // Stop when the API returns an empty page; otherwise step one page deeper.
         val next = if (posts.isEmpty() || offset >= MAX_OFFSET) null else (offset + PAGE).toString()
         return EntryPage(items, next)
@@ -72,7 +71,7 @@ class KemonoAdapter @Inject constructor(
             runCatching {
                 val root = api("https://$host/api/v1/posts?q=${URLEncoder.encode(q, "UTF-8")}&o=0")
                 // Same check as the feed: don't return results whose files can't load right now.
-                postsArray(root).flatMap { itemsFromPost(host, it) }.also { requireFilesReachable(host, it) }
+                playable(host, postsArray(root).flatMap { itemsFromPost(host, it) })
             }.getOrDefault(emptyList())
         }
         (remote + poolMatches(query)).distinctBy { it.key }
@@ -86,11 +85,24 @@ class KemonoAdapter @Inject constructor(
      * with spinners, so check one file (first byte only) every few minutes and report the outage
      * as what it is instead.
      */
-    private suspend fun requireFilesReachable(host: String, items: List<MediaItem>) {
+    /**
+     * [items] as they can be shown right now. When the file servers answer, as they are. When they
+     * don't (they're often down, and unreachable from some networks: checked from CI, where the
+     * nN.coomer.st servers time out while img.coomer.st answers), the pictures are still shown from
+     * the thumbnail server (up to 800 px), with the original kept for when it comes back. Only if
+     * nothing is left is the outage reported.
+     */
+    private suspend fun playable(host: String, items: List<MediaItem>): List<MediaItem> {
+        if (filesReachable(host, items)) return items
+        return thumbnailFallback(items).ifEmpty {
+            throw dev.pfeed.source.SourceException(id, "$host lists posts, but its file servers aren't responding (an outage on their side). Retrying every few minutes.")
+        }
+    }
+
+    private suspend fun filesReachable(host: String, items: List<MediaItem>): Boolean {
         // Two files from different posts (plus a thumbnail): one deleted upload isn't an outage.
-        val samples = (items.filter { it.type == MediaType.IMAGE } + items).mapNotNull { it.extras["media"] }.distinct().take(2) +
-            items.mapNotNull { it.thumbnailUrl }.filter { it.contains("/thumbnail/") }.take(1)
-        if (samples.isEmpty()) return
+        val samples = (items.filter { it.type == MediaType.IMAGE } + items).mapNotNull { it.extras["media"] }.distinct().take(3)
+        if (samples.isEmpty()) return true
         val now = System.currentTimeMillis()
         val cached = filesOk[host]?.takeIf { now - it.first < FILE_CHECK_EVERY_MS }
         // All samples at once, first success wins: checking them one after another could take
@@ -106,7 +118,7 @@ class KemonoAdapter @Inject constructor(
                 }
             }
         } ?: false).also { filesOk[host] = now to it }
-        if (!ok) throw dev.pfeed.source.SourceException(id, "$host lists posts, but its file servers aren't responding (an outage on their side). Retrying every few minutes.")
+        return ok
     }
 
     /**
@@ -130,6 +142,23 @@ class KemonoAdapter @Inject constructor(
 
     companion object {
         const val SOURCE_ID = "kemono"
+
+        private val DATA = Regex("""^https://([^/]+)/data/""")
+
+        /** https://{host}/data/… → https://img.{host}/thumbnail/data/… */
+        internal fun thumbnailOf(url: String): String? =
+            DATA.find(url)?.let { m -> url.replaceRange(m.range, "https://img.${m.groupValues[1]}/thumbnail/data/") }
+
+        /** Pictures only (videos have no thumbnail), served from the thumbnail server. */
+        internal fun thumbnailFallback(items: List<MediaItem>): List<MediaItem> = items.mapNotNull { item ->
+            if (item.type != MediaType.IMAGE) return@mapNotNull null
+            val original = item.extras["media"] ?: return@mapNotNull null
+            val thumb = thumbnailOf(original) ?: return@mapNotNull null
+            item.copy(
+                extras = item.extras + mapOf("media" to thumb, "full" to original),
+                pages = item.pages.map { thumbnailOf(it) ?: it },
+            )
+        }
 
         /** Old domains the sites moved away from (coomer.su stopped resolving in mid-2025). */
         private val MOVED = mapOf(

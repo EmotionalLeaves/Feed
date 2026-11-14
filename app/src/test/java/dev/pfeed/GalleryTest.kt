@@ -41,6 +41,19 @@ class GalleryTest {
     }
 
     @Test
+    fun `when coomer's file servers are down its pictures come from the thumbnail server`() {
+        val post = json.parseToJsonElement(
+            """{"id":"99","user":"ana","service":"onlyfans","file":{"path":"/a/cover.jpg"},
+                "attachments":[{"path":"/a/p1.jpg"},{"path":"/a/clip.mp4"}]}""",
+        ) as JsonObject
+        val shown = KemonoAdapter.thumbnailFallback(KemonoAdapter.itemsFromPost("coomer.st", post))
+        val set = shown.single() // the clip has no thumbnail to stand in for it
+        assertEquals("https://img.coomer.st/thumbnail/data/a/cover.jpg", set.extras["media"])
+        assertEquals("https://coomer.st/data/a/cover.jpg", set.extras["full"])
+        assertEquals(listOf("https://img.coomer.st/thumbnail/data/a/cover.jpg", "https://img.coomer.st/thumbnail/data/a/p1.jpg"), set.pages)
+    }
+
+    @Test
     fun `a single-image post stays a plain item`() {
         val post = json.parseToJsonElement("""{"id":"5","user":"u","service":"fansly","file":{"path":"/x.jpg"},"attachments":[]}""") as JsonObject
         val only = KemonoAdapter.itemsFromPost("coomer.st", post).single()
