@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.11.0 — 2026-11-14
+
+Smarter For You, unblockable DNS
+
+- **For You learns which sites and formats you like.** Every post now also teaches it where it's from and what it is (video, picture, GIF, comic), so if you always skip one site or only watch videos, you get less of the rest. They show in *Your taste* as "Posts from …" and "Videos".
+- **Fairer quality ranking.** Community scores now count relative to the same site's other posts, so sites with huge vote numbers no longer outrank everything (the same cause as the MLP flood). Posts without a date are no longer treated as old.
+- **Blocked by your network? Not any more, in most cases.** When the network's DNS refuses or sinkholes a site (ISPs in several countries, school/office filters, family-safety DNS), the app looks it up again privately over 1.1.1.1. *Settings → Privacy → Encrypted DNS* does this for every site, so the network can't see which ones you open.
+
 ## 4.10.0 — 2026-11-14
 
 Much less My Little Pony
