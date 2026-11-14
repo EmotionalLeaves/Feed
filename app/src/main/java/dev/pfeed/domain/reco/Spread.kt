@@ -9,7 +9,7 @@ import dev.pfeed.domain.model.MediaItem
  * Mastodon server, one site like Coomer or RedGIFs ([origin]). Within any [WINDOW] consecutive
  * items (counting what was already shown before this batch):
  *  - the same origin never appears twice in a row;
- *  - one origin fills at most [MAX_PER_ORIGIN] slots;
+ *  - one origin fills at most [MAX_PER_ORIGIN] slots, and one source at most [MAX_PER_SOURCE];
  *  - one creator fills at most [MAX_PER_CREATOR];
  *  - one post (a gallery of images) contributes at most one item;
  *  - a fandom niche ([Niche], e.g. My Little Pony) fills at most [MAX_PER_NICHE], unless opened.
@@ -18,7 +18,7 @@ import dev.pfeed.domain.model.MediaItem
  * when there's little to choose from.
  */
 class Spread(recent: List<MediaItem> = emptyList()) {
-    private class Keys(val origin: String, val post: String?, val creator: String?, val niche: String?)
+    private class Keys(val origin: String, val post: String?, val creator: String?, val niche: String?, val source: String)
 
     private val tail = ArrayDeque<Keys>(WINDOW + 1).apply { recent.takeLast(WINDOW).forEach { addLast(keys(it)) } }
 
@@ -29,6 +29,7 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         if (tail.lastOrNull()?.origin == k.origin) return 0
         if (k.post != null && tail.any { it.post == k.post }) return 1
         if (tail.count { it.origin == k.origin } >= MAX_PER_ORIGIN) return 2
+        if (tail.count { it.source == k.source } >= MAX_PER_SOURCE) return 2
         if (k.creator != null && tail.count { it.creator == k.creator } >= MAX_PER_CREATOR) return 2
         if (k.niche != null && k.niche !in openNiches && tail.count { it.niche == k.niche } >= MAX_PER_NICHE) return 2
         return 3
@@ -76,6 +77,11 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         const val WINDOW = 12
         const val MAX_PER_ORIGIN = 3
         const val MAX_PER_CREATOR = 2
+        /**
+         * One source (all its sites together) fills at most this many: measured, Latest was 53%
+         * Mastodon, whose dozens of servers each passed the per-origin rule.
+         */
+        const val MAX_PER_SOURCE = 4
         /** A fandom niche (see [Niche]) fills at most this many slots per window... */
         const val MAX_PER_NICHE = 1
 
@@ -93,7 +99,7 @@ class Spread(recent: List<MediaItem> = emptyList()) {
             else -> item.sourceId
         }
 
-        private fun keys(item: MediaItem) = Keys(origin(item), postKey(item), creatorKey(item), Niche.of(item))
+        private fun keys(item: MediaItem) = Keys(origin(item), postKey(item), creatorKey(item), Niche.of(item), item.sourceId)
 
         /** Items that came from one multi-image post share this. */
         fun postKey(item: MediaItem): String? = item.pageUrl.takeIf { it.isNotBlank() }
