@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.12.0 — 2026-11-14
+
+Crash reports
+
+- If the app ever closes unexpectedly, *Settings → Help* offers **Copy crash report** (app and Android version and where it failed, nothing you were viewing), so a problem can be pinned down instead of guessed at.
+- The per-site tube check now quotes what an empty site answered (a block page, a region notice), so you can tell a site that's down from one your region blocks.
+- Verified on the test device: all 11 tube sites list and play natively.
+
 ## 4.11.0 — 2026-11-14
 
 Smarter For You, unblockable DNS
