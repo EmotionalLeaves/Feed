@@ -24,6 +24,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
@@ -192,6 +193,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     icon = Icons.Filled.Apps,
                     iconTint = Good,
                     onClick = { dialog = PendingDialog.PickDisguise },
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Encrypted DNS",
+                    s.encryptedDns,
+                    subtitle = if (s.encryptedDns) "Every site is looked up privately over 1.1.1.1"
+                    else "Used automatically when your network blocks a site. On: always, so the network can't see which sites you open",
+                    icon = Icons.Filled.Shield,
+                    iconTint = Good,
+                    onChange = vm::setEncryptedDns,
                 )
                 RowDivider()
                 SettingRow(

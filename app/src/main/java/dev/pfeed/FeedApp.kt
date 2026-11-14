@@ -13,6 +13,7 @@ import dagger.hilt.android.HiltAndroidApp
 import dev.pfeed.security.AppLockManager
 import dev.pfeed.work.MaintenanceWorker
 import okhttp3.OkHttpClient
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltAndroidApp
@@ -21,6 +22,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     @Inject lateinit var workerFactory: HiltWorkerFactory
     @Inject lateinit var okHttpClient: OkHttpClient
     @Inject lateinit var lockManager: AppLockManager
+    @Inject lateinit var settings: dev.pfeed.data.settings.SettingsRepository
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -28,6 +30,9 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         lockManager.attach()
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {
+            settings.flow.collect { dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns }
+        }
         MaintenanceWorker.schedule(this)
     }
 

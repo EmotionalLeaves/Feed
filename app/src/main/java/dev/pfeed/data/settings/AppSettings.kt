@@ -61,6 +61,8 @@ data class AppSettings(
     val autoplayOnMobileData: Boolean = false,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
+    /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */
+    val encryptedDns: Boolean = false,
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),

@@ -202,6 +202,7 @@ class SettingsViewModel @Inject constructor(
     fun setAutoplayOnMobile(v: Boolean) = update { it.copy(autoplayOnMobileData = v) }
     fun setDefaultMute(v: Boolean) = update { it.copy(defaultMute = v) }
     fun setHistoryRetention(days: Int) = update { it.copy(historyRetentionDays = days) }
+    fun setEncryptedDns(v: Boolean) = update { it.copy(encryptedDns = v) }
     fun setLockTimeout(sec: Int) = update { it.copy(lockTimeoutSec = sec) }
 
     fun setDisguise(d: Disguise) {

@@ -54,6 +54,8 @@ object AppModule {
         // default made preloads and feed requests queue behind playback.
         .dispatcher(okhttp3.Dispatcher().apply { maxRequests = 96; maxRequestsPerHost = 16 })
         .connectionPool(okhttp3.ConnectionPool(16, 5, TimeUnit.MINUTES))
+        // Looks names up again over encrypted DNS when the network blocks or sinkholes them.
+        .dns(dev.pfeed.source.net.EncryptedDns)
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(45, TimeUnit.SECONDS)
