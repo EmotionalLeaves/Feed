@@ -236,7 +236,7 @@ class SettingsViewModel @Inject constructor(
     fun resetRecommendations() = viewModelScope.launch {
         signals.reset()
         _interests.value = signals.topInterests()
-        _messages.tryEmit("Recommendations reset")
+        _messages.tryEmit("For You will start learning again")
     }
 
     // ---- sources ----
@@ -280,7 +280,7 @@ class SettingsViewModel @Inject constructor(
 
     fun addMastodon(host: String, tag: String): Boolean {
         val h = host.trim()
-        if (h.isBlank() || h.contains(' ')) { _messages.tryEmit("Enter an instance host, e.g. mastodon.social"); return false }
+        if (h.isBlank() || h.contains(' ')) { _messages.tryEmit("Enter a server, e.g. mastodon.social"); return false }
         val feed = MastodonFeed(h, tag.trim().removePrefix("#").ifBlank { null })
         update { s -> if (feed in s.mastodonFeeds) s else s.copy(mastodonFeeds = s.mastodonFeeds + feed) }
         return true
@@ -289,7 +289,7 @@ class SettingsViewModel @Inject constructor(
 
     fun addBooru(host: String, tags: String): Boolean {
         val h = host.trim()
-        if (h.isBlank() || h.contains(' ')) { _messages.tryEmit("Enter a booru host, e.g. safebooru.donmai.us"); return false }
+        if (h.isBlank() || h.contains(' ')) { _messages.tryEmit("Enter a board, e.g. rule34.xxx"); return false }
         val feed = BooruFeed(h, tags.trim().ifBlank { null })
         update { s -> if (feed in s.booruFeeds) s else s.copy(booruFeeds = s.booruFeeds + feed) }
         return true
@@ -298,7 +298,7 @@ class SettingsViewModel @Inject constructor(
 
     fun addJson(feed: JsonFeed): Boolean {
         if (feed.name.isBlank() || feed.urlTemplate.toHttpUrlOrNull() == null || feed.itemsPath.isBlank()) {
-            _messages.tryEmit("Name, a valid URL and an items path are required")
+            _messages.tryEmit("Fill in a name, a valid URL and where the items are")
             return false
         }
         update { s -> s.copy(jsonFeeds = s.jsonFeeds.filterNot { it.name == feed.name } + feed) }

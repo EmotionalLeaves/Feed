@@ -59,7 +59,14 @@ class SmokeTest {
             }
             Thread.sleep(300)
         }
-        throw AssertionError("Failed waiting for: $what [${last?.javaClass?.simpleName}: ${last?.message?.take(200)}]", last)
+        val onScreen = runCatching {
+            rule.onAllNodes(androidx.compose.ui.test.isRoot(), useUnmergedTree = true).fetchSemanticsNodes().flatMap { root ->
+                fun walk(n: androidx.compose.ui.semantics.SemanticsNode): List<String> =
+                    (n.config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.map { it.text } ?: emptyList()) + n.children.flatMap(::walk)
+                walk(root)
+            }.distinct().take(40).joinToString(" | ")
+        }.getOrDefault("?")
+        throw AssertionError("Failed waiting for: $what [${last?.javaClass?.simpleName}: ${last?.message?.take(200)}] on screen: $onScreen", last)
     }
 
     /** Taps a text, retrying while the screen is too busy to be inspected. */
@@ -179,8 +186,8 @@ class SmokeTest {
         }
         waitFor(what = "reddit sheet") { exists("Subreddit") || exists("subreddits", substring = true) && exists("Find one") }
         androidx.test.espresso.Espresso.pressBack()
-        waitFor(what = "sheet closed") { !exists("Subreddit") }
-        rule.onNodeWithContentDescription("Back").performClick()
+        waitFor(what = "sheet closed, still on sources") { !exists("Subreddit") && exists("Check sources") }
+        waitFor(what = "tap back") { rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back"), useUnmergedTree = true)[0].performClick(); true }
         waitFor(what = "back to settings") { exists("App lock") }
 
         rule.onNodeWithText("Feed").performClick()

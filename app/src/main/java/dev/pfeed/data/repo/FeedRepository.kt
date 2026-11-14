@@ -117,12 +117,12 @@ class FeedSession(
         loads++
         val adapters = registry.enabledAdapters()
         if (adapters.isEmpty()) {
-            return LoadResult(emptyList(), emptyList(), endReached = true, hint = "No sources enabled. Add one in Settings → Sources.")
+            return LoadResult(emptyList(), emptyList(), endReached = true, hint = "All sources are turned off. Turn some on in Sources.")
         }
         val follows = library.followsOnce()
         val mode = (spec as? FeedSpec.Main)?.mode ?: FeedMode.LATEST
         if (mode == FeedMode.FOLLOWING && follows.isEmpty) {
-            return LoadResult(emptyList(), emptyList(), endReached = true, hint = "Follow a creator or tag to fill this feed.")
+            return LoadResult(emptyList(), emptyList(), endReached = true, hint = "Follow a creator or a tag and their posts show up here.")
         }
         val tag = (spec as? FeedSpec.Tag)?.tag?.let(Blocklist::normalize)
         val prefs = FeedPrefs(mode, tag, follows.creators, follows.tags)
@@ -174,7 +174,7 @@ class FeedSession(
         if (forYouMain) poolCache.save(candidates)
         val end = allDone && candidates.isEmpty() && batch.isEmpty()
         val hint = if (end && shown.isEmpty()) {
-            if (errors.isNotEmpty()) "Couldn't load anything. Check Settings → Sources." else "You have seen everything new for now. Tap Refresh in a bit."
+            if (errors.isNotEmpty()) "Nothing loaded. Check your connection, or see which sources are working." else "You're all caught up. Try again in a bit for new posts."
         } else null
         return LoadResult(batch, errors.distinct(), endReached = end, hint = hint)
     }
