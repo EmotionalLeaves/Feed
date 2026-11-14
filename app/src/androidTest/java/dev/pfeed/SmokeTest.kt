@@ -170,13 +170,13 @@ class SmokeTest {
         waitFor(what = "feed visible") { exists("For You") || exists("Latest") || exists("Following") }
 
         // 4. Every tab opens.
-        rule.onNodeWithText("Search").performClick()
+        rule.onNodeWithContentDescription("Search").performClick()
         waitFor(what = "search screen") { exists("Search every source") && exists("Popular") }
 
-        rule.onNodeWithText("Library").performClick()
+        rule.onNodeWithContentDescription("Library").performClick()
         waitFor(what = "library screen") { exists("Saved", substring = true) && exists("Following", substring = true) }
 
-        rule.onNodeWithText("Settings").performClick()
+        rule.onNodeWithContentDescription("Settings").performClick()
         waitFor(what = "settings screen") { exists("Sources") && exists("App lock") }
 
         // 5. Sources screen lists every source, the health check and the topic finder.
@@ -193,7 +193,7 @@ class SmokeTest {
         waitFor(what = "tap back") { rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back"), useUnmergedTree = true)[0].performClick(); true }
         waitFor(what = "back to settings") { exists("App lock") }
 
-        rule.onNodeWithText("Feed").performClick()
+        rule.onNodeWithContentDescription("Feed").performClick()
         waitFor(what = "back on feed") { exists("For You") }
 
         // 6. Panic gesture: three fingers down at once locks the app. Sent as real MotionEvents through

@@ -19,7 +19,9 @@ import dev.pfeed.source.parse.RedditParser
  *  - any other direct `.mp4/.webm` or image link → as-is
  *  - otherwise a `preview.redd.it` / `external-preview.redd.it` image (≥ 320 px) if the post has one
  *
- * Posts with nothing better than the tiny thumbnail (galleries, link posts) are skipped.
+ *  - a gallery → its first picture at full size (the preview names the original on i.redd.it)
+ *
+ * Posts with nothing better than the tiny thumbnail (link posts) are skipped.
  */
 internal object RedditRss {
 
@@ -43,7 +45,12 @@ internal object RedditRss {
             val link = LINK_RE.find(html)?.groupValues?.get(1)?.let(::decode)
             val previewImg = IMG_RE.findAll(html).map { decode(it.groupValues[1]) }.firstOrNull { isPreview(it) }
 
-            val media = link?.let(::mediaFor) ?: previewImg?.let { Media(MediaType.IMAGE, it) } ?: continue
+            // Gallery posts only carry a small preview of their first picture, but that preview names
+            // the file, and the full-size original lives at i.redd.it under the same name.
+            val galleryFirst = if (link?.contains("reddit.com/gallery/") == true) {
+                (IMG_RE.findAll(html).map { decode(it.groupValues[1]) } + listOfNotNull(thumbAttr)).firstNotNullOfOrNull(::galleryOriginal)
+            } else null
+            val media = galleryFirst ?: link?.let(::mediaFor) ?: previewImg?.let { Media(MediaType.IMAGE, it) } ?: continue
             val thumb = previewImg ?: thumbAttr ?: media.url?.takeIf { media.type == MediaType.IMAGE }
 
             out += MediaItem(
@@ -88,6 +95,17 @@ internal object RedditRss {
             host == "i.redd.it" || host.endsWith("redditmedia.com") || isPreview(url) -> byExtension(url, ext)
             else -> byExtension(url, ext)
         }
+    }
+
+    /** preview.redd.it/{name}.{ext}?width=… (a gallery's first picture) → the original on i.redd.it. */
+    fun galleryOriginal(previewUrl: String): Media? {
+        val url = previewUrl.replace("&amp;", "&")
+        val host = url.substringAfter("://").substringBefore('/').lowercase()
+        if (host != "preview.redd.it") return null
+        val name = url.substringAfter("://").substringAfter('/').substringBefore('?').substringBefore('#')
+        if (name.isBlank() || name.contains('/')) return null
+        val ext = name.substringAfterLast('.', "").lowercase()
+        return byExtension("https://i.redd.it/$name", ext)
     }
 
     private fun byExtension(url: String, ext: String): Media? = when (ext) {

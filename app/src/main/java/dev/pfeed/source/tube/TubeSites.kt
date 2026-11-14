@@ -57,7 +57,11 @@ sealed class TubeSite(val host: String, val label: String) {
         /** "10:23" / "1:02:03" / "10 min" → seconds. */
         internal fun duration(raw: String?): Int? {
             val t = raw?.trim()?.lowercase() ?: return null
-            Regex("""(\d+)\s*min""").find(t)?.let { return it.groupValues[1].toInt() * 60 }
+            // "12 min", "1 h 2 min", "10min", "45 sec"
+            val h = Regex("""(\d+)\s*h(?:ours?|rs?)?\b""").find(t)?.groupValues?.get(1)?.toInt()
+            val m = Regex("""(\d+)\s*min""").find(t)?.groupValues?.get(1)?.toInt()
+            val sec = Regex("""(\d+)\s*s(?:ec)?\b""").find(t)?.groupValues?.get(1)?.toInt()
+            if (h != null || m != null || sec != null) return (h ?: 0) * 3600 + (m ?: 0) * 60 + (sec ?: 0)
             val parts = t.split(':').mapNotNull { it.trim().toIntOrNull() }
             return when (parts.size) {
                 3 -> parts[0] * 3600 + parts[1] * 60 + parts[2]
@@ -148,11 +152,20 @@ sealed class TubeSite(val host: String, val label: String) {
     sealed class XvEngine(host: String, label: String) : TubeSite(host, label) {
 
         // Attribute order varies (data-id before or after class), hence the lookahead.
-        private val BLOCK = Regex("""<div\b(?=[^>]*\bthumb-block)[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
+        private val BLOCK = Regex("""<div\b(?=[^>]*\bthumb-block)[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
         private val HREF = Regex("""href="(/video[^"]+)"""")
         private val IMG = Regex("""\bdata-src="(https?://[^"]+)"""")
         private val TITLE = Regex("""<a[^>]*\btitle="([^"]*)"""")
         private val DUR = Regex("""class="duration"[^>]*>([^<]*)<""")
+        // XNXX puts the length loose in the metadata line: "… 26.4M 100% 10min - 1080p"
+        private val META = Regex("""class="metadata"[^>]*>(.*?)</p>""", RegexOption.DOT_MATCHES_ALL)
+        private val TAGS = Regex("<[^>]+>")
+
+        private fun lengthOf(under: String): Int? =
+            duration(DUR.find(under)?.groupValues?.get(1))
+                ?: META.find(under)?.groupValues?.get(1)?.replace(TAGS, " ")
+                    ?.let { Regex("""\b(\d+\s*h\s*)?\d+\s*min\b|\b\d+\s*sec\b""").find(it)?.value }
+                    ?.let(::duration)
 
         override fun parseList(body: String): List<TubeVideo> = BLOCK.findAll(body).mapNotNull { m ->
             val id = m.groupValues[1]
@@ -164,7 +177,7 @@ sealed class TubeSite(val host: String, val label: String) {
                 title = TITLE.find(under)?.groupValues?.get(1)?.let(::unescape)?.trim(),
                 pageUrl = "https://www.$host" + unescape(href),
                 thumb = IMG.find(thumbPart)?.groupValues?.get(1)?.let(::unescape),
-                durationSec = duration(DUR.find(under)?.groupValues?.get(1)),
+                durationSec = lengthOf(under),
             )
         }.toList()
 
@@ -222,7 +235,7 @@ sealed class TubeSite(val host: String, val label: String) {
         private val HREF = Regex("""<a\b[^>]*\bhref="(/(?:watch|porn-video)/\d+/?[^"]*)"""")
         private val POSTER = Regex("""\bdata-(?:poster|thumbnail|src)=['"](https?://[^'"]+)['"]""")
         private val IMG = Regex("""<img\b[^>]*\bsrc="(https?://[^"]+)"""")
-        private val DUR = Regex("""(?:duration|video-duration)[^>]*>\s*([\d:]+)""")
+        private val DUR = Regex("""(?:video-)?duration[^>]*>\s*(?:<span[^>]*>)?\s*([\d:]+)""")
 
         override fun parseList(body: String): List<TubeVideo> = ARTICLE.findAll(body).map { m ->
             val id = m.groupValues[1]

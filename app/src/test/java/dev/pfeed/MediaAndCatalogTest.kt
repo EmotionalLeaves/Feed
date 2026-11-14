@@ -68,6 +68,18 @@ class MediaAndCatalogTest {
     }
 
     @Test
+    fun `reddit gallery posts show their first picture at full size`() {
+        val g = RedditRss.parse(
+            "<feed>" + entry("ggg", "https://www.reddit.com/gallery/ggg", img = "https://preview.redd.it/w6a7bomjoj1i1.jpeg?width=140&amp;amp;height=140&amp;amp;crop=1:1,smart&amp;amp;s=c3") + "</feed>",
+            "testsub",
+        ).single()
+        assertEquals(MediaType.IMAGE, g.type)
+        assertEquals("https://i.redd.it/w6a7bomjoj1i1.jpeg", g.extras["media"])
+        assertEquals(MediaType.GIF, RedditRss.galleryOriginal("https://preview.redd.it/abc.gif?frame=1&width=140")?.type)
+        assertNull(RedditRss.galleryOriginal("https://external-preview.redd.it/abc.jpeg?width=140"))
+    }
+
+    @Test
     fun `reddit paging token is the last post fullname`() {
         assertEquals("t3_eee", RedditRss.lastId(feed))
         assertNull(RedditRss.lastId("<feed></feed>"))

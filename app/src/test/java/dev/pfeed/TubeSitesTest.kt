@@ -32,6 +32,7 @@ class TubeSitesTest {
         assertEquals("https://www.xvideos.com/video.ukfhdck1234/hot_title_here", list[0].pageUrl)
         assertEquals("https://img-hw.xvideos-cdn.com/videos/thumbs169lll/5c/1f/5c1f/1.jpg", list[0].thumb)
         assertEquals(12 * 60, list[0].durationSec)
+        assertEquals(3600 + 2 * 60, list[1].durationSec)
 
         val page = """html5player.setVideoUrlLow('https://cdn77-vid.xvideos-cdn.com/a/low.mp4?e=1');html5player.setVideoUrlHigh('https://cdn77-vid.xvideos-cdn.com/a/high.mp4?e=1');html5player.setVideoHLS('https://cdn77-vid.xvideos-cdn.com/a/hls.m3u8?e=1');"""
         val s = TubeSite.Xvideos.stream(page)!!
@@ -43,7 +44,7 @@ class TubeSitesTest {
 
     @Test
     fun `xnxx shares the xvideos engine but keeps its own host`() {
-        val html = """<div id="video_1" data-id="1" class="thumb-block"><div class="thumb-inside"><div class="thumb"><a href="/video-abc12/slug"><img data-src="https://img.xnxx-cdn.com/t.jpg"/></a></div></div><div class="thumb-under"><p class="title"><a href="/video-abc12/slug" title="T">T</a> <span class="duration">5 min</span></p></div></div>"""
+        val html = """<div id="video_1" data-id="1" class="thumb-block"><div class="thumb-inside"><div class="thumb"><a href="/video-abc12/slug"><img data-src="https://img.xnxx-cdn.com/t.jpg"/></a></div></div><div class="thumb-under"><p><a href="/video-abc12/slug" title="T">T</a></p><p class="metadata"><span class="right"> 26.4M <span class="icon-f icf-eye"></span><span class="superfluous">100%</span></span> 5min <span class="video-hd"><span class="superfluous"> - </span> 1080p </span></p></div></div>"""
         val v = TubeSite.Xnxx.parseList(html).single()
         assertEquals("https://www.xnxx.com/video-abc12/slug", v.pageUrl)
         assertEquals(300, v.durationSec)
@@ -54,7 +55,7 @@ class TubeSitesTest {
 
     @Test
     fun `youporn and tube8 article listings`() {
-        val yp = """<article class="video-box mobile js_video-box js-pop" data-video-id="308517921" data-uploader-name="miss frog" aria-label="Rainbow socks &amp; more"><a href="/watch/308517921/" class="tm_video_link" data-webm='https://ev-ph.ypncdn.com/x_fb.mp4' data-poster='https://pix-cdn77.ypncdn.com/c6531/videos/202611/10/68672575/original_68672575.mp4/plain/a?hash=1'><img src="https://pix-cdn77.ypncdn.com/other.jpg"></a><div class="video-duration">12:34</div></article>"""
+        val yp = """<article class="video-box mobile js_video-box js-pop" data-video-id="308517921" data-uploader-name="miss frog" aria-label="Rainbow socks &amp; more"><a href="/watch/308517921/" class="tm_video_link" data-webm='https://ev-ph.ypncdn.com/x_fb.mp4' data-poster='https://pix-cdn77.ypncdn.com/c6531/videos/202611/10/68672575/original_68672575.mp4/plain/a?hash=1'><img src="https://pix-cdn77.ypncdn.com/other.jpg"><div class="video-duration tm_video_duration"> <span> 12:34 </span> </div></a></article>"""
         val v = TubeSite.Youporn.parseList(yp).single()
         assertEquals("308517921", v.id)
         assertEquals("Rainbow socks & more", v.title)
