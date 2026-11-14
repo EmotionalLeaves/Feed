@@ -142,11 +142,11 @@ class TubeSitesTest {
         assertEquals(listOf("big tits", "pov"), e.tags)
         assertNull(TubeSite.Eporner.stream("<html>anything</html>"))
         val embed = """EP.video.player.vid = '4EeRbbhmzAh'; EP.video.player.hash = 'da3b99db1194ac5ed20deae3dca2d6e0';"""
-        val idx = TubeSite.Eporner.streamIndexUrl(embed)!!
-        assertTrue(idx.startsWith("https://www.eporner.com/xhr/video/4EeRbbhmzAh?hash="))
+        val epIndex = TubeSite.Eporner.streamIndexUrl(embed)!!
+        assertTrue(epIndex.startsWith("https://www.eporner.com/xhr/video/4EeRbbhmzAh?hash="))
         assertEquals("https://www.eporner.com/embed/x/", TubeSite.Eporner.streamPageUrl("https://www.eporner.com/video-x/y/", "x"))
-        val src = Json.parseToJsonElement("""{"sources":{"mp4":{"480p":{"src":"https://v/480.mp4"},"1080p":{"src":"https://v/1080.mp4"},"2160p(4K)":{"src":"https://v/4k.mp4"}}}}""")
-        assertEquals("https://v/1080.mp4", TubeSite.Eporner.streamFromIndex(src)!!.url)
+        val epSources = Json.parseToJsonElement("""{"sources":{"mp4":{"480p":{"src":"https://v/480.mp4"},"1080p":{"src":"https://v/1080.mp4"},"2160p(4K)":{"src":"https://v/4k.mp4"}}}}""")
+        assertEquals("https://v/1080.mp4", TubeSite.Eporner.streamFromIndex(epSources)!!.url)
         assertEquals("https://www.eporner.com/embed/abCD12ef3/", TubeSite.Eporner.embedUrl("abCD12ef3"))
     }
 
