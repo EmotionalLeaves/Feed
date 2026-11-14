@@ -46,8 +46,18 @@ class LiveProbeTest {
                 probe("$host thumb size $pth") {
                     client.newCall(Request.Builder().url("https://img.$host/thumbnail/data$pth").build()).execute().use { r ->
                         val bytes = r.body!!.bytes()
-                        val img = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
-                        "${r.code} ${bytes.size} bytes ${img?.width}x${img?.height}"
+                        fun u(i: Int) = bytes[i].toInt() and 0xff
+                        val dims = if (bytes.size > 24 && u(0) == 0x89) "${(u(16) shl 24) or (u(17) shl 16) or (u(18) shl 8) or u(19)}x${(u(20) shl 24) or (u(21) shl 16) or (u(22) shl 8) or u(23)}" else {
+                            var k = 2; var d = "?"
+                            while (k + 9 < bytes.size) {
+                                if (u(k) != 0xff) { k++; continue }
+                                val m = u(k + 1)
+                                if (m in 0xc0..0xc3) { d = "${(u(k + 7) shl 8) or u(k + 8)}x${(u(k + 5) shl 8) or u(k + 6)}"; break }
+                                k += 2 + ((u(k + 2) shl 8) or u(k + 3))
+                            }
+                            d
+                        }
+                        "${r.code} ${r.header("Content-Type")} ${bytes.size} bytes $dims"
                     }
                 }
             }
