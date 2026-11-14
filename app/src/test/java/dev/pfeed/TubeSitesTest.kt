@@ -173,7 +173,7 @@ class TubeSitesTest {
         assertEquals("555", g.id)
         assertEquals("Title", g.title)
         assertEquals("someone", g.creator)
-        assertEquals(listOf("https://i.nhentai.net/galleries/999/1.jpg", "https://i.nhentai.net/galleries/999/2.png", "https://i.nhentai.net/galleries/999/3.webp"), g.pages)
+        assertEquals(listOf("https://i1.nhentai.net/galleries/999/1.jpg", "https://i1.nhentai.net/galleries/999/2.png", "https://i1.nhentai.net/galleries/999/3.webp"), g.pages)
         assertEquals("https://t.nhentai.net/galleries/999/thumb.jpg", g.thumbnailUrl)
         assertEquals("https://nhentai.net/g/555/", g.pageUrl)
         assertTrue(g.tags.containsAll(listOf("comic", "big_breasts", "artist:someone", "language:english")))
@@ -189,9 +189,9 @@ class TubeSitesTest {
         val g = NhentaiAdapter.parse(root).single()
         assertEquals("4314731", g.id)
         assertEquals("[A] B", g.title)
-        assertEquals("https://t.nhentai.net/galleries/3214567/thumb.webp", g.thumbnailUrl)
+        assertEquals("https://t1.nhentai.net/galleries/3214567/thumb.webp", g.thumbnailUrl)
         assertEquals(3, g.pages.size)
-        assertEquals("https://i.nhentai.net/galleries/3214567/2.webp", g.pages[1])
+        assertEquals("https://i1.nhentai.net/galleries/3214567/2.webp", g.pages[1])
         assertEquals(listOf("comic", "doujinshi"), g.tags)
         assertEquals("https://nhentai.net/api/v2/galleries?query=tag%3Amilf+-tag%3Alolicon&sort=popular&page=2", NhentaiAdapter.searchUrl("tag:milf -tag:lolicon", "popular", 2))
     }
@@ -202,5 +202,14 @@ class TubeSitesTest {
         assertEquals(TubeSite.Xhamster, TubeSite.byHost("xhamster.desi"))
         assertEquals(TubeSite.Xhamster, TubeSite.byHost("ru.xhamster.com"))
         assertTrue(TubeSite.Xvideos.mirrors.isEmpty())
+    }
+
+    @Test
+    fun `nhentai v2 detail gives every page's exact file`() {
+        val d = Json.parseToJsonElement("""{"id":696940,"media_id":"4326714","title":{"english":"E","pretty":"P"},"cover":{"path":"galleries/4326714/cover.webp"},"thumbnail":{"path":"galleries/4326714/thumb.webp"},"tags":[{"type":"tag","name":"milf"}],"num_pages":2,"num_favorites":3,"pages":[{"number":1,"path":"galleries/4326714/1.jpg"},{"number":2,"path":"galleries/4326714/2.png"}]}""")
+        val g = NhentaiAdapter.parse(Json.parseToJsonElement("{\"result\":[$d]}")).single()
+        assertEquals(listOf("https://i1.nhentai.net/galleries/4326714/1.jpg", "https://i1.nhentai.net/galleries/4326714/2.png"), g.pages)
+        assertEquals("https://t1.nhentai.net/galleries/4326714/thumb.webp", g.thumbnailUrl)
+        assertTrue(g.tags.contains("milf"))
     }
 }

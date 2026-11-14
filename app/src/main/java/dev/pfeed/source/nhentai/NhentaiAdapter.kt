@@ -84,6 +84,8 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
         internal const val EXCLUDE = "-tag:lolicon -tag:shotacon"
 
         private const val DETAIL_CONCURRENCY = 4
+        /** From the site's /api/v2/config image_servers. */
+        private const val IMAGE_SERVER = "https://i1.nhentai.net"
         /** Items parsed from a bare listing carry only the two fixed tags. */
         private const val TAGLESS_MARKER = 2
         private val EXT = mapOf("j" to "jpg", "p" to "png", "g" to "gif", "w" to "webp")
@@ -106,15 +108,18 @@ class NhentaiAdapter @Inject constructor(private val http: HttpJson) : CachingAd
                 ?: listOf("english_title", "pretty_title", "japanese_title").firstNotNullOfOrNull { s(it)?.takeIf { t -> t.isNotBlank() } }
             val images = g["images"] as? JsonObject
             // v2 listing: "thumbnail":"galleries/123/thumb.webp" + num_pages; detail/v1: images.pages[].t
-            val thumbPath = s("thumbnail")
+            val thumbPath = s("thumbnail") ?: ((g["thumbnail"] as? JsonObject)?.get("path") as? JsonPrimitive)?.contentOrNull
             val thumbExt = thumbPath?.substringAfterLast('.', "")?.takeIf { it.isNotEmpty() }
             val pageTypes = (images?.get("pages") as? JsonArray).orEmpty().map { ((it as? JsonObject)?.get("t") as? JsonPrimitive)?.contentOrNull ?: "j" }
                 .ifEmpty { List(s("num_pages")?.toIntOrNull() ?: 0) { thumbExt?.let { e -> EXT.entries.firstOrNull { it.value == e }?.key } ?: "w" } }
-            if (pageTypes.isEmpty()) return null
-            val pages = pageTypes.mapIndexed { i, t -> "https://i.nhentai.net/galleries/$mediaId/${i + 1}.${EXT[t] ?: "jpg"}" }
+            // v2 detail: "pages":[{"path":"galleries/123/1.webp",…}], the exact file of every page.
+            val exact = (g["pages"] as? JsonArray).orEmpty().mapNotNull { ((it as? JsonObject)?.get("path") as? JsonPrimitive)?.contentOrNull }
+                .map { "$IMAGE_SERVER/${it.trimStart('/')}" }
+            if (pageTypes.isEmpty() && exact.isEmpty()) return null
+            val pages = exact.ifEmpty { pageTypes.mapIndexed { i, t -> "$IMAGE_SERVER/galleries/$mediaId/${i + 1}.${EXT[t] ?: "jpg"}" } }
             val coverType = ((images?.get("cover") as? JsonObject)?.get("t") as? JsonPrimitive)?.contentOrNull
-            val thumbUrl = thumbPath?.let { if (it.startsWith("http")) it else "https://t.nhentai.net/${it.trimStart('/')}" }
-                ?: "https://t.nhentai.net/galleries/$mediaId/thumb.${EXT[coverType ?: pageTypes.first()] ?: "jpg"}"
+            val thumbUrl = thumbPath?.let { if (it.startsWith("http")) it else "https://t1.nhentai.net/${it.trimStart('/')}" }
+                ?: "https://t.nhentai.net/galleries/$mediaId/thumb.${EXT[coverType ?: pageTypes.firstOrNull() ?: "w"] ?: "jpg"}"
             val tagObjs = (g["tags"] as? JsonArray).orEmpty().mapNotNull { it as? JsonObject }
             val tags = tagObjs.mapNotNull { t ->
                 val type = (t["type"] as? JsonPrimitive)?.contentOrNull
