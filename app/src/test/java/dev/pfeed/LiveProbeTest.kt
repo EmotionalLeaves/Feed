@@ -34,38 +34,20 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val pages = mapOf(
-            "motherless" to "https://motherless.com/videos/recent?page=1",
-            "spankbang" to "https://spankbang.com/new_videos/",
-            "youjizz" to "https://www.youjizz.com/newest-clips/1.html",
-            "porntrex" to "https://www.porntrex.com/latest-updates/",
-            "hqporner" to "https://hqporner.com/hdporn/1",
-            "tnaflix" to "https://www.tnaflix.com/new/1",
-            "pornone" to "https://pornone.com/newest/",
-            "4tube" to "https://www.4tube.com/videos",
-        )
-        for ((name, url) in pages) {
-            val got = runCatching { get(url) }
-            if (got.isFailure) { probe(name) { "EXC ${got.exceptionOrNull()?.message}" }; continue }
-            val (c, h) = got.getOrThrow()
-            probe("$name list") { "$c len=${h.length} title=${Regex("<title>([^<]{0,60})").find(h)?.groupValues?.get(1)}" }
-            val href = when (name) {
-                "motherless" -> Regex("href=\"(https://motherless.com/[A-Z0-9]{7})\"").find(h)?.groupValues?.get(1)
-                "spankbang" -> Regex("href=\"(/[a-z0-9]+/video/[^\"]+)\"").find(h)?.groupValues?.get(1)?.let { "https://spankbang.com$it" }
-                "youjizz" -> Regex("href=\"(/videos/[^\"]+\\.html)\"").find(h)?.groupValues?.get(1)?.let { "https://www.youjizz.com$it" }
-                "porntrex" -> Regex("href=\"(https://www.porntrex.com/video/[^\"]+)\"").find(h)?.groupValues?.get(1)
-                "hqporner" -> Regex("href=\"(/hdporn/\\d+-[^\"]+\\.html)\"").find(h)?.groupValues?.get(1)?.let { "https://hqporner.com$it" }
-                "tnaflix" -> Regex("href=\"(https://www.tnaflix.com/[^\"]+/video\\d+)\"").find(h)?.groupValues?.get(1)
-                "pornone" -> Regex("href=\"(https://pornone.com/[^\"]+/\\d+/)\"").find(h)?.groupValues?.get(1)
-                else -> Regex("href=\"(https://www.4tube.com/videos/\\d+/[^\"]+)\"").find(h)?.groupValues?.get(1)
-            }
-            probe("$name item") { "$href :: " + flat(around(h, href?.substringAfter(".com")?.take(30) ?: "zzzz", 400, 700)) }
-            if (href != null) {
-                val pg = runCatching { get(href) }
-                if (pg.isFailure) { probe("$name page") { "EXC ${pg.exceptionOrNull()?.message}" }; continue }
-                val (c2, p) = pg.getOrThrow()
-                probe("$name page") { "$c2 len=${p.length} m3u8=${Regex("https?:[^\"' ]+\\.m3u8[^\"' ]*").find(p.replace("\\/", "/"))?.value?.take(150)} mp4=${Regex("https?:[^\"' ]+\\.mp4[^\"' ]*").find(p.replace("\\/", "/"))?.value?.take(150)}" }
-            }
-        }
+        val tl = get("https://www.tnaflix.com/new/1").second
+        probe("tna block") { flat(around(tl, "data-vid=", 0, 1800)) }
+        val th = Regex("href=\"(https://www.tnaflix.com/[^\"]+/video\\d+)\"").find(tl)!!.groupValues[1]
+        val tp = get(th).second
+        probe("tna mp4s") { Regex("https?:[^\"' ]+\\.mp4[^\"' ]*").findAll(tp).map { it.value.take(130) }.distinct().take(8).toList().toString() }
+        probe("tna source") { flat(around(tp, "<source", 0, 700)) }
+        val pl = get("https://www.porntrex.com/latest-updates/").second
+        probe("ptx block") { flat(around(pl, "data-item-id=", 0, 2200)) }
+        val ph = Regex("href=\"(https://www.porntrex.com/video/[^\"]+)\"").find(pl)!!.groupValues[1]
+        val pp = get(ph).second
+        probe("ptx flashvars") { flat(around(pp, "flashvars", 0, 1600)) }
+        val yl = get("https://www.youjizz.com/newest-clips/1.html").second
+        probe("yj block") { flat(around(yl, "class=\"video-thumb\"", 0, 1800)) }
+        val yh = "https://www.youjizz.com" + Regex("href=\"(/videos/[^\"]+\\.html)\"").find(yl)!!.groupValues[1]
+        probe("yj enc") { flat(around(get(yh).second, "dataEncodings", 0, 900)) }
     }
 }
