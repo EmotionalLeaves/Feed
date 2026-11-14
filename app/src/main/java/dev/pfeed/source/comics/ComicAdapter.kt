@@ -108,7 +108,9 @@ class ComicSite private constructor(
         private val HIDDEN = Regex("""id="(load_server|load_dir|load_id|load_pages)" value="([^"]*)"""")
         private val PAGE_TYPES = Regex("""g_th\s*=\s*\$\.parseJSON\('(\{.*?\})'\)""")
         private val PAGE_TYPE = Regex(""""(\d+)":"([a-z])""")
-        private val TAG = Regex("""href="/tag/([^/"]+)/"""")
+        private val TAG = Regex("""href=['"]/tag/([^/'"]+)/['"]""")
+        /** Page thumbnails ".../12t.webp": the page count and each page's format where g_th is missing. */
+        private val PAGE_THUMB = Regex("""/(\d+)t\.([a-z]+)["'?]""")
         private val H1 = Regex("""<h1[^>]*>([^<]+)</h1>""")
         private val EXT = mapOf("j" to "jpg", "p" to "png", "g" to "gif", "w" to "webp")
 
@@ -130,11 +132,14 @@ class ComicSite private constructor(
             val types = PAGE_TYPES.find(html)?.groupValues?.get(1)
                 ?.let { json -> PAGE_TYPE.findAll(json).associate { it.groupValues[1].toInt() to it.groupValues[2] } }
                 .orEmpty()
-            val count = types.keys.maxOrNull() ?: fields["load_pages"]?.toIntOrNull() ?: return null
+            val thumbExts = PAGE_THUMB.findAll(html).associate { it.groupValues[1].toInt() to it.groupValues[2] }
+            val count = types.keys.maxOrNull() ?: fields["load_pages"]?.toIntOrNull() ?: thumbExts.keys.maxOrNull() ?: return null
             if (count <= 0) return null
             val thumbExt = l.thumb?.substringAfterLast('.')?.lowercase() ?: "jpg"
-            val pages = (1..count).map { n -> "$base/$n.${types[n]?.let { EXT[it] } ?: thumbExt}" }
-            val tags = TAG.findAll(html).map { it.groupValues[1].replace('-', '_') }.distinct().toList()
+            val pages = (1..count).map { n -> "$base/$n.${types[n]?.let { EXT[it] } ?: thumbExts[n] ?: thumbExt}" }
+            // Only the gallery's own tag list (from "Tags:" to the end of its list), not sidebars.
+            val tagArea = html.indexOf("Tags:").takeIf { it >= 0 }?.let { i -> html.substring(i, html.indexOf("</ul>", i).takeIf { it > i } ?: minOf(html.length, i + 4000)) } ?: ""
+            val tags = TAG.findAll(tagArea).map { it.groupValues[1].replace('-', '_') }.distinct().toList()
             if (tags.isEmpty()) return null // can't be checked, so not shown
             return MediaItem(
                 id = "${site.host}/${l.id}",
