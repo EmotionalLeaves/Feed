@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.8.0 — 2026-11-14
+
+11 video sites
+
+- **Three more video sites:** TNAFlix, Porntrex and YouJizz, each with newest, top and 28 category sections, playing direct MP4s up to 1080p in the app's player. That's 11 tube sites and 330 tube feeds.
+- They're also searched by every search.
+
 ## 4.7.0 — 2026-11-14
 
 xHamster plays natively
