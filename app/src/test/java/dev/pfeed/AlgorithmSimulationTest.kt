@@ -163,7 +163,7 @@ class AlgorithmSimulationTest {
     @Test
     fun `learns from every tag on heavily tagged posts`() {
         val tags = (1..120).map { "t%03d".format(it) }
-        assertEquals(Features.MAX, Features.of(item("x", tags = tags)).size)
+        assertEquals(Features.MAX, Features.of(item("x", tags = tags)).filterNot(Features::isMeta).size)
         assertTrue("t080" in Features.of(item("x", tags = tags)))
     }
 
@@ -180,5 +180,13 @@ class AlgorithmSimulationTest {
     fun `tag spellings from different sources meet`() {
         assertEquals(Features.normalizeTag("rough_sex"), Features.normalizeTag("Rough Sex"))
         assertEquals(Features.normalizeTag("#rough_sex"), Features.normalizeTag("rough sex"))
+    }
+
+    @Test
+    fun `site and format are learned too`() {
+        val f = Features.of(item("r", tags = listOf("bdsm")))
+        assertTrue(f.any { it.startsWith(Features.ORIGIN) })
+        assertTrue(f.any { it.startsWith(Features.TYPE) })
+        assertEquals("Videos", Features.label("type:video"))
     }
 }

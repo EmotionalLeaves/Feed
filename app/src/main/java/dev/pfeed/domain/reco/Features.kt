@@ -46,8 +46,24 @@ object Features {
             .toList()
         // Boards already describe the post in detail (and their "titles" are just the first tags).
         val words = if (tags.size >= 6) emptyList() else titleWords(item.title)
-        return (tags + words).distinct().take(MAX)
+        // Plus where it's from and what it is, so For You learns site and format preferences too
+        // (someone who only ever watches videos, or always skips one site, gets less of it).
+        return (tags + words).distinct().take(MAX) + meta(item)
     }
+
+    /** "o:{origin}" and "type:{video|image|gif|comic}". */
+    fun meta(item: MediaItem): List<String> = listOf(
+        ORIGIN + Spread.origin(item),
+        TYPE + when {
+            item.isGallery -> "comic"
+            else -> item.type.name.lowercase().let { if (it == "embed") "video" else it }
+        },
+    )
+
+    fun isMeta(feature: String) = feature.startsWith(ORIGIN) || feature.startsWith(TYPE)
+
+    const val ORIGIN = "o:"
+    const val TYPE = "type:"
 
     internal fun titleWords(title: String?): List<String> {
         if (title.isNullOrBlank()) return emptyList()
@@ -61,6 +77,12 @@ object Features {
     }
 
     /** Readable label for a feature in the "what it has learned" screen. */
-    fun label(feature: String): String =
-        if (feature.startsWith("w:")) "“${feature.removePrefix("w:")}” in titles" else "#${feature.replace('_', ' ')}"
+    fun label(feature: String): String = when {
+        feature.startsWith("w:") -> "“${feature.removePrefix("w:")}” in titles"
+        feature.startsWith(ORIGIN) -> "Posts from " + feature.removePrefix(ORIGIN).substringAfter(':')
+        feature.startsWith(TYPE) -> when (feature.removePrefix(TYPE)) {
+            "video" -> "Videos"; "image" -> "Pictures"; "gif" -> "GIFs"; "comic" -> "Comics"; else -> feature
+        }
+        else -> "#${feature.replace('_', ' ')}"
+    }
 }

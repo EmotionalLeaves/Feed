@@ -168,7 +168,7 @@ class SearchViewModel @Inject constructor(
         viewModelScope.launch {
             _interests.value = runCatching { signals.topInterests(limit = 30).first }.getOrDefault(emptyList())
                 .map { it.first }
-                .filterNot { it.startsWith("@") || it.startsWith("creator:") }
+                .filterNot { it.startsWith("@") || it.startsWith("creator:") || dev.pfeed.domain.reco.Features.isMeta(it) }
                 .map { it.removePrefix("w:").replace('_', ' ').trim() }
                 .filter { it.length in 2..24 }
                 .distinct()

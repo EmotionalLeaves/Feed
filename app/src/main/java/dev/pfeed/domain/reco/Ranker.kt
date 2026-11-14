@@ -180,7 +180,7 @@ class Ranker(
         private val QUALITY_REFS = mapOf("redgifs" to 20_000.0, "philomena" to 4_000.0, "booru" to QUALITY_REF, "nhentai" to 8_000.0)
 
         /** The features that make an item "the same kind of thing" as another. */
-        internal fun signature(item: MediaItem): Set<String> = Features.of(item).take(SIG_FEATURES).toHashSet()
+        internal fun signature(item: MediaItem): Set<String> = Features.of(item).filterNot(Features::isMeta).take(SIG_FEATURES).toHashSet()
 
         /** Overlap coefficient with the most similar recent item: 1 = same tags, 0 = nothing shared. */
         internal fun maxSimilarity(sig: Set<String>, recent: Collection<Set<String>>): Double {

@@ -150,7 +150,7 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
 }
 
 private fun openTag(nav: NavController, feature: String) {
-    if (feature.startsWith("@")) return
+    if (feature.startsWith("@") || dev.pfeed.domain.reco.Features.isMeta(feature)) return
     nav.navigate(Routes.tag(feature.removePrefix("w:")))
 }
 
