@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.7.0 — 2026-11-14
+
+xHamster plays natively
+
+- **xHamster videos play in the app's own player** (adaptive HLS up to 1080p). The site now hides its stream links behind a cipher; the app deciphers them the same way the site's player does (checked live against its current pages).
+- Parsing its player settings no longer fails on pages where some fields are empty.
+
 ## 4.6.0 — 2026-11-14
 
 Eporner plays natively
