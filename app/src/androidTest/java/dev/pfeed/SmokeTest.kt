@@ -265,7 +265,7 @@ class SmokeTest {
         // Reddit, raw: one feed request through the app's client, and whether the source is resting.
         runBlocking {
             val t0 = System.currentTimeMillis()
-            val line = runCatching { rule.activity.httpJson.getRaw("reddit", "https://old.reddit.com/r/gonewild/new/.rss?limit=100").split("<entry>").size - 1 }
+            val line = runCatching { rule.activity.httpJson.getRaw("reddit", "https://www.reddit.com/r/gonewild/new/.rss?limit=100").split("<entry>").size - 1 }
                 .fold({ "$it posts" }, { "error: ${it.message}" })
             val resting = (rule.activity.sourceRegistry.byId("reddit") as? dev.pfeed.source.net.CachingAdapter)?.restingGroups()
             android.util.Log.i("PFHEALTH", "  reddit raw: $line in ${System.currentTimeMillis() - t0} ms; resting=$resting")
