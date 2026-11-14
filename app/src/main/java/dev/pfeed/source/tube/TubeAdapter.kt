@@ -84,7 +84,11 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
                 site.label to (withTimeoutOrNull(30_000) {
                     runCatching {
                         val items = site.items(listWithMirrors(site, site.listUrl("new", 0)), "new")
-                        if (items.isEmpty()) return@runCatching "lists nothing"
+                        if (items.isEmpty()) {
+                            val raw = runCatching { http.getRaw(id, site.listUrl("new", 0)) }.getOrElse { return@runCatching "lists nothing (${it.message?.take(60)})" }
+                            val title = Regex("<title[^>]*>([^<]{0,60})", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.get(1)?.trim()
+                            return@runCatching "lists nothing (page ${raw.length / 1024} KB, \"$title\")"
+                        }
                         val first = items.first()
                         val how = when (val st = resolveStream(first)) {
                             is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load"
