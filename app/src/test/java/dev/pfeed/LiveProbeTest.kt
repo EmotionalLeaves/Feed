@@ -40,16 +40,17 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val path = "/56/0b/560b7d65dc462caebf9a1530d95bd47374a0fdf2e40a585c83f3046b4ab1ba1e.jpg"
-        probe("redirect") { noFollow("https://coomer.st/data$path") }
-        for (h in listOf("coomer.st", "n1.coomer.st", "n2.coomer.st", "n3.coomer.st", "n4.coomer.st", "img.coomer.st", "kemono.cr", "n1.kemono.cr", "n4.kemono.cr"))
-            probe("dns $h") { java.net.InetAddress.getAllByName(h).joinToString { it.hostAddress ?: "?" } }
-        probe("v4 only n1") {
-            val v4 = client.newBuilder().dns(object : okhttp3.Dns {
-                override fun lookup(hostname: String): List<java.net.InetAddress> = okhttp3.Dns.SYSTEM.lookup(hostname).filterIsInstance<java.net.Inet4Address>()
-            }).build()
-            v4.newCall(Request.Builder().url("https://n1.coomer.st/data$path").header("Range", "bytes=0-0").build()).execute().use { "${it.code} ${it.header("Content-Type")}" }
+        for (host in listOf("coomer.st", "kemono.cr")) {
+            val body = get("https://$host/api/v1/posts?o=0", "text/css").second
+            Regex("\"path\":\"(/[^\"]+\\.(?:jpe?g|png|webp))\"").findAll(body).map { it.groupValues[1] }.distinct().take(4).forEach { pth ->
+                probe("$host thumb size $pth") {
+                    client.newCall(Request.Builder().url("https://img.$host/thumbnail/data$pth").build()).execute().use { r ->
+                        val bytes = r.body!!.bytes()
+                        val img = javax.imageio.ImageIO.read(java.io.ByteArrayInputStream(bytes))
+                        "${r.code} ${bytes.size} bytes ${img?.width}x${img?.height}"
+                    }
+                }
+            }
         }
-        probe("with server param") { noFollow("https://coomer.st/data$path?f=x.jpg") }
     }
 }
