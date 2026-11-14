@@ -220,4 +220,16 @@ class TubeSitesTest {
         assertEquals("https://t1.nhentai.net/galleries/4326714/thumb.webp", g.thumbnailUrl)
         assertTrue(g.tags.contains("milf"))
     }
+
+    @Test
+    fun `xhamster deciphers only well-formed hex and rejects unknown generators`() {
+        assertNull(TubeSite.Xhamster.decipher("https://plain"))
+        assertNull(TubeSite.Xhamster.decipher("09" + "00000000" + "aabbcc"))
+        // Round trip with generator 1 (an LCG): encipher by XOR with the same stream, then decipher.
+        val url = "https://video.xhcdn.com/a.mp4"
+        var s = 12345
+        val enc = url.map { c -> s = s * 1664525 + 1013904223; (c.code xor (s and 0xff)) }
+        val hex = "01" + "39300000" + enc.joinToString("") { "%02x".format(it) }
+        assertEquals(url, TubeSite.Xhamster.decipher(hex))
+    }
 }
