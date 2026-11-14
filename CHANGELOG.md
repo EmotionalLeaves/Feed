@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.14.0 — 2026-11-14
+
+Balanced Latest
+
+- **Latest is no longer half Mastodon.** One source (all its sites together) now fills at most 4 of any 12 posts whenever anything else is available; measured, Mastodon's share of Latest dropped from 53% to 30%, and tube videos and comics now appear there (their newest listings are dated by position, since the sites don't say when a video went up).
+- Per-source share and the My Little Pony niche are *soft* rules: always kept when another post can take the slot, never a reason for the feed to wait.
+- For You on a fresh install, measured: 60% video, 18 different sites in 60 posts.
+
 ## 4.13.0 — 2026-11-14
 
 Video-first For You
