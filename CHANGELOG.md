@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.4.0 — 2026-11-14
+
+Search works across every source
+
+- **RedGIFs search was broken** (it asked for a sort order the API rejects) and now brings 120+ clips per search.
+- **nhentai feeds and search now actually filter.** The listing endpoint ignored the query, so every nhentai feed was the same newest-uploads list; feeds and search now use the site's search endpoint, paced to its rate limits (10 searches and 15 gallery reads a minute). Galleries tagged lolicon or shotacon are excluded by name in every query, by tag id on every result, and by the minors filter.
+- **Search timeouts now really stop slow sources.** Background requests ignored the cut-off, so one slow site could hold a search for 30 s. Measured on a test device: 600+ results from 7 sources, in 8–19 s, streaming in as each answers.
+
 ## 4.3.0 — 2026-11-14
 
 Comics fixed, Help, cleaner grids
