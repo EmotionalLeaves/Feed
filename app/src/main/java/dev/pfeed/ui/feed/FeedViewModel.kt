@@ -120,7 +120,13 @@ class FeedViewModel @Inject constructor(
     fun warmImage(url: String) = preloader.image(url)
 
     /** The post's media actually appeared (first video frame / image drawn). */
-    fun markShown(item: MediaItem) = mediaHealth.shown(item)
+    fun markShown(item: MediaItem) {
+        // A comic's pages each draw (and the next ones preload); the post counts once.
+        val post = item.key.substringBefore('#')
+        if (shownPosts.add(post)) mediaHealth.shown(item)
+    }
+
+    private val shownPosts = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
 
     val liked: StateFlow<Set<String>> = library.keys(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val saved: StateFlow<Set<String>> = library.keys(LibraryKind.SAVED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
