@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.6.0 — 2026-11-14
+
+Eporner plays natively
+
+- **Eporner videos play in the app's own player** (direct MP4, up to 1080p) instead of the site's embedded page with its ads and controls. The player's stream request is read from the embed page and asked for the same way the site's player does.
+- Follow pills, mode tabs and tag chips have larger touch targets.
+- New on-device checks run on every build: the Following feed, a tag page and a creator page must load (measured ~4 s each).
+
 ## 4.5.0 — 2026-11-14
 
 Faster search, smoother feed
