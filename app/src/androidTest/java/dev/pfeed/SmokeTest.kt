@@ -336,4 +336,26 @@ class SmokeTest {
             }
         }
     }
+
+    /** What For You actually serves (not what had time to draw): its first 60 posts by source and type. */
+    @Test
+    fun forYouMix() {
+        val a = rule.activity
+        runBlocking {
+            val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+            val session = a.feedSessions.create(dev.pfeed.data.repo.FeedSpec.Main(dev.pfeed.domain.model.FeedMode.FOR_YOU), scope)
+            val got = ArrayList<dev.pfeed.domain.model.MediaItem>()
+            val t0 = System.currentTimeMillis()
+            while (got.size < 60 && System.currentTimeMillis() - t0 < 90_000) {
+                val r = session.loadMore()
+                got += r.items
+                if (r.items.isEmpty()) kotlinx.coroutines.delay(1_000)
+            }
+            session.close()
+            val bySource = got.groupingBy { it.sourceId }.eachCount().entries.sortedByDescending { it.value }.joinToString { "${it.key}=${it.value}" }
+            val byType = got.groupingBy { if (it.isGallery) "comic" else it.type.name.lowercase() }.eachCount()
+            android.util.Log.i("PFHEALTH", "for you: ${got.size} posts in ${System.currentTimeMillis() - t0} ms; by source: $bySource; by type: $byType; origins: ${got.map { dev.pfeed.domain.reco.Spread.origin(it) }.distinct().size}")
+            assertTrue("For You served nothing", got.isNotEmpty())
+        }
+    }
 }
