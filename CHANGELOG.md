@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.0.0 — 2026-11-14
+
+Redesign: fewer screens, one way to everything
+
+- **Settings is one screen.** Three places to go (Sources, Your taste, Hidden & blocked); every other setting sits right there in grouped cards. The ranking sliders and "what For You learned" are now one *Your taste* screen with a single *Start over*.
+- **Sources rebuilt.** One list with a switch per source and a live status line. Tap a source to see what it pulls from, add to it (the one add control for that source), fix sign-in or board keys. A health card tests everything from your phone; *Find more* adds sources by topic. The old quick-add bar, reorder mode and separate lists are gone.
+- **Blocked lives in one place** (Settings → Hidden & blocked), with a way to block a tag or creator by name. Library is now Saved, Liked, History, Following.
+- **Post menu trimmed** to what isn't on the post already: Not interested, Hide a tag, Block creator, Hide source, Open, Report. Rotate shows only on videos.
+- **New look:** heavier type, grouped section cards, tinted icons, pinned headers, a flat bottom bar, a cleaner lock keypad, a bolder caption, and clearer empty states and messages.
+
 ## 3.30.1 — 2026-11-10
 
 Reddit pacing, Coomer outage check
