@@ -2,6 +2,7 @@ package dev.pfeed.domain.reco
 
 import dev.pfeed.domain.filter.Blocklist
 import dev.pfeed.domain.model.MediaItem
+import dev.pfeed.domain.model.MediaType
 import kotlinx.serialization.Serializable
 import java.time.Duration
 import java.time.Instant
@@ -60,7 +61,7 @@ class Ranker(
             exp(-ageDays / FRESHNESS_TAU_DAYS)
         } ?: UNKNOWN_FRESHNESS
         return weights.tag * tagScore + weights.creator * creatorScore +
-            weights.quality * qualityValue + weights.freshness * freshness
+            weights.quality * qualityValue + weights.freshness * freshness + formatPrior(item)
     }
 
     /**
@@ -115,6 +116,18 @@ class Ranker(
             if (recentSigs.size > SIMILARITY_WINDOW) recentSigs.removeFirst()
         }
         return out
+    }
+
+    /**
+     * A small lean toward video before anything is learned: measured on a fresh install, For You
+     * served 35% video and 20% comics, which is backwards for most people opening a porn app. It's
+     * small next to taste (±0.45), so the learned type:video / type:comic preference takes over fast.
+     */
+    private fun formatPrior(item: MediaItem): Double = when {
+        item.isGallery -> -0.06
+        item.type == MediaType.VIDEO || item.type == MediaType.EMBED -> 0.12
+        item.type == MediaType.GIF -> 0.04
+        else -> 0.0
     }
 
     private class Candidate(val item: MediaItem, val score: Double, val sig: Set<String>)
