@@ -22,7 +22,8 @@ import kotlin.random.Random
  * Philomena-engine boards (the software behind Derpibooru). These have a clean, key-free JSON API
  * and allow explicit content behind an "Everything" filter, which this adapter selects per host.
  *
- *  - derpibooru.org — My Little Pony art, huge and well-tagged.
+ *  - derpibooru.org — My Little Pony art, huge and well-tagged. All of it is MLP, so it's spaced
+ *    as a niche in the feed ([dev.pfeed.domain.reco.Niche]) and searched only for pony queries.
  *  - furbooru.org — furry art.
  *
  * API: `/api/v1/json/search/images?q={tags}&filter_id={everything}&per_page=50&page={n}&sf={sort}`.
@@ -58,7 +59,10 @@ class PhilomenaAdapter @Inject constructor(
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
-        val remote = HOSTS.keys.flatMap { host ->
+        // Derpibooru is all My Little Pony: searching it for "milf" returns pony milfs, which crowded
+        // every search. It's asked only when the search is about ponies.
+        val ponyQuery = PONY_WORDS.any { q.lowercase().contains(it) }
+        val remote = HOSTS.keys.filter { it != "derpibooru.org" || ponyQuery }.flatMap { host ->
             // Combine the user's query with the explicit rating so results are on-topic.
             attempt { fetch(host, "explicit, $q", 1, sort = "score") }.getOrDefault(emptyList())
         }
@@ -125,5 +129,6 @@ class PhilomenaAdapter @Inject constructor(
             "furbooru.org" to "2",
         )
         private val SEED_QUERIES = listOf("explicit", "explicit, bondage", "explicit, bdsm")
+        private val PONY_WORDS = listOf("pony", "ponies", "mlp", "my little", "equestria", "brony", "twilight sparkle", "rainbow dash", "fluttershy", "pinkie", "applejack", "celestia", "luna", "derpibooru")
     }
 }

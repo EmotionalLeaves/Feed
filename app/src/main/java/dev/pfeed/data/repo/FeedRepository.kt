@@ -363,6 +363,10 @@ class FeedSession(
         if (candidates.isEmpty()) return emptyList()
 
         val now = Instant.now()
+        // A fandom niche (My Little Pony) only gets its normal share once the user has shown they want it.
+        // A tag or creator page shows exactly what was asked for.
+        Spread.openNiches = if (spec is FeedSpec.Tag) setOf(dev.pfeed.domain.reco.Niche.MLP)
+            else dev.pfeed.domain.reco.Niche.opened(signals.affinities().tags)
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
             val ranker = Ranker(settings.get().weights)
