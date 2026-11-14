@@ -465,7 +465,8 @@ sealed class TubeSite(val host: String, val label: String) {
 
     object Tnaflix : TubeSite("tnaflix.com", "TNAFlix") {
         override fun listUrl(section: String, page: Int): String = when (section) {
-            "new" -> "https://www.tnaflix.com/new/${page + 1}"
+            // The very newest uploads are often still processing (their files answer 404): start a page in.
+            "new" -> "https://www.tnaflix.com/new/${page + 2}"
             "top" -> "https://www.tnaflix.com/toprated/${page + 1}"
             else -> "https://www.tnaflix.com/search?what=${enc(section)}&page=${page + 1}"
         }
