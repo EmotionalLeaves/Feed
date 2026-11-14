@@ -47,7 +47,11 @@ class ComicAdapter @Inject constructor(private val http: HttpJson) : CachingAdap
         val tag = entry.substringAfter('|', "")
         val page = token?.toIntOrNull() ?: 1
         val listed = ComicSite.parseList(site, http.getRaw(id, site.listUrl(tag.replace('-', ' '), page)))
-        val items = readAll(site, listed)
+        // The newest listing is newest-first; date it by position so Latest can place it.
+        val now = java.time.Instant.now()
+        val items = readAll(site, listed).mapIndexed { i, it ->
+            if (tag.isEmpty() && it.publishedAt == null) it.copy(publishedAt = now.minusSeconds(((page * 30L) + i) * 600L)) else it
+        }
         val next = if (listed.isEmpty() || page >= MAX_PAGES) null else (page + 1).toString()
         return EntryPage(items, next)
     }

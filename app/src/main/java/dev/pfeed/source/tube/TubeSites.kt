@@ -605,7 +605,14 @@ sealed class TubeSite(val host: String, val label: String) {
 }
 
 /** Feed items from a site's listing. */
-internal fun TubeSite.items(videos: List<TubeVideo>, section: String): List<MediaItem> = videos.map { v ->
+internal fun TubeSite.items(videos: List<TubeVideo>, section: String, page: Int = 0): List<MediaItem> {
+    // Listings rarely say when a video went up, but a "newest" page is newest-first: date it by its
+    // place in the list, so Latest can show tube videos instead of sorting them to the very end.
+    val now = java.time.Instant.now()
+    return videos.mapIndexed { i, v -> item(v, section, v.published ?: if (section == "new") now.minusSeconds(((page * 60L) + i) * 300L) else null) }
+}
+
+private fun TubeSite.item(v: TubeVideo, section: String, published: java.time.Instant?): MediaItem =
     MediaItem(
         id = "$host/${v.id}",
         sourceId = TubeAdapter.SOURCE_ID,
@@ -616,7 +623,6 @@ internal fun TubeSite.items(videos: List<TubeVideo>, section: String): List<Medi
         durationSec = v.durationSec,
         thumbnailUrl = v.thumb,
         pageUrl = v.pageUrl,
-        publishedAt = v.published,
+        publishedAt = published,
         extras = mapOf("resolve" to "tube", "vid" to v.id),
     )
-}

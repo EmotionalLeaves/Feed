@@ -44,7 +44,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         val site = TubeSite.byHost(entry.substringBefore('|')) ?: return EntryPage(emptyList(), null)
         val section = entry.substringAfter('|', "new")
         val page = token?.toIntOrNull() ?: 0
-        val items = site.items(listWithMirrors(site, site.listUrl(section, page)), section)
+        val items = site.items(listWithMirrors(site, site.listUrl(section, page)), section, page)
         val next = if (items.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString()
         return EntryPage(items, next)
     }
