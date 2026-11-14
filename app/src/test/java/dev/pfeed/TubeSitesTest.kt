@@ -193,7 +193,9 @@ class TubeSitesTest {
         assertEquals(3, g.pages.size)
         assertEquals("https://i1.nhentai.net/galleries/3214567/2.webp", g.pages[1])
         assertEquals(listOf("comic", "doujinshi"), g.tags)
-        assertEquals("https://nhentai.net/api/v2/galleries?query=tag%3Amilf+-tag%3Alolicon&sort=popular&page=2", NhentaiAdapter.searchUrl("tag:milf -tag:lolicon", "popular", 2))
+        assertEquals("https://nhentai.net/api/v2/search?query=tag%3Amilf+-tag%3Alolicon&sort=popular&page=2", NhentaiAdapter.searchUrl("tag:milf -tag:lolicon", "popular", 2))
+        // A listing entry carrying a minors tag id never becomes an item.
+        assertTrue(NhentaiAdapter.parse(Json.parseToJsonElement("""{"result":[{"id":1,"media_id":"2","english_title":"x","thumbnail":"galleries/2/thumb.webp","num_pages":2,"tag_ids":[5,19440]}]}""")).isEmpty())
     }
 
     @Test

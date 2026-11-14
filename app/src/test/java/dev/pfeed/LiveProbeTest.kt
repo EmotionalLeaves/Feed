@@ -32,13 +32,7 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val api = get("https://nhentai.net/api/v2/openapi.json", "application/json").second
-        for (path in listOf("\"/api/v2/search\"", "\"/api/v2/galleries\"", "\"/api/v2/galleries/tagged\"", "\"/api/v2/tags/search\""))
-            probe("spec $path") { around(api, path, 0, 1600).replace(Regex("\\s+"), " ") }
-        for (u in listOf(
-            "https://nhentai.net/api/v2/search?query=tag%3Amilf&sort=popular&page=1",
-            "https://nhentai.net/api/v2/search?query=milf+-tag%3Alolicon&sort=popular&page=1",
-            "https://nhentai.net/api/v2/search?query=tag%3A%22big+breasts%22&page=1",
-        )) probe("nh $u") { get(u, "application/json").let { (c, b) -> "$c results=${b.split("\"media_id\"").size - 1} tail=${b.takeLast(90)}" } }
+        for (slug in listOf("lolicon", "shotacon", "milf"))
+            probe("tag $slug") { get("https://nhentai.net/api/v2/tags/tag/$slug", "application/json").second.take(200) }
     }
 }
