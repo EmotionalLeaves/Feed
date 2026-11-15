@@ -270,4 +270,16 @@ class TubeSitesTest {
         assertEquals("https://s100.erome.com/9507/qTYRdpok/thumbs/ly.jpg?v=1", v.thumb)
         assertEquals("https://v93.erome.com/9525/E/a_720p.mp4", TubeSite.Erome.stream("""<video><source src="https://v93.erome.com/9525/E/a_720p.mp4" type='video/mp4' res='720'></video>""")!!.url)
     }
+
+    @Test
+    fun `rule34video lists videos and reads tags and streams from the page`() {
+        val list = """<div class="item thumb video_1 " data-video-card-id="4730794" > <a class="th" href="https://rule34video.com/video/4730794/rogue-anal-comission/" title="Rogue Anal Comission."> <div class="img wrap_image"> <img class="thumb" src="https://rule34video.com/contents/videos_screenshots/4730000/4730794/336x189/3.jpg" alt="x"/> <div class="time">1:23</div>"""
+        val v = TubeSite.Rule34Video.parseList(list).single()
+        assertEquals("Rogue Anal Comission.", v.title)
+        assertEquals(83, v.durationSec)
+        val page = """flashvars = { video_categories: 'Marvel, 3D', video_tags: 'rogue (marvel), futanari, big breasts', video_url: 'https://rule34video.com/get_file/54/a/4730794_360.mp4/?t=1', video_url_text: '360p', video_alt_url: 'https://rule34video.com/get_file/54/b/4730794_720p.mp4/?t=2', video_alt_url_text: '720p' }"""
+        assertEquals(listOf("Marvel", "3D", "rogue_(marvel)", "futanari", "big_breasts"), TubeSite.Rule34Video.pageTags(page))
+        assertEquals("https://rule34video.com/get_file/54/b/4730794_720p.mp4/?t=2", TubeSite.Rule34Video.stream(page)!!.url)
+        assertTrue(TubeSite.Rule34Video.checkTagsFirst)
+    }
 }
