@@ -49,7 +49,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         return EntryPage(items, next)
     }
 
-    private val resolved = ConcurrentHashMap<String, StreamInfo>()
+    private val resolved = ConcurrentHashMap<String, Pair<StreamInfo, Long>>()
 
     /** Mirror that last answered for a site; tried first next time. */
     private val workingMirror = ConcurrentHashMap<String, String>()
@@ -93,6 +93,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
                             return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\": $text)"
                         }
                         val first = items.first()
+                        resolved.remove(first.key) // judge the site now, not an earlier answer
                         val how = when (val st = resolveStream(first)) {
                             is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load"
                             is StreamInfo.Embed -> {
@@ -110,7 +111,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
 
     override suspend fun resolveStream(item: MediaItem): StreamInfo {
         if (item.extras["resolve"] != "tube") return super.resolveStream(item)
-        resolved[item.key]?.let { return it }
+        resolved[item.key]?.let { (s, at) -> if (System.currentTimeMillis() - at < RESOLVED_TTL_MS) return s }
         val site = TubeSite.byHost(item.id.substringBefore('/')) ?: throw SourceException(id, "Unknown site")
         val vid = item.extras["vid"] ?: item.id.substringAfter('/')
         val stream: StreamInfo = try {
@@ -125,10 +126,12 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             }
             direct?.let { StreamInfo.Direct(it.url, it.mime) } ?: StreamInfo.Embed(site.embedUrl(vid))
         } catch (e: SourceException) {
-            // Page refused or changed: the embed still works.
-            StreamInfo.Embed(site.embedUrl(vid))
+            // Page refused (often a moment's rate limit): the embed works now, and next time the
+            // page is asked again rather than remembering the fallback.
+            return StreamInfo.Embed(site.embedUrl(vid))
         }
-        resolved[item.key] = stream
+        // Remembered a while: stream links carry expiring tokens, so not for the whole session.
+        resolved[item.key] = stream to System.currentTimeMillis()
         return stream
     }
 
@@ -148,6 +151,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
     }
 
     companion object {
+        private const val RESOLVED_TTL_MS = 20 * 60_000L
         const val SOURCE_ID = "tube"
         private const val MAX_PAGES = 30
         private const val SEARCH_TIMEOUT_MS = 8_000L
