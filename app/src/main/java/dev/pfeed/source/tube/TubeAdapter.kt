@@ -15,6 +15,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.sync.withPermit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -44,9 +45,33 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
         val site = TubeSite.byHost(entry.substringBefore('|')) ?: return EntryPage(emptyList(), null)
         val section = entry.substringAfter('|', "new")
         val page = token?.toIntOrNull() ?: 0
-        val items = site.items(listWithMirrors(site, site.listUrl(section, page)), section, page)
-        val next = if (items.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString()
+        val listed = site.items(listWithMirrors(site, site.listUrl(section, page)), section, page)
+        val items = if (site.checkTagsFirst) checked(site, listed.take(TAG_CHECK_LIMIT)) else listed
+        val next = if (listed.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString()
         return EntryPage(items, next)
+    }
+
+    private val tagGate = kotlinx.coroutines.sync.Semaphore(4)
+
+    /**
+     * For [TubeSite.checkTagsFirst] sites: each video page is read, its tags added, and the post kept
+     * only if it has tags and the minors filter allows them. The stream on that page is kept for
+     * playback, so this costs no extra request when the video is opened.
+     */
+    private suspend fun checked(site: TubeSite, items: List<MediaItem>): List<MediaItem> = coroutineScope {
+        items.map { item ->
+            async {
+                tagGate.withPermit {
+                    attempt {
+                        val html = http.getRaw(id, item.pageUrl)
+                        val tags = site.pageTags(html)
+                        if (tags.isEmpty()) return@attempt null
+                        site.stream(html)?.let { resolved[item.key] = StreamInfo.Direct(it.url, it.mime) to System.currentTimeMillis() }
+                        item.copy(tags = (tags + item.tags).distinct())
+                    }.getOrNull()
+                }
+            }
+        }.awaitAll().filterNotNull().filter(dev.pfeed.domain.filter.MinorsFilter::allows)
     }
 
     private val resolved = ConcurrentHashMap<String, Pair<StreamInfo, Long>>()
@@ -143,7 +168,10 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             TubeSite.ALL.map { site ->
                 async {
                     withTimeoutOrNull(SEARCH_TIMEOUT_MS) {
-                        attempt { site.items(listWithMirrors(site, site.listUrl(q, 0)), q) }.getOrDefault(emptyList())
+                        attempt {
+                            val found = site.items(listWithMirrors(site, site.listUrl(q, 0)), q)
+                            if (site.checkTagsFirst) checked(site, found.take(TAG_CHECK_SEARCH)) else found
+                        }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()
@@ -153,6 +181,8 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
 
     companion object {
         private const val RESOLVED_TTL_MS = 20 * 60_000L
+        private const val TAG_CHECK_LIMIT = 16
+        private const val TAG_CHECK_SEARCH = 8
         const val SOURCE_ID = "tube"
         private const val MAX_PAGES = 30
         private const val SEARCH_TIMEOUT_MS = 8_000L

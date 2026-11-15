@@ -33,11 +33,12 @@ class LiveProbeTest {
     private fun flat(h: String) = h.replace(Regex("\\s+"), " ")
     @Test
     fun probe() {
-        for (u in listOf("https://rule34video.com/latest-updates/", "https://rule34video.com/search/milf/", "https://www.8muses.com/comics", "https://hanime.tv/")) probe("list $u") {
-            val (c, h) = get(u); "$c len=${h.length} title=${Regex("<title>([^<]{0,60})").find(h)?.groupValues?.get(1)} :: " + flat(around(h, "/video/", 500, 900))
-        }
-        val l = get("https://rule34video.com/latest-updates/").second
-        val v = Regex("href=\"(https://rule34video.com/video/\\d+/[^\"]+)\"").find(l)?.groupValues?.get(1)
-        if (v != null) { val p = get(v).second; probe("r34v page") { "len=${p.length} " + flat(around(p, "flashvars", 0, 1400)) } }
+        val site = TubeSite.Rule34Video
+        for (sec in listOf("new", "top", "milf")) probe("r34v $sec") { val l = site.parseList(get(site.listUrl(sec, 0)).second); "n=${l.size} durs=${l.count { it.durationSec != null }} first=${l.firstOrNull()}" }
+        val v = site.parseList(get(site.listUrl("new", 0)).second).first()
+        val h = get(v.pageUrl).second
+        val st = site.stream(h)
+        probe("r34v page") { "tags=${site.pageTags(h).take(15)} stream=$st ${st?.let { head(it.url) }}" }
+        probe("r34v time markup") { flat(around(get(site.listUrl("new", 0)).second, "time", 200, 200)) }
     }
 }
