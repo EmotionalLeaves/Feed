@@ -113,6 +113,7 @@ private val TextShadow = Shadow(color = Color.Black.copy(alpha = 0.7f), offset =
 private fun TextStyle.shadowed() = merge(TextStyle(shadow = TextShadow))
 
 @Composable
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltViewModel()) {
     val items by vm.items.collectAsStateWithLifecycle()
     val mode by vm.mode.collectAsStateWithLifecycle()
@@ -151,6 +152,24 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         if (items.isNotEmpty()) {
+            // Main feed: pull down on the first post for a fresh batch, as in any feed app.
+            val pull = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
+            val canPull = vm.tag == null && !vm.isViewer && !landscape
+            androidx.compose.material3.pulltorefresh.PullToRefreshBox(
+                isRefreshing = false,
+                onRefresh = { if (canPull) vm.refresh() },
+                state = pull,
+                modifier = Modifier.fillMaxSize(),
+                indicator = {
+                    if (canPull) androidx.compose.material3.pulltorefresh.PullToRefreshDefaults.Indicator(
+                        state = pull,
+                        isRefreshing = false,
+                        containerColor = Color(0xFF1C1C21),
+                        color = Accent,
+                        modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 52.dp),
+                    )
+                },
+            ) {
             VerticalPager(
                 state = pagerState,
                 beyondViewportPageCount = 1,
@@ -171,6 +190,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     landscape = landscape,
                     onLandscape = vm::setLandscape,
                 )
+            }
             }
             // "Loading more" only when you're actually waiting at the end, not as a constant badge.
             if (loading && pagerState.settledPage >= items.size - 2) {

@@ -1,5 +1,6 @@
 package dev.pfeed.ui.library
 
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.background
@@ -104,10 +105,17 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
         }
         // Four equal tabs that always fit, even on narrow phones (a scrolling row cut "Following" off).
         LibraryTabs(tab) { tab = it }
+        val toFeed = {
+            nav.navigate(Routes.FEED) {
+                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                launchSingleTop = true
+                restoreState = true
+            }
+        }
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
         when (tab) {
-            0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here for later.", openGrid(saved))
-            1 -> Grid(liked, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(liked))
+            0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts download on Wi-Fi and play offline.", openGrid(saved), onBrowse = toFeed)
+            1 -> Grid(liked, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(liked), onBrowse = toFeed)
             2 -> Grid(history, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(history))
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
@@ -140,8 +148,18 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit) {
-    if (items.isEmpty()) EmptyState(icon, title, hint) else MediaGrid(items, onOpen)
+private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null) {
+    if (items.isEmpty()) {
+        EmptyState(icon, title, hint, action = onBrowse?.let { go ->
+            {
+                androidx.compose.material3.Button(
+                    onClick = go,
+                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Accent),
+                    shape = RoundedCornerShape(50),
+                ) { Text("Browse For You", fontWeight = FontWeight.SemiBold) }
+            }
+        })
+    } else MediaGrid(items, onOpen)
 }
 
 @Composable
