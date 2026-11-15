@@ -47,7 +47,8 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PFeedTheme {
-                val blur by settingsRepository.flow.map { it.blurPreviews }.collectAsState(initial = false)
+                val blurFlow = androidx.compose.runtime.remember { settingsRepository.flow.map { it.blurPreviews } }
+                val blur by blurFlow.collectAsState(initial = false)
                 androidx.compose.runtime.CompositionLocalProvider(dev.pfeed.ui.common.LocalBlurPreviews provides blur) {
                     AppRoot(lockManager = lockManager, onPanic = ::panic)
                 }
