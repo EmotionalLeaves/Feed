@@ -1,5 +1,9 @@
 package dev.pfeed.ui
 
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.Search
+import androidx.compose.material.icons.outlined.Home
 import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,13 +66,14 @@ object Routes {
     fun viewer(token: String) = "viewer/$token"
 }
 
-private data class Tab(val route: String, val label: String, val icon: ImageVector)
+/** [icon] when selected, [outline] otherwise: the current tab reads at a glance, as in most modern apps. */
+private data class Tab(val route: String, val label: String, val icon: ImageVector, val outline: ImageVector)
 
 private val tabs = listOf(
-    Tab(Routes.FEED, "Feed", Icons.Filled.Home),
-    Tab(Routes.SEARCH, "Search", Icons.Filled.Search),
-    Tab(Routes.LIBRARY, "Library", Icons.Filled.VideoLibrary),
-    Tab(Routes.SETTINGS, "Settings", Icons.Filled.Settings),
+    Tab(Routes.FEED, "Feed", Icons.Filled.Home, Icons.Outlined.Home),
+    Tab(Routes.SEARCH, "Search", Icons.Filled.Search, Icons.Outlined.Search),
+    Tab(Routes.LIBRARY, "Library", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
+    Tab(Routes.SETTINGS, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
 )
 
 @Composable
@@ -122,7 +127,7 @@ private fun MainNav(locked: Boolean) {
                         NavigationBarItem(
                             selected = tab == currentTab,
                             onClick = { nav.navigateTab(tab.route) },
-                            icon = { Icon(tab.icon, contentDescription = tab.label) },
+                            icon = { Icon(if (tab == currentTab) tab.icon else tab.outline, contentDescription = tab.label) },
                             label = { Text(tab.label) },
                             colors = NavigationBarItemDefaults.colors(
                                 selectedIconColor = Color.White,
@@ -142,6 +147,11 @@ private fun MainNav(locked: Boolean) {
             startDestination = Routes.FEED,
             // Immersive screens handle the status bar themselves; the others get the normal insets.
             modifier = if (immersive) Modifier.padding(bottom = padding.calculateBottomPadding()) else Modifier.padding(padding),
+            // Quick fades between screens: snappy, and no sliding panels over full-screen video.
+            enterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) },
+            exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) },
+            popEnterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) },
+            popExitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) },
         ) {
             composable(Routes.FEED) { FeedScreen(nav = nav, locked = locked) }
             composable(Routes.TAG, arguments = listOf(navArgument("tag") { type = NavType.StringType })) {

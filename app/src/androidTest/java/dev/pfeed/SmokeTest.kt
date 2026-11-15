@@ -365,6 +365,13 @@ class SmokeTest {
             rule.onNodeWithText("Sources").performClick()
             waitFor(what = "sources") { exists("Check sources") }
             shot("08_sources")
+            // The PIN screen, as it looks when the app locks.
+            val lm = rule.activity.lockManager
+            runBlocking { lm.createPin("1234".toCharArray()) }
+            rule.runOnUiThread { lm.lockNow() }
+            Thread.sleep(800)
+            shot("09_lock")
+            runBlocking { lm.unlockWithPin("1234".toCharArray()); lm.disable("1234".toCharArray()) }
         } finally {
             rule.runOnUiThread { rule.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
             dev.pfeed.ui.common.MaskMedia.on = false
