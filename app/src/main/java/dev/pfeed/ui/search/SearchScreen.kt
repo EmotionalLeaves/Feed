@@ -192,6 +192,8 @@ class SearchViewModel @Inject constructor(
             it.copy(query = query, searched = query, loading = true, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0)
         }
         viewModelScope.launch { recent.add(query) }
+        // What you search for is what you want more of: For You learns it too.
+        viewModelScope.launch { runCatching { signals.recordSearch(query) } }
         job = viewModelScope.launch {
             repo.search(query).collect { r ->
                 _ui.update {

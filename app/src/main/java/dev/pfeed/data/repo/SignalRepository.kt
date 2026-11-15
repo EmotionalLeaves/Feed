@@ -8,6 +8,8 @@ import dev.pfeed.data.db.TagAffinityEntity
 import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.filter.Blocklist
 import dev.pfeed.domain.model.MediaItem
+import dev.pfeed.domain.model.MediaType
+import dev.pfeed.domain.reco.SignalType
 import dev.pfeed.domain.reco.AffinityModel
 import dev.pfeed.domain.reco.Features
 import dev.pfeed.domain.reco.Signal
@@ -80,6 +82,21 @@ class SignalRepository @Inject constructor(
         }
     }
 
+    /**
+     * A search is a stated interest: its words count like watching a matching post most of the way
+     * (a mild nudge, so one curious search doesn't take over For You; searching again adds up).
+     */
+    suspend fun recordSearch(query: String) {
+        val q = query.trim().takeIf { it.length >= 2 } ?: return
+        val words = q.split(Regex("\\s+")).filter { it.length >= 2 }
+        val probe = MediaItem(
+            id = "search/" + q.lowercase(), sourceId = "search", type = MediaType.IMAGE, title = null, creator = null,
+            tags = (words + q.replace(' ', '_')).distinct(), durationSec = null, thumbnailUrl = null, pageUrl = "",
+            publishedAt = null, extras = emptyMap(),
+        )
+        record(probe, Signal(SignalType.VIEW, SEARCH_NUDGE))
+    }
+
     /** Current affinities, decayed to now. */
     suspend fun affinities(): Affinities {
         ensureModel()
@@ -110,6 +127,7 @@ class SignalRepository @Inject constructor(
 
     companion object {
         const val TASTE_MODEL_VERSION = 3
+        private const val SEARCH_NUDGE = 1.5
     }
 
     /** Strongest learned likes and dislikes, for the "what it has learned" screen. */
