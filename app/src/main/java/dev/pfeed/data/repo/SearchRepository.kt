@@ -98,6 +98,8 @@ class SearchRepository @Inject constructor(
                 val r = searchOne(a, query)
                 val snapshot = lock.withLock {
                     timings[a.id] = System.currentTimeMillis() - t0
+                    // How long sources waited to start: high means the search's own threads were busy.
+                    timings["queued"] = maxOf(timings["queued"] ?: 0L, t0 - started)
                     pending--
                     r.onSuccess { list ->
                         val allowed = list.filter(blocklist::allows)
@@ -119,7 +121,7 @@ class SearchRepository @Inject constructor(
                 send(snapshot)
             }
         }
-    }.flowOn(kotlinx.coroutines.Dispatchers.Default) // dedup and ranking stay off the caller's thread (the UI), and timers fire on time
+    }.flowOn(SEARCH_THREADS) // off the UI thread, and off the shared CPU pool: a feed busy parsing pages can't delay search for seconds
 
     /**
      * One source's results within [PER_SOURCE_TIMEOUT_MS], hard. The work runs detached and is only
@@ -161,5 +163,9 @@ class SearchRepository @Inject constructor(
     companion object {
         private const val PER_SOURCE_TIMEOUT_MS = 14_000L
         private const val MAX_PER_SOURCE = 150
+
+        /** The search's own small pool (IO-backed, so feed work on Default can't queue it). */
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+        private val SEARCH_THREADS = kotlinx.coroutines.Dispatchers.IO.limitedParallelism(3)
     }
 }
