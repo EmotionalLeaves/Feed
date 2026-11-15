@@ -32,7 +32,12 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         CrashLog.install(this)
         lockManager.attach()
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {
-            settings.flow.collect { dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns }
+            settings.flow.collect {
+                dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
+                val height = if (it.dataSaver) 480 else 1080
+                dev.pfeed.source.tube.TubeSite.maxHeight = height
+                dev.pfeed.player.PlayerPool.maxHeight = height
+            }
         }
         MaintenanceWorker.schedule(this)
     }

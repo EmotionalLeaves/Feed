@@ -34,11 +34,18 @@ class PlayerPool @Inject constructor(
     @MainThread
     fun acquire(owner: String): ExoPlayer? {
         val existing = owners.indexOf(owner)
-        if (existing >= 0) return playerAt(existing)
+        if (existing >= 0) return playerAt(existing).also(::applyQuality)
         val free = owners.indexOfFirst { it == null }
         if (free < 0) return null
         owners[free] = owner
-        return playerAt(free)
+        return playerAt(free).also(::applyQuality)
+    }
+
+    /** Adaptive (HLS) streams pick their own quality; cap it to [maxHeight]. */
+    private fun applyQuality(player: ExoPlayer) {
+        val p = player.trackSelectionParameters
+        if (p.maxVideoHeight == maxHeight) return
+        player.trackSelectionParameters = p.buildUpon().setMaxVideoSize(Int.MAX_VALUE, maxHeight).build()
     }
 
     @MainThread
@@ -80,6 +87,9 @@ class PlayerPool @Inject constructor(
 
     companion object {
         const val SIZE = 4
+
+        /** 1080, or 480 with Data saver on (set from settings at startup and on change). */
+        @Volatile var maxHeight: Int = 1080
 
         val MOVIE: androidx.media3.common.AudioAttributes = androidx.media3.common.AudioAttributes.Builder()
             .setUsage(androidx.media3.common.C.USAGE_MEDIA)

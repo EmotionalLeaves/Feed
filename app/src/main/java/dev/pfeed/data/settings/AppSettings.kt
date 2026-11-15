@@ -65,6 +65,8 @@ data class AppSettings(
     val encryptedDns: Boolean = false,
     /** Private mode: nothing is added to watch history or search history, and watching teaches For You nothing. */
     val privateMode: Boolean = false,
+    /** Data saver: videos at most 480p (fewer megabytes on mobile data). */
+    val dataSaver: Boolean = false,
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),

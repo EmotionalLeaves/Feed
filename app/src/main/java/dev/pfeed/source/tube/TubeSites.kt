@@ -111,13 +111,16 @@ sealed class TubeSite(val host: String, val label: String) {
         }
 
         /** Highest "quality":"720" style pick from a list of {videoUrl, quality} objects. */
+        /** Tallest MP4 picked (1080, or 480 with Data saver on); adaptive streams are capped by the player. */
+        @Volatile var maxHeight: Int = 1080
+
         internal fun bestOf(list: JsonArray, site: String = ""): TubeStream? = list.mapNotNull { it as? JsonObject }
             .mapNotNull { o ->
                 val raw = (o["videoUrl"] ?: o["url"])?.jsonPrimitive?.contentOrNull?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
                 val url = absolute(raw, site).takeIf { it.startsWith("http") } ?: return@mapNotNull null
                 val q = o["quality"]?.let { q -> (q as? JsonPrimitive)?.contentOrNull?.filter(Char::isDigit)?.toIntOrNull() } ?: 0
                 q to url
-            }.maxByOrNull { it.first }?.let { (_, url) -> TubeStream(unescape(url), if (url.contains(".m3u8")) MediaTypes.HLS_MIME else null) }
+            }.let { all -> all.filter { it.first <= maxHeight }.ifEmpty { all.sortedBy { it.first }.take(1) } }.maxByOrNull { it.first }?.let { (_, url) -> TubeStream(unescape(url), if (url.contains(".m3u8")) MediaTypes.HLS_MIME else null) }
 
         /** Pornhub-family `"mediaDefinitions":[…]` found in a page's player setup. */
         internal fun mediaDefinitions(html: String): JsonArray? =
@@ -362,7 +365,7 @@ sealed class TubeSite(val host: String, val label: String) {
                 return TubeStream(it.second, if (it.second.contains(".m3u8")) MediaTypes.HLS_MIME else null)
             }
             return entries.mapNotNull { (q, u) -> Regex("""\d+""").find(q)?.value?.toIntOrNull()?.let { it to u } }
-                .filter { it.first <= 1080 }.maxByOrNull { it.first }?.let { TubeStream(it.second) }
+                .filter { it.first <= maxHeight }.maxByOrNull { it.first }?.let { TubeStream(it.second) }
         }
 
         /**
@@ -461,7 +464,7 @@ sealed class TubeSite(val host: String, val label: String) {
 
     /** Best "quality → url" pick up to 1080p (4K is too heavy for a phone feed). */
     protected fun best(options: List<Pair<Int, String>>): TubeStream? =
-        options.filter { it.first in 1..1080 && it.second.startsWith("http") }.maxByOrNull { it.first }?.let { TubeStream(it.second, "video/mp4") }
+        options.filter { it.first in 1..maxHeight && it.second.startsWith("http") }.maxByOrNull { it.first }?.let { TubeStream(it.second, "video/mp4") }
 
     object Tnaflix : TubeSite("tnaflix.com", "TNAFlix") {
         override fun listUrl(section: String, page: Int): String = when (section) {
@@ -597,7 +600,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     (Regex("""\d+""").find(label)?.value?.toIntOrNull() ?: 0) to src
                 }
                 // Up to 1080p: 4K files are huge for a phone feed.
-                .filter { it.first <= 1080 }
+                .filter { it.first <= maxHeight }
                 .maxByOrNull { it.first }
                 ?.let { TubeStream(it.second, "video/mp4") }
         }
