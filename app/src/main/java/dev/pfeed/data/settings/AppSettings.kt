@@ -69,6 +69,8 @@ data class AppSettings(
     val dataSaver: Boolean = false,
     /** Blur grid previews (Library, Search) until opened, for using the app around other people. */
     val blurPreviews: Boolean = false,
+    /** Saved posts are downloaded (on Wi-Fi) into private storage so they play offline. */
+    val keepSavedOffline: Boolean = true,
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),

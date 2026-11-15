@@ -23,6 +23,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     @Inject lateinit var okHttpClient: OkHttpClient
     @Inject lateinit var lockManager: AppLockManager
     @Inject lateinit var settings: dev.pfeed.data.settings.SettingsRepository
+    @Inject lateinit var offline: dev.pfeed.data.repo.OfflineStore
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -41,6 +42,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
             }
         }
         MaintenanceWorker.schedule(this)
+        offline.start()
     }
 
     override fun newImageLoader(): ImageLoader = ImageLoader.Builder(this)

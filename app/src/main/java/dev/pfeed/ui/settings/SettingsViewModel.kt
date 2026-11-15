@@ -67,6 +67,7 @@ class SettingsViewModel @Inject constructor(
     private val checker: dev.pfeed.source.SourceChecker,
     private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
     private val tube: dev.pfeed.source.tube.TubeAdapter,
+    offline: dev.pfeed.data.repo.OfflineStore,
 ) : ViewModel() {
 
     /** Per-site result of checking the tube sites, by site label; null while checking. */
@@ -206,6 +207,10 @@ class SettingsViewModel @Inject constructor(
     fun setPrivateMode(v: Boolean) = update { it.copy(privateMode = v) }
     fun setDataSaver(v: Boolean) = update { it.copy(dataSaver = v) }
     fun setBlurPreviews(v: Boolean) = update { it.copy(blurPreviews = v) }
+    fun setKeepSavedOffline(v: Boolean) = update { it.copy(keepSavedOffline = v) }
+
+    /** Space taken by offline copies of saved posts. */
+    val offlineBytes = offline.bytes
     fun setLockTimeout(sec: Int) = update { it.copy(lockTimeoutSec = sec) }
 
     fun setDisguise(d: Disguise) {

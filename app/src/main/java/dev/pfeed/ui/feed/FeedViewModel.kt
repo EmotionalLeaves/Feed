@@ -71,6 +71,7 @@ class FeedViewModel @Inject constructor(
     private val seen: SeenItems,
     private val dwellBaseline: DwellBaseline,
     private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
+    private val offline: dev.pfeed.data.repo.OfflineStore,
     holder: TransientFeedHolder,
     val playerPool: PlayerPool,
 ) : ViewModel() {
@@ -279,6 +280,8 @@ class FeedViewModel @Inject constructor(
 
     private fun streamAsync(item: MediaItem): Deferred<StreamInfo?> = streams.getOrPut(item.key) {
         viewModelScope.async {
+            // A saved post kept on the phone plays from there: instant, and works offline.
+            offline.local(item.key)?.let { return@async it }
             val resolved: StreamInfo? = try {
                 registry.byId(item.sourceId)?.resolveStream(item)
             } catch (e: CancellationException) {

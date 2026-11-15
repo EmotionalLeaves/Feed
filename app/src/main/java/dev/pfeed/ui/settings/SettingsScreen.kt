@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.SdStorage
+import androidx.compose.material.icons.filled.DownloadForOffline
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Timer
@@ -98,6 +99,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val lockOn by vm.lockEnabled.collectAsStateWithLifecycle()
     val sources by vm.sources.collectAsStateWithLifecycle()
     val blocked by vm.blockEntries.collectAsStateWithLifecycle()
+    val offlineBytes by vm.offlineBytes.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var dialog by remember { mutableStateOf<PendingDialog?>(null) }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -173,6 +175,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     value = formatMb(s.cacheSizeMb),
                     icon = Icons.Filled.SdStorage,
                     onClick = { dialog = PendingDialog.PickCache },
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Keep saved posts offline",
+                    s.keepSavedOffline,
+                    subtitle = if (s.keepSavedOffline) "Saved posts download on Wi-Fi and play without a connection" +
+                        (if (offlineBytes > 0) " · ${formatBytes(offlineBytes)}" else "")
+                    else "Off: saved posts stream like everything else",
+                    icon = Icons.Filled.DownloadForOffline,
+                    onChange = vm::setKeepSavedOffline,
                 )
             }
 
@@ -380,6 +392,12 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         }
         null -> Unit
     }
+}
+
+private fun formatBytes(b: Long) = when {
+    b >= 1L shl 30 -> "%.1f GB".format(b / (1L shl 30).toDouble())
+    b >= 1L shl 20 -> "${b shr 20} MB"
+    else -> "${(b shr 10).coerceAtLeast(1)} KB"
 }
 
 private fun formatMb(mb: Int) = if (mb >= 1024) "${mb / 1024} GB" else "$mb MB"
