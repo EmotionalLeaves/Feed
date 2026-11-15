@@ -38,7 +38,7 @@ class LiveProbeTest {
             val u = url ?: return@repeat
             val h = get("https://comics.8muses.com$u").second
             val pics = Regex("href=\"(/porn/picture/[^\"]+)\"").findAll(h).count()
-            val subs = Regex("href=\"(/porn/album/[^\"]+)\"").findAll(h).map { it.groupValues[1] }.filter { it.length > u.length && it.startsWith(u) }.distinct().toList()
+            val subs = Regex("href=\"(/porn/album/[^\"]+)\"").findAll(h).map { it.groupValues[1] }.filter { it.startsWith("$u/") && !it.contains("?") }.distinct().toList()
             probe("album $u") { "len=${h.length} pictures=$pics subs=${subs.size} first=${subs.firstOrNull()} :: " + flat(around(h, if (pics > 0) "/porn/picture/" else "c-tile", 100, 700)) }
             if (pics > 0) {
                 val th = Regex("/image/th/([^\"]+)\"").find(h)?.groupValues?.get(1)
