@@ -354,7 +354,7 @@ class SmokeTest {
             session.close()
             val bySource = got.groupingBy { it.sourceId }.eachCount().entries.sortedByDescending { it.value }.joinToString { "${it.key}=${it.value}" }
             val byType = got.groupingBy { if (it.isGallery) "comic" else it.type.name.lowercase() }.eachCount()
-            android.util.Log.i("PFHEALTH", "$mode: ${got.size} posts in ${System.currentTimeMillis() - t0} ms; by source: $bySource; by type: $byType; origins: ${got.map { dev.pfeed.domain.reco.Spread.origin(it) }.distinct().size}")
+            android.util.Log.i("PFHEALTH", "$mode: ${got.size} posts in ${System.currentTimeMillis() - t0} ms; by source: $bySource; by type: $byType; origins: ${got.map { dev.pfeed.domain.reco.Spread.origin(it) }.distinct().size}; my little pony: ${got.count { dev.pfeed.domain.reco.Niche.of(it) != null }}")
             assertTrue("For You served nothing", got.isNotEmpty())
         }
     }
