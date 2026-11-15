@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.ui.draw.drawWithContent
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
 import android.net.Uri
@@ -464,8 +465,14 @@ fun HeartBurst(position: Offset?, tick: Int) {
         Icon(
             Icons.Filled.Favorite,
             contentDescription = null,
-            tint = HeartRed,
-            modifier = Modifier.size(sizeDp),
+            tint = Color.White,
+            // Painted in the brand gradient, like the liked heart on the rail.
+            modifier = Modifier.size(sizeDp)
+                .graphicsLayer { compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen }
+                .drawWithContent {
+                    drawContent()
+                    drawRect(dev.pfeed.ui.theme.BrandGradient, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+                },
         )
     }
 }
