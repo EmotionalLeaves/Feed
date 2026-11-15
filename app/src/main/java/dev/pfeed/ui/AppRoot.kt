@@ -82,7 +82,11 @@ fun AppRoot(lockManager: AppLockManager, onPanic: () -> Unit) {
     Box(Modifier.fillMaxSize().panicGesture(onPanic)) {
         // The app stays composed under the lock screen (so view-model state survives), but media pauses.
         MainNav(locked = locked)
-        if (locked) LockScreen(lockManager)
+        // The lock screen sits outside the Scaffold, so give it the app's text colour itself
+        // (without this its title drew in the default black, invisible on the dark background).
+        if (locked) androidx.compose.runtime.CompositionLocalProvider(
+            androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground,
+        ) { LockScreen(lockManager) }
     }
 }
 

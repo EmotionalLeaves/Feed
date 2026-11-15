@@ -1,5 +1,6 @@
 package dev.pfeed.ui.search
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -41,7 +42,6 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
-import androidx.compose.material3.SuggestionChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -392,17 +392,33 @@ private fun SuggestionsPane(
         }
         if (interests.isNotEmpty()) {
             SectionTitle("Based on what you like")
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                interests.forEach { q -> SuggestionChip(onClick = { onPick(q) }, label = { Text(q) }) }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                interests.forEach { q -> TopicChip(q, highlighted = true) { onPick(q) } }
             }
             Spacer(Modifier.height(16.dp))
         }
         SectionTitle("Popular")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            POPULAR.forEach { q -> SuggestionChip(onClick = { onPick(q) }, label = { Text(q) }) }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            POPULAR.forEach { q -> TopicChip(q) { onPick(q) } }
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/** A filled pill (no outline): reads as a tappable topic, the way current apps draw them. Your own interests are tinted. */
+@Composable
+private fun TopicChip(text: String, highlighted: Boolean = false, onClick: () -> Unit) {
+    Text(
+        text,
+        style = MaterialTheme.typography.labelLarge,
+        color = if (highlighted) Color.White else Color.White.copy(alpha = 0.88f),
+        maxLines = 1,
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (highlighted) Accent.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surfaceContainerHigh)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+    )
 }
 
 @Composable
