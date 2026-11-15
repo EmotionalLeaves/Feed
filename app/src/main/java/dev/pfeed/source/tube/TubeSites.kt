@@ -313,6 +313,7 @@ sealed class TubeSite(val host: String, val label: String) {
             // The list sits inside window.initials (layoutPage.videoListProps / searchResult); some
             // pages don't carry the key as plain text, so look for it in the parsed object too.
             val arr = jsonAfter(body, "\"videoThumbProps\":")?.let { runCatching { json.parseToJsonElement(it).jsonArray }.getOrNull() }
+                ?.takeIf { it.isNotEmpty() }
                 ?: initials(body)?.let(::findThumbProps)
             val fromJson = arr?.mapNotNull { it as? JsonObject }?.mapNotNull { v ->
                 val url = v["pageURL"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null

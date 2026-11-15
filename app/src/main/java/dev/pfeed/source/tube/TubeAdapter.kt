@@ -115,7 +115,9 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
                             val title = Regex("<title[^>]*>([^<]{0,60})", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.get(1)?.trim()
                             val text = raw.replace(Regex("<(script|style)[^>]*>.*?</\\1>", RegexOption.DOT_MATCHES_ALL), " ")
                                 .replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim().take(160)
-                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\": $text)"
+                            val ini = (site as? TubeSite.Xhamster)?.let { TubeSite.Xhamster.initials(raw) }
+                            val diag = if (site is TubeSite.Xhamster) " initials=${ini?.keys?.take(6)} props=${ini?.let(TubeSite.Xhamster::findThumbProps)?.size} at=${raw.indexOf("window.initials")}" else ""
+                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\": $text)$diag"
                         }
                         val first = items.first()
                         resolved.remove(first.key) // judge the site now, not an earlier answer
