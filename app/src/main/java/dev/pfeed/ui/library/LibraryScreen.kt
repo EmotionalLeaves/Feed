@@ -1,5 +1,6 @@
 package dev.pfeed.ui.library
 
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -155,7 +156,19 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
                 dev.pfeed.ui.common.BrandButton("Browse For You", onClick = go)
             }
         })
-    } else MediaGrid(items, onOpen)
+    } else Column {
+        // How many, and the quickest way in: play the whole list as a feed.
+        Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "${items.size} ${if (items.size == 1) "post" else "posts"}",
+                style = MaterialTheme.typography.labelLarge,
+                color = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier.weight(1f),
+            )
+            dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
+        }
+        MediaGrid(items, onOpen)
+    }
 }
 
 @Composable

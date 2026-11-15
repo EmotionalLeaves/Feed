@@ -31,6 +31,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         dev.pfeed.player.ResumePoints.init(this)
+        dev.pfeed.player.ComicPages.init(this)
         CrashLog.install(this)
         lockManager.attach()
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {

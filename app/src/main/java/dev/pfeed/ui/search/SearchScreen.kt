@@ -1,5 +1,6 @@
 package dev.pfeed.ui.search
 
+import androidx.compose.material.icons.filled.MenuBook
 import dev.pfeed.ui.feed.Display
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -149,9 +150,11 @@ class SearchViewModel @Inject constructor(
     registry: SourceRegistry,
     library: dev.pfeed.data.repo.LibraryRepository,
 ) : ViewModel() {
-    /** Long videos you left partway, most recent first: they carry on from where you stopped. */
+    /** Long videos and comics you left partway, most recent first: they carry on from where you stopped. */
     val continueWatching: StateFlow<List<MediaItem>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
-        .map { list -> list.filter { dev.pfeed.player.ResumePoints.get(it.key) != null }.take(12) }
+        .map { list ->
+            list.filter { dev.pfeed.player.ResumePoints.get(it.key) != null || (it.isGallery && dev.pfeed.player.ComicPages.get(it.key) != null) }.take(12)
+        }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun openList(items: List<MediaItem>, index: Int, title: String): String = holder.put(items, index, title = title)
@@ -319,7 +322,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
         if (ui.searched == null) {
             SuggestionsPane(
                 continueWatching = continueWatching,
-                onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue watching"))) },
+                onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
                 typed = ui.query,
                 recent = recent,
                 interests = interests,
@@ -389,7 +392,7 @@ private fun SuggestionsPane(
             if (matches.isNotEmpty()) Spacer(Modifier.height(12.dp))
         }
         if (t.isEmpty() && continueWatching.isNotEmpty()) {
-            SectionTitle("Continue watching")
+            SectionTitle("Continue")
             Spacer(Modifier.height(10.dp))
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(continueWatching.size, key = { continueWatching[it].key }) { i -> ContinueCard(continueWatching[i]) { onContinue(i) } }
@@ -433,8 +436,10 @@ private fun SuggestionsPane(
 /** A video you left partway: its picture with how far you got, and how much is left. */
 @Composable
 private fun ContinueCard(item: MediaItem, onClick: () -> Unit) {
-    val at = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) ?: 0L }
-    val total = (item.durationSec ?: 0) * 1000L
+    // A video: time watched of its length. A comic: the page you're on of its pages.
+    val page = remember(item.key) { if (item.isGallery) dev.pfeed.player.ComicPages.get(item.key) else null }
+    val at = if (page != null) page + 1L else remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) ?: 0L }
+    val total = if (page != null) item.pages.size.toLong() else (item.durationSec ?: 0) * 1000L
     Column(Modifier.width(176.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
             coil.compose.AsyncImage(
@@ -445,11 +450,11 @@ private fun ContinueCard(item: MediaItem, onClick: () -> Unit) {
             )
             dev.pfeed.ui.common.MediaMask()
             Box(Modifier.align(Alignment.Center).size(38.dp).background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+                Icon(if (page != null) Icons.Filled.MenuBook else Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
             if (total > 0) {
                 Text(
-                    dev.pfeed.ui.common.formatDuration(((total - at) / 1000).toInt().coerceAtLeast(0)) + " left",
+                    if (page != null) "Page ${page + 1} of ${item.pages.size}" else dev.pfeed.ui.common.formatDuration(((total - at) / 1000).toInt().coerceAtLeast(0)) + " left",
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp),

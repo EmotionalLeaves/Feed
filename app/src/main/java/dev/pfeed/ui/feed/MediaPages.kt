@@ -213,9 +213,15 @@ fun VideoPage(
  */
 @Composable
 fun GalleryPage(item: MediaItem, vm: FeedViewModel) {
-    val pager = androidx.compose.foundation.pager.rememberPagerState(pageCount = { item.pages.size })
+    // Opens on the page you were reading last time.
+    val pager = androidx.compose.foundation.pager.rememberPagerState(
+        initialPage = remember(item.key) { dev.pfeed.player.ComicPages.get(item.key)?.coerceIn(0, item.pages.size - 1) ?: 0 },
+        pageCount = { item.pages.size },
+    )
+    val privateMode by vm.privateMode.collectAsState()
     LaunchedEffect(item.key, pager.currentPage) {
         item.pages.drop(pager.currentPage + 1).take(2).forEach { vm.warmImage(it) }
+        if (!privateMode) dev.pfeed.player.ComicPages.save(item.key, pager.currentPage, item.pages.size)
     }
     Box(Modifier.fillMaxSize()) {
         androidx.compose.foundation.pager.HorizontalPager(
