@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.24.0 — 2026-11-15
+
+Your taste, editable
+
+- **Your taste is grouped** the way you'd think about it: *Formats* (videos, pictures, comics, clip or full scene), *Sites*, then *More of* / *Less of* for subjects and creators.
+- **Forget any one thing** For You learned with the × next to it, instead of starting over completely.
+
 ## 4.23.0 — 2026-11-15
 
 Tighter MLP limit, comics in every search
