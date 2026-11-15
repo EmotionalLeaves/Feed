@@ -328,7 +328,8 @@ class SmokeTest {
         rule.runOnUiThread { rule.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
         try {
             val shown = rule.activity.mediaHealth.shownCount
-            runCatching { poll(60_000, "a post on screen") { shown.get() >= 1 } }
+            val before = shown.get()
+            runCatching { poll(90_000, "a post on screen") { shown.get() > before } }
             Thread.sleep(1_500)
             shot("01_feed")
             rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
@@ -338,6 +339,15 @@ class SmokeTest {
             waitFor(timeoutMs = 60_000, what = "results") { exists("Play all") || !exists("still searching", substring = true) }
             Thread.sleep(2_000)
             shot("03_results")
+            if (exists("Play all")) {
+                tap("Play all")
+                val b = shown.get()
+                runCatching { poll(60_000, "a result on screen") { shown.get() > b } }
+                Thread.sleep(1_000)
+                shot("03b_viewer")
+                androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+                Thread.sleep(1_000)
+            }
             rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "library") { exists("Saved", substring = true) }
             shot("04_library")

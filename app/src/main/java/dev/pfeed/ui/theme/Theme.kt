@@ -58,12 +58,13 @@ private val Type = Typography(
     titleLarge = base.titleLarge.copy(fontWeight = FontWeight.Bold),
     titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold),
     titleSmall = base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-    bodyLarge = base.bodyLarge,
-    bodyMedium = base.bodyMedium,
-    bodySmall = base.bodySmall.copy(lineHeight = 17.sp),
-    labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold),
-    labelMedium = base.labelMedium.copy(fontWeight = FontWeight.SemiBold),
-    labelSmall = base.labelSmall.copy(fontWeight = FontWeight.Medium),
+    // Material's default tracking (0.25–0.5 sp) reads dated and airy; modern UI type sits close to 0.
+    bodyLarge = base.bodyLarge.copy(letterSpacing = 0.1.sp),
+    bodyMedium = base.bodyMedium.copy(letterSpacing = 0.05.sp),
+    bodySmall = base.bodySmall.copy(lineHeight = 17.sp, letterSpacing = 0.05.sp),
+    labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.05.sp),
+    labelMedium = base.labelMedium.copy(fontWeight = FontWeight.SemiBold, letterSpacing = 0.15.sp),
+    labelSmall = base.labelSmall.copy(fontWeight = FontWeight.Medium, letterSpacing = 0.2.sp),
 )
 
 /** Small caps-style label above a group of settings. */

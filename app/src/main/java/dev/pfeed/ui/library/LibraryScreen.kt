@@ -1,5 +1,10 @@
 package dev.pfeed.ui.library
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -15,8 +20,6 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Tag
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.TabRowDefaults
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -33,8 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.ScrollableTabRow
-import androidx.compose.material3.Tab
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -95,33 +97,13 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     val liked by vm.liked.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
     val follows by vm.follows.collectAsStateWithLifecycle()
-    val counts = listOf(saved.size, liked.size, history.size, follows.size)
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Library") {
             if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
         }
-        ScrollableTabRow(
-            selectedTabIndex = tab,
-            edgePadding = 8.dp,
-            containerColor = Color.Transparent,
-            divider = {},
-            indicator = { positions ->
-                if (tab < positions.size) {
-                    TabRowDefaults.SecondaryIndicator(Modifier.tabIndicatorOffset(positions[tab]), color = Accent)
-                }
-            },
-        ) {
-            tabs.forEachIndexed { i, label ->
-                Tab(
-                    selected = tab == i,
-                    onClick = { tab = i },
-                    text = { Text(if (counts[i] > 0) "$label  ${counts[i]}" else label) },
-                    selectedContentColor = Color.White,
-                    unselectedContentColor = Color.White.copy(alpha = 0.55f),
-                )
-            }
-        }
+        // Four equal tabs that always fit, even on narrow phones (a scrolling row cut "Following" off).
+        LibraryTabs(tab) { tab = it }
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
         when (tab) {
             0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here for later.", openGrid(saved))
@@ -160,4 +142,32 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
 @Composable
 private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit) {
     if (items.isEmpty()) EmptyState(icon, title, hint) else MediaGrid(items, onOpen)
+}
+
+@Composable
+private fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
+    Column {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            tabs.forEachIndexed { i, label ->
+                val on = i == selected
+                val underline by androidx.compose.animation.core.animateDpAsState(if (on) 28.dp else 0.dp, label = "tab")
+                Column(
+                    Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { onSelect(i) }.padding(top = 12.dp, bottom = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text(
+                        label,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                        color = if (on) Color.White else Color.White.copy(alpha = 0.5f),
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Box(Modifier.width(underline).height(3.dp).background(Accent, RoundedCornerShape(2.dp)))
+                }
+            }
+        }
+        Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+    }
 }

@@ -258,7 +258,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
             TextField(
                 value = ui.query,
                 onValueChange = vm::setQuery,
-                placeholder = { Text("Search every source") },
+                placeholder = { Text("Search every site", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
