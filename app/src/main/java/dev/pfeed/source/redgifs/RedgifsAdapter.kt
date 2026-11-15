@@ -70,7 +70,7 @@ class RedgifsAdapter @Inject constructor(
         } ?: return null
         val gif = (root as? JsonObject)?.get("gif") as? JsonObject ?: return null
         val urls = gif["urls"] as? JsonObject ?: return null
-        val media = listOf("hd", "sd").firstNotNullOfOrNull { (urls[it] as? JsonPrimitive)?.contentOrNull } ?: return null
+        val media = (if (dev.pfeed.player.PlayerPool.maxHeight < 720) listOf("sd", "hd") else listOf("hd", "sd")).firstNotNullOfOrNull { (urls[it] as? JsonPrimitive)?.contentOrNull } ?: return null
         directCache[id] = media
         return media
     }
@@ -115,7 +115,7 @@ class RedgifsAdapter @Inject constructor(
         val gid = s("id") ?: return null
         val urls = g["urls"] as? JsonObject ?: return null
         fun u(key: String) = (urls[key] as? JsonPrimitive)?.contentOrNull
-        val media = u("hd") ?: u("sd") ?: return null
+        val media = (if (dev.pfeed.player.PlayerPool.maxHeight < 720) u("sd") ?: u("hd") else u("hd") ?: u("sd")) ?: return null
         val poster = u("poster") ?: u("thumbnail") ?: u("vthumbnail")
         val tags = (g["tags"] as? JsonArray)?.mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.lowercase() }.orEmpty()
         val creator = s("userName")?.takeIf { it.isNotBlank() && it != "unknown" }
