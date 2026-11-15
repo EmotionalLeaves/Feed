@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.23.0 — 2026-11-15
+
+Tighter MLP limit, comics in every search
+
+- **The one-in-36 My Little Pony limit really is one in 36 now.** The feed only remembered the last 12 posts when applying it, so pony could come back sooner than intended. Measured on the test device: 1 pony post in For You's first 60.
+- **Comic sites answer every search in time** (they read fewer galleries per search, so they no longer miss the deadline). Measured: 550–630 results per search from 8 sources, no source timing out.
+
 ## 4.22.0 — 2026-11-15
 
 Search suggestions, blurred previews
