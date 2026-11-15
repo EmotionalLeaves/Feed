@@ -1,5 +1,14 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.ui.draw.clip
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.ui.draw.drawWithContent
 import android.annotation.SuppressLint
 import android.graphics.Color as AndroidColor
@@ -239,14 +248,69 @@ fun GalleryPage(item: MediaItem, vm: FeedViewModel) {
             Modifier.align(Alignment.TopStart).fillMaxWidth(fraction).height(3.dp)
                 .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.9f)),
         )
-        Text(
-            "${pager.currentPage + 1} / ${item.pages.size}",
-            color = androidx.compose.ui.graphics.Color.White,
-            style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 14.dp)
-                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.45f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                .padding(horizontal = 10.dp, vertical = 4.dp),
-        )
+        // Tap the counter for a strip of every page; tap one to jump there.
+        var strip by remember(item.key) { mutableStateOf(false) }
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        Row(
+            Modifier.align(Alignment.TopEnd).padding(top = 100.dp, end = 14.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = if (strip) 0.7f else 0.45f))
+                .clickable { strip = !strip }
+                .padding(start = 10.dp, end = 6.dp, top = 4.dp, bottom = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                "${pager.currentPage + 1} / ${item.pages.size}",
+                color = androidx.compose.ui.graphics.Color.White,
+                style = MaterialTheme.typography.labelMedium,
+            )
+            Icon(
+                if (strip) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                contentDescription = if (strip) "Hide pages" else "All pages",
+                tint = androidx.compose.ui.graphics.Color.White,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+        androidx.compose.animation.AnimatedVisibility(
+            visible = strip,
+            enter = androidx.compose.animation.fadeIn() + androidx.compose.animation.expandVertically(),
+            exit = androidx.compose.animation.fadeOut() + androidx.compose.animation.shrinkVertically(),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 132.dp),
+        ) {
+            val listState = androidx.compose.foundation.lazy.rememberLazyListState(initialFirstVisibleItemIndex = (pager.currentPage - 2).coerceAtLeast(0))
+            androidx.compose.foundation.lazy.LazyRow(
+                state = listState,
+                modifier = Modifier.fillMaxWidth().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f)).padding(vertical = 8.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                items(item.pages.size, key = { it }) { i ->
+                    val page = remember(item.key, i) { Display.galleryPage(item, i) }
+                    val src by produceState<String?>(initialValue = item.pages[i], page.key) {
+                        value = (vm.resolve(page) as? StreamInfo.Direct)?.url ?: item.pages[i]
+                    }
+                    val current = i == pager.currentPage
+                    Box(
+                        Modifier.width(54.dp).height(76.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                            .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.08f))
+                            .then(if (current) Modifier.border(2.dp, dev.pfeed.ui.theme.BrandGradient, androidx.compose.foundation.shape.RoundedCornerShape(6.dp)) else Modifier)
+                            .clickable { scope.launch { pager.scrollToPage(i) }; strip = false },
+                    ) {
+                        AsyncImage(model = src, contentDescription = "Page ${i + 1}", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                        dev.pfeed.ui.common.MediaMask()
+                        Text(
+                            "${i + 1}",
+                            color = androidx.compose.ui.graphics.Color.White,
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.align(Alignment.BottomEnd).padding(3.dp)
+                                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                                .padding(horizontal = 4.dp),
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
