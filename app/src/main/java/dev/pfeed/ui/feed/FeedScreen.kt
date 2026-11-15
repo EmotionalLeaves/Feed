@@ -469,8 +469,8 @@ private fun FeedPage(
             isVideo = isVideo,
             // Turning sideways is for video; a still or a comic page reads fine upright.
             canFullscreen = isVideo || type == MediaType.EMBED,
-            onLike = { vm.toggleLike(item) },
-            onSave = { vm.toggleSave(item) },
+            onLike = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleLike(item) },
+            onSave = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleSave(item) },
             onMute = vm::toggleMute,
             onFollow = { vm.toggleFollowCreator(item) },
             onFullscreen = { onLandscape(true) },
