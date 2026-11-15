@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.30.1 — 2026-11-15
+
+xHamster fix, faster Reddit search
+
+- xHamster lists videos again: its pages moved the video list where the app wasn't looking. On networks where xHamster sends an empty page (a regional block), the app now leaves it alone for 20 minutes instead of asking four domains on every load, and the source check says so plainly.
+- Reddit searches go ahead of background feed requests in Reddit's request queue, so they come back within the search's time limit more often.
+- The double-tap heart bursts in the brand gradient.
+
 ## 4.30.0 — 2026-11-15
 
 Bolder look, Continue, and reading where you left off
