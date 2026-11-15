@@ -35,6 +35,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var library: dev.pfeed.data.repo.LibraryRepository
     @Inject lateinit var feedSessions: dev.pfeed.data.repo.FeedSessionFactory
     @Inject lateinit var settingsRepository: dev.pfeed.data.settings.SettingsRepository
+    @Inject lateinit var offlineStore: dev.pfeed.data.repo.OfflineStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.

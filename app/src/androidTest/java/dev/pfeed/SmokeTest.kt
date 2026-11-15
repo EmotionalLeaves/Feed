@@ -306,6 +306,34 @@ class SmokeTest {
         assertTrue("searches found nothing at all", total > 0)
     }
 
+    /** Saving a video and a comic keeps them on the phone: the copies appear and are what plays. */
+    @Test
+    fun savedPostsAreKeptOffline() {
+        val a = rule.activity
+        runBlocking {
+            val found = a.searchRepository.search("milf").toList().lastOrNull()?.items.orEmpty()
+            val picks = listOfNotNull(
+                found.firstOrNull { it.sourceId == "tube" },
+                found.firstOrNull { it.isGallery && it.pages.size <= 40 },
+                found.firstOrNull { it.type == dev.pfeed.domain.model.MediaType.IMAGE && !it.isGallery },
+            )
+            picks.forEach { a.library.add(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
+            try {
+                val t0 = System.currentTimeMillis()
+                fun done(it: dev.pfeed.domain.model.MediaItem) =
+                    if (it.isGallery) a.offlineStore.local("${it.key}#${it.pages.size - 1}") != null else a.offlineStore.local(it.key) != null
+                while (picks.any { !done(it) } && System.currentTimeMillis() - t0 < 120_000) kotlinx.coroutines.delay(2_000)
+                picks.forEach { p ->
+                    val local = if (p.isGallery) a.offlineStore.local("${p.key}#0") else a.offlineStore.local(p.key)
+                    android.util.Log.i("PFHEALTH", "offline ${p.sourceId}/${p.type}${if (p.isGallery) " (${p.pages.size} pages)" else ""}: ${if (done(p)) "kept" else "NOT kept"} in ${System.currentTimeMillis() - t0} ms ${local?.mimeType}; total ${a.offlineStore.bytes.value / 1024} KB")
+                }
+                assertTrue("nothing was kept offline", picks.isEmpty() || picks.any(::done))
+            } finally {
+                picks.forEach { a.library.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
+            }
+        }
+    }
+
     /** Following a tag fills the Following feed, and a tag page and a creator page both load. */
     @Test
     fun followingTagAndCreatorPagesLoad() {
