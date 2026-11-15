@@ -174,7 +174,7 @@ object ArchiveHeaders {
 
     /** The site to name as referrer for [host] (covers subdomains and the sites' CDN domains), or null. */
     /** Sites whose file servers only accept their www address as the referring page (checked live). */
-    private val WWW_REFERER = setOf("erome.com")
+    private val WWW_REFERER = setOf("erome.com", "tnaflix.com")
 
     fun refererFor(site: String): String = if (site in WWW_REFERER) "https://www.$site/" else "https://$site/"
 
