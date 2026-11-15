@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.30.0 — 2026-11-15
+
+Bolder look, Continue, and reading where you left off
+
+- **A signature look:** the main action on each screen, Follow, liked hearts and saved bookmarks now use a pink-to-coral gradient.
+- **Continue** in Search: long videos you left partway and comics you were reading, with how much is left or the page you're on. Tap to carry on.
+- **Comics reopen on the page you were reading.**
+- Search results show which site each tile is from, and the progress bar fills in as each site answers.
+- Library lists show how many posts they hold, with a Play all.
+- Confirmations ("Saved", "Hidden") are a compact dark pill instead of a light bar.
+
 ## 4.29.0 — 2026-11-15
 
 Polish pass
