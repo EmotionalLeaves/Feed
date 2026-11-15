@@ -72,7 +72,7 @@ object AppModule {
                 request.newBuilder()
                     .header("User-Agent", ArchiveHeaders.BROWSER_UA)
                     .apply {
-                        if (request.header("Referer") == null) header("Referer", "https://$site/")
+                        if (request.header("Referer") == null) header("Referer", ArchiveHeaders.refererFor(site))
                         // Sites that put an "are you 18?" page in front of everything until this is set.
                         ArchiveHeaders.cookiesFor(site)?.let { if (request.header("Cookie") == null) header("Cookie", it) }
                     }
@@ -173,6 +173,11 @@ object ArchiveHeaders {
         "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
 
     /** The site to name as referrer for [host] (covers subdomains and the sites' CDN domains), or null. */
+    /** Sites whose file servers only accept their www address as the referring page (checked live). */
+    private val WWW_REFERER = setOf("erome.com")
+
+    fun refererFor(site: String): String = if (site in WWW_REFERER) "https://www.$site/" else "https://$site/"
+
     fun siteFor(host: String): String? {
         SITES.firstOrNull { host == it || host.endsWith(".$it") }?.let { return it }
         return CDN.entries.firstOrNull { (cdn, _) -> host == cdn || host.endsWith(".$cdn") }?.value
