@@ -342,7 +342,7 @@ private fun FindMore(vm: SettingsViewModel) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Any topic, e.g. cosplay") },
+                placeholder = { Text("A topic, e.g. cosplay", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),

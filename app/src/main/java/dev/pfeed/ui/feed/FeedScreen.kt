@@ -1,5 +1,10 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.material.icons.filled.PanTool
+import androidx.compose.material.icons.filled.TouchApp
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.SwipeUp
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
@@ -672,20 +677,32 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
         exit = androidx.compose.animation.fadeOut(),
         modifier = modifier,
     ) {
+        // Sized to its text, never a fixed column: it reads cleanly on any width, and sits clear of the rail.
         Column(
-            Modifier.padding(horizontal = 40.dp).clip(RoundedCornerShape(20.dp)).background(Color.Black.copy(alpha = 0.72f)).padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            Modifier.padding(start = 20.dp, end = 84.dp).widthIn(max = 300.dp)
+                .clip(RoundedCornerShape(24.dp))
+                .background(Color(0xE6141418))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(24.dp))
+                .padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
+            Text("Quick gestures", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             listOf(
-                "Swipe up" to "next post",
-                "Double-tap" to "like",
-                "Hold the right side" to "play at 2×",
-                "Press and hold" to "more options",
-                "Three fingers" to "leave instantly",
-            ).forEach { (gesture, what) ->
+                Triple(Icons.Filled.SwipeUp, "Swipe up", "Next post"),
+                Triple(Icons.Filled.Favorite, "Double-tap", "Like"),
+                Triple(Icons.Filled.FastForward, "Hold the right side", "Play at 2×"),
+                Triple(Icons.Filled.TouchApp, "Press and hold", "More options"),
+                Triple(Icons.Filled.PanTool, "Three fingers", "Leave instantly"),
+            ).forEach { (icon, gesture, what) ->
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(gesture, color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.width(150.dp))
-                    Text(what, color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.bodyMedium)
+                    Box(Modifier.size(34.dp).background(Accent.copy(alpha = 0.18f), CircleShape), contentAlignment = Alignment.Center) {
+                        Icon(icon, contentDescription = null, tint = Accent, modifier = Modifier.size(18.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column {
+                        Text(gesture, color = Color.White, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
+                        Text(what, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodySmall)
+                    }
                 }
             }
         }
