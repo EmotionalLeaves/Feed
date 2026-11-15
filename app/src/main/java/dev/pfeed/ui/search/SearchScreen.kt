@@ -1,5 +1,9 @@
 package dev.pfeed.ui.search
 
+import dev.pfeed.ui.feed.Display
+import androidx.compose.ui.draw.blur
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -143,7 +147,15 @@ class SearchViewModel @Inject constructor(
     private val signals: SignalRepository,
     private val settingsRepo: dev.pfeed.data.settings.SettingsRepository,
     registry: SourceRegistry,
+    library: dev.pfeed.data.repo.LibraryRepository,
 ) : ViewModel() {
+    /** Long videos you left partway, most recent first: they carry on from where you stopped. */
+    val continueWatching: StateFlow<List<MediaItem>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
+        .map { list -> list.filter { dev.pfeed.player.ResumePoints.get(it.key) != null }.take(12) }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun openList(items: List<MediaItem>, index: Int, title: String): String = holder.put(items, index, title = title)
+
     private val _ui = MutableStateFlow(SearchUi())
     val ui: StateFlow<SearchUi> = _ui
     private val _filters = MutableStateFlow(SearchFilters())
@@ -247,6 +259,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     val visible by vm.visible.collectAsStateWithLifecycle()
     val recent by vm.recentSearches.collectAsStateWithLifecycle()
     val interests by vm.interests.collectAsStateWithLifecycle()
+    val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
     val focus = LocalFocusManager.current
     var showFilters by remember { mutableStateOf(false) }
 
@@ -305,6 +318,8 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
 
         if (ui.searched == null) {
             SuggestionsPane(
+                continueWatching = continueWatching,
+                onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue watching"))) },
                 typed = ui.query,
                 recent = recent,
                 interests = interests,
@@ -343,6 +358,8 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SuggestionsPane(
+    continueWatching: List<MediaItem>,
+    onContinue: (Int) -> Unit,
     typed: String,
     recent: List<String>,
     interests: List<String>,
@@ -370,6 +387,14 @@ private fun SuggestionsPane(
                 }
             }
             if (matches.isNotEmpty()) Spacer(Modifier.height(12.dp))
+        }
+        if (t.isEmpty() && continueWatching.isNotEmpty()) {
+            SectionTitle("Continue watching")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(continueWatching.size, key = { continueWatching[it].key }) { i -> ContinueCard(continueWatching[i]) { onContinue(i) } }
+            }
+            Spacer(Modifier.height(20.dp))
         }
         if (recent.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -402,6 +427,40 @@ private fun SuggestionsPane(
             POPULAR.forEach { q -> TopicChip(q) { onPick(q) } }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** A video you left partway: its picture with how far you got, and how much is left. */
+@Composable
+private fun ContinueCard(item: MediaItem, onClick: () -> Unit) {
+    val at = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) ?: 0L }
+    val total = (item.durationSec ?: 0) * 1000L
+    Column(Modifier.width(176.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick)) {
+        Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
+            coil.compose.AsyncImage(
+                model = item.thumbnailUrl,
+                contentDescription = item.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().then(if (dev.pfeed.ui.common.LocalBlurPreviews.current) Modifier.blur(24.dp) else Modifier),
+            )
+            dev.pfeed.ui.common.MediaMask()
+            Box(Modifier.align(Alignment.Center).size(38.dp).background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(24.dp))
+            }
+            if (total > 0) {
+                Text(
+                    dev.pfeed.ui.common.formatDuration(((total - at) / 1000).toInt().coerceAtLeast(0)) + " left",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp),
+                )
+                Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth((at.toFloat() / total).coerceIn(0.02f, 1f)).background(dev.pfeed.ui.theme.BrandGradient))
+                }
+            }
+        }
+        Spacer(Modifier.height(6.dp))
+        Text(item.title ?: Display.source(item, ""), style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, color = Color.White.copy(alpha = 0.9f))
     }
 }
 
@@ -455,15 +514,7 @@ private fun ResultsPane(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     modifier = Modifier.weight(1f),
                 )
-                Button(
-                    onClick = { onOpen(0) },
-                    colors = ButtonDefaults.buttonColors(containerColor = Accent),
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 6.dp),
-                ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Play all")
-                }
+                dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
             }
         }
         Box(Modifier.fillMaxSize()) {

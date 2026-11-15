@@ -334,10 +334,10 @@ private fun FeedEmptyState(
             Spacer(Modifier.height(24.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 if (onBrowse != null) {
-                    Button(onClick = onBrowse, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Browse For You") }
+                    dev.pfeed.ui.common.BrandButton("Browse For You", onClick = onBrowse)
                 } else {
                     if (canRefresh) {
-                        Button(onClick = onRefresh, colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Try again") }
+                        dev.pfeed.ui.common.BrandButton("Try again", onClick = onRefresh)
                     }
                     OutlinedButton(onClick = onSources) { Text("Sources", color = Color.White) }
                 }
@@ -413,7 +413,7 @@ private fun FollowPill(following: Boolean, onClick: () -> Unit, modifier: Modifi
         fontWeight = FontWeight.SemiBold,
         modifier = modifier
             .clip(shape)
-            .then(if (following) Modifier.border(1.dp, Color.White.copy(alpha = 0.5f), shape) else Modifier.background(Accent))
+            .then(if (following) Modifier.border(1.dp, Color.White.copy(alpha = 0.5f), shape) else Modifier.background(dev.pfeed.ui.theme.BrandGradient))
             .clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 6.dp),
     )

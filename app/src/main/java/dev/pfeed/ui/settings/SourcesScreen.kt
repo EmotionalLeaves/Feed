@@ -306,9 +306,7 @@ private fun HealthCard(
             }
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = onCheck, enabled = !running, colors = ButtonDefaults.buttonColors(containerColor = Accent)) {
-                    Text(if (done) "Check again" else "Check sources")
-                }
+                dev.pfeed.ui.common.BrandButton(if (done) "Check again" else "Check sources", onClick = onCheck, enabled = !running, compact = true)
                 if (done) {
                     OutlinedButton(onClick = {
                         val report = sources.filter { it.adapter.id in checks }.joinToString("\n") { src ->

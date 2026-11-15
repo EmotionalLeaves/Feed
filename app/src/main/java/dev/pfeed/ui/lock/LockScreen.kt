@@ -186,14 +186,12 @@ fun LockScreen(lock: AppLockManager) {
                 }
             }
             Spacer(Modifier.height(8.dp))
-            androidx.compose.material3.Button(
+            dev.pfeed.ui.common.BrandButton(
+                if (stage == Stage.ENTER) "Unlock" else "Continue",
                 onClick = ::submit,
                 enabled = pin.length >= MIN_PIN && !busy,
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = dev.pfeed.ui.theme.Accent),
-                modifier = Modifier.width(220.dp).height(50.dp),
-            ) {
-                Text(if (stage == Stage.ENTER) "Unlock" else "Continue", style = MaterialTheme.typography.titleMedium)
-            }
+                modifier = Modifier.width(220.dp),
+            )
         }
     }
 }

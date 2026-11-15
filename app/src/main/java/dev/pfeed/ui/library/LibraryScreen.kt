@@ -152,11 +152,7 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
     if (items.isEmpty()) {
         EmptyState(icon, title, hint, action = onBrowse?.let { go ->
             {
-                androidx.compose.material3.Button(
-                    onClick = go,
-                    colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Accent),
-                    shape = RoundedCornerShape(50),
-                ) { Text("Browse For You", fontWeight = FontWeight.SemiBold) }
+                dev.pfeed.ui.common.BrandButton("Browse For You", onClick = go)
             }
         })
     } else MediaGrid(items, onOpen)

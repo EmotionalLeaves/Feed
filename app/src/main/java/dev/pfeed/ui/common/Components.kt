@@ -278,3 +278,35 @@ fun StatusLine(text: String, color: Color, modifier: Modifier = Modifier) {
         Text(text, style = MaterialTheme.typography.bodySmall, color = TextMid, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/**
+ * The one main action on a screen, in the brand gradient. A pill with optional leading icon;
+ * dimmed (and not clickable) when disabled.
+ */
+@Composable
+fun BrandButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    icon: ImageVector? = null,
+    compact: Boolean = false,
+) {
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+    Row(
+        modifier
+            .clip(shape)
+            .then(if (enabled) Modifier.background(dev.pfeed.ui.theme.BrandGradient) else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(horizontal = if (compact) 14.dp else 22.dp, vertical = if (compact) 8.dp else 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
+    ) {
+        val color = if (enabled) Color.White else Color.White.copy(alpha = 0.4f)
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(if (compact) 18.dp else 20.dp))
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(text, color = color, style = if (compact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+    }
+}

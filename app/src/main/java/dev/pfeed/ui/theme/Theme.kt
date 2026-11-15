@@ -15,6 +15,14 @@ import androidx.compose.ui.unit.sp
 /** Brand accent: used for the one primary action on a screen, selection, and progress. */
 val Accent = Color(0xFFFF3D68)
 val AccentSoft = Color(0x33FF3D68)
+/** The second stop of the brand gradient (pink → coral). */
+val AccentWarm = Color(0xFFFF7A45)
+
+/**
+ * The app's signature: pink into coral. Used only where it counts (the main action on a screen,
+ * Follow, the like) so it stays distinctive rather than decorative.
+ */
+val BrandGradient = androidx.compose.ui.graphics.Brush.linearGradient(listOf(Accent, AccentWarm))
 val HeartRed = Color(0xFFFF2D55)
 val Good = Color(0xFF34D399)
 val Warn = Color(0xFFFBBF24)
