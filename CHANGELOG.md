@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.20.0 — 2026-11-15
+
+TNAFlix plays again
+
+- **TNAFlix videos play** (its file servers wanted the site's www address as the referring page; checked on the test device: all 12 tube sites list and play natively).
+- Videos that play in a site's own embedded player now count as shown once the player page loads, so spacing and site health see them like any other post.
+
 ## 4.19.0 — 2026-11-15
 
 Erome, and fewer embed fallbacks
