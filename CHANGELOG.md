@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.18.0 — 2026-11-15
+
+Pick up where you left off
+
+- **Long videos resume.** Leave a video of 3+ minutes part-way and open it again from History or Saved: it carries on from where you were. Grid tiles show a thin bar for how far you got. Cleared with your history; nothing is remembered in Private mode.
+
 ## 4.17.0 — 2026-11-15
 
 Data saver, clip-or-scene learning
