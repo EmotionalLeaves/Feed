@@ -98,7 +98,8 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
                             is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load"
                             is StreamInfo.Embed -> {
                                 val page = attempt { http.getRaw(id, first.pageUrl) }.getOrNull()
-                                "plays in embed (video page ${page?.length?.div(1024) ?: "?"} KB, \"${page?.let { Regex("<title[^>]*>([^<]{0,50})", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1)?.trim() }}\")"
+                                val hint = page?.let { p -> listOf("setVideoHLS", "mediaDefinitions", "<source", "flashvars").firstOrNull { p.contains(it) }?.let { k -> " has $k: " + p.substring(p.indexOf(k), minOf(p.length, p.indexOf(k) + 110)).replace(Regex("\\s+"), " ") } }
+                                "plays in embed (video page ${page?.length?.div(1024) ?: "?"} KB, \"${page?.let { Regex("<title[^>]*>([^<]{0,50})", RegexOption.IGNORE_CASE).find(it)?.groupValues?.get(1)?.trim() }}\"${hint.orEmpty()})"
                             }
                             else -> st.javaClass.simpleName
                         }
