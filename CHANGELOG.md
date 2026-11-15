@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.21.0 — 2026-11-15
+
+Erase everything
+
+- **Settings → Privacy → Erase everything**: deletes everything the app has stored on the phone (saves, likes, history, what For You learned, sources, settings) and closes it, as if just installed. Asks once to confirm.
+- A light haptic tick when you like or save.
+
 ## 4.20.0 — 2026-11-15
 
 TNAFlix plays again
