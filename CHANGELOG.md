@@ -1,5 +1,20 @@
 # Changelog
 
+## 4.29.0 — 2026-11-15
+
+Polish pass
+
+- **Zoomed in, one finger pans.** On an image or comic page you've zoomed into, dragging moves around the picture instead of turning the page or the post.
+- Saved posts work offline: thumbnails are kept too, so Saved looks right without a connection, and saved tiles show a ✓ once the post is on your phone. Unsaving stops a download under way.
+- Pull down on the first post to refresh the feed.
+- The feed loads as a shimmering post outline instead of a spinner on black.
+- New gesture tips card (it broke apart on narrow phones and covered the buttons).
+- Library tabs are equal and always fit; empty Saved and Liked offer a way back to For You.
+- Search: filled topic chips, and a search hint that stays on one line.
+- Selected tabs show a filled icon and the others an outline; screens change with quick fades.
+- Fixed: the lock screen's "Enter PIN" title was black on black.
+- Tighter, more modern letter spacing throughout.
+
 ## 4.28.0 — 2026-11-15
 
 Saved posts work offline
