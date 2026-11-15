@@ -330,7 +330,7 @@ class SmokeTest {
             rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "search screen") { exists("Popular") }
             shot("02_search")
-            tap("milf")
+            tap("anal")
             waitFor(timeoutMs = 60_000, what = "results") { exists("Play all") || !exists("still searching", substring = true) }
             Thread.sleep(2_000)
             shot("03_results")
