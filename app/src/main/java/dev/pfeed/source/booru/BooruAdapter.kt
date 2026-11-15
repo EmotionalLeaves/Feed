@@ -240,7 +240,14 @@ class BooruAdapter @Inject constructor(
             family == BooruFamily.MOEBOORU && baseCount <= 4 -> "-rating:s"
             else -> null
         }
-        return listOfNotNull(base, MinorsFilter.booruNegativeTags.takeIf { longQueries }, notSafe).joinToString(" ")
+        // My Little Pony is a big share of e621 and the rule34 boards. Unless the query is about it
+        // or the user has opened that niche, leave it out at the source so the feed's candidates
+        // are what people came for (it's still one tap away on a pony tag page).
+        val askedPony = base?.split(' ')?.any { dev.pfeed.domain.reco.Niche.isMlpTag(it.removePrefix("-")) || it.contains("pony") } == true
+        val noPony = "-my_little_pony".takeIf {
+            longQueries && !askedPony && dev.pfeed.domain.reco.Niche.MLP !in dev.pfeed.domain.reco.Spread.openNiches
+        }
+        return listOfNotNull(base, MinorsFilter.booruNegativeTags.takeIf { longQueries }, notSafe, noPony).joinToString(" ")
     }
 
     /**

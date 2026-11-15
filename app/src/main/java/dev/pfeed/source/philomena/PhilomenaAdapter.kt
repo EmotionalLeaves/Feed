@@ -44,12 +44,20 @@ class PhilomenaAdapter @Inject constructor(
 
     /** Entries are "host|query" pairs: every host crossed with a few explicit seed searches. */
     override suspend fun entries(): List<String> =
-        HOSTS.keys.flatMap { host -> SEED_QUERIES.map { "$host|$it" } }
+        HOSTS.keys
+            // Derpibooru is all My Little Pony: it only feeds the main feed once the user has opened
+            // that niche (liked, saved or followed pony posts). Its posts stay searchable.
+            .filter { it != "derpibooru.org" || dev.pfeed.domain.reco.Niche.MLP in dev.pfeed.domain.reco.Spread.openNiches }
+            .flatMap { host -> SEED_QUERIES.map { "$host|$it" } }
 
     /** Token = page number. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         val host = entry.substringBefore('|')
-        val query = entry.substringAfter('|', "explicit")
+        val base = entry.substringAfter('|', "explicit")
+        // Furbooru carries some pony art too (6–22% of explicit posts, measured); its feeds leave it out
+        // unless the user has opened that niche. Derpibooru is pony by definition and stays as is.
+        val query = if (host != "derpibooru.org" && dev.pfeed.domain.reco.Niche.MLP !in dev.pfeed.domain.reco.Spread.openNiches)
+            "$base, -my little pony" else base
         val page = token?.toIntOrNull() ?: Random.nextInt(1, RANDOM_START_PAGES + 1)
         val items = fetch(host, query, page, sort = "wilson_score")
         val next = if (items.isEmpty() || page >= MAX_PAGE) null else (page + 1).toString()
