@@ -94,7 +94,16 @@ class SignalRepository @Inject constructor(
             tags = (words + q.replace(' ', '_')).distinct(), durationSec = null, thumbnailUrl = null, pageUrl = "",
             publishedAt = null, extras = emptyMap(),
         )
-        record(probe, Signal(SignalType.VIEW, SEARCH_NUDGE))
+        // Only the words: not "o:search" or "type:image", which would teach a site and a format.
+        val tags = Features.of(probe).filterNot(Features::isMeta)
+        if (tags.isEmpty()) return
+        ensureModel()
+        val now = System.currentTimeMillis()
+        val model = AffinityModel(settings.get().halfLifeDays)
+        db.withTransaction {
+            val current = affinityDao.tags(tags).associate { it.tag to model.decayed(it.score, it.updatedAt, now) }
+            affinityDao.upsertTags(TasteModel.update(tags, current, SignalWeights.delta(Signal(SignalType.VIEW, SEARCH_NUDGE))).map { (t, v) -> TagAffinityEntity(t, v, now) })
+        }
     }
 
     /** Current affinities, decayed to now. */
