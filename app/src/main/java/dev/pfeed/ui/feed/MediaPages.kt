@@ -371,7 +371,8 @@ fun EmbedPage(item: MediaItem, active: Boolean, vm: FeedViewModel) {
                         settings.setGeolocationEnabled(false)
                         CookieManager.getInstance().setAcceptThirdPartyCookies(this, false)
                         webChromeClient = WebChromeClient()
-                        webViewClient = SandboxClient(Uri.parse(url).host)
+                        // The site's player page loaded: it's on screen (for health stats and spacing).
+                        webViewClient = SandboxClient(Uri.parse(url).host) { vm.markShown(item) }
                         loadUrl(url)
                     }
                 },
@@ -388,9 +389,15 @@ fun EmbedPage(item: MediaItem, active: Boolean, vm: FeedViewModel) {
     }
 }
 
-private class SandboxClient(private val host: String?) : WebViewClient() {
+private class SandboxClient(private val host: String?, private val onLoaded: () -> Unit) : WebViewClient() {
+    private var loaded = false
+
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
         request.url.host != host
+
+    override fun onPageFinished(view: WebView, url: String?) {
+        if (!loaded && url != null && url != "about:blank") { loaded = true; onLoaded() }
+    }
 }
 
 /** Double-tap heart. [tick] restarts the animation on every double tap. */
