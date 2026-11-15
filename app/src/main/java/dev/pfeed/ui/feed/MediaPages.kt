@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.Arrangement
@@ -410,6 +411,15 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                 .apply { if (zoomed) placeholderMemoryCacheKey(url) }
                 .build()
         }
+        // A tall page (a long comic page, a strip) at normal size scrolls down: read it top to bottom,
+        // and at its end the same swipe carries on to the next post. Zoomed in, it pans as before.
+        val img = imageSize
+        val readable = isTall && scale == 1f && img != null
+        val scroll = androidx.compose.foundation.rememberScrollState()
+        Box(
+            Modifier.fillMaxSize().then(if (readable) Modifier.verticalScroll(scroll) else Modifier),
+            contentAlignment = if (readable) Alignment.TopCenter else Alignment.Center,
+        ) {
         AsyncImage(
             model = model,
             contentDescription = item.title,
@@ -423,7 +433,13 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
             // (A failed full-size load while zoomed isn't a dead post: the sample already showed.)
             onError = { if (stream != null && !(full != null && scale > ZOOM_FULL_RES)) vm.markBroken(item, "image: ${it.result.throwable.message?.take(100)}") },
             modifier = Modifier
-                .then(if (isTall) Modifier.fillMaxWidth() else Modifier.fillMaxSize())
+                .then(
+                    when {
+                        readable -> Modifier.fillMaxWidth().aspectRatio(img!!.width.toFloat() / img.height.coerceAtLeast(1))
+                        isTall -> Modifier.fillMaxWidth()
+                        else -> Modifier.fillMaxSize()
+                    },
+                )
                 .graphicsLayer {
                     scaleX = scale
                     scaleY = scale
@@ -431,6 +447,7 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                     translationY = offsetY
                 },
         )
+        }
     }
 }
 
