@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
@@ -326,10 +327,12 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
     var offsetY by remember(item.key) { mutableFloatStateOf(0f) }
 
     val isTall = imageSize?.let { it.height > it.width * 1.3f } == true
+    var viewport by remember { mutableStateOf(androidx.compose.ui.unit.IntSize.Zero) }
 
     Box(
         Modifier
             .fillMaxSize()
+            .onSizeChanged { viewport = it }
             // At normal size, one finger belongs to the feed (and a comic's pages): only a pinch zooms.
             // Zoomed in, one finger moves around the image instead: its drags are consumed here, before
             // the pagers see them, so the post or page doesn't change under you. A second finger pinches.
@@ -414,7 +417,9 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
         // A tall page (a long comic page, a strip) at normal size scrolls down: read it top to bottom,
         // and at its end the same swipe carries on to the next post. Zoomed in, it pans as before.
         val img = imageSize
-        val readable = isTall && scale == 1f && img != null
+        // Only when the page at screen width is actually taller than the screen (most comic pages fit).
+        val readable = isTall && scale == 1f && img != null && viewport.height > 0 &&
+            viewport.width.toFloat() * img.height / img.width.coerceAtLeast(1) > viewport.height * 1.05f
         val scroll = androidx.compose.foundation.rememberScrollState()
         Box(
             Modifier.fillMaxSize().then(if (readable) Modifier.verticalScroll(scroll) else Modifier),
