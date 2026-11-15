@@ -33,17 +33,19 @@ class LiveProbeTest {
     private fun flat(h: String) = h.replace(Regex("\\s+"), " ")
     @Test
     fun probe() {
-        val home = get("https://comics.8muses.com/").second
-        probe("home") { "len=${home.length} " + flat(around(home, "c-tile", 100, 900)) }
-        var url = Regex("href=\"(/comics/album/[^\"]+)\"").find(home)?.groupValues?.get(1)
-        repeat(3) {
-            if (url == null) return@repeat
-            val h = get("https://comics.8muses.com$url").second
-            val pics = Regex("href=\"(/comics/picture/[^\"]+)\"").findAll(h).count()
-            val sub = Regex("href=\"(/comics/album/[^\"]+)\"").findAll(h).map { it.groupValues[1] }.filter { it.length > url!!.length && it.startsWith(url!!) }.firstOrNull()
-            probe("album $url") { "len=${h.length} pictures=$pics sub=$sub :: " + flat(around(h, "/image/", 200, 500)) }
-            if (pics > 0) return@repeat
-            url = sub
+        var url: String? = "/porn/album/MilfToon-Comics"
+        repeat(4) {
+            val u = url ?: return@repeat
+            val h = get("https://comics.8muses.com$u").second
+            val pics = Regex("href=\"(/porn/picture/[^\"]+)\"").findAll(h).count()
+            val subs = Regex("href=\"(/porn/album/[^\"]+)\"").findAll(h).map { it.groupValues[1] }.filter { it.length > u.length && it.startsWith(u) }.distinct().toList()
+            probe("album $u") { "len=${h.length} pictures=$pics subs=${subs.size} first=${subs.firstOrNull()} :: " + flat(around(h, if (pics > 0) "/porn/picture/" else "c-tile", 100, 700)) }
+            if (pics > 0) {
+                val th = Regex("/image/th/([^\"]+)\"").find(h)?.groupValues?.get(1)
+                probe("full image") { th?.let { head("https://comics.8muses.com/image/fl/$it") } ?: "no th" }
+                return@repeat
+            }
+            url = subs.firstOrNull()
         }
     }
 }
