@@ -88,6 +88,17 @@ class OfflineStore @Inject constructor(
 
     private val hlsUrls = ConcurrentHashMap<String, String>()
 
+    /** [item] with its thumbnail pointing at the kept copy, when there is one (Saved works offline). */
+    fun withLocalThumbnail(item: MediaItem): MediaItem {
+        val f = index[hash(thumbKey(item.key))]?.takeIf { it.exists() } ?: return item
+        return item.copy(thumbnailUrl = Uri.fromFile(f).toString())
+    }
+
+    /** Whether [item] is fully kept (every page, for a comic). */
+    fun isKept(item: MediaItem): Boolean = parts(item).all { (k, _) -> index.containsKey(hash(k)) }
+
+    private fun thumbKey(key: String) = "$key@thumb"
+
     /** Follows the Saved list for the life of the app: keeps what's saved, drops what isn't. */
     fun start() {
         scope.launch {
@@ -101,7 +112,7 @@ class OfflineStore @Inject constructor(
     }
 
     private suspend fun sync(saved: List<MediaItem>, on: Boolean) {
-        val wanted = if (on) saved.flatMap { item -> parts(item).map { it.first } }.toSet() else emptySet()
+        val wanted = if (on) saved.flatMap { item -> parts(item).map { it.first } + thumbKey(item.key) }.toSet() else emptySet()
         val wantedHashes = wanted.mapTo(HashSet(), ::hash)
         index.entries.removeIf { (h, f) -> (h !in wantedHashes).also { drop -> if (drop) forget(f) } }
         updateSize()
@@ -121,6 +132,11 @@ class OfflineStore @Inject constructor(
         if (item.isGallery) item.pages.mapIndexed { i, url -> "${item.key}#$i" to url } else listOf(item.key to null)
 
     private suspend fun keep(item: MediaItem) {
+        // The thumbnail first, so Saved looks right offline; it's best-effort and not retried on its own.
+        val thumb = thumbKey(item.key)
+        if (!index.containsKey(hash(thumb)) && item.thumbnailUrl?.startsWith("http") == true) {
+            try { fetch(thumb, StreamInfo.Direct(item.thumbnailUrl)) } catch (e: CancellationException) { throw e } catch (_: Exception) {}
+        }
         for ((key, pageUrl) in parts(item)) {
             if (index.containsKey(hash(key))) continue
             if (network.isMetered || dir.usableSpace < MIN_FREE_BYTES || _bytes.value > MAX_TOTAL_BYTES) return

@@ -71,8 +71,11 @@ import javax.inject.Inject
 class LibraryViewModel @Inject constructor(
     private val library: LibraryRepository,
     private val holder: TransientFeedHolder,
+    private val offline: dev.pfeed.data.repo.OfflineStore,
 ) : ViewModel() {
-    val saved: StateFlow<List<MediaItem>> = library.items(LibraryKind.SAVED).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** Saved posts, with thumbnails from the kept copies once they're downloaded (so Saved works offline). */
+    val saved: StateFlow<List<MediaItem>> = kotlinx.coroutines.flow.combine(library.items(LibraryKind.SAVED), offline.bytes) { list, _ -> list.map(offline::withLocalThumbnail) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val liked: StateFlow<List<MediaItem>> = library.items(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val history: StateFlow<List<MediaItem>> = library.items(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val follows: StateFlow<List<FollowEntity>> = library.followRows.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
