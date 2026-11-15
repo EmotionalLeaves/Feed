@@ -48,7 +48,7 @@ class Preloader @Inject constructor(
         jobs[key] = scope.launch(Dispatchers.IO) {
             try {
                 val writer = CacheWriter(
-                    mediaCache.cacheDataSourceFactory.createDataSource(),
+                    mediaCache.streamingFactory.createDataSource(),
                     DataSpec.Builder().setUri(Uri.parse(url)).setPosition(0).setLength(bytes).build(),
                     null,
                     null,

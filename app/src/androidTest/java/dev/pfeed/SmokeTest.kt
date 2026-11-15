@@ -325,7 +325,7 @@ class SmokeTest {
                 while (picks.any { !done(it) } && System.currentTimeMillis() - t0 < 120_000) kotlinx.coroutines.delay(2_000)
                 picks.forEach { p ->
                     val local = if (p.isGallery) a.offlineStore.local("${p.key}#0") else a.offlineStore.local(p.key)
-                    android.util.Log.i("PFHEALTH", "offline ${p.sourceId}/${p.type}${if (p.isGallery) " (${p.pages.size} pages)" else ""}: ${if (done(p)) "kept" else "NOT kept"} in ${System.currentTimeMillis() - t0} ms ${local?.mimeType}; total ${a.offlineStore.bytes.value / 1024} KB")
+                    android.util.Log.i("PFHEALTH", "offline ${p.sourceId}/${p.type}${if (p.isGallery) " (${p.pages.size} pages)" else ""}: ${if (done(p)) "kept" else "NOT kept"} in ${System.currentTimeMillis() - t0} ms ${local?.mimeType ?: a.offlineStore.problem(p.key)} ${p.id.substringBefore('/')}; total ${a.offlineStore.bytes.value / 1024} KB")
                 }
                 assertTrue("nothing was kept offline", picks.isEmpty() || picks.any(::done))
             } finally {

@@ -8,6 +8,7 @@ import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
+import androidx.media3.datasource.cache.NoOpCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -32,19 +33,45 @@ class MediaCache @Inject constructor(
         get() = prefs.getInt(KEY_SIZE, DEFAULT_MB)
         set(value) { prefs.edit().putInt(KEY_SIZE, value).apply() }
 
+    private val database by lazy { StandaloneDatabaseProvider(context) }
+
     val cache: SimpleCache by lazy {
         SimpleCache(
             File(context.cacheDir, "media"),
             LeastRecentlyUsedCacheEvictor(configuredSizeMb.toLong() * 1024 * 1024),
-            StandaloneDatabaseProvider(context),
+            database,
         )
     }
 
-    /** http(s) through the cache; content:// and file:// go straight to disk via DefaultDataSource. */
-    val cacheDataSourceFactory: CacheDataSource.Factory by lazy {
+    /**
+     * Streamed (HLS) videos of saved posts, kept for good: never evicted, and in app storage rather
+     * than the cache directory, so the system doesn't clear them either. See OfflineStore.
+     */
+    val offline: SimpleCache by lazy { SimpleCache(File(context.filesDir, "offline-hls"), NoOpCacheEvictor(), database) }
+
+    /** Writes into [offline] (used to download a saved post's stream). */
+    val offlineWriteFactory: CacheDataSource.Factory by lazy {
+        CacheDataSource.Factory().setCache(offline).setUpstreamDataSourceFactory(OkHttpDataSource.Factory(okHttp))
+    }
+
+    /**
+     * http(s): the kept copies of saved posts first (read-only), then the LRU cache, then the network.
+     * content:// and file:// go straight to disk via DefaultDataSource.
+     */
+    /** The LRU cache in front of the network: what preloading writes into. */
+    val streamingFactory: CacheDataSource.Factory by lazy {
         CacheDataSource.Factory()
             .setCache(cache)
             .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(okHttp))
+            .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
+    }
+
+    val cacheDataSourceFactory: CacheDataSource.Factory by lazy {
+        val streaming = streamingFactory
+        CacheDataSource.Factory()
+            .setCache(offline)
+            .setCacheWriteDataSinkFactory(null)
+            .setUpstreamDataSourceFactory(streaming)
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 

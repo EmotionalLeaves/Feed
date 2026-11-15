@@ -7,6 +7,7 @@ import dev.pfeed.data.settings.SettingsRepository
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.StreamInfo
 import dev.pfeed.source.SourceRegistry
+import dev.pfeed.source.parse.MediaTypes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -36,7 +37,8 @@ import javax.inject.Singleton
  * (nothing appears in the gallery, and "Erase everything" removes them); unsaving deletes the copy.
  *
  * Downloads run on Wi-Fi only, two at a time, and are retried every so often until they finish.
- * A post that only plays in the site's embed player, or as an HLS stream, can't be kept.
+ * Streamed (HLS) videos are kept too, in the player's offline cache. A post that only plays in the
+ * site's embed player can't be kept.
  */
 @Singleton
 class OfflineStore @Inject constructor(
@@ -46,6 +48,7 @@ class OfflineStore @Inject constructor(
     private val library: LibraryRepository,
     private val settings: SettingsRepository,
     private val network: NetworkMonitor,
+    private val mediaCache: dev.pfeed.player.MediaCache,
 ) {
     private val dir by lazy { File(context.filesDir, "offline").apply { mkdirs() } }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -61,6 +64,10 @@ class OfflineStore @Inject constructor(
         }
     }
 
+    /** Why a post isn't kept yet (for the health check), by post key. */
+    private val problems = ConcurrentHashMap<String, String>()
+    fun problem(key: String): String? = problems[key]
+
     private val _bytes = MutableStateFlow(0L)
     /** Space the offline copies take. */
     val bytes: StateFlow<Long> = _bytes
@@ -69,8 +76,13 @@ class OfflineStore @Inject constructor(
     fun local(key: String): StreamInfo.Direct? {
         val f = index[hash(key)] ?: return null
         if (!f.exists()) { index.remove(hash(key)); return null }
+        // A kept stream: the marker holds the playlist URL, whose playlist and segments are all in
+        // the offline cache, so playing it never touches the network (expired tokens don't matter).
+        if (f.extension == HLS_EXT) return hlsUrls.getOrPut(f.name) { f.readText().trim() }.let { StreamInfo.Direct(it, MediaTypes.HLS_MIME) }
         return StreamInfo.Direct(Uri.fromFile(f).toString(), mimeOf(f.extension))
     }
+
+    private val hlsUrls = ConcurrentHashMap<String, String>()
 
     /** Follows the Saved list for the life of the app: keeps what's saved, drops what isn't. */
     fun start() {
@@ -87,7 +99,7 @@ class OfflineStore @Inject constructor(
     private suspend fun sync(saved: List<MediaItem>, on: Boolean) {
         val wanted = if (on) saved.flatMap { item -> parts(item).map { it.first } }.toSet() else emptySet()
         val wantedHashes = wanted.mapTo(HashSet(), ::hash)
-        index.entries.removeIf { (h, f) -> (h !in wantedHashes).also { drop -> if (drop) f.delete() } }
+        index.entries.removeIf { (h, f) -> (h !in wantedHashes).also { drop -> if (drop) forget(f) } }
         updateSize()
         if (!on || network.isMetered) return
         for (item in saved) {
@@ -108,19 +120,20 @@ class OfflineStore @Inject constructor(
         for ((key, pageUrl) in parts(item)) {
             if (index.containsKey(hash(key))) continue
             if (network.isMetered || dir.usableSpace < MIN_FREE_BYTES || _bytes.value > MAX_TOTAL_BYTES) return
-            val stream = if (pageUrl != null) StreamInfo.Direct(pageUrl) else resolve(item) ?: return
-            val direct = stream as? StreamInfo.Direct ?: return // embed-only: nothing to keep
+            val stream = if (pageUrl != null) StreamInfo.Direct(pageUrl) else resolve(item) ?: return problem(item, "no file found")
+            val direct = stream as? StreamInfo.Direct ?: return problem(item, "plays in embed only")
             if (!direct.url.startsWith("http")) return // already a local file
-            if (isHls(direct)) return
             try {
-                fetch(key, direct)
+                if (isHls(direct)) fetchHls(key, direct.url) else fetch(key, direct)
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                return // try again on the next pass
+                return problem(item, "${e.javaClass.simpleName}: ${e.message}") // try again on the next pass
             }
         }
     }
+
+    private fun problem(item: MediaItem, why: String) { problems[item.key] = why }
 
     private suspend fun resolve(item: MediaItem): StreamInfo? = try {
         registry.byId(item.sourceId)?.resolveStream(item)
@@ -135,7 +148,7 @@ class OfflineStore @Inject constructor(
             if (!resp.isSuccessful) throw java.io.IOException("HTTP ${resp.code}")
             val body = resp.body ?: throw java.io.IOException("empty")
             val length = body.contentLength()
-            if (length > MAX_FILE_BYTES) return@withContext
+            if (length > MAX_FILE_BYTES) throw java.io.IOException("too big: ${length shr 20} MB")
             val mime = direct.mimeType ?: body.contentType()?.let { "${it.type}/${it.subtype}" }
             val ext = extFor(direct.url, mime)
             val h = hash(key)
@@ -149,12 +162,63 @@ class OfflineStore @Inject constructor(
         }
     }
 
+    /**
+     * A streamed video: picks one rendition (the best up to the player's height cap), and downloads its
+     * playlist and every segment into the offline cache. The marker file records which playlist.
+     */
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    private suspend fun fetchHls(key: String, url: String) = withContext(Dispatchers.IO) {
+        val playlistUrl = okHttp.newCall(Request.Builder().url(url).build()).execute().use { resp ->
+            if (!resp.isSuccessful) throw java.io.IOException("playlist HTTP ${resp.code}")
+            val parsed = androidx.media3.exoplayer.hls.playlist.HlsPlaylistParser()
+                .parse(Uri.parse(resp.request.url.toString()), resp.body!!.byteStream())
+            val multi = parsed as? androidx.media3.exoplayer.hls.playlist.HlsMultivariantPlaylist
+            if (multi == null || multi.variants.isEmpty()) url
+            else {
+                val cap = dev.pfeed.player.PlayerPool.maxHeight
+                val byHeight = multi.variants.sortedBy { it.format.height.takeIf { h -> h > 0 } ?: Int.MAX_VALUE }
+                (byHeight.lastOrNull { it.format.height in 1..cap } ?: byHeight.first()).url.toString()
+            }
+        }
+        val downloader = androidx.media3.exoplayer.hls.offline.HlsDownloader(
+            androidx.media3.common.MediaItem.Builder().setUri(playlistUrl).setMimeType(MediaTypes.HLS_MIME).build(),
+            mediaCache.offlineWriteFactory,
+        )
+        try {
+            kotlinx.coroutines.runInterruptible { downloader.download(null) }
+        } catch (e: Exception) {
+            runCatching { downloader.remove() }
+            throw e
+        }
+        val h = hash(key)
+        val marker = File(dir, "$h.$HLS_EXT")
+        marker.writeText(playlistUrl)
+        index[h] = marker
+        updateSize()
+    }
+
+    /** Deletes a kept copy; for a stream, its playlist and segments in the offline cache too. */
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun forget(f: File) {
+        if (f.extension == HLS_EXT) runCatching {
+            val url = f.readText().trim()
+            androidx.media3.exoplayer.hls.offline.HlsDownloader(
+                androidx.media3.common.MediaItem.Builder().setUri(url).setMimeType(MediaTypes.HLS_MIME).build(),
+                mediaCache.offlineWriteFactory,
+            ).remove()
+            hlsUrls.remove(f.name)
+        }
+        f.delete()
+    }
+
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     private fun updateSize() {
-        _bytes.value = index.values.sumOf { it.length() }
+        _bytes.value = index.values.sumOf { it.length() } + runCatching { mediaCache.offline.cacheSpace }.getOrDefault(0L)
     }
 
     companion object {
         private const val PART = ".part"
+        private const val HLS_EXT = "hls"
         private const val RETRY_MS = 15 * 60_000L
         private const val MAX_FILE_BYTES = 800L * 1024 * 1024
         private const val MAX_TOTAL_BYTES = 8L * 1024 * 1024 * 1024
