@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -57,7 +58,11 @@ class OfflineStore @Inject constructor(
     private val dir by lazy { File(context.filesDir, "offline").apply { mkdirs() } }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val gate = Semaphore(2)
-    private val running: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    /** Downloads under way, by post key: cancelled when the post is unsaved. */
+    private val running = ConcurrentHashMap<String, kotlinx.coroutines.Job>()
+
+    /** Name hashes of everything currently saved: a download that finishes after its post was unsaved is thrown away. */
+    @Volatile private var wantedHashes: Set<String> = emptySet()
 
     /** name hash → finished file. */
     private val index: ConcurrentHashMap<String, File> by lazy {
@@ -115,16 +120,20 @@ class OfflineStore @Inject constructor(
     private suspend fun sync(saved: List<MediaItem>, on: Boolean) {
         val wanted = if (on) saved.flatMap { item -> parts(item).map { it.first } + thumbKey(item.key) }.toSet() else emptySet()
         val wantedHashes = wanted.mapTo(HashSet(), ::hash)
+        this.wantedHashes = wantedHashes
+        val savedKeys = if (on) saved.mapTo(HashSet()) { it.key } else emptySet()
+        running.entries.removeIf { (k, job) -> (k !in savedKeys).also { stop -> if (stop) job.cancel() } }
         index.entries.removeIf { (h, f) -> (h !in wantedHashes).also { drop -> if (drop) forget(f) } }
         updateSize()
         if (!on || network.isMetered) return
         for (item in saved) {
-            if (item.key in running) continue
+            if (running.containsKey(item.key)) continue
             if (parts(item).all { (k, _) -> index.containsKey(hash(k)) }) continue
-            running += item.key
-            scope.launch {
-                try { gate.withPermit { keep(item) } } finally { running -= item.key }
+            val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
+                try { gate.withPermit { keep(item) } } finally { running.remove(item.key, coroutineContext[kotlinx.coroutines.Job]!!) }
             }
+            running[item.key] = job
+            job.start()
         }
     }
 
@@ -174,10 +183,21 @@ class OfflineStore @Inject constructor(
             val ext = extFor(direct.url, mime)
             val h = hash(key)
             val part = File(dir, "$h$PART")
-            part.outputStream().use { out -> body.byteStream().use { it.copyTo(out, 64 * 1024) } }
+            part.outputStream().use { out ->
+                body.byteStream().use { input ->
+                    val buf = ByteArray(64 * 1024)
+                    while (true) {
+                        ensureActive() // unsaved meanwhile: stop
+                        val n = input.read(buf)
+                        if (n < 0) break
+                        out.write(buf, 0, n)
+                    }
+                }
+            }
             if (length > 0 && part.length() != length) { part.delete(); throw java.io.IOException("cut off") }
             val done = File(dir, "$h.$ext")
             if (!part.renameTo(done)) { part.delete(); throw java.io.IOException("rename") }
+            if (h !in wantedHashes) { done.delete(); return@withContext }
             index[h] = done
             updateSize()
         }
@@ -214,6 +234,7 @@ class OfflineStore @Inject constructor(
         val h = hash(key)
         val marker = File(dir, "$h.$HLS_EXT")
         marker.writeText(playlistUrl)
+        if (h !in wantedHashes) { forget(marker); return@withContext }
         index[h] = marker
         updateSize()
     }
