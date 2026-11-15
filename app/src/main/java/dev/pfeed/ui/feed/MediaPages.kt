@@ -94,7 +94,13 @@ fun VideoPage(
     val stats = remember(item.key) { vm.statsFor(item.key) }
 
     DisposableEffect(item.key) {
-        onDispose { pool.release(item.key) }
+        onDispose {
+            // Leaving a long video part-way: remember where (not in private mode).
+            player?.takeIf { it.currentMediaItem?.mediaId == item.key && !vm.privateMode.value }?.let { p ->
+                dev.pfeed.player.ResumePoints.save(item.key, p.currentPosition, p.duration)
+            }
+            pool.release(item.key)
+        }
     }
     // Hand the player up only once it's showing this item, so the scrub bar never drives a stale one.
     LaunchedEffect(player, stream, firstFrame) { onPlayer(if (firstFrame) player else null) }
@@ -114,6 +120,8 @@ fun VideoPage(
                     .setUri(s.url)
                     .apply { s.mimeType?.let { setMimeType(it) } }
                     .build(),
+                // Carry on where you left a long video, if you did.
+                dev.pfeed.player.ResumePoints.get(item.key) ?: 0L,
             )
             p.prepare()
         }

@@ -52,6 +52,7 @@ class LibraryRepository @Inject constructor(
 
     suspend fun clearHistory() {
         libraryDao.clearHistory()
+        dev.pfeed.player.ResumePoints.clear() // where you left videos is history too
         itemDao.deleteOrphans()
     }
 
