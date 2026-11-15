@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.31.1 — 2026-11-15
+
+Comics teach For You properly; Copy link
+
+- For You now learns from comics by how far you read them (most of it counts like finishing a video), not by minutes spent. Before, every comic you opened looked like a favourite, and the long reading time also made ordinary images look skipped.
+- Post menu: **Copy link**. The copied link is marked sensitive, so Android 13+ doesn't show it in the clipboard preview.
+
 ## 4.31.0 — 2026-11-15
 
 Comic reading upgrades
