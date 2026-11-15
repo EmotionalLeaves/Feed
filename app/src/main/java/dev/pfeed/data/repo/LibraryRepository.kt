@@ -35,7 +35,8 @@ class LibraryRepository @Inject constructor(
         rows.mapNotNull { runCatching { json.decodeFromString(MediaItem.serializer(), it) }.getOrNull() }
     }
 
-    suspend fun add(kind: LibraryKind, item: MediaItem) {
+    suspend fun add(kind: LibraryKind, given: MediaItem) {
+        val item = OfflineStore.original(given)
         val now = System.currentTimeMillis()
         db.withTransaction {
             itemDao.upsert(ItemEntity(item.key, json.encodeToString(MediaItem.serializer(), item), now))

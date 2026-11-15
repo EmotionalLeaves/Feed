@@ -91,7 +91,8 @@ class OfflineStore @Inject constructor(
     /** [item] with its thumbnail pointing at the kept copy, when there is one (Saved works offline). */
     fun withLocalThumbnail(item: MediaItem): MediaItem {
         val f = index[hash(thumbKey(item.key))]?.takeIf { it.exists() } ?: return item
-        return item.copy(thumbnailUrl = Uri.fromFile(f).toString())
+        // The original is kept alongside, so a post saved again from here stores its real thumbnail.
+        return item.copy(thumbnailUrl = Uri.fromFile(f).toString(), extras = item.extras + (REMOTE_THUMB to item.thumbnailUrl.orEmpty()))
     }
 
     /** Whether [item] is fully kept (every page, for a comic). */
@@ -239,6 +240,13 @@ class OfflineStore @Inject constructor(
     companion object {
         private const val PART = ".part"
         private const val HLS_EXT = "hls"
+        const val REMOTE_THUMB = "remoteThumb"
+
+        /** Undoes [withLocalThumbnail]: the post as it should be stored. */
+        fun original(item: MediaItem): MediaItem {
+            val remote = item.extras[REMOTE_THUMB] ?: return item
+            return item.copy(thumbnailUrl = remote.ifBlank { null }, extras = item.extras - REMOTE_THUMB)
+        }
         private const val RETRY_MS = 15 * 60_000L
         private const val MAX_FILE_BYTES = 800L * 1024 * 1024
         private const val MAX_TOTAL_BYTES = 8L * 1024 * 1024 * 1024
