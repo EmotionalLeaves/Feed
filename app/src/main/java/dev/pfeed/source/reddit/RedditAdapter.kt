@@ -59,11 +59,33 @@ class RedditAdapter @Inject constructor(
      * before the feed would notice on its own; one request every 6 s stays inside it. Each brings up
      * to 100 posts, far more than anyone scrolls.
      */
-    private suspend fun paced(url: String): String = pace.withLock {
-        val wait = MIN_GAP_MS - (System.currentTimeMillis() - lastRequestAt)
-        if (wait > 0) kotlinx.coroutines.delay(wait)
-        try { http.getRaw(id, url) } finally { lastRequestAt = System.currentTimeMillis() }
+    private suspend fun paced(url: String, priority: Boolean = false): String {
+        // Searches go first: someone is waiting on them, while feed pages are background top-ups.
+        // A feed request that gets the turn while a search is waiting hands it back.
+        if (priority) searchesWaiting.incrementAndGet()
+        try {
+            while (true) {
+                pace.lock()
+                if (!priority && searchesWaiting.get() > 0) {
+                    pace.unlock()
+                    kotlinx.coroutines.delay(250)
+                    continue
+                }
+                try {
+                    val wait = MIN_GAP_MS - (System.currentTimeMillis() - lastRequestAt)
+                    if (wait > 0) kotlinx.coroutines.delay(wait)
+                    return http.getRaw(id, url)
+                } finally {
+                    lastRequestAt = System.currentTimeMillis()
+                    pace.unlock()
+                }
+            }
+        } finally {
+            if (priority) searchesWaiting.decrementAndGet()
+        }
     }
+
+    private val searchesWaiting = java.util.concurrent.atomic.AtomicInteger(0)
 
     /** Token = "listing|after|depth", so each subreddit keeps paging the same listing deeper. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
@@ -115,7 +137,7 @@ class RedditAdapter @Inject constructor(
         if (q.isEmpty()) return@cachedSearch emptyList()
         val enc = URLEncoder.encode(q, "UTF-8")
         val items = attempt {
-            RedditRss.parse(paced("https://$HOST/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100"), "search")
+            RedditRss.parse(paced("https://$HOST/search/.rss?q=$enc&sort=relevance&t=all&include_over_18=on&limit=100", priority = true), "search")
         }.getOrDefault(emptyList())
         // Also search inside the configured subs, a few dozen per multireddit request.
         val subs = entries().map { it.trim().removePrefix("/").removePrefix("r/").trim('/') }.filter { it.isNotEmpty() }.distinct()
@@ -127,7 +149,7 @@ class RedditAdapter @Inject constructor(
                         val multi = chunk.joinToString("+")
                         val url = "https://$HOST/r/$multi/search/.rss?q=$enc&restrict_sr=on&sort=relevance&t=all&include_over_18=on&limit=100"
                         // Each result is tagged with its own subreddit (from the entry's <category>).
-                        attempt { RedditRss.parse(paced(url), "search") }.getOrDefault(emptyList())
+                        attempt { RedditRss.parse(paced(url, priority = true), "search") }.getOrDefault(emptyList())
                     }.orEmpty()
                 }
             }.awaitAll()
