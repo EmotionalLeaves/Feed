@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.PanTool
 import androidx.compose.material.icons.filled.TouchApp
@@ -185,6 +186,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     }
                 }
             }
+        } else if (loading || hint == null) {
+            LoadingPost(Modifier.fillMaxSize())
         } else {
             FeedEmptyState(
                 loading = loading,
@@ -239,6 +242,44 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             vm = vm,
             onDismiss = { menuFor = null },
         )
+    }
+}
+
+/**
+ * While the first posts load: the shape of a post (caption lines, the button rail) under a slow
+ * shimmer, so the screen looks like the feed arriving rather than a spinner on black.
+ */
+@Composable
+private fun LoadingPost(modifier: Modifier = Modifier) {
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "shimmer")
+    val x by t.animateFloat(
+        initialValue = -1f, targetValue = 2f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(tween(1400, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "shimmerX",
+    )
+    val base = Color.White.copy(alpha = 0.06f)
+    val shine = Brush.linearGradient(
+        listOf(base, Color.White.copy(alpha = 0.14f), base),
+        start = Offset(x * 1000f, 0f), end = Offset(x * 1000f + 600f, 600f),
+    )
+    Box(modifier.background(Color(0xFF0C0C0F))) {
+        Column(Modifier.align(Alignment.BottomStart).padding(start = 14.dp, bottom = 40.dp, end = 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Box(Modifier.width(84.dp).height(20.dp).clip(RoundedCornerShape(50)).background(shine))
+            Box(Modifier.width(150.dp).height(18.dp).clip(RoundedCornerShape(6.dp)).background(shine))
+            Box(Modifier.fillMaxWidth().height(12.dp).clip(RoundedCornerShape(6.dp)).background(shine))
+            Box(Modifier.fillMaxWidth(0.7f).height(12.dp).clip(RoundedCornerShape(6.dp)).background(shine))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                repeat(3) { Box(Modifier.width(56.dp).height(26.dp).clip(RoundedCornerShape(50)).background(shine)) }
+            }
+        }
+        Column(Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 40.dp), verticalArrangement = Arrangement.spacedBy(22.dp)) {
+            repeat(4) { Box(Modifier.size(44.dp).clip(CircleShape).background(shine)) }
+        }
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Loading your feed", color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text("Pulling from thousands of feeds", color = Color.White.copy(alpha = 0.45f), style = MaterialTheme.typography.bodySmall)
+        }
     }
 }
 
