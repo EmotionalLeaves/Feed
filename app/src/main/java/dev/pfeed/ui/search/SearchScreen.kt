@@ -305,6 +305,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
 
         if (ui.searched == null) {
             SuggestionsPane(
+                typed = ui.query,
                 recent = recent,
                 interests = interests,
                 onPick = run,
@@ -342,6 +343,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun SuggestionsPane(
+    typed: String,
     recent: List<String>,
     interests: List<String>,
     onPick: (String) -> Unit,
@@ -349,6 +351,26 @@ private fun SuggestionsPane(
     onClearRecent: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+        // As you type: matching searches you've made, things you like and common tags.
+        val t = typed.trim().lowercase()
+        if (t.length >= 2) {
+            val vocab = remember(recent, interests) {
+                (recent + interests + POPULAR + dev.pfeed.data.settings.SourceCatalog.tubeSections.drop(2) +
+                    dev.pfeed.data.settings.SourceCatalog.comicTags.map { it.replace('-', ' ') }).distinctBy { it.lowercase() }
+            }
+            val matches = (vocab.filter { it.lowercase().startsWith(t) } + vocab.filter { it.lowercase().contains(t) })
+                .distinct().filter { it.lowercase() != t }.take(8)
+            matches.forEach { q ->
+                Row(
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onPick(q) }.padding(vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
+                    Text(q, style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+            if (matches.isNotEmpty()) Spacer(Modifier.height(12.dp))
+        }
         if (recent.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionTitle("Recent", Modifier.weight(1f))
