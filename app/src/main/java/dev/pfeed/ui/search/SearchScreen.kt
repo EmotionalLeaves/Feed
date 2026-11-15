@@ -134,6 +134,8 @@ data class SearchUi(
     val searched: String? = null,
     val loading: Boolean = false,
     val pending: Int = 0,
+    /** Sources asked (the first update reports them all pending). */
+    val total: Int = 0,
     val results: List<MediaItem> = emptyList(),
     val errors: List<String> = emptyList(),
     val elapsedMs: Long? = null,
@@ -205,7 +207,7 @@ class SearchViewModel @Inject constructor(
         if (query.isEmpty()) return
         job?.cancel()
         _ui.update {
-            it.copy(query = query, searched = query, loading = true, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0)
+            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0)
         }
         // What you search for is what you want more of: For You learns it too (not in private mode).
         viewModelScope.launch {
@@ -219,6 +221,7 @@ class SearchViewModel @Inject constructor(
                     it.copy(
                         loading = !r.done,
                         pending = r.pending,
+                        total = maxOf(it.total, r.pending),
                         results = r.items,
                         errors = r.errors,
                         elapsedMs = r.elapsedMs,
@@ -504,7 +507,16 @@ private fun ResultsPane(
     onResetFilters: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        if (ui.loading) LinearProgressIndicator(Modifier.fillMaxWidth(), color = Accent)
+        // How many sites have answered, filling in the brand gradient as they do.
+        if (ui.loading) {
+            val answered by androidx.compose.animation.core.animateFloatAsState(
+                if (ui.total > 0) 1f - ui.pending.toFloat() / ui.total else 0f,
+                label = "searchProgress",
+            )
+            Box(Modifier.fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.08f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth(answered.coerceIn(0.04f, 1f)).background(dev.pfeed.ui.theme.BrandGradient))
+            }
+        }
         if (visible.isNotEmpty()) {
             Row(
                 Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
