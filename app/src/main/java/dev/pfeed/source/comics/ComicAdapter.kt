@@ -83,7 +83,7 @@ class ComicAdapter @Inject constructor(private val http: HttpJson) : CachingAdap
         const val SOURCE_ID = "comics"
         private const val MAX_PAGES = 20
         private const val PAGE_CONCURRENCY = 4
-        private const val SEARCH_LIMIT = 16
+        private const val SEARCH_LIMIT = 8
     }
 }
 

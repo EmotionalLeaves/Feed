@@ -427,7 +427,9 @@ class FeedSession(
         batch.forEach { shown += it.key; recentSources += it.sourceId; recentShown += it; recentOrigins += Spread.origin(it) }
         while (recentOrigins.size > Ranker.NOVELTY_WINDOW) recentOrigins.removeFirst()
         if (recentSources.size > 50) recentSources.subList(0, recentSources.size - 50).clear()
-        if (recentShown.size > Spread.WINDOW) recentShown.subList(0, recentShown.size - Spread.WINDOW).clear()
+        // Long enough for the niche rule (one in 36), not just the spacing window.
+        val keep = maxOf(Spread.WINDOW, dev.pfeed.domain.reco.Niche.CLOSED_WINDOW)
+        if (recentShown.size > keep) recentShown.subList(0, recentShown.size - keep).clear()
         return batch
     }
 
