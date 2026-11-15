@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.22.0 — 2026-11-15
+
+Search suggestions, blurred previews
+
+- **Search suggests as you type** — your past searches, what you like, and common tags, best matches first.
+- **Blur previews** (Settings → Privacy): thumbnails in Library and Search stay blurred until you open one, for using the app with people around.
+
 ## 4.21.0 — 2026-11-15
 
 Erase everything
