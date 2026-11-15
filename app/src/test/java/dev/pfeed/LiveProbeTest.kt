@@ -32,11 +32,11 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        fun text(raw: String) = raw.replace(Regex("<(script|style)[^>]*>.*?</\\1>", RegexOption.DOT_MATCHES_ALL), " ").replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim().take(300)
-        for (host in listOf("xhamster.com", "xhamster2.com", "xhamster.desi")) for (path in listOf("/newest/1", "/newest", "/", "/best/weekly/1", "/search/milf?page=1")) probe("xh $host$path") {
-            val (code, body) = get("https://$host$path")
-            val n = TubeSite.Xhamster.parseList(body.replace("https://$host/", "https://xhamster.com/")).size
-            "$code len=${body.length} n=$n thumbProps=${body.indexOf("videoThumbProps")} initials=${body.indexOf("window.initials")} title=" + Regex("<title[^>]*>([^<]{0,80})").find(body)?.groupValues?.get(1) + " :: " + text(body).take(200) + " :: " + around(body, "<script", 0, 300)
+        for (path in listOf("/newest/1", "/search/milf?page=1")) probe("xh $path") {
+            val (code, body) = get("https://xhamster.com$path")
+            val ini = TubeSite.Xhamster.initials(body)
+            val raw = ini?.toString().orEmpty()
+            "$code keys=${ini?.keys} :: " + raw.take(2500)
         }
     }
 }
