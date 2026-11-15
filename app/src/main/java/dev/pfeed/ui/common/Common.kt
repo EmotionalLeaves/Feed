@@ -34,6 +34,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
@@ -126,6 +128,14 @@ fun MediaGrid(
                         if (badge.isNotEmpty()) {
                             Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         }
+                    }
+                }
+                // Part-watched long video: how far you got (it carries on from there).
+                val resumeAt = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) }
+                val total = item.durationSec?.times(1000L)
+                if (resumeAt != null && total != null && total > 0) {
+                    Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
+                        Box(Modifier.fillMaxHeight().fillMaxWidth((resumeAt.toFloat() / total).coerceIn(0.02f, 1f)).background(dev.pfeed.ui.theme.Accent))
                     }
                 }
             }
