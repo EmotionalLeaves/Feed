@@ -33,8 +33,10 @@ class LiveProbeTest {
     private fun flat(h: String) = h.replace(Regex("\\s+"), " ")
     @Test
     fun probe() {
-        for (u in listOf("https://www.erome.com/explore/new?page=2", "https://www.erome.com/search?q=milf&page=1", "https://www.erome.com/explore?page=1")) probe("list $u") {
-            val (c, h) = get(u); "$c len=${h.length} albums=${Regex("href=\"https://www.erome.com/a/([A-Za-z0-9]+)\"").findAll(h).map { it.groupValues[1] }.distinct().count()} :: " + flat(around(h, "album-link", 300, 1500))
-        }
+        val site = TubeSite.Erome
+        for (sec in listOf("new", "top", "milf")) probe("erome $sec") { val l = site.parseList(get(site.listUrl(sec, 0)).second); "n=${l.size} first=${l.firstOrNull()}" }
+        val v = site.parseList(get(site.listUrl("new", 0)).second).first()
+        val st = site.stream(get(v.pageUrl).second)
+        probe("erome stream") { "$st ${st?.let { head(it.url) }}" }
     }
 }

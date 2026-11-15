@@ -57,7 +57,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome) }
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { site ->
             (listOf(site.host) + site.mirrors).any { host == it || host.endsWith(".$it") }
         }
@@ -542,6 +542,33 @@ sealed class TubeSite(val host: String, val label: String) {
             })
         }
         override fun embedUrl(id: String) = "https://www.youjizz.com/videos/embed/$id"
+    }
+
+    /**
+     * Erome: amateur albums (often one person's set of clips). Only albums with videos are listed;
+     * each plays its first clip. Files need the site as Referer (sent by the browser headers).
+     */
+    object Erome : TubeSite("erome.com", "Erome") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.erome.com/explore/new?page=${page + 1}"
+            "top" -> "https://www.erome.com/explore?page=${page + 1}"
+            else -> "https://www.erome.com/search?q=${enc(section)}&page=${page + 1}"
+        }
+        private val MARK = Regex("""id="album-(\d+)"""")
+        private val HREF = Regex("""href="(https://www\.erome\.com/a/([A-Za-z0-9]+))"""")
+        private val IMG = Regex("""class="album-thumbnail[^"]*"\s+src="(https://[^"]+)"""")
+        private val TITLE = Regex("""class="album-title"[^>]*>([^<]*)<""")
+        private val SOURCE = Regex("""<source src="(https://[^"]+\.mp4)"[^>]*?(?:res=["'](\d+)["'])?""")
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (_, c) ->
+            if (!c.contains("album-videos")) return@mapNotNull null // pictures only
+            val m = HREF.find(c) ?: return@mapNotNull null
+            TubeVideo(m.groupValues[2], TITLE.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifBlank { null }, m.groupValues[1], IMG.find(c)?.groupValues?.get(1)?.let(::unescape), null)
+        }.distinctBy { it.id }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            SOURCE.find(pageHtml)?.groupValues?.get(1)?.let { TubeStream(unescape(it), "video/mp4") }
+        override fun embedUrl(id: String) = "https://www.erome.com/a/$id"
     }
 
     // ── Eporner (official API; plays its MP4s via the embed page's hash) ───

@@ -154,7 +154,7 @@ object ArchiveHeaders {
     )
     private val SITES = listOf(
         "coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party",
-        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "xhamster2.com", "xhamster.desi", "xhamster19.com", "redtube.com", "eporner.com", "tnaflix.com", "porntrex.com", "youjizz.com", "imhentai.xxx", "hentaifox.com",
+        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "xhamster2.com", "xhamster.desi", "xhamster19.com", "redtube.com", "eporner.com", "tnaflix.com", "porntrex.com", "youjizz.com", "imhentai.xxx", "hentaifox.com", "erome.com",
     )
     private val COOKIES = mapOf(
         "pornhub.com" to "age_verified=1; accessAgeDisclaimerPH=1; accessAgeDisclaimerUK=1; accessPH=1; platform=pc; hasVisited=1; cookiesBannerSeen=1",

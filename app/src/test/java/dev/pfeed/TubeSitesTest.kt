@@ -259,4 +259,15 @@ class TubeSitesTest {
         val enc = """var dataEncodings = [{"quality":"360","filename":"\/\/cdne-mobile.youjizz.com\/v-360.mp4?h=1"},{"quality":"1080","filename":"\/\/cdne-mobile.youjizz.com\/v-1080.mp4?h=2"},{"quality":"360","filename":"\/\/abre.youjizz.com\/_hls\/master.m3u8"}];"""
         assertEquals("https://cdne-mobile.youjizz.com/v-1080.mp4?h=2", TubeSite.Youjizz.stream(enc)!!.url)
     }
+
+    @Test
+    fun `erome lists video albums only and plays the first clip`() {
+        val html = """<div class="col album" id="album-23765447"> <a class="album-link" href="https://www.erome.com/a/qTYRdpok" > <img fetchpriority="high" alt="x #ly" width="250" class="album-thumbnail img-responsive active" src="https://s100.erome.com/9507/qTYRdpok/thumbs/ly.jpg?v=1" > <span class="album-videos" >1</span></a> <a class="album-title" href="https://www.erome.com/a/qTYRdpok" >pawg milf</a></div>
+            <div class="col album" id="album-2"> <a class="album-link" href="https://www.erome.com/a/pics" > <img class="album-thumbnail img-responsive" src="https://s1.erome.com/p.jpg" ></a> <a class="album-title" href="https://www.erome.com/a/pics">pictures</a></div>"""
+        val v = TubeSite.Erome.parseList(html).single()
+        assertEquals("qTYRdpok", v.id)
+        assertEquals("pawg milf", v.title)
+        assertEquals("https://s100.erome.com/9507/qTYRdpok/thumbs/ly.jpg?v=1", v.thumb)
+        assertEquals("https://v93.erome.com/9525/E/a_720p.mp4", TubeSite.Erome.stream("""<video><source src="https://v93.erome.com/9525/E/a_720p.mp4" type='video/mp4' res='720'></video>""")!!.url)
+    }
 }
