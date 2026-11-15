@@ -189,4 +189,14 @@ class AlgorithmSimulationTest {
         assertTrue(f.any { it.startsWith(Features.TYPE) })
         assertEquals("Videos", Features.label("type:video"))
     }
+
+    @Test
+    fun `clip or full scene is learned for videos of known length`() {
+        val clip = item("c", tags = listOf("bdsm"), type = MediaType.VIDEO).copy(durationSec = 25)
+        val scene = item("s", tags = listOf("bdsm"), type = MediaType.VIDEO).copy(durationSec = 1500)
+        assertTrue("len:short" in Features.of(clip))
+        assertTrue("len:long" in Features.of(scene))
+        assertTrue(Features.of(item("n", tags = listOf("bdsm"))).none { it.startsWith(Features.LENGTH) })
+        assertTrue(Features.isMeta("len:short"))
+    }
 }

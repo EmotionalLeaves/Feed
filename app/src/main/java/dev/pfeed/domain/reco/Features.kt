@@ -51,19 +51,22 @@ object Features {
         return (tags + words).distinct().take(MAX) + meta(item)
     }
 
-    /** "o:{origin}" and "type:{video|image|gif|comic}". */
-    fun meta(item: MediaItem): List<String> = listOf(
+    /** "o:{origin}", "type:{video|image|gif|comic}", and for videos of known length "len:{short|medium|long}". */
+    fun meta(item: MediaItem): List<String> = listOfNotNull(
         ORIGIN + Spread.origin(item),
         TYPE + when {
             item.isGallery -> "comic"
             else -> item.type.name.lowercase().let { if (it == "embed") "video" else it }
         },
+        // Clip or full scene: people usually want one or the other.
+        item.durationSec?.takeIf { it > 0 }?.let { d -> LENGTH + when { d < 60 -> "short"; d < 8 * 60 -> "medium"; else -> "long" } },
     )
 
-    fun isMeta(feature: String) = feature.startsWith(ORIGIN) || feature.startsWith(TYPE)
+    fun isMeta(feature: String) = feature.startsWith(ORIGIN) || feature.startsWith(TYPE) || feature.startsWith(LENGTH)
 
     const val ORIGIN = "o:"
     const val TYPE = "type:"
+    const val LENGTH = "len:"
 
     internal fun titleWords(title: String?): List<String> {
         if (title.isNullOrBlank()) return emptyList()
@@ -82,6 +85,9 @@ object Features {
         feature.startsWith(ORIGIN) -> "Posts from " + feature.removePrefix(ORIGIN).substringAfter(':')
         feature.startsWith(TYPE) -> when (feature.removePrefix(TYPE)) {
             "video" -> "Videos"; "image" -> "Pictures"; "gif" -> "GIFs"; "comic" -> "Comics"; else -> feature
+        }
+        feature.startsWith(LENGTH) -> when (feature.removePrefix(LENGTH)) {
+            "short" -> "Short clips (under a minute)"; "medium" -> "Videos of 1–8 minutes"; else -> "Long videos (8 minutes and up)"
         }
         else -> "#${feature.replace('_', ' ')}"
     }
