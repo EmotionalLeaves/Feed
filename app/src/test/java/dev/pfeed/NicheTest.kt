@@ -32,8 +32,22 @@ class NicheTest {
         val out = Spread.order(pony + other, emptyList(), limit = 12, allowForcedRun = false)
         assertEquals(1, out.take(12).count { Niche.of(it) != null })
 
-        Spread.openNiches = Niche.opened(mapOf("pony" to 50.0))
+        // Watching doesn't open it; liking or saving three pony posts, or following a pony tag, does.
+        assertTrue(Niche.opened(pony.take(2), emptySet()).isEmpty())
+        assertEquals(setOf(Niche.MLP), Niche.opened(pony.take(3), emptySet()))
+        assertEquals(setOf(Niche.MLP), Niche.opened(emptyList(), setOf("twilight_sparkle")))
+        Spread.openNiches = Niche.opened(pony.take(3), emptySet())
         val open = Spread.order(pony + other, emptyList(), limit = 12, allowForcedRun = false)
         assertTrue(open.count { Niche.of(it) != null } > 1)
+    }
+
+    @Test
+    fun `closed niche is one in 36, and board-style pony tags are recognised`() {
+        val pony = (1..20).map { item("site$it.org/$it", listOf("rarity_(mlp)"), source = "p$it") }
+        val other = (1..40).map { item("other$it.org/$it", listOf("milf"), source = "o${it % 20}") }
+        val out = Spread.order(pony + other, emptyList(), limit = 36, allowForcedRun = false)
+        assertEquals(1, out.take(36).count { Niche.of(it) != null })
+        assertEquals(Niche.MLP, Niche.of(item("e621.net/9", listOf("my_little_pony_friendship_is_magic"))))
+        assertEquals(Niche.MLP, Niche.of(item("e621.net/9", listOf("equestria_girls_(franchise)"))))
     }
 }

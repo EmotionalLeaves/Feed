@@ -21,6 +21,8 @@ class Spread(recent: List<MediaItem> = emptyList()) {
     private class Keys(val origin: String, val post: String?, val creator: String?, val niche: String?, val source: String)
 
     private val tail = ArrayDeque<Keys>(WINDOW + 1).apply { recent.takeLast(WINDOW).forEach { addLast(keys(it)) } }
+    /** Niches of the last [Niche.CLOSED_WINDOW] posts: a closed niche's share is judged over a longer stretch. */
+    private val nicheTail = ArrayDeque<String?>(Niche.CLOSED_WINDOW + 1).apply { recent.takeLast(Niche.CLOSED_WINDOW).forEach { addLast(Niche.of(it)) } }
 
     /** Strictest level [item] passes: 4 = balanced too, 3 = all hard rules, 2 = not back-to-back + one per post, 1 = not back-to-back, 0 = none. */
     fun level(item: MediaItem): Int = level(keys(item))
@@ -32,13 +34,16 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         if (k.creator != null && tail.count { it.creator == k.creator } >= MAX_PER_CREATOR) return 2
         // Soft rules: kept whenever any candidate can keep them, never a reason to stop a batch.
         if (tail.count { it.source == k.source } >= MAX_PER_SOURCE) return ALL_RULES
-        if (k.niche != null && k.niche !in openNiches && tail.count { it.niche == k.niche } >= MAX_PER_NICHE) return ALL_RULES
+        if (k.niche != null && k.niche !in openNiches && nicheTail.count { it == k.niche } >= MAX_PER_NICHE) return ALL_RULES
         return BALANCED
     }
 
     fun add(item: MediaItem) {
-        tail.addLast(keys(item))
+        val k = keys(item)
+        tail.addLast(k)
         if (tail.size > WINDOW) tail.removeFirst()
+        nicheTail.addLast(k.niche)
+        if (nicheTail.size > Niche.CLOSED_WINDOW) nicheTail.removeFirst()
     }
 
     /**

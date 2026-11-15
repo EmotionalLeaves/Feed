@@ -13,6 +13,9 @@ import dev.pfeed.domain.model.MediaItem
 object Niche {
     const val MLP = "mlp"
 
+    /** A closed niche gets at most one post in this many (longer than the spacing window). */
+    const val CLOSED_WINDOW = 36
+
 
     private val MLP_HOSTS = setOf("derpibooru.org", "ponybooru.org", "twibooru.org", "manebooru.art", "ponerpics.org")
     private val MLP_TAGS = setOf(
@@ -25,20 +28,29 @@ object Niche {
     )
 
     /**
-     * Niches the user has clearly asked for: liked, saved, followed or watched through enough of it
-     * that For You's learned affinity for its tags is strongly positive.
+     * Niches the user has explicitly asked for: liked or saved at least [OPEN_AFTER] of its posts, or
+     * follows one of its tags. Watching isn't enough: while pony posts flooded every feed, people
+     * watched them simply because they were there, and that alone re-opened the flood.
      */
-    fun opened(tagAffinity: Map<String, Double>): Set<String> {
-        val best = MLP_TAGS.maxOfOrNull { tagAffinity[Features.normalizeTag(it)] ?: 0.0 } ?: 0.0
-        return if (Ranker.squash(best) >= OPEN_AT) setOf(MLP) else emptySet()
+    fun opened(likedOrSaved: List<MediaItem>, followedTags: Set<String>): Set<String> {
+        val explicit = likedOrSaved.count { of(it) == MLP }
+        val follows = followedTags.any { isMlpTag(it) }
+        return if (explicit >= OPEN_AFTER || follows) setOf(MLP) else emptySet()
     }
 
-    private const val OPEN_AT = 0.5
+    private const val OPEN_AFTER = 3
+
+    /** Exact tags, plus the patterns boards use: "*_(mlp)" characters, "my_little_pony…", "…equestria…". */
+    fun isMlpTag(raw: String): Boolean {
+        val t = raw.trim().lowercase()
+        return t in MLP_TAGS || t.endsWith("_(mlp)") || t.endsWith(" (mlp)") || t.startsWith("mlp:") || t.startsWith("mlp_") ||
+            t.contains("my_little_pony") || t.contains("my little pony") || t.contains("friendship_is_magic") || t.contains("equestria")
+    }
 
     fun of(item: MediaItem): String? {
         val host = item.id.substringBefore('/', "").lowercase().removePrefix("www.")
         if (host in MLP_HOSTS) return MLP
-        if (item.tags.any { it.trim().lowercase() in MLP_TAGS }) return MLP
+        if (item.tags.any(::isMlpTag)) return MLP
         return null
     }
 }

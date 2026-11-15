@@ -21,6 +21,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.job
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.selects.select
 import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
@@ -115,6 +116,20 @@ class FeedSession(
 
     /** Stop background fetches; call when the session is replaced. */
     fun close() = scope.cancel()
+
+    private var nichesCheckedAt = 0L
+    private var niches: Set<String> = emptySet()
+
+    /** Niches opened by explicit likes, saves and follows (see [dev.pfeed.domain.reco.Niche.opened]); re-read once a minute. */
+    private suspend fun openNiches(follows: Follows): Set<String> {
+        val now = System.currentTimeMillis()
+        if (now - nichesCheckedAt > 60_000) {
+            nichesCheckedAt = now
+            val kept = library.items(LibraryKind.LIKED).first() + library.items(LibraryKind.SAVED).first()
+            niches = dev.pfeed.domain.reco.Niche.opened(kept, follows.tags)
+        }
+        return niches
+    }
 
     suspend fun loadMore(): LoadResult = kotlinx.coroutines.withContext(SESSION_THREAD) { loadMoreHere() }
 
@@ -365,8 +380,7 @@ class FeedSession(
         val now = Instant.now()
         // A fandom niche (My Little Pony) only gets its normal share once the user has shown they want it.
         // A tag or creator page shows exactly what was asked for.
-        Spread.openNiches = if (spec is FeedSpec.Tag) setOf(dev.pfeed.domain.reco.Niche.MLP)
-            else dev.pfeed.domain.reco.Niche.opened(signals.affinities().tags)
+        Spread.openNiches = if (spec is FeedSpec.Tag) setOf(dev.pfeed.domain.reco.Niche.MLP) else openNiches(library.followsOnce())
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
             val ranker = Ranker(settings.get().weights)
