@@ -190,7 +190,7 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             Spacer(Modifier.height(24.dp))
         }
     }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+        dev.pfeed.ui.common.AppSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
     val open = listed.firstOrNull { it.adapter.id == openId }

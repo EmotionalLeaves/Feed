@@ -1,5 +1,6 @@
 package dev.pfeed.ui.common
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -308,5 +309,38 @@ fun BrandButton(
             Spacer(Modifier.width(6.dp))
         }
         Text(text, color = color, style = if (compact) MaterialTheme.typography.labelLarge else MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+    }
+}
+
+/**
+ * Confirmations ("Saved", "Hidden"): a compact dark pill with a hairline edge, instead of Material's
+ * light bar, so they read as part of the app over any picture.
+ */
+@Composable
+fun AppSnackbarHost(state: androidx.compose.material3.SnackbarHostState, modifier: Modifier = Modifier) {
+    androidx.compose.material3.SnackbarHost(state, modifier) { data ->
+        Row(
+            Modifier
+                .padding(8.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(Color(0xF01C1C21))
+                .border(1.dp, Color.White.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .padding(horizontal = 18.dp, vertical = 11.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(dev.pfeed.ui.theme.BrandGradient))
+            Spacer(Modifier.width(10.dp))
+            Text(data.visuals.message, color = Color.White, style = MaterialTheme.typography.labelLarge, maxLines = 2)
+            data.visuals.actionLabel?.let { label ->
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    label,
+                    color = dev.pfeed.ui.theme.Accent,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                    modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).clickable { data.performAction() }.padding(4.dp),
+                )
+            }
+        }
     }
 }

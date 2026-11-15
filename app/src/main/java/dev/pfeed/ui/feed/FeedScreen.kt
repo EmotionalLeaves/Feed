@@ -251,7 +251,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         )
 
         // Confirmations appear under the top bar, clear of the caption and buttons.
-        SnackbarHost(
+        dev.pfeed.ui.common.AppSnackbarHost(
             snackbar,
             Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp, start = 16.dp, end = 16.dp),
         )
