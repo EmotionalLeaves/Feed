@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.19.0 — 2026-11-15
+
+Erome, and fewer embed fallbacks
+
+- **New tube site: Erome** — amateur video albums (newest, top and every category/search), playing each album's clip natively. 12 video sites now.
+- **Fewer videos stuck in a site's embed player.** When a video page was refused for a moment (a rate limit), the app remembered "embed only" for that video for the rest of the session; now it asks the page again next time. Stream links are also remembered for only 20 minutes, because they carry expiring tokens — a video reopened later no longer fails on a dead link.
+
 ## 4.18.0 — 2026-11-15
 
 Pick up where you left off
