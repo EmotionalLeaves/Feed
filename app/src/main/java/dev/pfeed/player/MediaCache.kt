@@ -33,6 +33,12 @@ class MediaCache @Inject constructor(
         get() = prefs.getInt(KEY_SIZE, DEFAULT_MB)
         set(value) { prefs.edit().putInt(KEY_SIZE, value).apply() }
 
+    /**
+     * The app's client (headers, DNS) without its 45 s overall call deadline: a progressive video is
+     * one long response that the player reads as it plays, and the deadline cut it off mid-video.
+     */
+    private val media: OkHttpClient by lazy { okHttp.newBuilder().callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS).build() }
+
     private val database by lazy { StandaloneDatabaseProvider(context) }
 
     val cache: SimpleCache by lazy {
@@ -51,7 +57,7 @@ class MediaCache @Inject constructor(
 
     /** Writes into [offline] (used to download a saved post's stream). */
     val offlineWriteFactory: CacheDataSource.Factory by lazy {
-        CacheDataSource.Factory().setCache(offline).setUpstreamDataSourceFactory(OkHttpDataSource.Factory(okHttp))
+        CacheDataSource.Factory().setCache(offline).setUpstreamDataSourceFactory(OkHttpDataSource.Factory(media))
     }
 
     /**
@@ -62,7 +68,7 @@ class MediaCache @Inject constructor(
     val streamingFactory: CacheDataSource.Factory by lazy {
         CacheDataSource.Factory()
             .setCache(cache)
-            .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(okHttp))
+            .setUpstreamDataSourceFactory(OkHttpDataSource.Factory(media))
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 

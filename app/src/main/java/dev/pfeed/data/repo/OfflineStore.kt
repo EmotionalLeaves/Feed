@@ -50,6 +50,10 @@ class OfflineStore @Inject constructor(
     private val network: NetworkMonitor,
     private val mediaCache: dev.pfeed.player.MediaCache,
 ) {
+    /** The app's client (same headers and DNS), without the overall call deadline: a video can take minutes. */
+    private val downloads: OkHttpClient by lazy {
+        okHttp.newBuilder().callTimeout(0, java.util.concurrent.TimeUnit.MILLISECONDS).readTimeout(60, java.util.concurrent.TimeUnit.SECONDS).build()
+    }
     private val dir by lazy { File(context.filesDir, "offline").apply { mkdirs() } }
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val gate = Semaphore(2)
@@ -144,7 +148,7 @@ class OfflineStore @Inject constructor(
     }
 
     private suspend fun fetch(key: String, direct: StreamInfo.Direct) = withContext(Dispatchers.IO) {
-        okHttp.newCall(Request.Builder().url(direct.url).build()).execute().use { resp ->
+        downloads.newCall(Request.Builder().url(direct.url).build()).execute().use { resp ->
             if (!resp.isSuccessful) throw java.io.IOException("HTTP ${resp.code}")
             val body = resp.body ?: throw java.io.IOException("empty")
             val length = body.contentLength()
