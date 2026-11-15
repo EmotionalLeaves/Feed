@@ -34,6 +34,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.runtime.remember
 import androidx.compose.foundation.layout.height
 import androidx.compose.ui.graphics.Color
@@ -104,7 +105,7 @@ fun MediaGrid(
                     model = item.thumbnailUrl,
                     contentDescription = item.title,
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().then(if (LocalBlurPreviews.current) Modifier.blur(28.dp) else Modifier),
                 )
                 val badge = when (item.type) {
                     MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
@@ -148,3 +149,7 @@ fun formatDuration(sec: Int): String = if (sec >= 3600) {
 } else {
     "%d:%02d".format(sec / 60, sec % 60)
 }
+
+/** Blur grid previews (Settings → Privacy). Provided at the top of the app from settings. */
+val LocalBlurPreviews = androidx.compose.runtime.staticCompositionLocalOf { false }
+

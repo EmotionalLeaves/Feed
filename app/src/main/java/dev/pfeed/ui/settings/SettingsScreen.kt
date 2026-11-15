@@ -18,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Block
+import androidx.compose.material.icons.filled.BlurOn
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DataSaverOn
 import androidx.compose.material.icons.filled.DeleteForever
@@ -216,6 +217,15 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     icon = Icons.Filled.VisibilityOff,
                     iconTint = Good,
                     onChange = vm::setPrivateMode,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Blur previews",
+                    s.blurPreviews,
+                    subtitle = "Library and search thumbnails stay blurred until you open one",
+                    icon = Icons.Filled.BlurOn,
+                    iconTint = Good,
+                    onChange = vm::setBlurPreviews,
                 )
                 RowDivider()
                 SwitchSetting(

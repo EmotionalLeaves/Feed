@@ -7,6 +7,9 @@ import android.view.MotionEvent
 import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import kotlinx.coroutines.flow.map
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -31,6 +34,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var searchRepository: dev.pfeed.data.repo.SearchRepository
     @Inject lateinit var library: dev.pfeed.data.repo.LibraryRepository
     @Inject lateinit var feedSessions: dev.pfeed.data.repo.FeedSessionFactory
+    @Inject lateinit var settingsRepository: dev.pfeed.data.settings.SettingsRepository
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.
@@ -43,7 +47,10 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             PFeedTheme {
-                AppRoot(lockManager = lockManager, onPanic = ::panic)
+                val blur by settingsRepository.flow.map { it.blurPreviews }.collectAsState(initial = false)
+                androidx.compose.runtime.CompositionLocalProvider(dev.pfeed.ui.common.LocalBlurPreviews provides blur) {
+                    AppRoot(lockManager = lockManager, onPanic = ::panic)
+                }
             }
         }
     }

@@ -205,6 +205,7 @@ class SettingsViewModel @Inject constructor(
     fun setEncryptedDns(v: Boolean) = update { it.copy(encryptedDns = v) }
     fun setPrivateMode(v: Boolean) = update { it.copy(privateMode = v) }
     fun setDataSaver(v: Boolean) = update { it.copy(dataSaver = v) }
+    fun setBlurPreviews(v: Boolean) = update { it.copy(blurPreviews = v) }
     fun setLockTimeout(sec: Int) = update { it.copy(lockTimeoutSec = sec) }
 
     fun setDisguise(d: Disguise) {

@@ -67,6 +67,8 @@ data class AppSettings(
     val privateMode: Boolean = false,
     /** Data saver: videos at most 480p (fewer megabytes on mobile data). */
     val dataSaver: Boolean = false,
+    /** Blur grid previews (Library, Search) until opened, for using the app around other people. */
+    val blurPreviews: Boolean = false,
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),
