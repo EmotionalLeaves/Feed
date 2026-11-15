@@ -95,6 +95,11 @@ class OfflineStore @Inject constructor(
 
     /** [item] with its thumbnail pointing at the kept copy, when there is one (Saved works offline). */
     fun withLocalThumbnail(item: MediaItem): MediaItem {
+        val kept = if (isKept(item)) item.copy(extras = item.extras + (KEPT to "1")) else item
+        return withThumb(kept)
+    }
+
+    private fun withThumb(item: MediaItem): MediaItem {
         val f = index[hash(thumbKey(item.key))]?.takeIf { it.exists() } ?: return item
         // The original is kept alongside, so a post saved again from here stores its real thumbnail.
         return item.copy(thumbnailUrl = Uri.fromFile(f).toString(), extras = item.extras + (REMOTE_THUMB to item.thumbnailUrl.orEmpty()))
@@ -264,7 +269,11 @@ class OfflineStore @Inject constructor(
         const val REMOTE_THUMB = "remoteThumb"
 
         /** Undoes [withLocalThumbnail]: the post as it should be stored. */
-        fun original(item: MediaItem): MediaItem {
+        /** Marks a post in Saved whose copy is complete (for the tile's badge). */
+        const val KEPT = "kept"
+
+        fun original(given: MediaItem): MediaItem {
+            val item = if (KEPT in given.extras) given.copy(extras = given.extras - KEPT) else given
             val remote = item.extras[REMOTE_THUMB] ?: return item
             return item.copy(thumbnailUrl = remote.ifBlank { null }, extras = item.extras - REMOTE_THUMB)
         }

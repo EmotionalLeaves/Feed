@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
@@ -130,6 +131,16 @@ fun MediaGrid(
                             Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         }
                     }
+                }
+                // A saved post that's on the phone: opens without a connection.
+                if (item.extras[dev.pfeed.data.repo.OfflineStore.KEPT] != null) {
+                    Icon(
+                        Icons.Filled.DownloadDone,
+                        contentDescription = "On this phone",
+                        tint = Color.White,
+                        modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp)
+                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(2.dp),
+                    )
                 }
                 // Part-watched long video: how far you got (it carries on from there).
                 val resumeAt = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) }
