@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.26.0 — 2026-11-15
+
+8muses comics
+
+- **8muses** joins Comic sites: western porn comics from the artists on its front page, read issue by issue at full size. Issues without tags are left out, so every one is checked like the other comic sites.
+
 ## 4.25.0 — 2026-11-15
 
 Hentai videos: Rule34Video
