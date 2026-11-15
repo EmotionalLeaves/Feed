@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.27.0 — 2026-11-15
+
+Faster first search
+
+- Search runs on its own threads, so a search started while the feed is still loading no longer waits behind it (first search after launch: 30 s → 15 s).
+- The feed's learning is now checked against a change of taste mid-session: once you start skipping what you used to like, it follows the new interest within a few screens.
+
 ## 4.26.0 — 2026-11-15
 
 8muses comics
