@@ -282,4 +282,13 @@ class TubeSitesTest {
         assertEquals("https://rule34video.com/get_file/54/b/4730794_720p.mp4/?t=2", TubeSite.Rule34Video.stream(page)!!.url)
         assertTrue(TubeSite.Rule34Video.checkTagsFirst)
     }
+
+    @Test
+    fun `xhamster videos are found inside window initials even when the key is escaped`() {
+        val html = """<script>window.initials={"layoutPage":{"videoListProps":{"video\u0054humbProps":[{"id":1,"duration":609,"title":"A title","pageURL":"https://xhamster.com/videos/a-title-xhAbC1","thumbURL":"https://ic.xhcdn.com/t.webp"}]}}};</script>"""
+        val list = dev.pfeed.source.tube.TubeSite.Xhamster.parseList(html)
+        org.junit.Assert.assertEquals(1, list.size)
+        org.junit.Assert.assertEquals("xhAbC1", list[0].id)
+        org.junit.Assert.assertEquals(609, list[0].durationSec)
+    }
 }

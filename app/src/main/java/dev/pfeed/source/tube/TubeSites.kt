@@ -310,7 +310,10 @@ sealed class TubeSite(val host: String, val label: String) {
 
         /** Listing pages carry their videos as JSON (`videoThumbProps` inside `window.initials`). */
         override fun parseList(body: String): List<TubeVideo> {
+            // The list sits inside window.initials (layoutPage.videoListProps / searchResult); some
+            // pages don't carry the key as plain text, so look for it in the parsed object too.
             val arr = jsonAfter(body, "\"videoThumbProps\":")?.let { runCatching { json.parseToJsonElement(it).jsonArray }.getOrNull() }
+                ?: initials(body)?.let(::findThumbProps)
             val fromJson = arr?.mapNotNull { it as? JsonObject }?.mapNotNull { v ->
                 val url = v["pageURL"]?.jsonPrimitive?.contentOrNull ?: return@mapNotNull null
                 TubeVideo(
@@ -344,6 +347,13 @@ sealed class TubeSite(val host: String, val label: String) {
 
         /** …/videos/some-slug-xhABC or …/videos/xhABC → xhABC. */
         internal fun videoId(url: String): String = url.substringBefore('?').trimEnd('/').substringAfterLast('/').substringAfterLast('-')
+
+        /** The first "videoThumbProps" array anywhere under [e]. */
+        internal fun findThumbProps(e: kotlinx.serialization.json.JsonElement): JsonArray? = when (e) {
+            is JsonObject -> (e["videoThumbProps"] as? JsonArray)?.takeIf { it.isNotEmpty() } ?: e.values.firstNotNullOfOrNull(::findThumbProps)
+            is JsonArray -> e.firstNotNullOfOrNull(::findThumbProps)
+            else -> null
+        }
 
         internal fun initials(html: String): JsonObject? =
             jsonAfter(html, "window.initials")?.let { runCatching { json.parseToJsonElement(it).jsonObject }.getOrNull() }
