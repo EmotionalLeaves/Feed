@@ -309,9 +309,11 @@ class SmokeTest {
     /** Saves a screenshot of what's on screen (pulled from the device and uploaded by CI). */
     private fun shot(name: String) {
         repeat(6) { rule.mainClock.advanceTimeBy(250); Thread.sleep(120) }
-        val bmp = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
-        val dir = java.io.File(rule.activity.getExternalFilesDir(null), "shots").apply { mkdirs() }
-        java.io.File(dir, "$name.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        // Taken by the shell into /data/local/tmp, which outlives the test run's uninstall (CI pulls it).
+        val ua = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation
+        fun sh(cmd: String) = android.os.ParcelFileDescriptor.AutoCloseInputStream(ua.executeShellCommand(cmd)).use { it.readBytes() }
+        sh("mkdir -p /data/local/tmp/shots")
+        sh("screencap -p /data/local/tmp/shots/$name.png")
         android.util.Log.i("PFHEALTH", "screenshot $name")
     }
 
