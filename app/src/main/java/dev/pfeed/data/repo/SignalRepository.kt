@@ -117,6 +117,12 @@ class SignalRepository @Inject constructor(
         )
     }
 
+    /** Forget one learned interest ("@name" for a creator). */
+    suspend fun forget(feature: String) {
+        if (feature.startsWith("@")) affinityDao.deleteCreators(listOf(feature.removePrefix("@")))
+        else affinityDao.deleteTags(listOf(feature))
+    }
+
     suspend fun reset() {
         db.withTransaction {
             signalDao.clear()

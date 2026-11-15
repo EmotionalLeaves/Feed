@@ -39,6 +39,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -91,10 +93,10 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         val sites = all.filter { it.first.startsWith(Features.ORIGIN) }
         val moreOf = likes.filterNot { Features.isMeta(it.first) }
         val lessOf = dislikes.filterNot { Features.isMeta(it.first) }
-        if (formats.isNotEmpty()) InterestSection("Formats", formats, nav)
-        if (sites.isNotEmpty()) InterestSection("Sites", sites.sortedByDescending { it.second }, nav)
-        if (moreOf.isNotEmpty()) InterestSection("More of", moreOf.map { Triple(it.first, it.second, true) }, nav)
-        if (lessOf.isNotEmpty()) InterestSection("Less of", lessOf.map { Triple(it.first, it.second, false) }, nav)
+        if (formats.isNotEmpty()) InterestSection("Formats", formats, nav, vm::forgetInterest)
+        if (sites.isNotEmpty()) InterestSection("Sites", sites.sortedByDescending { it.second }, nav, vm::forgetInterest)
+        if (moreOf.isNotEmpty()) InterestSection("More of", moreOf.map { Triple(it.first, it.second, true) }, nav, vm::forgetInterest)
+        if (lessOf.isNotEmpty()) InterestSection("Less of", lessOf.map { Triple(it.first, it.second, false) }, nav, vm::forgetInterest)
 
         Section("Ranking", footer = if (tuning) "Changes apply to the next posts loaded." else null) {
             SettingRow(
@@ -145,11 +147,11 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun InterestSection(title: String, rows: List<Triple<String, Double, Boolean>>, nav: NavController) {
-    Section(title) {
+private fun InterestSection(title: String, rows: List<Triple<String, Double, Boolean>>, nav: NavController, onForget: (String) -> Unit) {
+    Section(title, footer = if (title == "Formats") "Tap × to make For You forget something it learned." else null) {
         rows.forEachIndexed { i, (f, v, positive) ->
             if (i > 0) RowDivider(indent = false)
-            InterestRow(f, v, positive) { openTag(nav, f) }
+            InterestRow(f, v, positive, onForget = { onForget(f) }) { openTag(nav, f) }
         }
     }
 }
@@ -191,7 +193,7 @@ private fun WeightSlider(
 }
 
 @Composable
-private fun InterestRow(feature: String, score: Double, positive: Boolean, onClick: () -> Unit) {
+private fun InterestRow(feature: String, score: Double, positive: Boolean, onForget: () -> Unit, onClick: () -> Unit) {
     val label = if (feature.startsWith("@")) "by ${feature.removePrefix("@")}" else Features.label(feature)
     // Same squash the ranker uses, so the bar shows how much this actually moves the ranking.
     val strength = abs(Ranker.squash(score)).toFloat().coerceIn(0.04f, 1f)
@@ -209,6 +211,9 @@ private fun InterestRow(feature: String, score: Double, positive: Boolean, onCli
                 Modifier.fillMaxHeight().fillMaxWidth(strength).clip(RoundedCornerShape(3.dp))
                     .background(if (positive) Accent else Bad),
             )
+        }
+        androidx.compose.material3.IconButton(onClick = onForget) {
+            Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Forget", tint = TextLow, modifier = Modifier.size(18.dp))
         }
     }
 }

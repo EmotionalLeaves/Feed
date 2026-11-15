@@ -247,6 +247,11 @@ class SettingsViewModel @Inject constructor(
 
     fun loadInterests() = viewModelScope.launch { _interests.value = signals.topInterests() }
 
+    fun forgetInterest(feature: String) = viewModelScope.launch {
+        signals.forget(feature)
+        _interests.value = signals.topInterests()
+    }
+
     fun resetRecommendations() = viewModelScope.launch {
         signals.reset()
         _interests.value = signals.topInterests()
