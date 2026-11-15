@@ -50,6 +50,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChange
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem as ExoMediaItem
@@ -257,18 +258,39 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
     Box(
         Modifier
             .fillMaxSize()
-            // Pinch-to-zoom only: detectTransformGestures is wrapped so it only activates
-            // when 2+ pointers are down. Single-finger drags pass through to the pager.
+            // At normal size, one finger belongs to the feed (and a comic's pages): only a pinch zooms.
+            // Zoomed in, one finger moves around the image instead: its drags are consumed here, before
+            // the pagers see them, so the post or page doesn't change under you. A second finger pinches.
             .pointerInput(item.key) {
+                fun panBy(d: Offset) {
+                    val img = imageSize ?: return
+                    val fw = size.width.toFloat(); val fh = fw * img.height / img.width
+                    val mx = ((fw * scale - size.width) / 2f).coerceAtLeast(0f)
+                    val my = ((fh * scale - size.height) / 2f).coerceAtLeast(0f)
+                    offsetX = (offsetX + d.x).coerceIn(-mx, mx)
+                    offsetY = (offsetY + d.y).coerceIn(-my, my)
+                }
                 awaitEachGesture {
                     // Wait for the first finger
-                    awaitFirstDown(requireUnconsumed = false)
-                    // Wait for a second finger (pinch) or give up
-                    val second = withTimeoutOrNull(300) {
-                        do { val event = awaitPointerEvent() } while (event.changes.size < 2)
-                        true
+                    val down = awaitFirstDown(requireUnconsumed = false)
+                    if (scale > 1f) {
+                        var pinch = false
+                        do {
+                            val event = awaitPointerEvent()
+                            if (event.changes.count { it.pressed } >= 2) { pinch = true; break }
+                            val c = event.changes.firstOrNull { it.id == down.id && it.pressed } ?: break
+                            val d = c.positionChange()
+                            if (d != Offset.Zero) { panBy(d); c.consume() }
+                        } while (event.changes.any { it.pressed })
+                        if (!pinch) return@awaitEachGesture
+                    } else {
+                        // Wait for a second finger (pinch) or give up
+                        val second = withTimeoutOrNull(300) {
+                            do { val event = awaitPointerEvent() } while (event.changes.size < 2)
+                            true
+                        }
+                        if (second != true) return@awaitEachGesture
                     }
-                    if (second != true) return@awaitEachGesture
                     // Two fingers down: track pinch + pan until all fingers lift
                     var prevCentroid = Offset.Unspecified
                     do {
