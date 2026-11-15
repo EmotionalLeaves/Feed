@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.25.0 — 2026-11-15
+
+Hentai videos: Rule34Video
+
+- **New video site: Rule34Video** — hentai, 3D and animated porn (newest, most popular and every category/search), up to 1080p in the app's player. 13 video sites now.
+- Its listings don't carry tags, so every video's page is read first and the post is shown only once its tags are known and pass the always-on minors filter. The stream found on that page is kept, so opening it costs nothing extra.
+
 ## 4.24.0 — 2026-11-15
 
 Your taste, editable
