@@ -216,4 +216,18 @@ class AlgorithmSimulationTest {
         assertTrue(Features.of(item("n", tags = listOf("bdsm"))).none { it.startsWith(Features.LENGTH) })
         assertTrue(Features.isMeta("len:short"))
     }
+
+    @Test
+    fun `comics are judged by how far you read, not by minutes spent`() {
+        val typical = Engagement.DEFAULT_IMAGE_MS
+        // Read 20 of 22 pages over three minutes: as good as finishing a video, not off the scale.
+        assertEquals(1.0, Engagement.comicTarget(180_000, 20, 22, typical), 1e-9)
+        // Opened, looked at the cover for 40 s, left: no more than mildly positive.
+        assertTrue(Engagement.comicTarget(40_000, 1, 22, typical) <= 0.5)
+        // Flicked past.
+        assertEquals(Engagement.SKIP_TARGET, Engagement.comicTarget(800, 1, 22, typical), 1e-9)
+        // A few pages in: positive, less than finishing.
+        val few = Engagement.comicTarget(30_000, 5, 22, typical)
+        assertTrue(few in 0.15..0.5)
+    }
 }

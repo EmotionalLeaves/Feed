@@ -41,6 +41,22 @@ object Engagement {
         return t.coerceIn(SKIP_TARGET, MAX_TARGET)
     }
 
+    /**
+     * A comic or photo set: judged by how far you read, not by time (reading takes minutes, which
+     * against the image baseline would make every opened comic look loved). Read most of it: like
+     * finishing a video. A few pages in: mildly positive, more the further you got. Only the cover:
+     * an image view, judged by dwell as usual.
+     */
+    fun comicTarget(dwellMs: Long, pagesReached: Int, pageCount: Int, typicalImageMs: Double): Double {
+        if (dwellMs < FAST_SKIP_MS) return SKIP_TARGET
+        val share = pagesReached.toDouble() / pageCount.coerceAtLeast(1)
+        return when {
+            pageCount >= 4 && share >= 0.8 -> 1.0
+            pagesReached >= 3 -> 0.15 + 0.6 * share
+            else -> target(dwellMs, isVideo = false, durationMs = null, replays = 0, typicalMs = typicalImageMs).coerceAtMost(0.5)
+        }
+    }
+
     /** New log-domain baseline after observing [dwellMs]; skips don't move it. */
     fun updateBaseline(logTypical: Double, dwellMs: Long): Double {
         if (dwellMs < FAST_SKIP_MS) return logTypical

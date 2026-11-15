@@ -55,6 +55,8 @@ class PlaybackStats {
     @Volatile var replays: Int = 0
     /** Set when the user liked/saved/followed/dismissed during this view: that's the signal, not dwell. */
     @Volatile var explicit: Boolean = false
+    /** Furthest page reached in a comic or photo set (0-based). */
+    @Volatile var maxPage: Int = 0
 }
 
 @HiltViewModel
@@ -274,6 +276,12 @@ class FeedViewModel @Inject constructor(
 
     // ---- playback plumbing ----
 
+    /** A comic's reader turned to [page]. */
+    fun onComicPage(item: MediaItem, page: Int) {
+        val st = statsFor(item.key)
+        if (page > st.maxPage) st.maxPage = page
+    }
+
     fun statsFor(key: String): PlaybackStats = stats.getOrPut(key) { PlaybackStats() }
 
     suspend fun resolve(item: MediaItem): StreamInfo? = streamAsync(item).await()
@@ -347,14 +355,19 @@ class FeedViewModel @Inject constructor(
             // player reported a duration, judge the dwell against typical video viewing, not images.
             val isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED || (st?.durationMs ?: 0L) > 0L
             val typical = dwellBaseline.typicalMs(isVideo)
-            dwellBaseline.observe(isVideo, dwell)
+            // Reading a comic takes minutes: that would teach the image baseline that people stare at images.
+            if (!item.isGallery) dwellBaseline.observe(isVideo, dwell)
             // A like/save/follow/"not interested" already told the model what you think; recording the
             // dwell afterwards would pull it back toward an average view (the model is error-driven).
             if (st?.explicit == true) return@launch
             // Private mode: watching teaches nothing (likes and saves still count; they're deliberate).
             if (settings.value.privateMode) return@launch
             val durationMs = st?.durationMs?.takeIf { it > 0 } ?: item.durationSec?.times(1000L)
-            val target = Engagement.target(dwell, isVideo, durationMs, st?.replays ?: 0, typical)
+            val target = if (item.isGallery && !isVideo) {
+                Engagement.comicTarget(dwell, (st?.maxPage ?: 0) + 1, item.pages.size, typical)
+            } else {
+                Engagement.target(dwell, isVideo, durationMs, st?.replays ?: 0, typical)
+            }
             signals.record(item, Signal(SignalType.VIEW, target))
         }
     }

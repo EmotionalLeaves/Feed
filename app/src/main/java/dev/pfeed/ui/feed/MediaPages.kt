@@ -233,6 +233,7 @@ fun GalleryPage(item: MediaItem, vm: FeedViewModel) {
     val privateMode by vm.privateMode.collectAsState()
     LaunchedEffect(item.key, pager.currentPage) {
         item.pages.drop(pager.currentPage + 1).take(2).forEach { vm.warmImage(it) }
+        vm.onComicPage(item, pager.currentPage)
         if (!privateMode) dev.pfeed.player.ComicPages.save(item.key, pager.currentPage, item.pages.size)
     }
     Box(Modifier.fillMaxSize()) {
