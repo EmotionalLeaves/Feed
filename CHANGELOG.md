@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.17.0 — 2026-11-15
+
+Data saver, clip-or-scene learning
+
+- **Data saver** (Settings → Playback): videos at most 480p — tube MP4s pick the 480p file, adaptive streams are capped by the player, RedGIFs uses its SD files.
+- **For You learns whether you want clips or full scenes.** Videos of known length also teach it short (under a minute), medium (1–8 min) or long (8 min+); it shows in *Your taste* like formats and sites do.
+
 ## 4.16.0 — 2026-11-15
 
 Private mode, and searches teach For You
