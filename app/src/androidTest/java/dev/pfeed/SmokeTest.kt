@@ -189,7 +189,7 @@ class SmokeTest {
 
         // 4. Every tab opens.
         rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
-        waitFor(what = "search screen") { exists("Search every source") && exists("Popular") }
+        waitFor(what = "search screen") { exists("Search every site") && exists("Popular") }
 
         rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
         waitFor(what = "library screen") { exists("Saved", substring = true) && exists("Following", substring = true) }

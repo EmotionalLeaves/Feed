@@ -130,7 +130,8 @@ class OfflineStore @Inject constructor(
         running.entries.removeIf { (k, job) -> (k !in savedKeys).also { stop -> if (stop) job.cancel() } }
         index.entries.removeIf { (h, f) -> (h !in wantedHashes).also { drop -> if (drop) forget(f) } }
         updateSize()
-        if (!on || network.isMetered) return
+        if (!on) return
+        if (network.isMetered) { saved.forEach { problem(it, "waiting for Wi-Fi") }; return }
         for (item in saved) {
             if (running.containsKey(item.key)) continue
             if (parts(item).all { (k, _) -> index.containsKey(hash(k)) }) continue
@@ -154,7 +155,11 @@ class OfflineStore @Inject constructor(
         }
         for ((key, pageUrl) in parts(item)) {
             if (index.containsKey(hash(key))) continue
-            if (network.isMetered || dir.usableSpace < MIN_FREE_BYTES || _bytes.value > MAX_TOTAL_BYTES) return
+            when {
+                network.isMetered -> return problem(item, "waiting for Wi-Fi")
+                dir.usableSpace < MIN_FREE_BYTES -> return problem(item, "phone storage nearly full (${dir.usableSpace shr 20} MB free)")
+                _bytes.value > MAX_TOTAL_BYTES -> return problem(item, "offline copies at their ${MAX_TOTAL_BYTES shr 30} GB limit")
+            }
             val stream = if (pageUrl != null) StreamInfo.Direct(pageUrl) else resolve(item) ?: return problem(item, "no file found")
             val direct = stream as? StreamInfo.Direct ?: return problem(item, "plays in embed only")
             if (!direct.url.startsWith("http")) return // already a local file
@@ -280,7 +285,8 @@ class OfflineStore @Inject constructor(
         private const val RETRY_MS = 15 * 60_000L
         private const val MAX_FILE_BYTES = 800L * 1024 * 1024
         private const val MAX_TOTAL_BYTES = 8L * 1024 * 1024 * 1024
-        private const val MIN_FREE_BYTES = 1L * 1024 * 1024 * 1024
+        /** Always leave this much of the phone free. */
+        private const val MIN_FREE_BYTES = 400L * 1024 * 1024
 
         internal fun hash(key: String): String =
             MessageDigest.getInstance("SHA-1").digest(key.toByteArray()).joinToString("") { "%02x".format(it) }
