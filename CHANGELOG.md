@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.15.0 — 2026-11-15
+
+My Little Pony, properly contained
+
+- **Why you could still be seeing a lot of MLP:** the earlier fix let the pony niche open again once For You had learned an interest in pony tags, and it learned that just from watching — so if the flood had already trained it, it came straight back. Now the niche opens only on **explicit** interest: liking or saving 3 pony posts, or following a pony tag.
+- While closed, My Little Pony gets **at most one post in 36** (was one in 12), Derpibooru no longer feeds the main feed at all, and e621, the rule34 boards and Furbooru are asked for their feeds **without** pony posts (they carry a lot of it). Pony characters tagged the board way ("rarity_(mlp)", "equestria_girls…") are recognised too.
+- Measured on the test device: 1 MLP post in For You's first 60, none in Latest. Searching for pony, a pony tag page, or opening the niche still shows all of it.
+- If For You still leans pony from before, *Settings → Your taste → Start over* clears what it learned.
+
 ## 4.14.0 — 2026-11-14
 
 Balanced Latest
