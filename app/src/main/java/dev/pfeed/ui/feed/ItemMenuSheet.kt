@@ -76,6 +76,7 @@ fun ItemMenuSheet(
                 ListItem(
                     headlineContent = { Text("Hide posts tagged…", fontWeight = FontWeight.Bold) },
                     leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
+                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     modifier = Modifier.clickable { pickTag = null },
                 )
                 HorizontalDivider()
@@ -99,7 +100,7 @@ fun ItemMenuSheet(
 
             // What you're acting on.
             Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(52.dp).clip(RoundedCornerShape(8.dp))) { Thumbnail(item) }
+                Box(Modifier.size(52.dp).clip(RoundedCornerShape(8.dp))) { Thumbnail(item); dev.pfeed.ui.common.MediaMask() }
                 Spacer(Modifier.width(12.dp))
                 Column {
                     Text(creator?.let { "@$it" } ?: source, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -137,6 +138,8 @@ private fun MenuRow(label: String, icon: ImageVector, supporting: String? = null
         headlineContent = { Text(label) },
         supportingContent = supporting?.let { { Text(it) } },
         leadingContent = { Icon(icon, contentDescription = null) },
+        // Rows sit on the sheet's own colour (the default surface showed as darker bands).
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         modifier = Modifier.clickable(onClick = onClick),
     )
 }
