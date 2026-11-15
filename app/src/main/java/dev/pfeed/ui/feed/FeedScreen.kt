@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material.icons.filled.PanTool
@@ -660,7 +661,7 @@ private fun Overlay(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LikeButton(liked = liked, onLike = onLike)
-            RailButton(if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (saved) "Saved" else "Save", onSave)
+            RailButton(if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (saved) "Saved" else "Save", onSave, branded = saved)
             if (isVideo) {
                 RailButton(if (muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, if (muted) "Muted" else "Sound", onMute)
             }
@@ -677,6 +678,8 @@ private fun RailButton(
     onClick: () -> Unit,
     tint: Color = Color.White,
     iconScale: Float = 1f,
+    /** On: the icon is painted in the brand gradient (a liked heart, a saved bookmark). */
+    branded: Boolean = false,
 ) {
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -690,7 +693,18 @@ private fun RailButton(
                 icon,
                 contentDescription = label,
                 tint = tint,
-                modifier = Modifier.size(28.dp).graphicsLayer { scaleX = iconScale; scaleY = iconScale },
+                modifier = Modifier.size(28.dp)
+                    .graphicsLayer {
+                        scaleX = iconScale; scaleY = iconScale
+                        // Offscreen so the gradient below only paints where the icon is.
+                        if (branded) compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                    }
+                    .then(
+                        if (branded) Modifier.drawWithContent {
+                            drawContent()
+                            drawRect(dev.pfeed.ui.theme.BrandGradient, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+                        } else Modifier,
+                    ),
             )
         }
         Spacer(Modifier.height(3.dp))
@@ -714,8 +728,9 @@ private fun LikeButton(liked: Boolean, onLike: () -> Unit) {
         icon = if (liked) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
         label = if (liked) "Liked" else "Like",
         onClick = onLike,
-        tint = if (liked) HeartRed else Color.White,
+        tint = Color.White,
         iconScale = pop.value,
+        branded = liked,
     )
 }
 

@@ -524,7 +524,8 @@ private fun ResultsPane(
         }
         Box(Modifier.fillMaxSize()) {
             when {
-                visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen)
+                // Results come from every site at once: each tile says which.
+                visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen, label = { Display.source(it, it.sourceId) })
                 ui.loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(color = Accent)
                     Spacer(Modifier.height(12.dp))

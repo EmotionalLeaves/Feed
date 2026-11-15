@@ -77,6 +77,8 @@ fun MediaGrid(
     items: List<MediaItem>,
     onOpen: (index: Int) -> Unit,
     modifier: Modifier = Modifier,
+    /** A short label for the tile's corner (where it's from), or null for none. */
+    label: ((MediaItem) -> String?)? = null,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -132,6 +134,17 @@ fun MediaGrid(
                             Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                         }
                     }
+                }
+                label?.invoke(item)?.let { text ->
+                    Text(
+                        text,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        maxLines = 1,
+                        modifier = Modifier.align(Alignment.TopStart).padding(5.dp)
+                            .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(5.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    )
                 }
                 // A saved post that's on the phone: opens without a connection.
                 if (item.extras[dev.pfeed.data.repo.OfflineStore.KEPT] != null) {
