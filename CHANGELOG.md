@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.16.0 — 2026-11-15
+
+Private mode, and searches teach For You
+
+- **Private mode** (Settings → Privacy): while it's on, nothing goes into watch history or search history and watching teaches For You nothing; likes and saves still count because they're deliberate. A small *Private* marker sits on the feed so it's never left on by accident.
+- **What you search for, For You learns.** A search nudges For You toward its words (gently: one curious search doesn't take over; searching again adds up). Only the words are learned, not a site or a format.
+
 ## 4.15.0 — 2026-11-15
 
 My Little Pony, properly contained
