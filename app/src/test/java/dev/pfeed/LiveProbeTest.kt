@@ -33,22 +33,8 @@ class LiveProbeTest {
     private fun flat(h: String) = h.replace(Regex("\\s+"), " ")
     @Test
     fun probe() {
-        val hosts = HashMap<String, Int>()
-        var skipped = 0
-        for (sub in listOf("gonewild", "RealGirls", "nsfw", "holdthemoan", "cumsluts", "PetiteGoneWild")) {
-            val xml = get("https://www.reddit.com/r/$sub/new/.rss?limit=100", "application/atom+xml").second
-            val links = Regex("<a href=\"([^\"]+)\">\\[link\\]</a>").findAll(xml.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"")).map { it.groupValues[1] }.toList()
-            links.forEach { l -> val h = l.substringAfter("://").substringBefore('/').removePrefix("www."); hosts[h] = (hosts[h] ?: 0) + 1; if (dev.pfeed.source.reddit.RedditRss.mediaFor(l) == null && !l.contains("/gallery/")) skipped++ }
-            Thread.sleep(2500)
-        }
-        probe("link hosts") { hosts.entries.sortedByDescending { it.value }.take(15).joinToString { "${it.key}=${it.value}" } + " unplayable=$skipped" }
-        val album = get("https://www.erome.com/explore/new").second.let { Regex("href=\"(https://www.erome.com/a/[A-Za-z0-9]+)\"").find(it)?.groupValues?.get(1) }
-        probe("erome album") { album ?: "none" }
-        if (album != null) {
-            val h = get(album).second
-            probe("erome page") { "len=${h.length} videos=${Regex("<source src=\"(https://[^\"]+\\.mp4)\"").findAll(h).map { it.groupValues[1] }.take(3).toList()} imgs=${Regex("data-src=\"(https://s\\d+\\.erome\\.com/[^\"]+)\"").findAll(h).map { it.groupValues[1] }.take(3).toList()} title=${Regex("<title>([^<]{0,60})").find(h)?.groupValues?.get(1)}" }
-            val v = Regex("<source src=\"(https://[^\"]+\\.mp4)\"").find(h)?.groupValues?.get(1)
-            if (v != null) probe("erome video") { head(v) + " / with referer: " + client.newCall(Request.Builder().url(v).header("Range", "bytes=0-0").header("Referer", "https://www.erome.com/").build()).execute().use { "${it.code} ${it.header("Content-Type")}" } }
+        for (u in listOf("https://www.erome.com/explore/new?page=2", "https://www.erome.com/search?q=milf&page=1", "https://www.erome.com/explore?page=1")) probe("list $u") {
+            val (c, h) = get(u); "$c len=${h.length} albums=${Regex("href=\"https://www.erome.com/a/([A-Za-z0-9]+)\"").findAll(h).map { it.groupValues[1] }.distinct().count()} :: " + flat(around(h, "album-link", 300, 1500))
         }
     }
 }
