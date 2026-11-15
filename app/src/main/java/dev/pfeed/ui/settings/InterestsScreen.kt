@@ -84,22 +84,17 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         if (interests != null && likes.isEmpty() && dislikes.isEmpty()) {
             EmptyState(Icons.Filled.AutoAwesome, "Still learning", "Watch, like and skip a few dozen posts and this fills in.")
         }
-        if (likes.isNotEmpty()) {
-            Section("More of") {
-                likes.forEachIndexed { i, (f, v) ->
-                    if (i > 0) RowDivider(indent = false)
-                    InterestRow(f, v, positive = true) { openTag(nav, f) }
-                }
-            }
-        }
-        if (dislikes.isNotEmpty()) {
-            Section("Less of") {
-                dislikes.forEachIndexed { i, (f, v) ->
-                    if (i > 0) RowDivider(indent = false)
-                    InterestRow(f, v, positive = false) { openTag(nav, f) }
-                }
-            }
-        }
+        // What it learned, grouped the way people think about it: what kind of post, which sites,
+        // then the subjects themselves.
+        val all = likes.map { Triple(it.first, it.second, true) } + dislikes.map { Triple(it.first, it.second, false) }
+        val formats = all.filter { it.first.startsWith(Features.TYPE) || it.first.startsWith(Features.LENGTH) }
+        val sites = all.filter { it.first.startsWith(Features.ORIGIN) }
+        val moreOf = likes.filterNot { Features.isMeta(it.first) }
+        val lessOf = dislikes.filterNot { Features.isMeta(it.first) }
+        if (formats.isNotEmpty()) InterestSection("Formats", formats, nav)
+        if (sites.isNotEmpty()) InterestSection("Sites", sites.sortedByDescending { it.second }, nav)
+        if (moreOf.isNotEmpty()) InterestSection("More of", moreOf.map { Triple(it.first, it.second, true) }, nav)
+        if (lessOf.isNotEmpty()) InterestSection("Less of", lessOf.map { Triple(it.first, it.second, false) }, nav)
 
         Section("Ranking", footer = if (tuning) "Changes apply to the next posts loaded." else null) {
             SettingRow(
@@ -146,6 +141,16 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             confirmButton = { TextButton(onClick = { vm.resetRecommendations(); vm.loadInterests(); confirmReset = false }) { Text("Start over") } },
             dismissButton = { TextButton(onClick = { confirmReset = false }) { Text("Cancel") } },
         )
+    }
+}
+
+@Composable
+private fun InterestSection(title: String, rows: List<Triple<String, Double, Boolean>>, nav: NavController) {
+    Section(title) {
+        rows.forEachIndexed { i, (f, v, positive) ->
+            if (i > 0) RowDivider(indent = false)
+            InterestRow(f, v, positive) { openTag(nav, f) }
+        }
     }
 }
 
