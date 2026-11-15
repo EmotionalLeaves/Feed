@@ -421,6 +421,7 @@ private fun FeedPage(
             MediaType.IMAGE, MediaType.GIF -> if (item.isGallery) GalleryPage(item, vm) else ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
+        dev.pfeed.ui.common.MediaMask()
 
         // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
         if (!landscape) Box(

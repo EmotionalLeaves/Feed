@@ -306,6 +306,56 @@ class SmokeTest {
         assertTrue("searches found nothing at all", total > 0)
     }
 
+    /** Saves a screenshot of what's on screen (pulled from the device and uploaded by CI). */
+    private fun shot(name: String) {
+        repeat(6) { rule.mainClock.advanceTimeBy(250); Thread.sleep(120) }
+        val bmp = androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot() ?: return
+        val dir = java.io.File(rule.activity.getExternalFilesDir(null), "shots").apply { mkdirs() }
+        java.io.File(dir, "$name.png").outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        android.util.Log.i("PFHEALTH", "screenshot $name")
+    }
+
+    /**
+     * Screenshots of every main screen for design review. Every post's picture is covered with a
+     * flat panel (see MaskMedia): the shots show the app's layout, not the content.
+     */
+    @Test
+    fun designScreenshots() {
+        dev.pfeed.ui.common.MaskMedia.on = true
+        try {
+            val shown = rule.activity.mediaHealth.shownCount
+            runCatching { poll(60_000, "a post on screen") { shown.get() >= 1 } }
+            Thread.sleep(1_500)
+            shot("01_feed")
+            rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
+            waitFor(what = "search screen") { exists("Popular") }
+            shot("02_search")
+            tap("milf")
+            waitFor(timeoutMs = 60_000, what = "results") { exists("Play all") || !exists("still searching", substring = true) }
+            Thread.sleep(2_000)
+            shot("03_results")
+            rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
+            waitFor(what = "library") { exists("Saved", substring = true) }
+            shot("04_library")
+            rule.onNode(hasText("Settings") and androidx.compose.ui.test.isSelectable()).performClick()
+            waitFor(what = "settings") { exists("App lock") }
+            shot("05_settings")
+            waitFor(what = "scroll settings") { rule.onAllNodes(hasText("Encrypted DNS"), useUnmergedTree = true)[0].performScrollTo(); true }
+            shot("06_settings_more")
+            waitFor(what = "scroll to top") { rule.onAllNodes(hasText("Sources"), useUnmergedTree = true)[0].performScrollTo(); true }
+            rule.onNodeWithText("Your taste").performClick()
+            Thread.sleep(1_000)
+            shot("07_taste")
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            waitFor(what = "settings again") { exists("App lock") }
+            rule.onNodeWithText("Sources").performClick()
+            waitFor(what = "sources") { exists("Check sources") }
+            shot("08_sources")
+        } finally {
+            dev.pfeed.ui.common.MaskMedia.on = false
+        }
+    }
+
     /** Saving a video and a comic keeps them on the phone: the copies appear and are what plays. */
     @Test
     fun savedPostsAreKeptOffline() {

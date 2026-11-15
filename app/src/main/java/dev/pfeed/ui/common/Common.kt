@@ -108,6 +108,7 @@ fun MediaGrid(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().then(if (LocalBlurPreviews.current) Modifier.blur(28.dp) else Modifier),
                 )
+                MediaMask()
                 val badge = when (item.type) {
                     MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
                     MediaType.GIF -> "GIF"
@@ -159,6 +160,19 @@ fun formatDuration(sec: Int): String = if (sec >= 3600) {
     "%d:%02d:%02d".format(sec / 3600, sec % 3600 / 60, sec % 60)
 } else {
     "%d:%02d".format(sec / 60, sec % 60)
+}
+
+/**
+ * Design screenshots (taken by the instrumented test and uploaded from CI) cover every post's
+ * picture with a flat panel, so they show the app's own layout and none of the content.
+ */
+object MaskMedia {
+    @Volatile var on = false
+}
+
+@androidx.compose.runtime.Composable
+fun MediaMask(modifier: Modifier = Modifier) {
+    if (MaskMedia.on) Box(modifier.fillMaxSize().background(Color(0xFF3A3A44)))
 }
 
 /** Blur grid previews (Settings → Privacy). Provided at the top of the app from settings. */
