@@ -57,4 +57,18 @@ class ComicSitesTest {
         val g = ComicSite.gallery(ComicSite.HENTAIFOX, ComicSite.Listed("177483", "Huntress", "https://i3.hentaifox.com/005/4329276/thumb.jpg"), fox)!!
         assertEquals(listOf("https://i3.hentaifox.com/005/4329276/1.jpg", "https://i3.hentaifox.com/005/4329276/2.webp"), g.pages)
     }
+
+    @Test
+    fun `8muses issue page becomes a comic of full-size pages`() {
+        val html = """<h1 class="page-title">Issue 1</h1><p><a href="/porn/tag/milf">milf</a>,<a href="/porn/tag/big-tits">big tits</a></p>
+            <div class="gallery"> <a class="c-tile t-hover" href="/porn/picture/MilfToon-Comics/The-Milftoons/Issue-1/1" title="p1"> <div class="image"><img height="313" src="/image/th/AAA.jpg" alt="x"></div></a><a class="c-tile t-hover" href="/porn/picture/MilfToon-Comics/The-Milftoons/Issue-1/2" title="p2"> <div class="image"><img height="313" src="/image/th/BBB.jpg" alt="x"></div></a>"""
+        val g = dev.pfeed.source.comics.EightMuses.issue("/porn/album/MilfToon-Comics/The-Milftoons/Issue-1", html)!!
+        assertEquals(listOf("https://comics.8muses.com/image/fl/AAA.jpg", "https://comics.8muses.com/image/fl/BBB.jpg"), g.pages)
+        assertEquals("The Milftoons – Issue 1", g.title)
+        assertEquals(listOf("comic", "milf", "big_tits"), g.tags)
+        assertEquals("8muses", Display.source(g, "x"))
+        // A list of albums, or an issue without tags, isn't a comic.
+        assertEquals(null, dev.pfeed.source.comics.EightMuses.issue("/porn/album/X", """<a class="c-tile" href="/porn/album/X/Y">"""))
+        assertEquals(null, dev.pfeed.source.comics.EightMuses.issue("/porn/album/X/Y", html.replace("/porn/tag/", "/porn/nottag/")))
+    }
 }

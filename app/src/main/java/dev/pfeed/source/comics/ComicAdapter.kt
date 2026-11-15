@@ -40,9 +40,15 @@ class ComicAdapter @Inject constructor(private val http: HttpJson) : CachingAdap
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
     override suspend fun entries(): List<String> =
-        ComicSite.ALL.flatMap { site -> (listOf("") + SourceCatalog.comicTags).map { "${site.host}|$it" } }
+        ComicSite.ALL.flatMap { site -> (listOf("") + SourceCatalog.comicTags).map { "${site.host}|$it" } } +
+            EightMuses.artists(http, id).map { "${EightMuses.HOST}|$it" }
 
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
+        if (entry.startsWith(EightMuses.HOST + "|")) {
+            val offset = token?.toIntOrNull() ?: 0
+            val (items, next) = EightMuses.page(http, id, entry.substringAfter('|'), offset)
+            return EntryPage(items.filter(MinorsFilter::allows), next?.toString())
+        }
         val site = ComicSite.byHost(entry.substringBefore('|')) ?: return EntryPage(emptyList(), null)
         val tag = entry.substringAfter('|', "")
         val page = token?.toIntOrNull() ?: 1
@@ -105,7 +111,8 @@ class ComicSite private constructor(
         val IMHENTAI = ComicSite("imhentai.xxx", "IMHentai", "https://imhentai.xxx/", "https://imhentai.xxx/search/?key=")
         val HENTAIFOX = ComicSite("hentaifox.com", "HentaiFox", "https://hentaifox.com/", "https://hentaifox.com/search/?q=")
         val ALL = listOf(IMHENTAI, HENTAIFOX)
-        fun byHost(host: String) = ALL.firstOrNull { host == it.host || host.endsWith("." + it.host) }
+        private val EIGHT_MUSES_LABEL = ComicSite(EightMuses.HOST, "8muses", "", "")
+        fun byHost(host: String) = (ALL + EIGHT_MUSES_LABEL).firstOrNull { host == it.host || host.endsWith("." + it.host) }
 
         private val GALLERY_LINK = Regex("""<a href="/gallery/(\d+)/">(?!<img)([^<]*)</a>""")
         private val THUMB = Regex("""<a href="/gallery/(\d+)/"><img[^>]*\bdata-src="(https://[^"]+/thumb\.[a-z]+)"""")
@@ -162,5 +169,79 @@ class ComicSite private constructor(
         }
 
         private fun unescape(s: String) = s.replace("&amp;", "&").replace("&#039;", "'").replace("&quot;", "\"").replace("&lt;", "<").replace("&gt;", ">")
+    }
+}
+
+
+/**
+ * 8muses: western porn comics, organised artist → series → issue. Each issue (an album of pictures)
+ * becomes one comic; its pages are the full-size versions of the picture thumbnails. Entries are
+ * the artists on the front page; each page of an entry walks a few of that artist's albums.
+ * An issue without tags isn't shown (it couldn't be checked).
+ */
+internal object EightMuses {
+    const val HOST = "comics.8muses.com"
+    private const val BASE = "https://$HOST"
+    private const val ALBUMS_PER_PAGE = 4
+    private const val ISSUES_PER_ALBUM = 3
+
+    private val TILE = Regex("""<a class="c-tile[^"]*" href="(/porn/album/[^"?]+)"""")
+    private val PICTURE_THUMB = Regex("""href="/porn/picture/[^"]+"[^>]*>\s*<div class="image"><img[^>]*\bsrc="/image/th/([^"]+)"""")
+    private val TAG = Regex("""href="/porn/tag/([^"/]+)"""")
+    private val H1 = Regex("""<h1 class="page-title">([^<]+)</h1>""")
+
+    @Volatile private var artistsCache: Pair<Long, List<String>>? = null
+
+    /** Artist album paths from the front page (refreshed every 6 h). */
+    suspend fun artists(http: HttpJson, sourceId: String): List<String> {
+        artistsCache?.let { (at, list) -> if (System.currentTimeMillis() - at < 6 * 3_600_000L && list.isNotEmpty()) return list }
+        val list = attempt { TILE.findAll(http.getRaw(sourceId, "$BASE/")).map { it.groupValues[1] }.distinct().toList() }.getOrDefault(emptyList())
+        if (list.isNotEmpty()) artistsCache = System.currentTimeMillis() to list
+        return list
+    }
+
+    /** One page of an artist: issues from up to [ALBUMS_PER_PAGE] of its albums, and the next offset. */
+    suspend fun page(http: HttpJson, sourceId: String, path: String, offset: Int): Pair<List<MediaItem>, Int?> {
+        val html = http.getRaw(sourceId, BASE + path)
+        issue(path, html)?.let { return listOf(it) to null }
+        val subs = children(path, html)
+        val slice = subs.drop(offset).take(ALBUMS_PER_PAGE)
+        val items = slice.flatMap { sub -> attempt { issuesUnder(http, sourceId, sub, depth = 2) }.getOrDefault(emptyList()) }
+        val next = (offset + ALBUMS_PER_PAGE).takeIf { it < subs.size }
+        return items to next
+    }
+
+    private suspend fun issuesUnder(http: HttpJson, sourceId: String, path: String, depth: Int): List<MediaItem> {
+        val html = http.getRaw(sourceId, BASE + path)
+        issue(path, html)?.let { return listOf(it) }
+        if (depth <= 0) return emptyList()
+        return children(path, html).take(ISSUES_PER_ALBUM).flatMap { attempt { issuesUnder(http, sourceId, it, depth - 1) }.getOrDefault(emptyList()) }
+    }
+
+    private fun children(path: String, html: String) =
+        TILE.findAll(html).map { it.groupValues[1] }.filter { it.startsWith("$path/") }.distinct().toList()
+
+    /** The comic on an issue page, or null if the page is a list of albums (or has no tags). */
+    fun issue(path: String, html: String): MediaItem? {
+        val thumbs = PICTURE_THUMB.findAll(html).map { it.groupValues[1] }.toList()
+        if (thumbs.isEmpty()) return null
+        val tags = TAG.findAll(html).map { it.groupValues[1].replace('-', '_').lowercase() }.distinct().toList()
+        if (tags.isEmpty()) return null
+        val pages = thumbs.map { "$BASE/image/fl/$it" }
+        val series = path.removePrefix("/porn/album/").split('/')
+        return MediaItem(
+            id = "$HOST/${series.joinToString("/")}",
+            sourceId = ComicAdapter.SOURCE_ID,
+            type = MediaType.IMAGE,
+            title = (H1.find(html)?.groupValues?.get(1)?.trim()?.let { t -> if (series.size >= 2) series[series.size - 2].replace('-', ' ') + " – " + t else t }),
+            creator = series.firstOrNull()?.replace('-', ' '),
+            tags = (listOf("comic") + tags).distinct(),
+            durationSec = null,
+            thumbnailUrl = "$BASE/image/th/${thumbs.first()}",
+            pageUrl = BASE + path,
+            publishedAt = null,
+            extras = mapOf("media" to pages.first(), "rating" to "e"),
+            pages = if (pages.size > 1) pages else emptyList(),
+        )
     }
 }
