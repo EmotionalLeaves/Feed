@@ -43,6 +43,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -132,6 +133,8 @@ class FeedViewModel @Inject constructor(
     val saved: StateFlow<Set<String>> = library.keys(LibraryKind.SAVED).stateIn(viewModelScope, SharingStarted.Eagerly, emptySet())
     val follows: StateFlow<Follows> = library.follows.stateIn(viewModelScope, SharingStarted.Eagerly, Follows())
     private val settings: StateFlow<AppSettings> = settingsRepo.flow.stateIn(viewModelScope, SharingStarted.Eagerly, AppSettings())
+    /** Private mode is on (shown as a small marker on the feed so it's never forgotten on). */
+    val privateMode: StateFlow<Boolean> = settingsRepo.flow.map { it.privateMode }.stateIn(viewModelScope, SharingStarted.Eagerly, false)
 
     private val _muted = MutableStateFlow(true)
     val muted: StateFlow<Boolean> = _muted
@@ -316,7 +319,7 @@ class FeedViewModel @Inject constructor(
             finishCurrent()
             currentItem = item
             if (visible) enteredAt = SystemClock.elapsedRealtime()
-            viewModelScope.launch { library.add(LibraryKind.HISTORY, item) }
+            if (!settings.value.privateMode) viewModelScope.launch { library.add(LibraryKind.HISTORY, item) }
         }
         if (index >= list.size - LOAD_AHEAD) loadMore()
         preloadAround(list, index)
@@ -345,6 +348,8 @@ class FeedViewModel @Inject constructor(
             // A like/save/follow/"not interested" already told the model what you think; recording the
             // dwell afterwards would pull it back toward an average view (the model is error-driven).
             if (st?.explicit == true) return@launch
+            // Private mode: watching teaches nothing (likes and saves still count; they're deliberate).
+            if (settings.value.privateMode) return@launch
             val durationMs = st?.durationMs?.takeIf { it > 0 } ?: item.durationSec?.times(1000L)
             val target = Engagement.target(dwell, isVideo, durationMs, st?.replays ?: 0, typical)
             signals.record(item, Signal(SignalType.VIEW, target))

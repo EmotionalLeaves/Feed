@@ -66,6 +66,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
@@ -189,6 +191,19 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 onBrowse = if (mode == FeedMode.FOLLOWING && vm.tag == null && !vm.isViewer) ({ vm.setMode(FeedMode.FOR_YOU) }) else null,
                 modifier = Modifier.align(Alignment.Center),
             )
+        }
+
+        val isPrivate by vm.privateMode.collectAsStateWithLifecycle()
+        if (isPrivate && !landscape) {
+            Row(
+                Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 12.dp, bottom = 6.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 3.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.VisibilityOff, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Private", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelSmall)
+            }
         }
 
         // First run: show the gestures once, out of the way, until the first swipe.

@@ -203,6 +203,7 @@ class SettingsViewModel @Inject constructor(
     fun setDefaultMute(v: Boolean) = update { it.copy(defaultMute = v) }
     fun setHistoryRetention(days: Int) = update { it.copy(historyRetentionDays = days) }
     fun setEncryptedDns(v: Boolean) = update { it.copy(encryptedDns = v) }
+    fun setPrivateMode(v: Boolean) = update { it.copy(privateMode = v) }
     fun setLockTimeout(sec: Int) = update { it.copy(lockTimeoutSec = sec) }
 
     fun setDisguise(d: Disguise) {

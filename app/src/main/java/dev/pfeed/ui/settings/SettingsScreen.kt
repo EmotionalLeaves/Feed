@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -194,6 +195,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     icon = Icons.Filled.Apps,
                     iconTint = Good,
                     onClick = { dialog = PendingDialog.PickDisguise },
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Private mode",
+                    s.privateMode,
+                    subtitle = if (s.privateMode) "On: nothing goes into history or search history, and For You isn't learning"
+                    else "Browse without adding to history or teaching For You",
+                    icon = Icons.Filled.VisibilityOff,
+                    iconTint = Good,
+                    onChange = vm::setPrivateMode,
                 )
                 RowDivider()
                 SwitchSetting(

@@ -141,6 +141,7 @@ class SearchViewModel @Inject constructor(
     private val holder: TransientFeedHolder,
     private val recent: RecentSearches,
     private val signals: SignalRepository,
+    private val settingsRepo: dev.pfeed.data.settings.SettingsRepository,
     registry: SourceRegistry,
 ) : ViewModel() {
     private val _ui = MutableStateFlow(SearchUi())
@@ -191,9 +192,12 @@ class SearchViewModel @Inject constructor(
         _ui.update {
             it.copy(query = query, searched = query, loading = true, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0)
         }
-        viewModelScope.launch { recent.add(query) }
-        // What you search for is what you want more of: For You learns it too.
-        viewModelScope.launch { runCatching { signals.recordSearch(query) } }
+        // What you search for is what you want more of: For You learns it too (not in private mode).
+        viewModelScope.launch {
+            if (settingsRepo.get().privateMode) return@launch
+            recent.add(query)
+            runCatching { signals.recordSearch(query) }
+        }
         job = viewModelScope.launch {
             repo.search(query).collect { r ->
                 _ui.update {
