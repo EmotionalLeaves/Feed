@@ -314,15 +314,17 @@ class SmokeTest {
             val found = a.searchRepository.search("milf").toList().lastOrNull()?.items.orEmpty()
             val picks = listOfNotNull(
                 found.firstOrNull { it.sourceId == "tube" },
+                // A site that streams (HLS), so the stream download is checked too.
+                found.firstOrNull { it.sourceId == "tube" && (it.id.startsWith("pornhub.com") || it.id.startsWith("xhamster")) },
                 found.firstOrNull { it.isGallery && it.pages.size <= 40 },
                 found.firstOrNull { it.type == dev.pfeed.domain.model.MediaType.IMAGE && !it.isGallery },
-            )
+            ).distinctBy { it.key }
             picks.forEach { a.library.add(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
             try {
                 val t0 = System.currentTimeMillis()
                 fun done(it: dev.pfeed.domain.model.MediaItem) =
                     if (it.isGallery) a.offlineStore.local("${it.key}#${it.pages.size - 1}") != null else a.offlineStore.local(it.key) != null
-                while (picks.any { !done(it) } && System.currentTimeMillis() - t0 < 120_000) kotlinx.coroutines.delay(2_000)
+                while (picks.any { !done(it) } && System.currentTimeMillis() - t0 < 180_000) kotlinx.coroutines.delay(2_000)
                 picks.forEach { p ->
                     val local = if (p.isGallery) a.offlineStore.local("${p.key}#0") else a.offlineStore.local(p.key)
                     android.util.Log.i("PFHEALTH", "offline ${p.sourceId}/${p.type}${if (p.isGallery) " (${p.pages.size} pages)" else ""}: ${if (done(p)) "kept" else "NOT kept"} in ${System.currentTimeMillis() - t0} ms ${local?.mimeType ?: a.offlineStore.problem(p.key)} ${p.id.substringBefore('/')}; total ${a.offlineStore.bytes.value / 1024} KB")
