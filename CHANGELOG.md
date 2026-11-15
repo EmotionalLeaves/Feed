@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.28.0 — 2026-11-15
+
+Saved posts work offline
+
+- **Saved posts are kept on your phone.** Saving something is all it takes: on Wi-Fi it downloads into the app's private storage (nothing shows up in your gallery), then plays instantly and without a connection. Videos (streamed ones too), images and whole comics are kept. Unsaving deletes the copy. A new switch in Settings → Playback turns this off and shows the space used.
+- Long videos no longer stall partway through: video streams and downloads aren't cut off by the 45-second request limit any more.
+
 ## 4.27.0 — 2026-11-15
 
 Faster first search
