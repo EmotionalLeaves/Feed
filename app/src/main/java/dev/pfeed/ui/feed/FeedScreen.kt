@@ -218,6 +218,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 onSources = { nav.navigate(Routes.SOURCES) },
                 // An empty Following feed needs something to follow, not a retry.
                 onBrowse = if (mode == FeedMode.FOLLOWING && vm.tag == null && !vm.isViewer) ({ vm.setMode(FeedMode.FOR_YOU) }) else null,
+                // Nothing loading (often: no connection) but saved posts are on the phone: offer them.
+                onSaved = if (saved.isNotEmpty() && !vm.isViewer) ({ nav.navigate(Routes.LIBRARY) }) else null,
                 modifier = Modifier.align(Alignment.Center),
             )
         }
@@ -312,6 +314,7 @@ private fun FeedEmptyState(
     onRefresh: () -> Unit,
     onSources: () -> Unit,
     onBrowse: (() -> Unit)? = null,
+    onSaved: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -341,6 +344,12 @@ private fun FeedEmptyState(
                         dev.pfeed.ui.common.BrandButton("Try again", onClick = onRefresh)
                     }
                     OutlinedButton(onClick = onSources) { Text("Sources", color = Color.White) }
+                }
+            }
+            if (onSaved != null && onBrowse == null) {
+                Spacer(Modifier.height(16.dp))
+                androidx.compose.material3.TextButton(onClick = onSaved) {
+                    Text("Watch your saved posts (they work offline)", color = Color.White.copy(alpha = 0.8f))
                 }
             }
         }
