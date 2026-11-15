@@ -33,10 +33,10 @@ class LiveProbeTest {
     private fun flat(h: String) = h.replace(Regex("\\s+"), " ")
     @Test
     fun probe() {
-        val site = TubeSite.Erome
-        for (sec in listOf("new", "top", "milf")) probe("erome $sec") { val l = site.parseList(get(site.listUrl(sec, 0)).second); "n=${l.size} first=${l.firstOrNull()}" }
-        val v = site.parseList(get(site.listUrl("new", 0)).second).first()
-        val st = site.stream(get(v.pageUrl).second)
-        probe("erome stream") { "$st ${st?.let { head(it.url) }}" }
+        for (site in listOf(TubeSite.Xvideos, TubeSite.Xnxx)) {
+            val v = site.parseList(get(site.listUrl("new", 0)).second).first()
+            val h = get(v.pageUrl).second
+            probe("${site.label} page") { "len=${h.length} stream=${site.stream(h)} :: " + flat(around(h, "html5player", 50, 900)) + " || " + flat(around(h, "HLS", 200, 300)) }
+        }
     }
 }
