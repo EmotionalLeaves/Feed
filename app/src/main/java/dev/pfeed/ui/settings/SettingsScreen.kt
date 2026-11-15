@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.DataSaverOn
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.History
@@ -81,6 +82,7 @@ private sealed interface PendingDialog {
     data object PickHistory : PendingDialog
     data object PickCache : PendingDialog
     data object Gestures : PendingDialog
+    data object EraseAll : PendingDialog
     data class ExportPassword(val uri: Uri) : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
@@ -233,6 +235,15 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     iconTint = Good,
                     onClick = { dialog = PendingDialog.PickHistory },
                 )
+                RowDivider()
+                SettingRow(
+                    "Erase everything",
+                    subtitle = "Saves, likes, history, what For You learned, sources and settings",
+                    icon = Icons.Filled.DeleteForever,
+                    iconTint = dev.pfeed.ui.theme.Bad,
+                    titleColor = dev.pfeed.ui.theme.Bad,
+                    onClick = { dialog = PendingDialog.EraseAll },
+                )
             }
 
             Section("Backup", footer = "Saved as a file encrypted with a password you choose. Your PIN, sign-ins and history aren't included.") {
@@ -342,6 +353,21 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             },
             confirmButton = { TextButton(onClick = { dialog = null }) { Text("Done") } },
         )
+        PendingDialog.EraseAll -> {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            AlertDialog(
+                onDismissRequest = { dialog = null },
+                properties = SecureDialog,
+                title = { Text("Erase everything?") },
+                text = { Text("Everything this app has stored on this phone is deleted and the app closes, as if it had just been installed. This can't be undone.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).clearApplicationUserData()
+                    }) { Text("Erase", color = dev.pfeed.ui.theme.Bad) }
+                },
+                dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
+            )
+        }
         null -> Unit
     }
 }
