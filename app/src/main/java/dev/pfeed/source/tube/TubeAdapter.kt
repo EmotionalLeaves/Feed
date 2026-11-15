@@ -81,12 +81,18 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
 
     /** The listing at [url], from the site or, if it answers with nothing usable, one of its mirrors. */
     private suspend fun listWithMirrors(site: TubeSite, url: String): List<TubeVideo> {
+        // A site that answered every domain with an empty shell (a regional page with no list at
+        // all, see TubeSite.isShell) rests for a while instead of being asked four times per load.
+        if ((emptyUntil[site.host] ?: 0L) > System.currentTimeMillis()) return emptyList()
         val order = listOfNotNull(workingMirror[site.host]) + (listOf(site.host) + site.mirrors).filter { it != workingMirror[site.host] }
         var lastError: Exception? = null
+        var shells = 0
         for (domain in order) {
             val u = if (domain == site.host) url else site.onMirror(url, domain)
             try {
-                val videos = site.parseList(http.getRaw(id, u))
+                val body = http.getRaw(id, u)
+                if (site.isShell(body)) shells++
+                val videos = site.parseList(body)
                 if (videos.isNotEmpty()) {
                     if (domain != site.host) workingMirror[site.host] = domain else workingMirror.remove(site.host)
                     return videos
@@ -97,8 +103,11 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             if (site.mirrors.isEmpty()) break
         }
         lastError?.let { throw it }
+        if (shells == order.size) emptyUntil[site.host] = System.currentTimeMillis() + EMPTY_REST_MS
         return emptyList()
     }
+
+    private val emptyUntil = ConcurrentHashMap<String, Long>()
 
     /**
      * One line per site: does its newest page list videos, and does the first one play directly
@@ -109,15 +118,16 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
             async {
                 site.label to (withTimeoutOrNull(30_000) {
                     attempt {
+                        emptyUntil.remove(site.host) // the report always asks
                         val items = site.items(listWithMirrors(site, site.listUrl("new", 0)), "new")
                         if (items.isEmpty()) {
                             val raw = attempt { http.getRaw(id, site.listUrl("new", 0)) }.getOrElse { return@attempt "lists nothing (${it.message?.take(60)})" }
                             val title = Regex("<title[^>]*>([^<]{0,60})", RegexOption.IGNORE_CASE).find(raw)?.groupValues?.get(1)?.trim()
                             val text = raw.replace(Regex("<(script|style)[^>]*>.*?</\\1>", RegexOption.DOT_MATCHES_ALL), " ")
                                 .replace(Regex("<[^>]+>"), " ").replace(Regex("\\s+"), " ").trim().take(160)
-                            val ini = (site as? TubeSite.Xhamster)?.let { TubeSite.Xhamster.initials(raw) }
-                            val diag = if (site is TubeSite.Xhamster) " initials=${ini?.keys?.take(6)} props=${ini?.let(TubeSite.Xhamster::findThumbProps)?.size} at=${raw.indexOf("window.initials")}" else ""
-                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\": $text)$diag"
+                            // xHamster answers some regions with an empty shell (no list at all): say so plainly.
+                            if (site.isShell(raw)) return@attempt "lists nothing here: the site sends this network an empty page (regional block); works elsewhere"
+                            return@attempt "lists nothing (page ${raw.length / 1024} KB, \"$title\": $text)"
                         }
                         val first = items.first()
                         resolved.remove(first.key) // judge the site now, not an earlier answer
@@ -182,6 +192,9 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
     }
 
     companion object {
+        /** How long a site that lists nothing on any of its domains is left alone. */
+        private const val EMPTY_REST_MS = 20 * 60_000L
+
         private const val RESOLVED_TTL_MS = 20 * 60_000L
         private const val TAG_CHECK_LIMIT = 16
         private const val TAG_CHECK_SEARCH = 8

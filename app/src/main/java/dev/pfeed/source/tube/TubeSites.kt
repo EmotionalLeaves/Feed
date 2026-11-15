@@ -43,6 +43,9 @@ sealed class TubeSite(val host: String, val label: String) {
      */
     open val mirrors: List<String> = emptyList()
 
+    /** The page is the site's empty shell for this network (a regional block), not a real listing. */
+    open fun isShell(body: String): Boolean = false
+
     /** [url] on [mirror] instead of the main domain. */
     fun onMirror(url: String, mirror: String): String = url.replaceFirst("://$host", "://$mirror").replaceFirst("://www.$host", "://www.$mirror")
     /** Direct stream from the video page, or null to fall back to [embedUrl]. */
@@ -348,6 +351,12 @@ sealed class TubeSite(val host: String, val label: String) {
 
         /** …/videos/some-slug-xhABC or …/videos/xhABC → xhABC. */
         internal fun videoId(url: String): String = url.substringBefore('?').trimEnd('/').substringAfterLast('/').substringAfterLast('-')
+
+        /** Some networks get a page whose initials hold only site-wide settings: no layout, no results. */
+        override fun isShell(body: String): Boolean {
+            val ini = initials(body) ?: return false
+            return ini["layoutPage"] == null && ini["searchResult"] == null && findThumbProps(ini) == null
+        }
 
         /** The first "videoThumbProps" array anywhere under [e]. */
         internal fun findThumbProps(e: kotlinx.serialization.json.JsonElement): JsonArray? = when (e) {
