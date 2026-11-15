@@ -27,14 +27,14 @@ import kotlin.random.Random
 class AlgorithmSimulationTest {
     private val now = Instant.parse("2026-11-01T12:00:00Z")
 
-    private class World(val rng: Random, val target: String, val baseRate: Double) {
+    private class World(val rng: Random, val targets: List<String>, val baseRate: Double) {
         private var next = 0
         private val vocab = (1..60).map { "tag$it" }
         /** A board-style post: 10 tags, [target] with probability [baseRate] (or always, if [with] is it). */
         fun post(with: String? = null): MediaItem {
             next++
             val tags = vocab.shuffled(rng).take(9).toMutableList()
-            tags += if (rng.nextDouble() < baseRate) target else vocab.random(rng)
+            targets.forEach { target -> tags += if (rng.nextDouble() < baseRate) target else vocab.random(rng) }
             if (with != null) tags += with
             val score = if (rng.nextBoolean()) rng.nextInt(0, 400).toString() else null
             return item("p$next", source = "s${next % 3}", tags = tags.distinct().sorted(), type = MediaType.IMAGE)
@@ -46,9 +46,17 @@ class AlgorithmSimulationTest {
      * Runs [rounds] batches. The user lingers 6–14 s on [target] posts (liking ~30%) and flicks past
      * the rest (60% under 1.5 s, the others 1.5–3.5 s). Returns the share of [target] per batch.
      */
-    private fun simulate(target: String, rounds: Int, seed: Int, baseRate: Double = 0.10, interests: Boolean = true): List<Double> {
+    private fun simulate(
+        first: String,
+        rounds: Int,
+        seed: Int,
+        baseRate: Double = 0.10,
+        interests: Boolean = true,
+        /** The user's taste moves to another tag at this round (and the share returned is of the new one). */
+        shift: Pair<Int, String>? = null,
+    ): List<Double> {
         val rng = Random(seed)
-        val world = World(rng, target, baseRate)
+        val world = World(rng, listOfNotNull(first, shift?.second), baseRate)
         val pool = MutableList(150) { world.post() }
         val pooledAt = HashMap<String, Int>().apply { pool.forEach { put(it.key, 0) } }
         val aff = HashMap<String, Double>()
@@ -57,6 +65,7 @@ class AlgorithmSimulationTest {
         val recentSources = ArrayList<String>()
         val recent = ArrayList<MediaItem>()
         return List(rounds) { round ->
+            val target = if (shift != null && round >= shift.first) shift.second else first
             // FeedSession: fresh candidates every load; candidates passed over for 10 loads age out.
             repeat(60) { world.post().also { pool += it; pooledAt[it.key] = round } }
             pool.removeAll { round - (pooledAt[it.key] ?: round) > 10 }
@@ -112,6 +121,14 @@ class AlgorithmSimulationTest {
         val without = (1..8).map { simulate("zz_rope", rounds = 14, seed = it, baseRate = 0.03, interests = false) }.map { it.takeLast(4).average() }.average()
         assertTrue("with interest searches the feed should mostly match (got $with)", with >= 0.6)
         assertTrue("interest searches should clearly beat ranking alone ($with vs $without)", with > without + 0.3)
+    }
+
+    @Test
+    fun `a change of taste is followed within a session`() {
+        // Locked on "zz_rope" for 12 batches, then the user starts skipping it and lingering on "zz_feet".
+        val runs = (1..8).map { seed -> simulate("zz_rope", rounds = 24, seed = seed, shift = 12 to "zz_feet") }
+        val late = runs.map { it.takeLast(4).average() }.average()
+        assertTrue("after the change most of the feed should follow the new taste (got $late; by round ${List(24) { r -> "%.2f".format(runs.map { it[r] }.average()) }})", late >= 0.5)
     }
 
     @Test
