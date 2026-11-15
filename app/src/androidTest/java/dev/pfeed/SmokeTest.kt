@@ -348,9 +348,18 @@ class SmokeTest {
                 androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
                 Thread.sleep(1_000)
             }
+            // A few saved images, so the Saved grid (count, Play all, kept badges) is in the shot.
+            val savedForShot = runBlocking {
+                rule.activity.searchRepository.search("cosplay").toList().lastOrNull()?.items.orEmpty()
+                    .filter { it.type == dev.pfeed.domain.model.MediaType.IMAGE && !it.isGallery }.take(5)
+            }
+            runBlocking { savedForShot.forEach { rule.activity.library.add(dev.pfeed.data.repo.LibraryKind.SAVED, it) } }
+            Thread.sleep(8_000) // time for them to be kept
             rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "library") { exists("Saved", substring = true) }
+            Thread.sleep(1_500)
             shot("04_library")
+            runBlocking { savedForShot.forEach { rule.activity.library.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) } }
             rule.onNode(hasText("Settings") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "settings") { exists("App lock") }
             shot("05_settings")
