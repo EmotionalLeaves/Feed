@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.31.0 — 2026-11-15
+
+Comic reading upgrades
+
+- **Page strip:** tap a comic's page counter to see every page; tap one to jump there.
+- **Long pages scroll:** a page taller than the screen scrolls from top to bottom at normal size, and the same swipe carries on to the next post at its end. Before, its top and bottom were cut off unless you zoomed.
+- If the feed can't load (no connection, say) and you have saved posts, it offers them; they play offline.
+
 ## 4.30.1 — 2026-11-15
 
 xHamster fix, faster Reddit search
