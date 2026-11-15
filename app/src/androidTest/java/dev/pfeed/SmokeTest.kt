@@ -324,6 +324,8 @@ class SmokeTest {
     @Test
     fun designScreenshots() {
         dev.pfeed.ui.common.MaskMedia.on = true
+        // The app blocks screenshots (FLAG_SECURE); lift that for this test only, with the posts masked.
+        rule.runOnUiThread { rule.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
         try {
             val shown = rule.activity.mediaHealth.shownCount
             runCatching { poll(60_000, "a post on screen") { shown.get() >= 1 } }
@@ -354,6 +356,7 @@ class SmokeTest {
             waitFor(what = "sources") { exists("Check sources") }
             shot("08_sources")
         } finally {
+            rule.runOnUiThread { rule.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
             dev.pfeed.ui.common.MaskMedia.on = false
         }
     }
