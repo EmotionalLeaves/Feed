@@ -100,6 +100,9 @@ enum class DurationFilter(val label: String, val range: IntRange?) {
     LONG("Over 5 min", 301..Int.MAX_VALUE),
 }
 
+/** Order of results: best match (mixed across sites), or by length. */
+enum class SortOrder(val label: String) { BEST("Best match"), LONGEST("Longest first"), SHORTEST("Shortest first") }
+
 /** One of the main "what kind of thing" choices; null type = everything. */
 enum class TypeFilter(val label: String, val types: Set<MediaType>) {
     ALL("All", emptySet()),
@@ -114,9 +117,10 @@ data class SearchFilters(
     val sources: Set<String> = emptySet(), // empty = all
     val type: TypeFilter = TypeFilter.ALL,
     val duration: DurationFilter = DurationFilter.ANY,
+    val sort: SortOrder = SortOrder.BEST,
 ) {
     /** How many of the filters hidden in the sheet are active (shown as a badge). */
-    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0)
+    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0)
 
     /** Any filter on: the endless continuation can't honour them, so it isn't offered. */
     val active: Boolean get() = sheetCount > 0 || type != TypeFilter.ALL
@@ -193,7 +197,15 @@ class SearchViewModel @Inject constructor(
         .map { list -> list.filter { it.enabled }.map { it.adapter.id to it.adapter.displayName } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val visible: StateFlow<List<MediaItem>> = combine(_ui, _filters) { ui, f -> ui.results.filter(f::matches) }
+    val visible: StateFlow<List<MediaItem>> = combine(_ui, _filters) { ui, f ->
+        val kept = ui.results.filter(f::matches)
+        // Unknown lengths go last either way.
+        when (f.sort) {
+            SortOrder.BEST -> kept
+            SortOrder.LONGEST -> kept.sortedByDescending { it.durationSec ?: -1 }
+            SortOrder.SHORTEST -> kept.sortedBy { it.durationSec ?: Int.MAX_VALUE }
+        }
+    }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private var job: Job? = null
@@ -272,7 +284,8 @@ class SearchViewModel @Inject constructor(
     fun toggleSource(id: String) = _filters.update { f -> f.copy(sources = if (id in f.sources) f.sources - id else f.sources + id) }
     fun setType(t: TypeFilter) = _filters.update { it.copy(type = t) }
     fun setDuration(d: DurationFilter) = _filters.update { it.copy(duration = d) }
-    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY) }
+    fun setSort(o: SortOrder) = _filters.update { it.copy(sort = o) }
+    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST) }
 
     private companion object {
         const val TOPIC_ROWS = 3
@@ -397,6 +410,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
                 sources = sources,
                 onToggleSource = vm::toggleSource,
                 onDuration = vm::setDuration,
+                onSort = vm::setSort,
                 onReset = vm::resetSheetFilters,
             )
         }
@@ -653,12 +667,22 @@ private fun FiltersSheet(
     sources: List<Pair<String, String>>,
     onToggleSource: (String) -> Unit,
     onDuration: (DurationFilter) -> Unit,
+    onSort: (SortOrder) -> Unit,
     onReset: () -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).navigationBarsPadding()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Filters", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
             if (filters.sheetCount > 0) TextButton(onClick = onReset) { Text("Reset") }
+        }
+        SectionTitle("Order")
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            SortOrder.entries.forEach { o ->
+                FilterChip(
+                    selected = filters.sort == o, onClick = { onSort(o) }, label = { Text(o.label) },
+                    colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
+                )
+            }
         }
         SectionTitle("Length")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
