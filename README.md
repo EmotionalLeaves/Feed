@@ -96,6 +96,29 @@ Every view is a signal: how long you stayed compared with *your own* usual pace,
 
 Ranking mixes taste, community score (as a percentile within each source), freshness and a little exploration, then spaces the feed so no site, subreddit or creator runs together. **Settings → Your taste** shows what it has learned; remove anything with ×, or start over.
 
+## Architecture
+
+```
+dev.pfeed
+├── domain/            pure Kotlin, unit-tested
+│   ├── model/         MediaItem, Page, StreamInfo, FeedPrefs…
+│   ├── filter/        Blocklist
+│   └── reco/          TasteModel, Engagement, Ranker, Spread, Niche, Deduplicator, MinorsFilter
+├── data/
+│   ├── db/            Room entities/DAOs, encrypted by SQLCipher
+│   ├── settings/      DataStore-backed AppSettings
+│   └── repo/          FeedSession (fetch → filter → dedup → rank → space), Search, Library, Signals, OfflineStore
+├── source/            SourceAdapter, SourceRegistry
+│   ├── parse/         pure, unit-tested parsers (MediaTypes, JsonPath, Reddit/Booru/Mastodon/GenericJson)
+│   ├── net/           HttpJson, CachingAdapter (fetch-many + in-memory paging base)
+│   ├── tube/ comics/ nhentai/ redgifs/ reddit/ booru/ philomena/ mastodon/ kemono/ rss/ local/ direct/ generic/   the adapters
+│   └── auth/          OAuth PKCE (Custom Tabs)
+├── player/            MediaCache (LRU + offline), PlayerPool, Preloader, ResumePoints
+├── security/          AppLockManager, SecretStore (PIN + Keystore-wrapped DB key), LauncherDisguise
+├── work/              MaintenanceWorker (history purge, compaction)
+└── ui/                Compose screens: feed, search, library, settings, lock
+```
+
 ## Adding a SourceAdapter
 
 1. Create a class in `source/<name>/` that implements `SourceAdapter`:
