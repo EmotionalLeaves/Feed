@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.39.0 — 2026-11-16
+
+Find in Library
+
+- **Library → Find** (the search icon): filter Saved, Liked or History by title, creator or tag.
+
 ## 4.38.3 — 2026-11-16
 
 Safer long images
