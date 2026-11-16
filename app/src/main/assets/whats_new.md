@@ -1,3 +1,8 @@
+## 4.44.0 — 2026-11-16
+Choose what the feed shows
+
+- **Settings → Feed shows**: switch videos, pictures, GIFs or comics on or off for the main feeds (For You, Following, Latest). Search and tag pages still show everything.
+
 ## 4.43.10 — 2026-11-16
 Smoother with many saved posts
 
@@ -7,9 +12,3 @@ Smoother with many saved posts
 RedGIFs creator pages
 
 - A RedGIFs creator's page now starts with their own clips (fetched from their profile), not just clips that mention their name.
-
-## 4.43.8 — 2026-11-16
-Readable hidden sites
-
-- Hidden & blocked lists hidden sites by name (Pornhub, HentaiFox), not internal ids.
-- SOURCES.md rewritten for the sources the app actually uses, plus the ones tried and skipped.
