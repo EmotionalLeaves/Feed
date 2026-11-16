@@ -106,6 +106,8 @@ enum class TypeFilter(val label: String, val types: Set<MediaType>) {
     VIDEOS("Videos", setOf(MediaType.VIDEO, MediaType.EMBED)),
     IMAGES("Images", setOf(MediaType.IMAGE)),
     GIFS("GIFs", setOf(MediaType.GIF)),
+    /** Multi-page posts: comics, doujinshi, photo sets. */
+    COMICS("Comics", setOf(MediaType.IMAGE)),
 }
 
 data class SearchFilters(
@@ -122,6 +124,9 @@ data class SearchFilters(
     fun matches(item: MediaItem): Boolean {
         if (sources.isNotEmpty() && item.sourceId !in sources) return false
         if (type.types.isNotEmpty() && item.type !in type.types) return false
+        // Images means single pictures; Comics means the multi-page ones.
+        if (type == TypeFilter.COMICS && !item.isGallery) return false
+        if (type == TypeFilter.IMAGES && item.isGallery) return false
         val range = duration.range ?: return true
         val d = item.durationSec ?: return false
         return d in range
