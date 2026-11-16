@@ -273,7 +273,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         )
 
         // Very first run: what are you into? (skippable; shapes For You from the first screen). On top of everything.
-        if (!vm.isViewer && vm.tag == null && !landscape) InterestPicker(onDone = vm::pickInterests)
+        val newUser by vm.isNewUser.collectAsStateWithLifecycle()
+        if (!vm.isViewer && vm.tag == null && !landscape && newUser == true) InterestPicker(onDone = vm::pickInterests)
     }
 
     menuFor?.let { item ->

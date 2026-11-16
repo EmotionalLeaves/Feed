@@ -456,6 +456,11 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** True when nothing has been learned yet (a new install): only then is the topic picker offered. */
+    val isNewUser: StateFlow<Boolean?> = kotlinx.coroutines.flow.flow {
+        emit(runCatching { signals.affinities().tags.size < 3 }.getOrDefault(false))
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     /** Why For You showed [item]: the learned interests it matches most, as labels ("#milf"). */
     suspend fun reasons(item: MediaItem): List<String> {
         val aff = runCatching { signals.affinities().tags }.getOrDefault(emptyMap())
