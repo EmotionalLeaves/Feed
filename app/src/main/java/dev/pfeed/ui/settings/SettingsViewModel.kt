@@ -348,6 +348,7 @@ class SettingsViewModel @Inject constructor(
     // ---- blocklist ----
     fun block(kind: BlockKind, value: String) = viewModelScope.launch { blocks.block(kind, value) }
     fun unblock(row: BlockEntity) = viewModelScope.launch { blocks.unblock(row.kind, row.value) }
+    fun unblockOrigin(origin: String) = viewModelScope.launch { blocks.unblock(BlockKind.ORIGIN.name, dev.pfeed.domain.filter.Blocklist.normalize(origin)) }
     fun clearNotInterested() = viewModelScope.launch { blocks.clearNotInterested() }
 
     // ---- export / import ----

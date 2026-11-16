@@ -495,6 +495,8 @@ private fun AddSection(title: String, content: @Composable () -> Unit) {
 private fun TubeSites(vm: SettingsViewModel) {
     val report by vm.tubeReport.collectAsStateWithLifecycle()
     val checking = report.isNotEmpty() && report.values.any { it == null }
+    val blocked by vm.blockEntries.collectAsStateWithLifecycle()
+    val hidden = blocked.filter { it.kind == dev.pfeed.data.repo.BlockKind.ORIGIN.name }.mapTo(HashSet()) { it.value }
     Section(
         "Sites",
         footer = "Each site in ${SourceCatalog.tubeSections.size} sections: newest, top and ${SourceCatalog.tubeSections.size - 2} categories. " +
@@ -503,12 +505,23 @@ private fun TubeSites(vm: SettingsViewModel) {
         TubeSite.ALL.forEachIndexed { i, site ->
             if (i > 0) RowDivider(indent = false)
             val r = report[site.label]
+            // Each site can be switched off on its own (the same as hiding it from a post's menu).
+            val origin = "tube:${site.host}"
+            val on = origin !in hidden
             SettingRow(
                 site.label,
                 below = when {
                     report.isEmpty() -> null
                     r == null -> ({ StatusLine("Checking…", TextLow) })
                     else -> ({ StatusLine(r, if (r.contains("plays")) Good else Bad) })
+                },
+                trailing = {
+                    androidx.compose.material3.Switch(
+                        checked = on,
+                        onCheckedChange = { want ->
+                            if (want) vm.unblockOrigin(origin) else vm.block(dev.pfeed.data.repo.BlockKind.ORIGIN, origin)
+                        },
+                    )
                 },
             )
         }
