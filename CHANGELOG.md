@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.39.1 — 2026-11-16
+
+Double-tap to skip, sideways
+
+- Watching a video sideways (Rotate), double-tap the left or right edge to skip back or ahead 10 seconds, as in video players. The middle is still a like.
+
 ## 4.39.0 — 2026-11-16
 
 Find in Library
