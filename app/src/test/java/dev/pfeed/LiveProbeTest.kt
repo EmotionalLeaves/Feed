@@ -32,13 +32,13 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        probe("rox view") {
-            val id = Regex("""href="/gallery/(\d+)/"""").find(get("https://hentairox.com/").second)!!.groupValues[1]
-            val g = get("https://hentairox.com/gallery/$id/").second
-            val (code, v) = get("https://hentairox.com/g/$id/1/")
-            val imgs = Regex("""https://m\d+\.hentairox\.com/[^"' ]+""").findAll(v).map { it.value }.distinct().take(8).toList()
-            val thumbs = Regex("""/(\d+)t\.([a-z]+)""").findAll(g).map { it.groupValues[1] }.distinct().count()
-            "$code imgs=$imgs galleryThumbs=$thumbs pagesText=" + Regex("""(\d+)\s*(?:pages|Pages)""").find(g)?.value + " :: " + around(v, "data-", 0, 0) + around(g, "Pages", 100, 200) + " || hidden=" + Regex("""<input[^>]*hidden[^>]*>""").findAll(v).map { it.value }.toList()
+        val site = dev.pfeed.source.comics.ComicSite.HENTAIROX
+        probe("rox gallery") {
+            val ls = dev.pfeed.source.comics.ComicSite.parseList(site, get(site.listUrl("", 1)).second)
+            ls.take(3).joinToString(" || ") { l ->
+                val g = dev.pfeed.source.comics.ComicSite.gallery(site, l, get(site.galleryUrl(l.id)).second)
+                "pages=${g?.pages?.size} tags=${g?.tags?.size} p1=${g?.pages?.firstOrNull()?.let { head(it) }} plast=${g?.pages?.lastOrNull()?.let { head(it) }}"
+            }
         }
     }
 }

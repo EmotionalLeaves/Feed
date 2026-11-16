@@ -99,6 +99,8 @@ class ComicSite private constructor(
     val label: String,
     private val listBase: String,
     private val searchBase: String,
+    /** The format every full page comes in, when the site serves them all the same (HentaiRox: webp). */
+    private val pageExt: String? = null,
 ) {
     data class Listed(val id: String, val title: String?, val thumb: String?)
 
@@ -111,7 +113,8 @@ class ComicSite private constructor(
         val IMHENTAI = ComicSite("imhentai.xxx", "IMHentai", "https://imhentai.xxx/", "https://imhentai.xxx/search/?key=")
         val HENTAIFOX = ComicSite("hentaifox.com", "HentaiFox", "https://hentaifox.com/", "https://hentaifox.com/search/?q=")
         val HENTAIERA = ComicSite("hentaiera.com", "HentaiEra", "https://hentaiera.com/", "https://hentaiera.com/search/?key=")
-        val ALL = listOf(IMHENTAI, HENTAIFOX, HENTAIERA)
+        val HENTAIROX = ComicSite("hentairox.com", "HentaiRox", "https://hentairox.com/", "https://hentairox.com/search/?q=", pageExt = "webp")
+        val ALL = listOf(IMHENTAI, HENTAIFOX, HENTAIERA, HENTAIROX)
         private val EIGHT_MUSES_LABEL = ComicSite(EightMuses.HOST, "8muses", "", "")
         fun byHost(host: String) = (ALL + EIGHT_MUSES_LABEL).firstOrNull { host == it.host || host.endsWith("." + it.host) }
 
@@ -126,6 +129,8 @@ class ComicSite private constructor(
         /** Page thumbnails ".../12t.webp": the page count and each page's format where g_th is missing. */
         private val PAGE_THUMB = Regex("""/(\d+)t\.([a-z]+)["'?]""")
         private val H1 = Regex("""<h1[^>]*>([^<]+)</h1>""")
+        /** "167 pages" in the gallery's details (where only the first page thumbnails are in the page). */
+        private val PAGES_TEXT = Regex("""\b(\d{1,4})\s+pages\b""", RegexOption.IGNORE_CASE)
         private val EXT = mapOf("j" to "jpg", "p" to "png", "g" to "gif", "w" to "webp")
 
         /** Galleries on a listing page: id, title and the thumbnail (which names the image folder). */
@@ -146,10 +151,12 @@ class ComicSite private constructor(
                 ?.let { json -> PAGE_TYPE.findAll(json).associate { it.groupValues[1].toInt() to it.groupValues[2] } }
                 .orEmpty()
             val thumbExts = PAGE_THUMB.findAll(html).associate { it.groupValues[1].toInt() to it.groupValues[2] }
-            val count = types.keys.maxOrNull() ?: fields["load_pages"]?.toIntOrNull() ?: thumbExts.keys.maxOrNull() ?: return null
+            val count = types.keys.maxOrNull() ?: fields["load_pages"]?.toIntOrNull()
+                ?: (if (site.pageExt != null) PAGES_TEXT.find(html)?.groupValues?.get(1)?.toIntOrNull() else null)
+                ?: thumbExts.keys.maxOrNull() ?: return null
             if (count <= 0) return null
             val thumbExt = l.thumb?.substringAfterLast('.')?.lowercase() ?: "jpg"
-            val pages = (1..count).map { n -> "$base/$n.${types[n]?.let { EXT[it] } ?: thumbExts[n] ?: thumbExt}" }
+            val pages = (1..count).map { n -> "$base/$n.${types[n]?.let { EXT[it] } ?: site.pageExt ?: thumbExts[n] ?: thumbExt}" }
             // Only the gallery's own tag list (from "Tags:" to the end of its list), not sidebars.
             val tagArea = html.indexOf("Tags:").takeIf { it >= 0 }?.let { i -> html.substring(i, html.indexOf("</ul>", i).takeIf { it > i } ?: minOf(html.length, i + 4000)) } ?: ""
             // Otherwise: the gallery's own details, from its title down to its page thumbnails.
