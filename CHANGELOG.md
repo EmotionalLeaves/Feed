@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.36.1 — 2026-11-15
+
+Add topics from Your taste
+
+- **Your taste → Add topics you like**: the same quick picker as on first run, available any time.
+- Your taste reads better: full labels (they were cut off), the strength shown underneath, and proper site names.
+
 ## 4.36.0 — 2026-11-15
 
 Pick your interests; Undo
