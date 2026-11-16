@@ -12,6 +12,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.SegmentedButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -190,7 +191,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         androidx.compose.material3.SingleChoiceSegmentedButtonRow {
                             val options = listOf("any" to "Any length", "short" to "Clips", "long" to "Full")
                             options.forEachIndexed { index, (value, label) ->
-                                androidx.compose.material3.SegmentedButton(
+                                SegmentedButton(
                                     selected = s.videoLength == value,
                                     onClick = { vm.setVideoLength(value) },
                                     shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(index, options.size),
