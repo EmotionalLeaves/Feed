@@ -203,7 +203,8 @@ class SearchViewModel @Inject constructor(
                 .filter { it.length in 2..24 }
                 .distinct()
                 .take(10)
-            loadTopicRows(_interests.value.take(TOPIC_ROWS))
+            // Nothing learned yet: popular topics instead, so a new install still has pictures to tap.
+            loadTopicRows(_interests.value.ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
         }
     }
 
