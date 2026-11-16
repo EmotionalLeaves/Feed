@@ -38,6 +38,11 @@ data class MediaItem(
     val pages: List<String> = emptyList(),
 ) {
     /** Globally unique key across sources. */
+    companion object {
+        /** In extras: [publishedAt] is only a guess (its place in a "newest" list), not to be shown. */
+        const val APPROX_DATE = "approxDate"
+    }
+
     val key: String get() = "$sourceId:$id"
 
     val isGallery: Boolean get() = pages.size > 1

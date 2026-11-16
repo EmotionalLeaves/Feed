@@ -48,4 +48,13 @@ class DisplayTest {
     fun `at most five tags`() {
         assertEquals(5, Display.tags(item("1", tags = (1..20).map { "topic_$it" })).size)
     }
+
+    @Test
+    fun `age shows only real dates`() {
+        val now = java.time.Instant.parse("2026-11-16T12:00:00Z")
+        val base = dev.pfeed.domain.model.MediaItem(id = "x/1", sourceId = "booru", type = dev.pfeed.domain.model.MediaType.IMAGE, title = null, creator = null, tags = emptyList(), durationSec = null, thumbnailUrl = null, pageUrl = "https://x", publishedAt = now.minusSeconds(3 * 3600))
+        org.junit.Assert.assertEquals("3h", Display.age(base, now))
+        org.junit.Assert.assertEquals(null, Display.age(base.copy(extras = mapOf(dev.pfeed.domain.model.MediaItem.APPROX_DATE to "1")), now))
+        org.junit.Assert.assertEquals("2d", Display.age(base.copy(publishedAt = now.minusSeconds(2 * 86_400 + 5)), now))
+    }
 }

@@ -49,6 +49,21 @@ object Display {
         return actual == MediaType.IMAGE
     }
 
+    /** How long ago it was posted ("5m", "3h", "2d", "6w"), when the source said; null for guessed or old dates. */
+    fun age(item: MediaItem, now: java.time.Instant = java.time.Instant.now()): String? {
+        val at = item.publishedAt ?: return null
+        if (item.extras[MediaItem.APPROX_DATE] != null) return null
+        val s = java.time.Duration.between(at, now).seconds
+        return when {
+            s < 0 -> null
+            s < 3600 -> "${(s / 60).coerceAtLeast(1)}m"
+            s < 86_400 -> "${s / 3600}h"
+            s < 14 * 86_400 -> "${s / 86_400}d"
+            s < 365 * 86_400 -> "${s / (7 * 86_400)}w"
+            else -> null
+        }
+    }
+
     /** Short, recognisable name of where an item came from: "r/BDSM", "Rule34", "Coomer"… */
     fun source(item: MediaItem, fallback: String): String {
         val host = item.id.substringBefore('/', "").removePrefix("api.").removePrefix("www.")

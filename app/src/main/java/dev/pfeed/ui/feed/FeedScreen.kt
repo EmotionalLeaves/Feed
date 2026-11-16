@@ -636,6 +636,10 @@ private fun Overlay(
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                 )
+                // When it was posted, if the source said (useful in Latest).
+                remember(item.key) { Display.age(item) }?.let { age ->
+                    Text(" · $age", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                }
             }
             if (creator != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {

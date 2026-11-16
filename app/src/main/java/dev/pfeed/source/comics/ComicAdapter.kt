@@ -56,7 +56,7 @@ class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAda
         // The newest listing is newest-first; date it by position so Latest can place it.
         val now = java.time.Instant.now()
         val items = readAll(site, listed).mapIndexed { i, it ->
-            if (tag.isEmpty() && it.publishedAt == null) it.copy(publishedAt = now.minusSeconds(((page * 30L) + i) * 600L)) else it
+            if (tag.isEmpty() && it.publishedAt == null) it.copy(publishedAt = now.minusSeconds(((page * 30L) + i) * 600L), extras = it.extras + (dev.pfeed.domain.model.MediaItem.APPROX_DATE to "1")) else it
         }
         val next = if (listed.isEmpty() || page >= MAX_PAGES) null else (page + 1).toString()
         return EntryPage(items, next)
