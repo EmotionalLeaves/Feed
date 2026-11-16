@@ -208,6 +208,11 @@ class SettingsViewModel @Inject constructor(
     fun setDataSaver(v: Boolean) = update { it.copy(dataSaver = v) }
     fun setBlurPreviews(v: Boolean) = update { it.copy(blurPreviews = v) }
     fun setKeepSavedOffline(v: Boolean) = update { it.copy(keepSavedOffline = v) }
+    fun setFeedType(type: String, shown: Boolean) = update { s ->
+        val hidden = if (shown) s.hiddenFeedTypes - type else s.hiddenFeedTypes + type
+        // Never everything off: an empty feed would just look broken.
+        if (hidden.size >= 4) s else s.copy(hiddenFeedTypes = hidden)
+    }
 
     /** Space taken by offline copies of saved posts. */
     val offlineBytes = offline.bytes

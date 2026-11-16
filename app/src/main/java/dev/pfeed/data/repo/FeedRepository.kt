@@ -366,7 +366,10 @@ class FeedSession(
         // Re-apply filters: the user may have blocked something or swiped past it since it was pooled.
         val blocklist = blocks.current()
         // Also age out candidates the ranker has passed over for many loads: they're the leftovers.
+        // The main feeds leave out kinds of post you've switched off (Settings → Feed shows).
+        val hiddenTypes = if (spec is FeedSpec.Main) settings.get().hiddenFeedTypes else emptySet()
         val dropped = candidates.filter {
+            (hiddenTypes.isNotEmpty() && feedType(it) in hiddenTypes) ||
             !blocklist.allows(it) || seen.isSeen(it.key) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS ||
                 // A site whose files aren't loading right now: don't hand out more of it.
                 mediaHealth.isResting(it)
@@ -431,6 +434,13 @@ class FeedSession(
         val keep = maxOf(Spread.WINDOW, dev.pfeed.domain.reco.Niche.CLOSED_WINDOW)
         if (recentShown.size > keep) recentShown.subList(0, recentShown.size - keep).clear()
         return batch
+    }
+
+    private fun feedType(item: MediaItem): String = when {
+        item.isGallery -> "comic"
+        item.type == dev.pfeed.domain.model.MediaType.VIDEO || item.type == dev.pfeed.domain.model.MediaType.EMBED -> "video"
+        item.type == dev.pfeed.domain.model.MediaType.GIF -> "gif"
+        else -> "image"
     }
 
     companion object {

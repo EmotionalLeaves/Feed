@@ -71,6 +71,8 @@ data class AppSettings(
     val blurPreviews: Boolean = false,
     /** Saved posts are downloaded (on Wi-Fi) into private storage so they play offline. */
     val keepSavedOffline: Boolean = true,
+    /** Kinds of post kept out of the main feeds ("video", "image", "gif", "comic"); search and tag pages still show them. */
+    val hiddenFeedTypes: Set<String> = emptySet(),
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),

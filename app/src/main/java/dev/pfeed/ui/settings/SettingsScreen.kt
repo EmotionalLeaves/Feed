@@ -1,5 +1,9 @@
 package dev.pfeed.ui.settings
 
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.graphics.Color
+import dev.pfeed.ui.theme.Accent
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.clickable
 import android.net.Uri
@@ -151,6 +155,27 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     chevron = true,
                     onClick = { nav.navigate(Routes.BLOCKLIST) },
                 )
+            }
+
+            // What the main feeds show: everything by default; switch a kind off to leave it out.
+            Section("Feed shows", footer = "Search and tag pages still show everything.") {
+                @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+                androidx.compose.foundation.layout.FlowRow(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                ) {
+                    listOf("video" to "Videos", "image" to "Pictures", "gif" to "GIFs", "comic" to "Comics").forEach { (type, label) ->
+                        val shown = type !in s.hiddenFeedTypes
+                        androidx.compose.material3.FilterChip(
+                            selected = shown,
+                            onClick = { vm.setFeedType(type, !shown) },
+                            label = { Text(label) },
+                            leadingIcon = if (shown) ({ androidx.compose.material3.Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else null,
+                            colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
+                        )
+                    }
+                }
             }
 
             Section("Playback") {
