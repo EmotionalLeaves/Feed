@@ -1,3 +1,8 @@
+## 4.43.9 — 2026-11-16
+RedGIFs creator pages
+
+- A RedGIFs creator's page now starts with their own clips (fetched from their profile), not just clips that mention their name.
+
 ## 4.43.8 — 2026-11-16
 Readable hidden sites
 
@@ -8,8 +13,3 @@ Readable hidden sites
 Gestures help updated
 
 - **Settings → Gestures** lists every gesture, including the newer ones: pinch and pan, pull to refresh, double-tap an edge to skip while sideways, volume up for sound, and the comic page strip.
-
-## 4.43.6 — 2026-11-16
-Crash fix for huge images
-
-- Fixed a crash: a very large image (a long strip or a huge original) could become a picture too big for Android to draw, which closed the app. Every image is now sized safely, wherever it appears.

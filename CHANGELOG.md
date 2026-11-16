@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.9 — 2026-11-16
+
+RedGIFs creator pages
+
+- A RedGIFs creator's page now starts with their own clips (fetched from their profile), not just clips that mention their name.
+
 ## 4.43.8 — 2026-11-16
 
 Readable hidden sites
