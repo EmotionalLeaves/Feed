@@ -32,15 +32,14 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        probe("multporn new rows") {
-            val b = get("https://multporn.net/new").second
-            val i = b.indexOf("views-row-1 ")
-            b.substring(i, minOf(b.length, i + 1800))
-        }
-        probe("multporn gallery") {
-            val (code, g) = get("https://multporn.net/comics/sparring_session")
-            val imgs = Regex("""(https?:)?//[^"' ]+\.(?:jpg|jpeg|png|webp|gif)""").findAll(g).map { it.value }.distinct().toList()
-            "$code len=${g.length} imgs=${imgs.size} ${imgs.filter { it.contains("comic") || it.contains("files") }.take(6)} cats=${Regex("""href="(/category/[^"]+)"""").findAll(g).map { it.groupValues[1] }.distinct().take(12).toList()} :: " + around(g, "field-name-field-com-pages", 0, 600) + " || " + around(g, "jb-idx", 0, 300)
+        val M = dev.pfeed.source.comics.Multporn
+        probe("multporn list") { val sl = M.slugs(get(M.listUrl(0)).second); "n=${sl.size} ${sl.take(6)} p1=${M.slugs(get(M.listUrl(1)).second).take(3)}" }
+        probe("multporn search") { val sl = M.slugs(get(M.searchUrl("milf")).second); "n=${sl.size} ${sl.take(6)}" }
+        probe("multporn comics") {
+            M.slugs(get(M.listUrl(0)).second).take(4).joinToString(" || ") { slug ->
+                val c = M.comic(slug, get("https://multporn.net/comics/$slug").second)
+                "$slug pages=${c?.pages?.size} tags=${c?.tags?.take(6)} title=${c?.title} full=${c?.extras?.get("media")?.let { head(it) }} thumb=${c?.thumbnailUrl?.let { head(it) }}"
+            }
         }
     }
 }
