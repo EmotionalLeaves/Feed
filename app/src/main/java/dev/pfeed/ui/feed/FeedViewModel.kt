@@ -452,7 +452,7 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             signals.record(item, Signal(SignalType.NOT_INTERESTED))
             blocks.block(BlockKind.ITEM, item.key)
-            _messages.tryEmit("Got it. You'll see less like this.")
+            undoable("Got it. You'll see less like this.", BlockKind.ITEM, item.key)
         }
     }
 
@@ -461,7 +461,8 @@ class FeedViewModel @Inject constructor(
     val undoables: SharedFlow<Pair<String, () -> Unit>> = _undoables
 
     private fun undoable(text: String, kind: BlockKind, value: String) {
-        _undoables.tryEmit(text to { viewModelScope.launch { blocks.unblock(kind.name, Blocklist.normalize(value)) }; Unit })
+        val stored = if (kind == BlockKind.ITEM) value else Blocklist.normalize(value) // as BlockRepository.block stores it
+        _undoables.tryEmit(text to { viewModelScope.launch { blocks.unblock(kind.name, stored) }; Unit })
     }
 
     fun blockCreator(item: MediaItem) {
