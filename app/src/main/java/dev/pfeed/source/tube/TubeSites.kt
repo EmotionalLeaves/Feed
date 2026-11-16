@@ -679,7 +679,7 @@ sealed class TubeSite(val host: String, val label: String) {
             "top" -> "https://pornone.com/newest/${if (page > 0) "${page + 1}/" else ""}"
             else -> "https://pornone.com/search?q=${enc(section)}${if (page > 0) "&page=${page + 1}" else ""}"
         }
-        private val MARK = Regex("""<a href="https://pornone\.com/[^/"]+/[^/"]+/(\d+)/[^"]*"\s+class="[^"]*videocard""")
+        private val MARK = Regex("""<a href="https://pornone\.com/[^/"]+/[^/"]+/(\d+)/[^"]*"[^>]*\bvideocard""")
         private val HREF = Regex("""href="(https://pornone\.com/[^/"]+/([^/"]+)/\d+/)""")
         private val IMG = Regex("""(https://th[^"\s]*\.pornone\.com/t/[^"\s]+\.jpg)""")
         private val DUR = Regex("""durlabel"[^>]*>(?:\s*<img[^>]*>)?\s*([\d:]{4,})""")
