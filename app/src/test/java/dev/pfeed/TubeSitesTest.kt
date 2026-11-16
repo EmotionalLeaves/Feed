@@ -285,11 +285,13 @@ class TubeSitesTest {
 
     @Test
     fun `xhamster videos are found inside window initials even when the key is escaped`() {
-        val html = """<script>window.initials={"layoutPage":{"videoListProps":{"video\u0054humbProps":[{"id":1,"duration":609,"title":"A title","pageURL":"https://xhamster.com/videos/a-title-xhAbC1","thumbURL":"https://ic.xhcdn.com/t.webp"}]}}};</script>"""
+        val html = """<script>window.initials={"layoutPage":{"videoListProps":{"video\u0054humbProps":[{"id":1,"duration":609,"created":1794774837,"title":"A title","pageURL":"https://xhamster.com/videos/a-title-xhAbC1","thumbURL":"https://ic.xhcdn.com/t.webp","landing":{"type":"person","name":"UKPROCOUPLE"}}]}}};</script>"""
         val list = dev.pfeed.source.tube.TubeSite.Xhamster.parseList(html)
         org.junit.Assert.assertEquals(1, list.size)
         org.junit.Assert.assertEquals("xhAbC1", list[0].id)
         org.junit.Assert.assertEquals(609, list[0].durationSec)
+        org.junit.Assert.assertEquals("UKPROCOUPLE", list[0].creator)
+        org.junit.Assert.assertEquals(java.time.Instant.ofEpochSecond(1794774837), list[0].published)
     }
 
     @Test

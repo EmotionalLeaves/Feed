@@ -326,6 +326,9 @@ sealed class TubeSite(val host: String, val label: String) {
                     pageUrl = url,
                     thumb = v["thumbURL"]?.jsonPrimitive?.contentOrNull,
                     durationSec = (v["duration"] as? JsonPrimitive)?.contentOrNull?.toIntOrNull(),
+                    // The channel, creator or pornstar it's credited to: followable like any creator.
+                    creator = (v["landing"] as? JsonObject)?.get("name")?.jsonPrimitive?.contentOrNull?.trim()?.takeIf { it.isNotEmpty() },
+                    published = (v["created"] as? JsonPrimitive)?.contentOrNull?.toLongOrNull()?.takeIf { it > 1_000_000_000L }?.let { java.time.Instant.ofEpochSecond(it) },
                 )
             }.orEmpty()
             return if (fromJson.isNotEmpty()) fromJson else parseListHtml(body)
