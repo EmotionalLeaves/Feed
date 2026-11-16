@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.2 — 2026-11-16
+
+Switch comic sites on and off
+
+- **Sources → Comic sites** has a switch for each site (IMHentai, HentaiFox, HentaiEra, HentaiRox, 8muses). A site you switch off isn't fetched or searched at all.
+
 ## 4.43.1 — 2026-11-16
 
 Switch tube sites on and off
