@@ -114,6 +114,16 @@ fun ItemMenuSheet(
                     )
                 }
             }
+            // Why it's here: the interests it matches (For You's reasoning, in plain words).
+            val reasons by androidx.compose.runtime.produceState(initialValue = emptyList<String>(), item.key) { value = vm.reasons(item) }
+            if (reasons.isNotEmpty()) {
+                Text(
+                    "Because you like " + reasons.joinToString(", "),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+                )
+            }
             HorizontalDivider()
 
             // Save, like and follow live on the post itself; this menu is for the rest.

@@ -456,6 +456,17 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Why For You showed [item]: the learned interests it matches most, as labels ("#milf"). */
+    suspend fun reasons(item: MediaItem): List<String> {
+        val aff = runCatching { signals.affinities().tags }.getOrDefault(emptyMap())
+        return dev.pfeed.domain.reco.Features.of(item)
+            .filterNot(dev.pfeed.domain.reco.Features::isMeta)
+            .mapNotNull { f -> aff[f]?.takeIf { it >= 0.3 }?.let { f to it } }
+            .sortedByDescending { it.second }
+            .take(3)
+            .map { dev.pfeed.domain.reco.Features.label(it.first) }
+    }
+
     /** First run: the topics picked teach For You straight away, then the feed starts over with them. */
     fun pickInterests(topics: List<String>) {
         viewModelScope.launch {
