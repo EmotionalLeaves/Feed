@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.35.0 — 2026-11-15
+
+Post age and a Comics filter
+
+- Posts show how long ago they went up ("3h", "2d") next to the site name, when the site gives a date. Dates the app only estimated aren't shown.
+- Search has a **Comics** filter for multi-page posts. **Images** now means single pictures.
+
 ## 4.34.1 — 2026-11-15
 
 Offline copies on mobile data
