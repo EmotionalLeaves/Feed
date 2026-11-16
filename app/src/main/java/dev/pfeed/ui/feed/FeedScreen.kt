@@ -23,6 +23,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -586,6 +587,23 @@ private fun FeedPage(
                     },
                 )
             }
+            // Swipe left on a post (not a comic, which turns pages that way): their page, everything
+            // by them across every source, as in other short-video apps. Child gestures that use the
+            // drag (zoomed pan, the scrub bar) consume it first, so this only sees a free swipe.
+            .pointerInput(item.key, landscape, type) {
+                val creator = Display.creator(item)
+                if (landscape || item.isGallery || creator == null || type == MediaType.EMBED) return@pointerInput
+                var dx = 0f
+                detectHorizontalDragGestures(
+                    onDragStart = { dx = 0f },
+                    onDragEnd = {
+                        if (dx < -SWIPE_TO_CREATOR_DP.dp.toPx()) {
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            onOpenTag("@$creator")
+                        }
+                    },
+                ) { change, amount -> dx += amount; change.consume() }
+            }
             // Press-and-hold: on a video's right third → 2× speed; elsewhere → the menu.
             // awaitLongPressOrCancellation ignores quick taps and swipes (movement cancels it), so
             // taps, double-taps and the pager's vertical swipe all keep working.
@@ -929,6 +947,8 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 }
 
 
+/** How far left a swipe must go to open the creator's page. */
+private const val SWIPE_TO_CREATOR_DP = 90
 private const val SEEK_STEP_MS = 10_000L
 
 /** Turned off by the instrumented tests, which need the feed itself on screen. */
