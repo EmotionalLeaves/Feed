@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.38.3 — 2026-11-16
+
+Safer long images
+
+- Images are decoded at most 2048×8192 pixels, so a very long comic strip can no longer become a picture too large to draw (which would crash the feed).
+- Every build now also runs 2,500 random taps and swipes on the emulator after the tests (0 crashes, 0 freezes so far).
+
 ## 4.38.2 — 2026-11-16
 
 Mixed search results
