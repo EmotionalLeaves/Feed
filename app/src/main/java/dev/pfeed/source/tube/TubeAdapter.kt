@@ -27,7 +27,16 @@ import javax.inject.Singleton
  * Entry = "host|section". Each site is one origin for spacing, and one group for rate limiting.
  */
 @Singleton
-class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapter() {
+class TubeAdapter @Inject constructor(
+    private val http: HttpJson,
+    private val blocks: dev.pfeed.data.repo.BlockRepository,
+) : CachingAdapter() {
+    /** Sites switched off (in Sources, or hidden from a post's menu): not asked at all. */
+    private suspend fun activeSites(): List<TubeSite> {
+        val hidden = runCatching { blocks.current().origins }.getOrDefault(emptySet())
+        return TubeSite.ALL.filter { "tube:${it.host}" !in hidden }
+    }
+
     override val id = SOURCE_ID
     override val displayName = "Tube sites"
     override val requiresAuth = false
@@ -39,7 +48,7 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
     override suspend fun entries(): List<String> =
-        TubeSite.ALL.flatMap { site -> SourceCatalog.tubeSections.map { "${site.host}|$it" } }
+        activeSites().flatMap { site -> SourceCatalog.tubeSections.map { "${site.host}|$it" } }
 
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         val site = TubeSite.byHost(entry.substringBefore('|')) ?: return EntryPage(emptyList(), null)
@@ -175,8 +184,9 @@ class TubeAdapter @Inject constructor(private val http: HttpJson) : CachingAdapt
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
+        val sites = activeSites()
         val remote = coroutineScope {
-            TubeSite.ALL.map { site ->
+            sites.map { site ->
                 async {
                     withTimeoutOrNull(SEARCH_TIMEOUT_MS) {
                         attempt {
