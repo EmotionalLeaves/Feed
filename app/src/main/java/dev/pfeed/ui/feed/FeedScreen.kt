@@ -43,6 +43,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
@@ -275,6 +277,26 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
         )
+
+        // Hands-free is on: say so, with a quick way to stop it.
+        val handsFreeOn by HandsFree.on.collectAsStateWithLifecycle()
+        if (handsFreeOn && !landscape && items.isNotEmpty()) {
+            Row(
+                Modifier.align(Alignment.TopStart).statusBarsPadding()
+                    .padding(start = 12.dp, top = if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable { HandsFree.set(false); vm.offer("Hands-free off", "Turn back on") { HandsFree.set(true) } }
+                    .padding(start = 10.dp, end = 8.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Autorenew, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Hands-free", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Stop hands-free", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+            }
+        }
 
         // A tag page: the tags that show up most alongside it, to hop sideways to.
         val pageTag = vm.tag
@@ -519,6 +541,17 @@ private fun FeedPage(
     // Hold the right side of a video to play at 2×; release to go back to 1×.
     LaunchedEffect(player, speeding) { player?.setPlaybackSpeed(if (speeding) 2f else 1f) }
 
+    // Hands-free: a picture stays up a few seconds, then the feed moves on (tap pauses the countdown).
+    val handsFree by HandsFree.on.collectAsStateWithLifecycle()
+    val imageCountdown = handsFree && playing && !paused && !item.isGallery && (type == MediaType.IMAGE || type == MediaType.GIF)
+    val countdown = remember(item.key) { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(imageCountdown) {
+        if (!imageCountdown) { countdown.snapTo(0f); return@LaunchedEffect }
+        countdown.snapTo(0f)
+        countdown.animateTo(1f, androidx.compose.animation.core.tween(HandsFree.IMAGE_MS.toInt(), easing = androidx.compose.animation.core.LinearEasing))
+        onEnded()
+    }
+
     Box(
         Modifier
             .fillMaxSize()
@@ -570,10 +603,16 @@ private fun FeedPage(
     ) {
         when (type) {
             MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, onEnded = onEnded)
-            MediaType.IMAGE, MediaType.GIF -> if (item.isGallery) GalleryPage(item, vm, active = playing) else ImagePage(item, vm)
+            MediaType.IMAGE, MediaType.GIF ->
+                if (item.isGallery) GalleryPage(item, vm, active = playing, autoFlip = handsFree && playing && !paused, onEnded = onEnded)
+                else ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
         dev.pfeed.ui.common.MediaMask()
+        if (imageCountdown) Box(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth(countdown.value).height(2.dp)
+                .background(Color.White.copy(alpha = 0.7f)),
+        )
 
         // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
         if (!landscape) Box(

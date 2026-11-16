@@ -107,6 +107,8 @@ fun VideoPage(
     var firstFrame by remember(item.key) { mutableStateOf(false) }
     var error by remember(item.key) { mutableStateOf<String?>(null) }
     val stats = remember(item.key) { vm.statsFor(item.key) }
+    val handsFree by HandsFree.on.collectAsState()
+    val ended by androidx.compose.runtime.rememberUpdatedState(onEnded)
 
     DisposableEffect(item.key) {
         onDispose {
@@ -142,8 +144,15 @@ fun VideoPage(
         }
     }
 
+    // Hands-free switched on or off mid-video: play once or loop from here on.
+    LaunchedEffect(player, handsFree) {
+        val p = player ?: return@LaunchedEffect
+        if (p.currentMediaItem?.mediaId == item.key && p.duration > 0) p.repeatMode = repeatFor(p.duration, handsFree)
+    }
+
     DisposableEffect(player) {
         val p = player
+        var loops = 0
         val listener = object : Player.Listener {
             override fun onRenderedFirstFrame() { firstFrame = true; vm.markShown(item) }
             override fun onPositionDiscontinuity(old: Player.PositionInfo, new: Player.PositionInfo, reason: Int) {
@@ -152,18 +161,25 @@ fun VideoPage(
                 // passively; counting each loop as a replay made the model over-reward them and
                 // drift toward short clips. Dwell and completion already capture those.
                 if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION && stats.durationMs >= MIN_LOOP_AS_REPLAY_MS) stats.replays++
+                // Hands-free: a short clip moves on once it has looped for a while.
+                if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION && HandsFree.on.value && p != null &&
+                    p.currentMediaItem?.mediaId == item.key && p.duration > 0
+                ) {
+                    loops++
+                    if (loops * p.duration >= HandsFree.SHORT_VIDEO_TOTAL_MS) ended()
+                }
             }
             override fun onPlaybackStateChanged(state: Int) {
                 if (state == Player.STATE_READY && p != null && p.duration > 0) {
                     stats.durationMs = p.duration
                     // Clips loop (as in any short-video feed); a full scene plays once and then the
                     // feed moves on, instead of starting it over.
-                    val wanted = if (p.duration >= AUTO_NEXT_MIN_MS) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ONE
+                    val wanted = repeatFor(p.duration, HandsFree.on.value)
                     if (p.repeatMode != wanted) p.repeatMode = wanted
                 }
                 if (state == Player.STATE_ENDED && p != null && p.repeatMode == Player.REPEAT_MODE_OFF) {
                     p.repeatMode = Player.REPEAT_MODE_ONE // the pooled player loops again for the next post
-                    onEnded()
+                    ended()
                 }
             }
             override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item, "player: ${e.errorCodeName} ${e.cause?.message?.take(80).orEmpty()}") }
@@ -247,7 +263,14 @@ fun VideoPage(
  * read, so turning a page is instant.
  */
 @Composable
-fun GalleryPage(item: MediaItem, vm: FeedViewModel, active: Boolean = true) {
+fun GalleryPage(
+    item: MediaItem,
+    vm: FeedViewModel,
+    active: Boolean = true,
+    /** Hands-free: flip a page every few seconds, then [onEnded] after the last. */
+    autoFlip: Boolean = false,
+    onEnded: () -> Unit = {},
+) {
     // Opens on the page you were reading last time.
     val pager = androidx.compose.foundation.pager.rememberPagerState(
         initialPage = remember(item.key) { dev.pfeed.player.ComicPages.get(item.key)?.coerceIn(0, item.pages.size - 1) ?: 0 },
@@ -268,6 +291,11 @@ fun GalleryPage(item: MediaItem, vm: FeedViewModel, active: Boolean = true) {
         item.pages.drop(pager.currentPage + 1).take(2).forEach { vm.warmImage(it) }
         vm.onComicPage(item, pager.currentPage)
         if (!privateMode) dev.pfeed.player.ComicPages.save(item.key, pager.currentPage, item.pages.size)
+    }
+    LaunchedEffect(autoFlip, pager.settledPage) {
+        if (!autoFlip) return@LaunchedEffect
+        kotlinx.coroutines.delay(HandsFree.GALLERY_PAGE_MS)
+        if (pager.settledPage + 1 < item.pages.size) pager.animateScrollToPage(pager.settledPage + 1) else onEnded()
     }
     Box(Modifier.fillMaxSize()) {
         androidx.compose.foundation.pager.HorizontalPager(
@@ -602,6 +630,11 @@ fun HeartBurst(position: Offset?, tick: Int) {
 }
 
 private const val AUTO_NEXT_MIN_MS = 3 * 60_000L
+
+/** Clips loop; a full scene (or, hands-free, anything but a short clip) plays once. */
+private fun repeatFor(durationMs: Long, handsFree: Boolean): Int =
+    if (durationMs >= AUTO_NEXT_MIN_MS || (handsFree && durationMs >= HandsFree.PLAY_ONCE_MIN_MS)) Player.REPEAT_MODE_OFF
+    else Player.REPEAT_MODE_ONE
 private const val MAX_DECODE_W = 1280
 private const val MAX_DECODE_H = 4096
 

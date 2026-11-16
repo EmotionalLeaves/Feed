@@ -61,6 +61,7 @@ Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 
 - **Feed** has three modes along the top: **For You** (learned from what you watch), **Following** (creators and tags you follow) and **Latest**. Swipe up for the next post; pull down on the first post to refresh.
 - **Gestures:** tap to pause, double-tap to like, hold the right side of a video for 2×, press and hold for the menu (why it's here, Not interested, hide a tag/creator/site, open or copy the link, report; hiding can be undone), three fingers anywhere to leave instantly. Pinch to zoom; zoomed in, one finger pans. Sideways, double-tap a video's edges to skip 10 s. Volume up unmutes.
+- **Hands-free:** from the hold menu. The feed moves on by itself: pictures after 6 s, galleries a page every 4 s, short clips after they've looped about 12 s, longer videos at their end. Tap to pause the countdown; tap the Hands-free pill to stop.
 - **First run** asks what you're into (skippable); add more any time in **Settings → Your taste**.
 - **Tag pages** show related tags to hop to; after you like two posts by the same creator, the app offers to follow them.
 - **Comics** turn sideways page by page; tap the page counter for a strip of every page. Pages taller than the screen scroll, and a comic reopens on the page you were reading.

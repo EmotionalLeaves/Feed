@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bookmark
@@ -43,6 +44,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -128,6 +130,12 @@ fun ItemMenuSheet(
             HorizontalDivider()
 
             // Save, like and follow live on the post itself; this menu is for the rest.
+            val handsFree by HandsFree.on.collectAsState()
+            MenuRow(
+                if (handsFree) "Stop hands-free" else "Hands-free",
+                Icons.Filled.Autorenew,
+                if (handsFree) "Back to swiping yourself" else "Moves on by itself: pictures after a few seconds, videos when they end",
+            ) { HandsFree.set(!handsFree); onDismiss() }
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
             if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
             if (creator != null) {
