@@ -173,6 +173,11 @@ class SearchViewModel @Inject constructor(
 
     fun openList(items: List<MediaItem>, index: Int, title: String): String = holder.put(items, index, title = title)
 
+    /** Creators and tags you follow, for typeahead. */
+    val followed: StateFlow<List<String>> = library.follows
+        .map { f -> (f.creators.map { it.substringBefore('@') } + f.tags.map { it.replace('_', ' ') }).distinct() }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
     private val _ui = MutableStateFlow(SearchUi())
     val ui: StateFlow<SearchUi> = _ui
     private val _filters = MutableStateFlow(SearchFilters())
@@ -299,6 +304,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     val interests by vm.interests.collectAsStateWithLifecycle()
     val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
+    val followed by vm.followed.collectAsStateWithLifecycle()
     val focus = LocalFocusManager.current
     var showFilters by remember { mutableStateOf(false) }
 
@@ -362,6 +368,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
                 onTopicItem = { topic, index -> nav.navigate(Routes.viewer(vm.openList(topicRows.first { it.first == topic }.second, index, topic))) },
                 onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
                 typed = ui.query,
+                followed = followed,
                 recent = recent,
                 interests = interests,
                 onPick = run,
@@ -404,6 +411,7 @@ private fun SuggestionsPane(
     onTopicItem: (String, Int) -> Unit,
     onContinue: (Int) -> Unit,
     typed: String,
+    followed: List<String>,
     recent: List<String>,
     interests: List<String>,
     onPick: (String) -> Unit,
@@ -414,8 +422,8 @@ private fun SuggestionsPane(
         // As you type: matching searches you've made, things you like and common tags.
         val t = typed.trim().lowercase()
         if (t.length >= 2) {
-            val vocab = remember(recent, interests) {
-                (recent + interests + POPULAR + dev.pfeed.data.settings.SourceCatalog.tubeSections.drop(2) +
+            val vocab = remember(recent, interests, followed) {
+                (recent + followed + interests + POPULAR + dev.pfeed.data.settings.SourceCatalog.tubeSections.drop(2) +
                     dev.pfeed.data.settings.SourceCatalog.comicTags.map { it.replace('-', ' ') }).distinctBy { it.lowercase() }
             }
             val matches = (vocab.filter { it.lowercase().startsWith(t) } + vocab.filter { it.lowercase().contains(t) })
