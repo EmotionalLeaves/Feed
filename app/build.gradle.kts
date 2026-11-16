@@ -156,6 +156,9 @@ dependencies {
     implementation(libs.androidx.biometric)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.androidx.browser)
+    // Installs the ahead-of-time profiles Compose and the other AndroidX libraries ship, on sideloaded
+    // installs too (the Play Store would otherwise do it): less jank in the first minutes of use.
+    implementation("androidx.profileinstaller:profileinstaller:1.4.1")
 
     testImplementation(libs.junit)
     testImplementation(libs.kotlinx.coroutines.test)
