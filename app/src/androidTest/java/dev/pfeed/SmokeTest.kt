@@ -419,9 +419,10 @@ class SmokeTest {
         runBlocking {
             val found = a.searchRepository.search("milf").toList().lastOrNull()?.items.orEmpty()
             val picks = listOfNotNull(
-                found.firstOrNull { it.sourceId == "tube" },
+                // Short ones: a full scene can be a gigabyte, which fills the emulator's small disk.
+                found.firstOrNull { it.sourceId == "tube" && (it.durationSec ?: 9999) <= 300 },
                 // A site that streams (HLS), so the stream download is checked too.
-                found.firstOrNull { it.sourceId == "tube" && (it.id.startsWith("pornhub.com") || it.id.startsWith("xhamster")) },
+                found.firstOrNull { it.sourceId == "tube" && (it.durationSec ?: 9999) <= 300 && (it.id.startsWith("pornhub.com") || it.id.startsWith("xhamster")) },
                 found.firstOrNull { it.isGallery && it.pages.size <= 40 },
                 found.firstOrNull { it.type == dev.pfeed.domain.model.MediaType.IMAGE && !it.isGallery },
             ).distinctBy { it.key }
