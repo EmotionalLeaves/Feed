@@ -459,7 +459,11 @@ private fun SourceSheet(
             AddTo(a.id, vm, onPickFolder)
             if (a.id == "booru") BoardKeys(vm, keyHosts) { openExternal(context, it) }
             Entries(a.id, s, vm)
-            if (a.id == "tube") TubeSites(vm) else BuiltInContents(a.id)
+            when (a.id) {
+                "tube" -> TubeSites(vm)
+                "comics" -> ComicSites(vm)
+                else -> BuiltInContents(a.id)
+            }
         }
     }
 }
@@ -528,6 +532,29 @@ private fun TubeSites(vm: SettingsViewModel) {
         RowDivider(indent = false)
         Row(Modifier.padding(12.dp)) {
             OutlinedButton(onClick = vm::checkTubeSites, enabled = !checking) { Text(if (checking) "Checking…" else "Check each site") }
+        }
+    }
+}
+
+/** The comic sites, each with its own switch (off = hidden, and not fetched or searched). */
+@Composable
+private fun ComicSites(vm: SettingsViewModel) {
+    val blocked by vm.blockEntries.collectAsStateWithLifecycle()
+    val hidden = blocked.filter { it.kind == dev.pfeed.data.repo.BlockKind.ORIGIN.name }.mapTo(HashSet()) { it.value }
+    val sites = dev.pfeed.source.comics.ComicSite.ALL.map { it.host to it.label } + (dev.pfeed.source.comics.EightMuses.HOST to "8muses")
+    Section("Sites", footer = "Newest and ${SourceCatalog.comicTags.size} tags from each. Every gallery's tags are checked before it's shown.") {
+        sites.forEachIndexed { i, (host, label) ->
+            if (i > 0) RowDivider(indent = false)
+            val origin = "comics:$host"
+            SettingRow(
+                label,
+                trailing = {
+                    androidx.compose.material3.Switch(
+                        checked = origin !in hidden,
+                        onCheckedChange = { want -> if (want) vm.unblockOrigin(origin) else vm.block(dev.pfeed.data.repo.BlockKind.ORIGIN, origin) },
+                    )
+                },
+            )
         }
     }
 }

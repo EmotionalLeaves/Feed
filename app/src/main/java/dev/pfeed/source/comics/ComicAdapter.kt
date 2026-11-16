@@ -28,7 +28,13 @@ import javax.inject.Singleton
  * whose tags the minors filter rejects never become items; one that can't be read is dropped.
  */
 @Singleton
-class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAdapter() {
+class ComicAdapter @Inject constructor(
+    internal val http: HttpJson,
+    private val blocks: dev.pfeed.data.repo.BlockRepository,
+) : CachingAdapter() {
+    private suspend fun hiddenHosts(): Set<String> =
+        runCatching { blocks.current().origins }.getOrDefault(emptySet()).filter { it.startsWith("comics:") }.mapTo(HashSet()) { it.removePrefix("comics:") }
+
     override val id = SOURCE_ID
     override val displayName = "Comic sites"
     override val requiresAuth = false
@@ -39,9 +45,11 @@ class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAda
 
     override suspend fun authenticate(ctx: AuthContext) = AuthResult.NotRequired
 
-    override suspend fun entries(): List<String> =
-        ComicSite.ALL.flatMap { site -> (listOf("") + SourceCatalog.comicTags).map { "${site.host}|$it" } } +
-            EightMuses.artists(http, id).map { "${EightMuses.HOST}|$it" }
+    override suspend fun entries(): List<String> {
+        val hidden = hiddenHosts()
+        return ComicSite.ALL.filter { it.host !in hidden }.flatMap { site -> (listOf("") + SourceCatalog.comicTags).map { "${site.host}|$it" } } +
+            (if (EightMuses.HOST in hidden) emptyList() else EightMuses.artists(http, id).map { "${EightMuses.HOST}|$it" })
+    }
 
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         if (entry.startsWith(EightMuses.HOST + "|")) {
@@ -65,8 +73,9 @@ class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAda
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
+        val hidden = hiddenHosts()
         val found = coroutineScope {
-            ComicSite.ALL.map { site ->
+            ComicSite.ALL.filter { it.host !in hidden }.map { site ->
                 async { attempt { readAll(site, ComicSite.parseList(site, http.getRaw(id, site.listUrl(q, 1))).take(SEARCH_LIMIT)) }.getOrDefault(emptyList()) }
             }.awaitAll().flatten()
         }
