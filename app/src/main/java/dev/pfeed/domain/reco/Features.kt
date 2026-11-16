@@ -80,9 +80,18 @@ object Features {
     }
 
     /** Readable label for a feature in the "what it has learned" screen. */
+    /** "redgifs" → "RedGIFs", "r/gonewild" stays, "rule34.xxx" → "rule34.xxx". */
+    private fun prettyOrigin(o: String): String = KNOWN_ORIGINS[o.lowercase()] ?: o
+
+    private val KNOWN_ORIGINS = mapOf(
+        "redgifs" to "RedGIFs", "reddit" to "Reddit", "nhentai" to "nhentai", "kemono" to "Coomer",
+        "pornhub.com" to "Pornhub", "xvideos.com" to "XVideos", "xnxx.com" to "XNXX", "xhamster.com" to "xHamster",
+        "youporn.com" to "YouPorn", "redtube.com" to "RedTube", "eporner.com" to "Eporner", "tnaflix.com" to "TNAFlix",
+    )
+
     fun label(feature: String): String = when {
         feature.startsWith("w:") -> "“${feature.removePrefix("w:")}” in titles"
-        feature.startsWith(ORIGIN) -> "Posts from " + feature.removePrefix(ORIGIN).substringAfter(':')
+        feature.startsWith(ORIGIN) -> "Posts from " + prettyOrigin(feature.removePrefix(ORIGIN).substringAfter(':'))
         feature.startsWith(TYPE) -> when (feature.removePrefix(TYPE)) {
             "video" -> "Videos"; "image" -> "Pictures"; "gif" -> "GIFs"; "comic" -> "Comics"; else -> feature
         }
