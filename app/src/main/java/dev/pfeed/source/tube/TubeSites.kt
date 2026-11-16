@@ -671,6 +671,32 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun embedUrl(id: String) = "https://thisvid.com/embed/$id/"
     }
 
+    /** PornOne (formerly vPorn): long full scenes, MP4s up to 1080p right in the page. */
+    object PornOne : TubeSite("pornone.com", "PornOne") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://pornone.com/newest/${if (page > 0) "${page + 1}/" else ""}"
+            "top" -> "https://pornone.com/mostviewed/${if (page > 0) "${page + 1}/" else ""}"
+            else -> "https://pornone.com/search?q=${enc(section)}${if (page > 0) "&page=${page + 1}" else ""}"
+        }
+        private val MARK = Regex("""<a href="https://pornone\.com/[^/"]+/[^/"]+/(\d+)/[^"]*"\s+class="[^"]*videocard""")
+        private val HREF = Regex("""href="(https://pornone\.com/[^/"]+/([^/"]+)/\d+/)""")
+        private val IMG = Regex("""(https://th[^"\s]*\.pornone\.com/t/[^"\s]+\.jpg)""")
+        private val ALT = Regex("""\balt="([^"]{6,})"""")
+        private val DUR = Regex("""durlabel"[^>]*>(?:\s*<img[^>]*>)?\s*([\d:]{4,})""")
+        private val MP4 = Regex("""(https://[^"'\s]+\.pornone\.com/[^"'\s]+_(\d+)x(\d+)_\d+k\.mp4[^"'\s]*)""")
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
+            val m = HREF.find(c) ?: return@mapNotNull null
+            val title = ALT.find(c)?.groupValues?.get(1)?.takeIf { !it.contains("HD Video") }?.let(::unescape)?.trim()
+                ?: m.groupValues[2].replace('-', ' ').replaceFirstChar { it.uppercase() }
+            TubeVideo(id, title, m.groupValues[1], IMG.find(c)?.groupValues?.get(1), duration(DUR.find(c)?.groupValues?.get(1)))
+        }.distinctBy { it.id }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            best(MP4.findAll(pageHtml).mapNotNull { m -> m.groupValues[3].toIntOrNull()?.let { h -> h to unescape(m.groupValues[1]) } }.toList())
+        override fun embedUrl(id: String) = "https://pornone.com/embed/$id/"
+    }
+
     // ── Eporner (official API; plays its MP4s via the embed page's hash) ───
 
     object Eporner : TubeSite("eporner.com", "Eporner") {

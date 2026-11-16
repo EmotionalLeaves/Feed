@@ -32,19 +32,17 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val s = TubeSite.ThisVid
-        for (sec in listOf("new", "top", "milf")) probe("thisvid $sec") {
+        val s = TubeSite.PornOne
+        for (sec in listOf("new", "top", "milf")) probe("pornone $sec") {
             val (code, b) = get(s.listUrl(sec, 0))
             val l = s.parseList(b)
-            "$code n=${l.size} thumbs=${l.count { it.thumb != null }} durs=${l.count { it.durationSec != null }} titles=${l.count { it.title != null }} first=${l.firstOrNull()}" +
-                if (l.isEmpty()) " :: " + around(b, "/videos/", 300, 600) else ""
+            "$code n=${l.size} thumbs=${l.count { it.thumb != null }} durs=${l.count { it.durationSec != null }} first=${l.firstOrNull()} p2=${s.parseList(get(s.listUrl(sec, 1)).second).size}"
         }
-        probe("thisvid stream") {
+        probe("pornone stream") {
             val v = s.parseList(get(s.listUrl("new", 0)).second).first()
             val (code, page) = get(v.pageUrl)
             val st = s.stream(page)
-            "page=$code stream=${st?.url?.take(100)} head=${st?.let { head(it.url) }} tags=${s.pageTags(page).take(12)}"
+            "page=$code stream=${st?.url?.take(110)} head=${st?.let { head(it.url) }} :: " + around(page, "keywords", 0, 300)
         }
-        probe("pornone list") { val b = get("https://pornone.com/newest/").second; around(b, "281", 0, 0) + Regex("""href="([^"]+)"[^>]*class="[^"]*(?:video|thumb)""").findAll(b).take(5).map { it.groupValues[1] }.toList() + " :: " + around(b, "<a href=\"https://pornone.com/", 0, 700) }
     }
 }
