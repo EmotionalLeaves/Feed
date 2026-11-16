@@ -11,6 +11,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -100,6 +101,7 @@ private sealed interface PendingDialog {
  * Settings, in one screen. Three places to go (Sources, Your taste, Hidden & blocked) and every
  * other setting right here, so nothing is more than one tap deep.
  */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val s by vm.settings.collectAsStateWithLifecycle()
@@ -160,7 +162,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             // What the main feeds show: everything by default; switch a kind off to leave it out.
-            Section("Feed shows", footer = "Search and tag pages still show everything.") {
+            Section("Feed shows", footer = "Clips are under 3 minutes; full videos are 3 minutes and up. Search and tag pages still show everything.") {
                 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
                 androidx.compose.foundation.layout.FlowRow(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
@@ -176,6 +178,27 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                             leadingIcon = if (shown) ({ androidx.compose.material3.Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(16.dp)) }) else null,
                             colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
                         )
+                    }
+                }
+                if ("video" !in s.hiddenFeedTypes) {
+                    RowDivider()
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Text("Videos", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                        androidx.compose.material3.SingleChoiceSegmentedButtonRow {
+                            val options = listOf("any" to "Any length", "short" to "Clips", "long" to "Full")
+                            options.forEachIndexed { index, (value, label) ->
+                                androidx.compose.material3.SegmentedButton(
+                                    selected = s.videoLength == value,
+                                    onClick = { vm.setVideoLength(value) },
+                                    shape = androidx.compose.material3.SegmentedButtonDefaults.itemShape(index, options.size),
+                                    icon = {},
+                                    label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                                )
+                            }
+                        }
                     }
                 }
             }

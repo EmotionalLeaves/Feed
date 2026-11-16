@@ -217,6 +217,8 @@ class SettingsViewModel @Inject constructor(
         if (hidden.size >= 4) s else s.copy(hiddenFeedTypes = hidden)
     }
 
+    fun setVideoLength(length: String) = update { it.copy(videoLength = length) }
+
     /** Space taken by offline copies of saved posts. */
     val offlineBytes = offline.bytes
     fun setLockTimeout(sec: Int) = update { it.copy(lockTimeoutSec = sec) }

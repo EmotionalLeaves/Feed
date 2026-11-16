@@ -368,8 +368,10 @@ class FeedSession(
         // Also age out candidates the ranker has passed over for many loads: they're the leftovers.
         // The main feeds leave out kinds of post you've switched off (Settings → Feed shows).
         val hiddenTypes = if (spec is FeedSpec.Main) settings.get().hiddenFeedTypes else emptySet()
+        val videoLength = if (spec is FeedSpec.Main) settings.get().videoLength else "any"
         val dropped = candidates.filter {
             (hiddenTypes.isNotEmpty() && feedType(it) in hiddenTypes) ||
+            (videoLength != "any" && !lengthAllowed(it, videoLength)) ||
             !blocklist.allows(it) || seen.isSeen(it.key) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS ||
                 // A site whose files aren't loading right now: don't hand out more of it.
                 mediaHealth.isResting(it)
@@ -436,6 +438,20 @@ class FeedSession(
         return batch
     }
 
+    /**
+     * Settings → Feed shows → video length. Clips: under 3 min, or no length given (mostly short
+     * clips from feeds that don't say). Full videos: 3 min and up, by the length the site lists.
+     */
+    private fun lengthAllowed(item: MediaItem, length: String): Boolean {
+        if (feedType(item) != "video") return true
+        val sec = item.durationSec
+        return when (length) {
+            "short" -> sec == null || sec < LONG_VIDEO_SEC
+            "long" -> sec != null && sec >= LONG_VIDEO_SEC
+            else -> true
+        }
+    }
+
     private fun feedType(item: MediaItem): String = when {
         item.isGallery -> "comic"
         item.type == dev.pfeed.domain.model.MediaType.VIDEO || item.type == dev.pfeed.domain.model.MediaType.EMBED -> "video"
@@ -444,6 +460,7 @@ class FeedSession(
     }
 
     companion object {
+        private const val LONG_VIDEO_SEC = 180
         /** Items handed to the screen per call; small so ranking reacts quickly to new signals. */
         const val BATCH = 12
         /**

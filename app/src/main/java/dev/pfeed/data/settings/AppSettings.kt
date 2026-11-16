@@ -73,6 +73,8 @@ data class AppSettings(
     val keepSavedOffline: Boolean = true,
     /** Kinds of post kept out of the main feeds ("video", "image", "gif", "comic"); search and tag pages still show them. */
     val hiddenFeedTypes: Set<String> = emptySet(),
+    /** Which videos the main feeds show by length: "any", "short" (clips under 3 min) or "long" (3 min and up). */
+    val videoLength: String = "any",
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),
