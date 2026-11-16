@@ -215,7 +215,12 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     landscape = landscape,
                     onLandscape = vm::setLandscape,
                     // A full scene finished: on to the next post.
-                    onEnded = { if (page == pagerState.settledPage && page + 1 < items.size) pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
+                    onEnded = {
+                        if (page == pagerState.settledPage && page + 1 < items.size) {
+                            if (HandsFree.on.value) vm.statsFor(item.key).autoAdvanced = true
+                            pagerScope.launch { pagerState.animateScrollToPage(page + 1) }
+                        }
+                    },
                 )
             }
             }

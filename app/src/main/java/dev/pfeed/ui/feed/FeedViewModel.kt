@@ -57,6 +57,8 @@ class PlaybackStats {
     @Volatile var explicit: Boolean = false
     /** Furthest page reached in a comic or photo set (0-based). */
     @Volatile var maxPage: Int = 0
+    /** Hands-free moved on from this post by itself: the time on it wasn't your choice. */
+    @Volatile var autoAdvanced: Boolean = false
 }
 
 @HiltViewModel
@@ -334,6 +336,7 @@ class FeedViewModel @Inject constructor(
         if (item.key != currentItem?.key) {
             finishCurrent()
             currentItem = item
+            stats[item.key]?.autoAdvanced = false // back on it: this visit is judged afresh
             if (visible) enteredAt = SystemClock.elapsedRealtime()
             if (!settings.value.privateMode) viewModelScope.launch { library.add(LibraryKind.HISTORY, item) }
         }
@@ -360,6 +363,16 @@ class FeedViewModel @Inject constructor(
             // player reported a duration, judge the dwell against typical video viewing, not images.
             val isVideo = item.type == MediaType.VIDEO || item.type == MediaType.EMBED || (st?.durationMs ?: 0L) > 0L
             val typical = dwellBaseline.typicalMs(isVideo)
+            // Hands-free decided how long this stayed up, so it says nothing about your pace, and a
+            // picture or clip it timed out on teaches nothing either (every one would look "watched").
+            // A longer video it let play to the end still counts, modestly.
+            val auto = st?.autoAdvanced == true
+            if (auto && (st?.explicit == true || settings.value.privateMode)) return@launch
+            if (auto) {
+                val longVideo = isVideo && (st?.durationMs ?: 0L) >= HandsFree.PLAY_ONCE_MIN_MS && st?.replays == 0
+                if (longVideo) signals.record(item, Signal(SignalType.VIEW, HANDS_FREE_FULL_VIEW))
+                return@launch
+            }
             // Reading a comic takes minutes: that would teach the image baseline that people stare at images.
             if (!item.isGallery) dwellBaseline.observe(isVideo, dwell)
             // A like/save/follow/"not interested" already told the model what you think; recording the
@@ -580,6 +593,8 @@ class FeedViewModel @Inject constructor(
 
     companion object {
         private const val LOAD_AHEAD = 10
+        /** A longer video hands-free let play to the end: watched, but not chosen like a manual full watch. */
+        private const val HANDS_FREE_FULL_VIEW = 0.5
         private const val PRELOAD_AHEAD = 6
         private const val RESOLVE_AHEAD = 5
         private const val CHAIN_DELAY_MS = 300L
