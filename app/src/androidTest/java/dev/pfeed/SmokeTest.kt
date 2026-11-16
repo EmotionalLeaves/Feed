@@ -337,6 +337,9 @@ class SmokeTest {
             shot("01_feed")
             rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "search screen") { exists("Popular") }
+            // Topic rows arrive once the video sites answer.
+            runCatching { waitFor(timeoutMs = 25_000, what = "topic rows") { exists("See all") } }
+            android.util.Log.i("PFHEALTH", "search landing: topic rows ${if (exists("See all")) "shown" else "not shown"}")
             shot("02_search")
             tap("anal")
             waitFor(timeoutMs = 60_000, what = "results") { exists("Play all") || !exists("still searching", substring = true) }
