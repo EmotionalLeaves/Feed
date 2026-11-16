@@ -154,9 +154,16 @@ class SearchViewModel @Inject constructor(
     private val recent: RecentSearches,
     private val signals: SignalRepository,
     private val settingsRepo: dev.pfeed.data.settings.SettingsRepository,
-    registry: SourceRegistry,
+    private val registry: SourceRegistry,
     library: dev.pfeed.data.repo.LibraryRepository,
+    private val blocks: dev.pfeed.data.repo.BlockRepository,
 ) : ViewModel() {
+    private val _topicRows = MutableStateFlow<List<Pair<String, List<MediaItem>>>>(emptyList())
+    /**
+     * Picture rows for your top interests, from the video sites (the same searches For You runs, so
+     * usually already cached): something to tap before typing anything.
+     */
+    val topicRows: StateFlow<List<Pair<String, List<MediaItem>>>> = _topicRows
     /** Long videos and comics you left partway, most recent first: they carry on from where you stopped. */
     val continueWatching: StateFlow<List<MediaItem>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
         .map { list ->
@@ -196,6 +203,21 @@ class SearchViewModel @Inject constructor(
                 .filter { it.length in 2..24 }
                 .distinct()
                 .take(10)
+            loadTopicRows(_interests.value.take(TOPIC_ROWS))
+        }
+    }
+
+    private fun loadTopicRows(topics: List<String>) {
+        val tube = registry.byId("tube") ?: return
+        topics.forEach { topic ->
+            viewModelScope.launch {
+                val blocklist = runCatching { blocks.current() }.getOrNull()
+                val items = runCatching { tube.search(topic, null).items }.getOrDefault(emptyList())
+                    .filter { it.thumbnailUrl != null && (blocklist?.allows(it) != false) }
+                    .distinctBy { it.title?.lowercase() ?: it.key }
+                    .take(12)
+                if (items.size >= 4) _topicRows.update { rows -> (rows + (topic to items)).sortedBy { topics.indexOf(it.first) } }
+            }
         }
     }
 
@@ -246,6 +268,10 @@ class SearchViewModel @Inject constructor(
     fun setDuration(d: DurationFilter) = _filters.update { it.copy(duration = d) }
     fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY) }
 
+    private companion object {
+        const val TOPIC_ROWS = 3
+    }
+
     /** Opens the results at [index]; past the last one it keeps going as an endless feed of the search. */
     fun open(index: Int): String = holder.put(
         visible.value,
@@ -271,6 +297,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     val recent by vm.recentSearches.collectAsStateWithLifecycle()
     val interests by vm.interests.collectAsStateWithLifecycle()
     val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
+    val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val focus = LocalFocusManager.current
     var showFilters by remember { mutableStateOf(false) }
 
@@ -330,6 +357,8 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
         if (ui.searched == null) {
             SuggestionsPane(
                 continueWatching = continueWatching,
+                topicRows = topicRows,
+                onTopicItem = { topic, index -> nav.navigate(Routes.viewer(vm.openList(topicRows.first { it.first == topic }.second, index, topic))) },
                 onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
                 typed = ui.query,
                 recent = recent,
@@ -370,6 +399,8 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
 @Composable
 private fun SuggestionsPane(
     continueWatching: List<MediaItem>,
+    topicRows: List<Pair<String, List<MediaItem>>>,
+    onTopicItem: (String, Int) -> Unit,
     onContinue: (Int) -> Unit,
     typed: String,
     recent: List<String>,
@@ -407,6 +438,16 @@ private fun SuggestionsPane(
             }
             Spacer(Modifier.height(20.dp))
         }
+        if (t.isEmpty()) topicRows.forEach { (topic, items) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionTitle(topic.replaceFirstChar { it.uppercase() }, Modifier.weight(1f))
+                TextButton(onClick = { onPick(topic) }) { Text("See all") }
+            }
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }
+            }
+            Spacer(Modifier.height(18.dp))
+        }
         if (recent.isNotEmpty()) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionTitle("Recent", Modifier.weight(1f))
@@ -438,6 +479,25 @@ private fun SuggestionsPane(
             POPULAR.forEach { q -> TopicChip(q) { onPick(q) } }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** A post in a topic row: its picture, how long, and where it's from. */
+@Composable
+private fun TopicTile(item: MediaItem, onClick: () -> Unit) {
+    Box(Modifier.width(112.dp).aspectRatio(3f / 4f).clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh).clickable(onClick = onClick)) {
+        coil.compose.AsyncImage(
+            model = item.thumbnailUrl,
+            contentDescription = item.title,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().then(if (dev.pfeed.ui.common.LocalBlurPreviews.current) Modifier.blur(24.dp) else Modifier),
+        )
+        dev.pfeed.ui.common.MediaMask()
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.4f).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
+        Column(Modifier.align(Alignment.BottomStart).padding(6.dp)) {
+            item.durationSec?.let { Text(dev.pfeed.ui.common.formatDuration(it), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+            Text(Display.source(item, ""), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        }
     }
 }
 
