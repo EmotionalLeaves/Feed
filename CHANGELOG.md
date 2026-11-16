@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.38.1 — 2026-11-16
+
+Browser disguise, new icon
+
+- **Home screen icon → Browser**: the app can appear as a plain "Browser" with a globe icon, alongside Notes and Calculator.
+- The default icon is a rounded play mark in the app's pink-to-coral gradient.
+
 ## 4.38.0 — 2026-11-16
 
 Related tags
