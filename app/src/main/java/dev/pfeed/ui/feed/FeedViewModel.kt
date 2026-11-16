@@ -465,6 +465,16 @@ class FeedViewModel @Inject constructor(
         emit(runCatching { signals.affinities().tags.size < 3 }.getOrDefault(false))
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    /** Whether [item] is kept on the phone as a file that can be exported (not a stream). */
+    fun canExport(item: MediaItem): Boolean = android.os.Build.VERSION.SDK_INT >= 29 && !item.isGallery && offline.localFile(item.key) != null
+
+    fun exportToDownloads(item: MediaItem) {
+        viewModelScope.launch {
+            val ok = offline.exportToDownloads(item.key, item.title)
+            _messages.tryEmit(if (ok) "Saved to your phone's Downloads" else "Couldn't export it")
+        }
+    }
+
     /** Why For You showed [item]: the learned interests it matches most, as labels ("#milf"). */
     suspend fun reasons(item: MediaItem): List<String> {
         val aff = runCatching { signals.affinities().tags }.getOrDefault(emptyMap())

@@ -93,6 +93,31 @@ class OfflineStore @Inject constructor(
 
     private val hlsUrls = ConcurrentHashMap<String, String>()
 
+    /** The kept file itself (not a stream), for exporting; null if not kept or kept as a stream. */
+    fun localFile(key: String): File? = index[hash(key)]?.takeIf { it.exists() && it.extension != HLS_EXT && it.extension != "bin" }
+
+    /**
+     * Copies the kept file of [key] into the phone's Downloads folder (Android 10+), where other apps
+     * and the gallery can see it. Only when the person asks: nothing leaves the app's storage otherwise.
+     */
+    suspend fun exportToDownloads(key: String, title: String?): Boolean = withContext(Dispatchers.IO) {
+        if (android.os.Build.VERSION.SDK_INT < 29) return@withContext false
+        val f = localFile(key) ?: return@withContext false
+        val safe = (title ?: "post").replace(Regex("[^A-Za-z0-9 ._-]"), "").trim().take(60).ifBlank { "post" }
+        val values = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "$safe.${f.extension}")
+            put(android.provider.MediaStore.Downloads.MIME_TYPE, mimeOf(f.extension) ?: "application/octet-stream")
+            put(android.provider.MediaStore.Downloads.IS_PENDING, 1)
+        }
+        val resolver = context.contentResolver
+        val uri = resolver.insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values) ?: return@withContext false
+        val ok = runCatching { resolver.openOutputStream(uri)?.use { out -> f.inputStream().use { it.copyTo(out) } } != null }.getOrDefault(false)
+        if (!ok) { resolver.delete(uri, null, null); return@withContext false }
+        values.clear(); values.put(android.provider.MediaStore.Downloads.IS_PENDING, 0)
+        resolver.update(uri, values, null, null)
+        true
+    }
+
     /** [item] with its thumbnail pointing at the kept copy, when there is one (Saved works offline). */
     fun withLocalThumbnail(item: MediaItem): MediaItem {
         val kept = if (isKept(item)) item.copy(extras = item.extras + (KEPT to "1")) else item

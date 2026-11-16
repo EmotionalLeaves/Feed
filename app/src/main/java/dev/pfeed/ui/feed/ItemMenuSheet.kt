@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -135,6 +136,11 @@ fun ItemMenuSheet(
             MenuRow("Hide $source", Icons.Filled.VisibilityOff, "Never show posts from it") { vm.hideOrigin(item, source); onDismiss() }
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             MenuRow("Open on $source", Icons.AutoMirrored.Filled.OpenInNew) { openExternal(context, item.pageUrl); onDismiss() }
+            // Kept on the phone already: copy it out to Downloads (visible to the gallery and other apps).
+            if (vm.canExport(item)) MenuRow("Export to Downloads", Icons.Filled.Download, "Outside this app: other apps can see it") {
+                vm.exportToDownloads(item)
+                onDismiss()
+            }
             if (item.pageUrl.isNotBlank()) MenuRow("Copy link", Icons.Filled.Link) {
                 dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
                 onDismiss()
