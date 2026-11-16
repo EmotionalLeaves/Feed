@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.42.1 — 2026-11-16
+
+Start over
+
+- Reopening a long video you left partway says where it carries on from, with **Start over** to go back to the beginning.
+
 ## 4.42.0 — 2026-11-16
 
 Full scenes move on

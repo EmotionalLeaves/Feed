@@ -1,3 +1,8 @@
+## 4.42.1 — 2026-11-16
+Start over
+
+- Reopening a long video you left partway says where it carries on from, with **Start over** to go back to the beginning.
+
 ## 4.42.0 — 2026-11-16
 Full scenes move on
 
@@ -7,8 +12,3 @@ Full scenes move on
 Hidden tags match every spelling
 
 - Hiding a tag now also hides its other spellings: hiding "big tits" hides posts tagged "big_tits" or "large breasts". Before, a tag typed with a space didn't match the same tag written with an underscore.
-
-## 4.41.1 — 2026-11-16
-One taste, many spellings
-
-- For You treats different sites' words for the same thing as one interest: a like on a board's "large breasts" also brings more "big tits" videos, "fellatio" counts as "blowjob", and so on. Searching and hiding tags use the same matching.
