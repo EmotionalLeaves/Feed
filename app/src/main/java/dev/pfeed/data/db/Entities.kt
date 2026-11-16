@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "items")
 data class ItemEntity(@PrimaryKey val itemKey: String, val json: String, val storedAt: Long)
 
-/** kind = SAVED | LIKED | HISTORY */
+/** kind = SAVED | LIKED | HISTORY, or "C:<name>" for a collection of saved posts. */
 @Entity(tableName = "library", primaryKeys = ["itemKey", "kind"], indices = [Index("kind", "at")])
 data class LibraryEntity(val itemKey: String, val kind: String, val at: Long)
 

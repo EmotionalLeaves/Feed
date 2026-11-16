@@ -39,16 +39,58 @@ class LibraryRepository @Inject constructor(
     fun times(kind: LibraryKind): Flow<Map<String, Long>> =
         libraryDao.times(kind.name, MAX_ITEMS).map { rows -> rows.associate { it.itemKey to it.at } }
 
-    suspend fun add(kind: LibraryKind, given: MediaItem) {
+    suspend fun add(kind: LibraryKind, given: MediaItem) = addTo(kind.name, given)
+
+    private suspend fun addTo(kind: String, given: MediaItem) {
         val item = OfflineStore.original(given)
         val now = System.currentTimeMillis()
         db.withTransaction {
             itemDao.upsert(ItemEntity(item.key, json.encodeToString(MediaItem.serializer(), item), now))
-            libraryDao.upsert(LibraryEntity(item.key, kind.name, now))
+            libraryDao.upsert(LibraryEntity(item.key, kind, now))
         }
     }
 
-    suspend fun remove(kind: LibraryKind, item: MediaItem) = libraryDao.delete(item.key, kind.name)
+    /** Unsaving a post also takes it out of your collections (they're folders within Saved). */
+    suspend fun remove(kind: LibraryKind, item: MediaItem) {
+        db.withTransaction {
+            libraryDao.delete(item.key, kind.name)
+            if (kind == LibraryKind.SAVED) libraryDao.removeFromAllCollections(item.key)
+        }
+    }
+
+    // ── collections: named folders of saved posts ──
+
+    data class Collection(val name: String, val count: Int)
+
+    val collections: Flow<List<Collection>> = libraryDao.collections().map { rows ->
+        rows.map { Collection(it.kind.removePrefix(COLLECTION), it.count) }
+    }
+
+    fun collectionItems(name: String): Flow<List<MediaItem>> = libraryDao.itemsJson(COLLECTION + name, MAX_ITEMS).map { rows ->
+        rows.mapNotNull { runCatching { json.decodeFromString(MediaItem.serializer(), it) }.getOrNull() }
+    }
+
+    suspend fun collectionsOf(item: MediaItem): Set<String> =
+        libraryDao.collectionsOf(item.key).mapTo(HashSet()) { it.removePrefix(COLLECTION) }
+
+    /** Putting a post in a collection saves it too, so it's kept offline like any saved post. */
+    suspend fun addToCollection(name: String, item: MediaItem) {
+        val n = cleanName(name) ?: return
+        db.withTransaction {
+            addTo(LibraryKind.SAVED.name, item)
+            addTo(COLLECTION + n, item)
+        }
+    }
+
+    suspend fun removeFromCollection(name: String, item: MediaItem) = libraryDao.delete(item.key, COLLECTION + name)
+
+    suspend fun renameCollection(from: String, to: String) {
+        val n = cleanName(to) ?: return
+        if (n != from) libraryDao.renameKind(COLLECTION + from, COLLECTION + n)
+    }
+
+    /** The collection goes; its posts stay saved. */
+    suspend fun deleteCollection(name: String) = libraryDao.deleteKind(COLLECTION + name)
 
     suspend fun purgeHistory(retentionDays: Int) {
         libraryDao.purgeHistory(System.currentTimeMillis() - retentionDays * DAY_MS)
@@ -82,6 +124,10 @@ class LibraryRepository @Inject constructor(
     )
 
     companion object {
+        private const val COLLECTION = "C:"
+        const val MAX_COLLECTION_NAME = 40
+
+        fun cleanName(name: String): String? = name.trim().replace(Regex("\\s+"), " ").take(MAX_COLLECTION_NAME).ifEmpty { null }
         private const val DAY_MS = 86_400_000L
         private const val MAX_ITEMS = 2000
     }

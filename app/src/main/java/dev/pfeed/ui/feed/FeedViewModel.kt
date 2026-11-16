@@ -465,6 +465,31 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Your collections (named folders of saved posts), most recently added-to first. */
+    val collections: StateFlow<List<dev.pfeed.data.repo.LibraryRepository.Collection>> =
+        library.collections.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    suspend fun collectionsOf(item: MediaItem): Set<String> = library.collectionsOf(item)
+
+    /** Put a post in a collection (saving it, if it wasn't) or take it out (it stays saved). */
+    fun setInCollection(item: MediaItem, name: String, add: Boolean) {
+        viewModelScope.launch {
+            if (add) {
+                val wasSaved = item.key in saved.value
+                library.addToCollection(name, item)
+                if (!wasSaved) {
+                    statsFor(item.key).explicit = true
+                    signals.record(item, Signal(SignalType.SAVE))
+                    noteKeeper(item)
+                }
+                _messages.tryEmit("Added to ${dev.pfeed.data.repo.LibraryRepository.cleanName(name) ?: name}")
+            } else {
+                library.removeFromCollection(name, item)
+                _messages.tryEmit("Removed from $name")
+            }
+        }
+    }
+
     fun notInterested(item: MediaItem) {
         statsFor(item.key).explicit = true
         viewModelScope.launch {

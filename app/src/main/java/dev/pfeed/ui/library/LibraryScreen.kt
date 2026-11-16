@@ -40,6 +40,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
 import androidx.compose.foundation.layout.Row
@@ -73,6 +77,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.flatMapLatest
 import javax.inject.Inject
 
 @HiltViewModel
@@ -91,6 +96,28 @@ class LibraryViewModel @Inject constructor(
     val historyTimes: StateFlow<Map<String, Long>> = library.times(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
     val follows: StateFlow<List<FollowEntity>> = library.followRows.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    val collections: StateFlow<List<dev.pfeed.data.repo.LibraryRepository.Collection>> =
+        library.collections.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    /** The collection being looked at in Saved, or null for all saved posts. */
+    val collection = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val collectionItems: StateFlow<List<MediaItem>> = collection
+        .flatMapLatest { name ->
+            if (name == null) kotlinx.coroutines.flow.flowOf(emptyList())
+            else kotlinx.coroutines.flow.combine(library.collectionItems(name), offline.bytes) { list, _ -> list.map(offline::withLocalThumbnail) }
+        }
+        .flowOn(kotlinx.coroutines.Dispatchers.IO)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun renameCollection(from: String, to: String) = viewModelScope.launch {
+        library.renameCollection(from, to)
+        collection.value = dev.pfeed.data.repo.LibraryRepository.cleanName(to) ?: from
+    }
+    fun deleteCollection(name: String) = viewModelScope.launch {
+        collection.value = null
+        library.deleteCollection(name)
+    }
+
     fun open(items: List<MediaItem>, index: Int, title: String) = holder.put(items, index, title = title)
     fun unfollow(row: FollowEntity) = viewModelScope.launch { library.unfollow(FollowKind.valueOf(row.kind), row.value) }
     fun clearHistory() = viewModelScope.launch { library.clearHistory() }
@@ -107,6 +134,16 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     val history by vm.history.collectAsStateWithLifecycle()
     val historyTimes by vm.historyTimes.collectAsStateWithLifecycle()
     val follows by vm.follows.collectAsStateWithLifecycle()
+    val collections by vm.collections.collectAsStateWithLifecycle()
+    val collection by vm.collection.collectAsStateWithLifecycle()
+    val collectionItems by vm.collectionItems.collectAsStateWithLifecycle()
+    var renaming by remember { mutableStateOf<String?>(null) }
+    var deleting by remember { mutableStateOf<String?>(null) }
+    // A collection that's gone (deleted elsewhere, or emptied by unsaving): back to all saved posts.
+    LaunchedEffect(collections, collection) {
+        val c = collection
+        if (c != null && collections.isNotEmpty() && collections.none { it.name == c }) vm.collection.value = null
+    }
     var finding by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     // Find in the current list: title, creator and tags.
@@ -125,6 +162,15 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                 androidx.compose.material3.Icon(if (finding) Icons.Filled.Close else Icons.Filled.Search, contentDescription = if (finding) "Close find" else "Find in library")
             }
             if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
+            val open = collection
+            if (tab == 0 && open != null) {
+                androidx.compose.material3.IconButton(onClick = { renaming = open }) {
+                    androidx.compose.material3.Icon(Icons.Filled.Edit, contentDescription = "Rename collection")
+                }
+                androidx.compose.material3.IconButton(onClick = { deleting = open }) {
+                    androidx.compose.material3.Icon(Icons.Filled.DeleteOutline, contentDescription = "Delete collection")
+                }
+            }
         }
         // Four equal tabs that always fit, even on narrow phones (a scrolling row cut "Following" off).
         LibraryTabs(tab) { tab = it }
@@ -155,7 +201,15 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
         val shuffle: (List<MediaItem>) -> () -> Unit = { list -> { nav.navigate(Routes.viewer(vm.open(list.shuffled(), 0, tabs[tab] + " · shuffled"))) } }
         when (tab) {
-            0 -> saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
+            0 -> Column {
+                if (collections.isNotEmpty() || collection != null) CollectionChips(collections, collection, saved.size) { vm.collection.value = it }
+                val open = collection
+                if (open == null) {
+                    saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
+                } else {
+                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }) }
+                }
+            }
             1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
             2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
@@ -176,6 +230,33 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
             }
         }
     }
+    renaming?.let { from ->
+        var name by remember(from) { mutableStateOf(from) }
+        AlertDialog(
+            onDismissRequest = { renaming = null },
+            properties = SecureDialog,
+            title = { Text("Rename collection") },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it.take(dev.pfeed.data.repo.LibraryRepository.MAX_COLLECTION_NAME) },
+                    singleLine = true,
+                )
+            },
+            confirmButton = { TextButton(enabled = name.isNotBlank(), onClick = { vm.renameCollection(from, name); renaming = null }) { Text("Rename") } },
+            dismissButton = { TextButton(onClick = { renaming = null }) { Text("Cancel") } },
+        )
+    }
+    deleting?.let { name ->
+        AlertDialog(
+            onDismissRequest = { deleting = null },
+            properties = SecureDialog,
+            title = { Text("Delete \"$name\"?") },
+            text = { Text("The collection goes; its posts stay in Saved.") },
+            confirmButton = { TextButton(onClick = { vm.deleteCollection(name); deleting = null }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { deleting = null }) { Text("Cancel") } },
+        )
+    }
     if (confirmClear) {
         AlertDialog(
             onDismissRequest = { confirmClear = false },
@@ -185,6 +266,36 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
             confirmButton = { TextButton(onClick = { vm.clearHistory(); confirmClear = false }) { Text("Clear") } },
             dismissButton = { TextButton(onClick = { confirmClear = false }) { Text("Cancel") } },
         )
+    }
+}
+
+/** Saved's folders: All, then each collection with its count. */
+@Composable
+private fun CollectionChips(
+    collections: List<dev.pfeed.data.repo.LibraryRepository.Collection>,
+    selected: String?,
+    savedCount: Int,
+    onSelect: (String?) -> Unit,
+) {
+    androidx.compose.foundation.lazy.LazyRow(
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+    ) {
+        item(key = "all") {
+            androidx.compose.material3.FilterChip(
+                selected = selected == null,
+                onClick = { onSelect(null) },
+                label = { Text("All · $savedCount") },
+            )
+        }
+        items(collections, key = { it.name }) { c ->
+            androidx.compose.material3.FilterChip(
+                selected = selected == c.name,
+                onClick = { onSelect(c.name) },
+                label = { Text("${c.name} · ${c.count}", maxLines = 1) },
+                leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp)) },
+            )
+        }
     }
 }
 

@@ -27,10 +27,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.PersonOff
 import androidx.compose.material.icons.filled.Tag
@@ -76,6 +78,10 @@ fun ItemMenuSheet(
     ) {
         Column(Modifier.verticalScroll(rememberScrollState()).navigationBarsPadding().padding(bottom = 8.dp)) {
             val mode = pickTag
+            if (mode == "collect") {
+                CollectionPicker(item, vm, onBack = { pickTag = null }, onDone = onDismiss)
+                return@Column
+            }
             if (mode != null) {
                 ListItem(
                     headlineContent = { Text("Hide posts tagged…", fontWeight = FontWeight.Bold) },
@@ -130,6 +136,7 @@ fun ItemMenuSheet(
             HorizontalDivider()
 
             // Save, like and follow live on the post itself; this menu is for the rest.
+            MenuRow("Add to collection…", Icons.Filled.CreateNewFolder, "Sort saved posts into your own folders") { pickTag = "collect" }
             val handsFree by HandsFree.on.collectAsState()
             MenuRow(
                 if (handsFree) "Stop hands-free" else "Hands-free",
@@ -171,4 +178,57 @@ private fun MenuRow(label: String, icon: ImageVector, supporting: String? = null
         colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
         modifier = Modifier.clickable(onClick = onClick),
     )
+}
+
+/** Tick the collections this post belongs in, or start a new one with it. */
+@Composable
+private fun CollectionPicker(item: MediaItem, vm: FeedViewModel, onBack: () -> Unit, onDone: () -> Unit) {
+    val collections by vm.collections.collectAsState()
+    val inThem by androidx.compose.runtime.produceState<Set<String>?>(initialValue = null, item.key) { value = vm.collectionsOf(item) }
+    var newName by remember { mutableStateOf("") }
+    ListItem(
+        headlineContent = { Text("Add to collection", fontWeight = FontWeight.Bold) },
+        leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
+        colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+        modifier = Modifier.clickable(onClick = onBack),
+    )
+    HorizontalDivider()
+    val current = inThem ?: return
+    collections.forEach { c ->
+        val checked = c.name in current
+        ListItem(
+            headlineContent = { Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            supportingContent = { Text(if (c.count == 1) "1 post" else "${c.count} posts") },
+            leadingContent = { Icon(Icons.Filled.Folder, contentDescription = null) },
+            trailingContent = {
+                androidx.compose.material3.Checkbox(checked = checked, onCheckedChange = null)
+            },
+            colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+            modifier = Modifier.clickable { vm.setInCollection(item, c.name, add = !checked); onDone() },
+        )
+    }
+    // A new collection, starting with this post.
+    Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        androidx.compose.material3.OutlinedTextField(
+            value = newName,
+            onValueChange = { newName = it.take(dev.pfeed.data.repo.LibraryRepository.MAX_COLLECTION_NAME) },
+            placeholder = { Text(if (collections.isEmpty()) "Name your first collection" else "New collection") },
+            singleLine = true,
+            shape = RoundedCornerShape(14.dp),
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences,
+                imeAction = androidx.compose.ui.text.input.ImeAction.Done,
+            ),
+            keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
+                if (newName.isNotBlank()) { vm.setInCollection(item, newName, add = true); onDone() }
+            }),
+            modifier = Modifier.weight(1f),
+        )
+        Spacer(Modifier.width(8.dp))
+        androidx.compose.material3.TextButton(
+            enabled = newName.isNotBlank(),
+            onClick = { vm.setInCollection(item, newName, add = true); onDone() },
+        ) { Text("Create") }
+    }
+    Spacer(Modifier.size(8.dp))
 }

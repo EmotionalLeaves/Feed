@@ -48,6 +48,25 @@ interface LibraryDao {
 
     @Query("DELETE FROM library WHERE kind = 'HISTORY'")
     suspend fun clearHistory()
+
+    // Collections are library lists too, with kind "C:<name>".
+    @Query(
+        "SELECT kind AS kind, COUNT(*) AS count, MAX(at) AS at FROM library WHERE kind LIKE 'C:%' " +
+            "GROUP BY kind ORDER BY MAX(at) DESC",
+    )
+    fun collections(): Flow<List<KindCount>>
+
+    @Query("SELECT kind FROM library WHERE itemKey = :itemKey AND kind LIKE 'C:%'")
+    suspend fun collectionsOf(itemKey: String): List<String>
+
+    @Query("DELETE FROM library WHERE itemKey = :itemKey AND kind LIKE 'C:%'")
+    suspend fun removeFromAllCollections(itemKey: String)
+
+    @Query("UPDATE OR REPLACE library SET kind = :to WHERE kind = :from")
+    suspend fun renameKind(from: String, to: String)
+
+    @Query("DELETE FROM library WHERE kind = :kind")
+    suspend fun deleteKind(kind: String)
 }
 
 @Dao
@@ -142,3 +161,6 @@ interface CredentialDao {
 
 /** When a post went into a library list. */
 data class KeyAt(val itemKey: String, val at: Long)
+
+/** A library list (a collection) with how many posts it has and when one was last added. */
+data class KindCount(val kind: String, val count: Int, val at: Long)
