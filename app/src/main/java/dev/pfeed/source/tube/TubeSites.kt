@@ -206,8 +206,12 @@ sealed class TubeSite(val host: String, val label: String) {
                 pageUrl = "https://www.$host" + unescape(href),
                 thumb = IMG.find(thumbPart)?.groupValues?.get(1)?.let(::unescape),
                 durationSec = lengthOf(under),
+                // The uploader, channel or pornstar under the tile: followable like any creator.
+                creator = NAME.find(under)?.groupValues?.get(1)?.let(::unescape)?.trim()?.takeIf { it.isNotEmpty() },
             )
         }.toList()
+
+        private val NAME = Regex("""<span class="name">([^<]+)</span>""")
 
         private val HLS = Regex("""setVideoHLS\(\s*['"]([^'"]+)['"]""")
         private val HIGH = Regex("""setVideoUrlHigh\(\s*['"]([^'"]+)['"]""")
