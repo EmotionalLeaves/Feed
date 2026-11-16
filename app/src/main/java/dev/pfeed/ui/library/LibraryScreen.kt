@@ -1,5 +1,6 @@
 package dev.pfeed.ui.library
 
+import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PlayArrow
@@ -149,9 +150,10 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
             }
         }
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
+        val shuffle: (List<MediaItem>) -> () -> Unit = { list -> { nav.navigate(Routes.viewer(vm.open(list.shuffled(), 0, tabs[tab] + " · shuffled"))) } }
         when (tab) {
-            0 -> saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline.", openGrid(l), onBrowse = toFeed) }
-            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed) }
+            0 -> saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
+            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
             2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
@@ -198,7 +200,7 @@ private fun whenWatched(at: Long?): String {
 }
 
 @Composable
-private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null) {
+private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null) {
     if (items.isEmpty()) {
         EmptyState(icon, title, hint, action = onBrowse?.let { go ->
             {
@@ -214,6 +216,9 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.weight(1f),
             )
+            if (onShuffle != null && items.size > 2) androidx.compose.material3.IconButton(onClick = onShuffle) {
+                androidx.compose.material3.Icon(Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = Color.White.copy(alpha = 0.8f))
+            }
             dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
         }
         MediaGrid(items, onOpen, sectionOf = sectionOf)
