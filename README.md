@@ -103,7 +103,7 @@ dev.pfeed
 ├── domain/            pure Kotlin, unit-tested
 │   ├── model/         MediaItem, Page, StreamInfo, FeedPrefs…
 │   ├── filter/        Blocklist
-│   └── reco/          TasteModel, Engagement, Ranker, Spread, Niche, Deduplicator, MinorsFilter
+│   └── reco/          AffinityModel + TasteModel, Engagement, Features, Ranker, Spread, Niche, Deduplicator
 ├── data/
 │   ├── db/            Room entities/DAOs, encrypted by SQLCipher
 │   ├── settings/      DataStore-backed AppSettings
