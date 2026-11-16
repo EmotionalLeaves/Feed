@@ -129,9 +129,6 @@ fun VideoPage(
         if (Display.isStillForVideo(item, s)) return@LaunchedEffect
         if (p.currentMediaItem?.mediaId != item.key) {
             firstFrame = false
-            val resumeAt = dev.pfeed.player.ResumePoints.get(item.key)
-            // Say so, with a way back to the start (only for the post actually on screen).
-            if (resumeAt != null && play) vm.offer("Carrying on from ${dev.pfeed.ui.common.formatDuration((resumeAt / 1000).toInt())}", "Start over") { p.seekTo(0) }
             p.setMediaItem(
                 ExoMediaItem.Builder()
                     .setMediaId(item.key)
@@ -185,6 +182,17 @@ fun VideoPage(
     }
 
     LaunchedEffect(player, play) { player?.playWhenReady = play }
+    // Reopened a long video partway: say where it carries on from, with a way back to the start.
+    // Once, when it's actually on screen (the next post is prepared ahead, before you get to it).
+    var offeredResume by remember(item.key) { mutableStateOf(false) }
+    LaunchedEffect(player, play) {
+        val p = player ?: return@LaunchedEffect
+        val at = dev.pfeed.player.ResumePoints.get(item.key) ?: return@LaunchedEffect
+        if (play && !offeredResume) {
+            offeredResume = true
+            vm.offer("Carrying on from ${dev.pfeed.ui.common.formatDuration((at / 1000).toInt())}", "Start over") { p.seekTo(0) }
+        }
+    }
     // A clip that hasn't shown a frame after this long while on screen is effectively dead: skip it.
     LaunchedEffect(item.key, play, firstFrame) {
         if (play && !firstFrame) {
