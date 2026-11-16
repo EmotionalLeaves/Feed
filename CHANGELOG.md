@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.42.0 — 2026-11-16
+
+Full scenes move on
+
+- A full scene (3 minutes or longer) now plays once, and when it ends the feed moves on to the next post. Short clips still loop.
+
 ## 4.41.2 — 2026-11-16
 
 Hidden tags match every spelling
