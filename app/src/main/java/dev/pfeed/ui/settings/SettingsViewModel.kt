@@ -252,6 +252,11 @@ class SettingsViewModel @Inject constructor(
 
     fun loadInterests() = viewModelScope.launch { _interests.value = signals.topInterests() }
 
+    fun addInterests(topics: List<String>) = viewModelScope.launch {
+        topics.forEach { runCatching { signals.recordInterest(it) } }
+        _interests.value = signals.topInterests()
+    }
+
     fun forgetInterest(feature: String) = viewModelScope.launch {
         signals.forget(feature)
         _interests.value = signals.topInterests()

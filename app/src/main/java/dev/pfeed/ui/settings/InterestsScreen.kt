@@ -1,5 +1,6 @@
 package dev.pfeed.ui.settings
 
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -73,6 +74,7 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     val s by vm.settings.collectAsStateWithLifecycle()
     var tuning by rememberSaveable { mutableStateOf(false) }
     var confirmReset by remember { mutableStateOf(false) }
+    var picking by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.loadInterests() }
 
     Column(Modifier.fillMaxSize()) {
@@ -93,6 +95,16 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         val sites = all.filter { it.first.startsWith(Features.ORIGIN) }
         val moreOf = likes.filterNot { Features.isMeta(it.first) }
         val lessOf = dislikes.filterNot { Features.isMeta(it.first) }
+        // Tell it directly, rather than waiting for it to notice.
+        Section {
+            SettingRow(
+                "Add topics you like",
+                subtitle = "For You starts showing more of them right away",
+                icon = Icons.Filled.Add,
+                chevron = true,
+                onClick = { picking = true },
+            )
+        }
         if (formats.isNotEmpty()) InterestSection("Formats", formats, nav, vm::forgetInterest)
         if (sites.isNotEmpty()) InterestSection("Sites", sites.sortedByDescending { it.second }, nav, vm::forgetInterest)
         if (moreOf.isNotEmpty()) InterestSection("More of", moreOf.map { Triple(it.first, it.second, true) }, nav, vm::forgetInterest)
@@ -134,6 +146,20 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     }
     }
 
+    if (picking) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { picking = false },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+        ) {
+            dev.pfeed.ui.common.TopicPicker(
+                title = "Add topics you like",
+                subtitle = "Tap the ones you want more of.",
+                onDone = { vm.addInterests(it); picking = false },
+                onSkip = { picking = false },
+                skipLabel = "Cancel",
+            )
+        }
+    }
     if (confirmReset) {
         AlertDialog(
             onDismissRequest = { confirmReset = false },
