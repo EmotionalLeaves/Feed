@@ -208,6 +208,9 @@ class SettingsViewModel @Inject constructor(
     fun setDataSaver(v: Boolean) = update { it.copy(dataSaver = v) }
     fun setBlurPreviews(v: Boolean) = update { it.copy(blurPreviews = v) }
     fun setKeepSavedOffline(v: Boolean) = update { it.copy(keepSavedOffline = v) }
+
+    /** Empties the video cache (posts watched recently play again from the network). Kept saved posts aren't touched. */
+    fun clearVideoCache() = viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { mediaCache.clear() } }
     fun setFeedType(type: String, shown: Boolean) = update { s ->
         val hidden = if (shown) s.hiddenFeedTypes - type else s.hiddenFeedTypes + type
         // Never everything off: an empty feed would just look broken.

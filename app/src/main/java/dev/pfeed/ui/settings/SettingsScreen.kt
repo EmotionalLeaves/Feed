@@ -1,5 +1,6 @@
 package dev.pfeed.ui.settings
 
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
 import dev.pfeed.ui.theme.Accent
@@ -107,6 +108,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val blocked by vm.blockEntries.collectAsStateWithLifecycle()
     val offlineBytes by vm.offlineBytes.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var dialog by remember { mutableStateOf<PendingDialog?>(null) }
     var showWhatsNew by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
@@ -206,6 +208,12 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     value = formatMb(s.cacheSizeMb),
                     icon = Icons.Filled.SdStorage,
                     onClick = { dialog = PendingDialog.PickCache },
+                    trailing = {
+                        TextButton(onClick = {
+                            vm.clearVideoCache()
+                            scope.launch { snackbar.showSnackbar("Video cache cleared") }
+                        }) { Text("Clear") }
+                    },
                 )
                 RowDivider()
                 SwitchSetting(
