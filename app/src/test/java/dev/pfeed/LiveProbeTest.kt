@@ -32,18 +32,14 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        for (site in listOf(dev.pfeed.source.comics.ComicSite.HENTAIERA, dev.pfeed.source.comics.ComicSite.HENTAIROX)) {
-            for (term in listOf("", "milf")) probe("${site.host} '$term'") {
-                val (code, b) = get(site.listUrl(term, 1))
-                val l = dev.pfeed.source.comics.ComicSite.parseList(site, b)
-                "$code n=${l.size} titles=${l.count { it.title != null }} first=${l.firstOrNull()}" + if (l.isEmpty()) " :: " + around(b, "/gallery/", 200, 500) else ""
-            }
-            probe("${site.host} gallery") {
-                val l = dev.pfeed.source.comics.ComicSite.parseList(site, get(site.listUrl("", 1)).second).first()
-                val (code, html) = get(site.galleryUrl(l.id))
-                val g = dev.pfeed.source.comics.ComicSite.gallery(site, l, html)
-                "$code pages=${g?.pages?.size} tags=${g?.tags?.take(8)} first=${g?.pages?.firstOrNull()} head=${g?.pages?.firstOrNull()?.let { head(it) }}" + if (g == null) " :: " + around(html, "load_", 100, 400) + " || " + around(html, "Tags", 0, 400) else ""
-            }
+        for (host in listOf("hentaiera.com", "hentairox.com")) probe("$host gallery") {
+            val id = Regex("""href="/gallery/(\d+)/"""").find(get("https://$host/").second)!!.groupValues[1]
+            val (code, html) = get("https://$host/gallery/$id/")
+            val hidden = Regex("""<input[^>]*type="hidden"[^>]*>""").findAll(html).map { it.value }.toList()
+            val imgs = Regex("""https://m\d+\.$host/[^"' ]+""").findAll(html).map { it.value }.distinct().take(6).toList()
+            val tagLinks = Regex("""href="(/tag/[^"]+)"""").findAll(html).map { it.groupValues[1] }.distinct().take(10).toList()
+            val tagIdx = html.indexOf("Tags")
+            "$code len=${html.length} hidden=$hidden imgs=$imgs tagLinks=$tagLinks :: " + (if (tagIdx >= 0) html.substring(tagIdx, minOf(html.length, tagIdx + 500)) else "<no Tags>") + " || " + around(html, "parseJSON", 0, 200) + " || " + around(html, "/1t.", 300, 100)
         }
     }
 }
