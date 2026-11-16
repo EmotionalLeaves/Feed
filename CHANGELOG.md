@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.3 — 2026-11-16
+
+xHamster creators
+
+- xHamster videos now show their creator, channel or pornstar, which you can tap and follow like any other creator. They also carry their real upload date.
+
 ## 4.43.2 — 2026-11-16
 
 Switch comic sites on and off
