@@ -1,0 +1,4 @@
+# Compile all of the app's own code ahead of time at install (with the profile installer, also for
+# sideloaded installs): the feed, player, sources and ranking all run on the first screen.
+HSPLdev/pfeed/**;->**(**)**
+Ldev/pfeed/**;
