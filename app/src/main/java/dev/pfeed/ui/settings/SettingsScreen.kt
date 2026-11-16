@@ -1,5 +1,7 @@
 package dev.pfeed.ui.settings
 
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.clickable
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -102,6 +104,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     val offlineBytes by vm.offlineBytes.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     var dialog by remember { mutableStateOf<PendingDialog?>(null) }
+    var showWhatsNew by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
@@ -292,16 +295,39 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             Text(
-                "Feed ${BuildConfig.VERSION_NAME}",
+                "Feed ${BuildConfig.VERSION_NAME} · What's new",
                 style = MaterialTheme.typography.labelSmall,
                 color = TextLow,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 8.dp).clickable { showWhatsNew = true }.padding(vertical = 6.dp),
             )
             Spacer(Modifier.height(24.dp))
         }
     }
         dev.pfeed.ui.common.AppSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+    }
+
+    if (showWhatsNew) {
+        val assets = androidx.compose.ui.platform.LocalContext.current.assets
+        val notes = remember { runCatching { assets.open("whats_new.md").bufferedReader().readText() }.getOrDefault("") }
+        AlertDialog(
+            onDismissRequest = { showWhatsNew = false },
+            properties = dev.pfeed.ui.common.SecureDialog,
+            title = { Text("What's new") },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    notes.lines().forEach { line ->
+                        when {
+                            line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                            line.startsWith("- ") -> Text("• " + line.removePrefix("- ").replace("**", ""), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
+                            line.isBlank() -> {}
+                            else -> Text(line.replace("**", ""), style = MaterialTheme.typography.bodySmall, color = TextMid)
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton(onClick = { showWhatsNew = false }) { Text("Done") } },
+        )
     }
 
     when (val d = dialog) {
