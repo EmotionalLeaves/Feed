@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.45.3 — 2026-11-16
+
+Clear the video cache
+
+- **Settings → Storage → Video cache → Clear** empties the cache of recently watched videos. Saved posts kept offline aren't touched.
+
 ## 4.45.2 — 2026-11-16
 
 App code compiled ahead of time
