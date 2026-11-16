@@ -384,6 +384,18 @@ class SmokeTest {
             Thread.sleep(800)
             shot("09_lock")
             runBlocking { lm.unlockWithPin("1234".toCharArray()); lm.disable("1234".toCharArray()) }
+            // The first-run topic picker, as a new install sees it.
+            rule.activity.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE).edit().remove("interests_asked").commit()
+            dev.pfeed.ui.feed.FirstRun.askInterests = true
+            try {
+                rule.onNode(hasText("Feed") and androidx.compose.ui.test.isSelectable()).performClick()
+                waitFor(what = "topic picker") { exists("What are you into?") }
+                tap("milf"); tap("cosplay")
+                shot("10_interests")
+                tap("Skip")
+            } finally {
+                dev.pfeed.ui.feed.FirstRun.askInterests = false
+            }
         } finally {
             rule.runOnUiThread { rule.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
             dev.pfeed.ui.common.MaskMedia.on = false
