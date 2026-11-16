@@ -413,6 +413,10 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
             coil.request.ImageRequest.Builder(context)
                 .data(if (zoomed) full else url)
                 .apply { if (zoomed) placeholderMemoryCacheKey(url) }
+                // Never decode beyond 2048 × 8192: a very long strip at full size would be a bitmap
+                // too large to draw (Android refuses anything over ~100 MB) and crash the feed.
+                .size(MAX_DECODE_W, MAX_DECODE_H)
+                .precision(coil.size.Precision.INEXACT)
                 .build()
         }
         // A tall page (a long comic page, a strip) at normal size scrolls down: read it top to bottom,
@@ -563,6 +567,9 @@ fun HeartBurst(position: Offset?, tick: Int) {
         )
     }
 }
+
+private const val MAX_DECODE_W = 2048
+private const val MAX_DECODE_H = 8192
 
 /** On screen this long without a single frame: treat as dead and move on. */
 private const val STALL_TIMEOUT_MS = 12_000L
