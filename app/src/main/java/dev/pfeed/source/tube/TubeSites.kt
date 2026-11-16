@@ -70,7 +70,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid) }
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { site ->
             (listOf(site.host) + site.mirrors).any { host == it || host.endsWith(".$it") }
         }
@@ -629,6 +629,46 @@ sealed class TubeSite(val host: String, val label: String) {
             Regex("""\b${m.groupValues[1]}_text:\s*'(\d+)p""").find(pageHtml)?.groupValues?.get(1)?.toIntOrNull()?.let { it to m.groupValues[2] }
         }.toList())
         override fun embedUrl(id: String) = "https://rule34video.com/embed/$id"
+    }
+
+    /** ThisVid: amateur and home-made (KVS engine; its files carry a short-lived access token, fetched per play). */
+    object ThisVid : TubeSite("thisvid.com", "ThisVid") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://thisvid.com/latest-updates/${page + 1}/"
+            "top" -> "https://thisvid.com/most-popular/${page + 1}/"
+            else -> "https://thisvid.com/search/${page + 1}/?q=${enc(section)}"
+        }
+        private val MARK = Regex("""<a\b[^>]*\bhref="https://thisvid\.com/videos/([^/"]+)/"""")
+        private val TITLE = Regex("""\btitle="([^"]+)"""")
+        private val TITLE_SPAN = Regex("""class="title"[^>]*>([^<]+)<""")
+        private val IMG = Regex("""(?:data-original|data-src|src)="((?:https:)?//[^"]+videos_screenshots[^"]+\.jpg)"""")
+        private val DUR = Regex("""class="duration"[^>]*>\s*([\d:]+)""")
+        private val URLS = Regex("""\b(video(?:_alt)?_url\d*):\s*'(https://[^']+)'""")
+        private val FLASH_LIST = Regex("""\bvideo_(?:tags|categories):\s*'([^']*)'""")
+
+        override val checkTagsFirst = true
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (slug, c) ->
+            // Private videos (friends only) can't be played: their tiles say so.
+            if (c.substringBefore("</a>").contains("private", ignoreCase = true)) return@mapNotNull null
+            val title = (TITLE.find(c.substringBefore('>'))?.groupValues?.get(1) ?: TITLE_SPAN.find(c)?.groupValues?.get(1))?.let(::unescape)?.trim()
+            val thumb = IMG.find(c)?.groupValues?.get(1)?.let { if (it.startsWith("//")) "https:$it" else it }
+            TubeVideo(slug, title, "https://thisvid.com/videos/$slug/", thumb, duration(DUR.find(c)?.groupValues?.get(1)))
+        }.distinctBy { it.id }
+
+        override fun pageTags(pageHtml: String): List<String> =
+            FLASH_LIST.findAll(pageHtml).flatMap { it.groupValues[1].split(',') }.map { it.trim().lowercase().replace(' ', '_') }.filter { it.isNotEmpty() }.distinct().toList()
+
+        override fun stream(pageHtml: String): TubeStream? {
+            val found = URLS.findAll(pageHtml).map { m ->
+                val q = Regex("""\b${m.groupValues[1]}_text:\s*'(\d+)p""").find(pageHtml)?.groupValues?.get(1)?.toIntOrNull()
+                    ?: Regex("""_(\d{3,4})p\.mp4""").find(m.groupValues[2])?.groupValues?.get(1)?.toIntOrNull()
+                    ?: 480 // the unlabelled main file
+                q to m.groupValues[2]
+            }.toList()
+            return best(found)
+        }
+        override fun embedUrl(id: String) = "https://thisvid.com/embed/$id/"
     }
 
     // ── Eporner (official API; plays its MP4s via the embed page's hash) ───
