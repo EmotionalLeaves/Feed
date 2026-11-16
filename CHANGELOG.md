@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.45.4 — 2026-11-16
+
+Add topics shows only new ones
+
+- Settings → Interests → Add topics no longer offers topics the app already knows you like.
+
 ## 4.45.3 — 2026-11-16
 
 Clear the video cache
