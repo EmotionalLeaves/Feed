@@ -321,7 +321,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                             line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
                             line.startsWith("- ") -> Text("• " + line.removePrefix("- ").replace("**", ""), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
                             line.isBlank() -> {}
-                            else -> Text(line.replace("**", ""), style = MaterialTheme.typography.bodySmall, color = TextMid)
+                            else -> Text(line.replace("**", ""), style = MaterialTheme.typography.bodySmall, color = dev.pfeed.ui.theme.TextMid)
                         }
                     }
                 }
