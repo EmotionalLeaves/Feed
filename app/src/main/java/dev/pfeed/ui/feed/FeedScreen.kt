@@ -497,6 +497,8 @@ private fun FeedPage(
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
     var speeding by remember(item.key) { mutableStateOf(false) }
+    /** Which edge was just double-tapped to skip (−1 back, 1 ahead), and when: shows a brief "10 s" badge. */
+    var seekFlash by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
     // What the post really is once its file is known: a board/Reddit post listed as an image can turn
     // out to be an MP4/WebM, which must play as a video (drawn as an image it froze on one frame).
     val stream by produceState<dev.pfeed.domain.model.StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
@@ -509,10 +511,25 @@ private fun FeedPage(
     Box(
         Modifier
             .fillMaxSize()
-            .pointerInput(item.key) {
+            .pointerInput(item.key, landscape, isVideo) {
                 detectTapGestures(
                     onTap = { paused = !paused },
                     onDoubleTap = { offset ->
+                        // Sideways, watching a video: double-tap the left or right edge to skip 10 s,
+                        // as in video players. The middle (and everything upright) is a like.
+                        val p = player
+                        val edge = when {
+                            offset.x < size.width * 0.3f -> -1
+                            offset.x > size.width * 0.7f -> 1
+                            else -> 0
+                        }
+                        if (landscape && isVideo && p != null && edge != 0) {
+                            val to = (p.currentPosition + edge * SEEK_STEP_MS).coerceIn(0L, (p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE))
+                            p.seekTo(to)
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            seekFlash = edge to System.currentTimeMillis()
+                            return@detectTapGestures
+                        }
                         heartAt = offset
                         heartTick++
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -563,6 +580,16 @@ private fun FeedPage(
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(Icons.Filled.PlayArrow, contentDescription = "Paused", tint = Color.White, modifier = Modifier.size(56.dp))
+            }
+        }
+        seekFlash?.let { (edge, at) ->
+            LaunchedEffect(at) { kotlinx.coroutines.delay(650); if (seekFlash?.second == at) seekFlash = null }
+            Surface(
+                color = Color.Black.copy(alpha = 0.55f),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.align(if (edge < 0) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 48.dp),
+            ) {
+                Text(if (edge < 0) "◀◀  10 s" else "10 s  ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             }
         }
         if (speeding) {
@@ -846,6 +873,8 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
     }
 }
 
+
+private const val SEEK_STEP_MS = 10_000L
 
 /** Turned off by the instrumented tests, which need the feed itself on screen. */
 object FirstRun {
