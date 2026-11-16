@@ -1,3 +1,8 @@
+## 4.44.1 — 2026-11-16
+Sort search results
+
+- Search filters (the sliders icon) have an **Order** choice: best match, longest first (full scenes), or shortest first (quick clips).
+
 ## 4.44.0 — 2026-11-16
 Choose what the feed shows
 
@@ -7,8 +12,3 @@ Choose what the feed shows
 Smoother with many saved posts
 
 - Checks for kept offline copies no longer touch the disk on the main thread (the Saved grid, opening a post, the post menu). With many saved posts, the app stays smooth.
-
-## 4.43.9 — 2026-11-16
-RedGIFs creator pages
-
-- A RedGIFs creator's page now starts with their own clips (fetched from their profile), not just clips that mention their name.

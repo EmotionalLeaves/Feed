@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.44.1 — 2026-11-16
+
+Sort search results
+
+- Search filters (the sliders icon) have an **Order** choice: best match, longest first (full scenes), or shortest first (quick clips).
+
 ## 4.44.0 — 2026-11-16
 
 Choose what the feed shows
