@@ -33,7 +33,9 @@ class MediaHealth @Inject constructor() {
     private fun note(event: String) { recent.addLast(event); while (recent.size > 40) recent.pollFirst() }
 
     fun shown(item: MediaItem) {
-        shownCount.incrementAndGet()
+        val n = shownCount.incrementAndGet()
+        // On the test emulator only (never on a phone): a count CI can read from the optimized build.
+        if (ON_EMULATOR && (n == 1 || n % 10 == 0)) android.util.Log.i("PFHEALTH", "app: $n posts shown")
         note("shown ${Spread.origin(item)} ${item.type}")
         val o = Spread.origin(item)
         lastSuccessAt = now()
@@ -79,3 +81,6 @@ class MediaHealth @Inject constructor() {
         const val REST_MS = 10 * 60_000L
     }
 }
+
+/** The CI emulator ("ranchu"/"goldfish" hardware). Real phones never match. */
+private val ON_EMULATOR: Boolean = android.os.Build.HARDWARE.let { it == "ranchu" || it == "goldfish" }
