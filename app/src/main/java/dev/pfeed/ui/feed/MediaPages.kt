@@ -95,6 +95,8 @@ fun VideoPage(
     muted: Boolean,
     vm: FeedViewModel,
     onPlayer: (androidx.media3.exoplayer.ExoPlayer?) -> Unit = {},
+    /** A full scene (3 min or longer) reached its end: move on rather than loop it. */
+    onEnded: () -> Unit = {},
     /** When true, this page gives up the player's video surface (the fullscreen view has it). */
     detached: Boolean = false,
 ) {
@@ -152,7 +154,17 @@ fun VideoPage(
                 if (reason == Player.DISCONTINUITY_REASON_AUTO_TRANSITION && stats.durationMs >= MIN_LOOP_AS_REPLAY_MS) stats.replays++
             }
             override fun onPlaybackStateChanged(state: Int) {
-                if (state == Player.STATE_READY && p != null && p.duration > 0) stats.durationMs = p.duration
+                if (state == Player.STATE_READY && p != null && p.duration > 0) {
+                    stats.durationMs = p.duration
+                    // Clips loop (as in any short-video feed); a full scene plays once and then the
+                    // feed moves on, instead of starting it over.
+                    val wanted = if (p.duration >= AUTO_NEXT_MIN_MS) Player.REPEAT_MODE_OFF else Player.REPEAT_MODE_ONE
+                    if (p.repeatMode != wanted) p.repeatMode = wanted
+                }
+                if (state == Player.STATE_ENDED && p != null && p.repeatMode == Player.REPEAT_MODE_OFF) {
+                    p.repeatMode = Player.REPEAT_MODE_ONE // the pooled player loops again for the next post
+                    onEnded()
+                }
             }
             override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item, "player: ${e.errorCodeName} ${e.cause?.message?.take(80).orEmpty()}") }
             // Headphones unplugged: the player paused itself so nothing played on the speaker.
@@ -568,6 +580,7 @@ fun HeartBurst(position: Offset?, tick: Int) {
     }
 }
 
+private const val AUTO_NEXT_MIN_MS = 3 * 60_000L
 private const val MAX_DECODE_W = 2048
 private const val MAX_DECODE_H = 8192
 

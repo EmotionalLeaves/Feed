@@ -1,5 +1,7 @@
 package dev.pfeed.ui.feed
 
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.draw.drawWithContent
@@ -132,6 +134,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val active = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !locked
 
     val pagerState = rememberPagerState(initialPage = vm.startIndex) { items.size }
+    val pagerScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
 
@@ -204,6 +207,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     onMenu = { menuFor = item },
                     landscape = landscape,
                     onLandscape = vm::setLandscape,
+                    // A full scene finished: on to the next post.
+                    onEnded = { if (page == pagerState.settledPage && page + 1 < items.size) pagerScope.launch { pagerState.animateScrollToPage(page + 1) } },
                 )
             }
             }
@@ -490,6 +495,7 @@ private fun FeedPage(
     onMenu: () -> Unit,
     landscape: Boolean,
     onLandscape: (Boolean) -> Unit,
+    onEnded: () -> Unit = {},
 ) {
     var paused by remember(item.key) { mutableStateOf(!vm.autoplayAllowed()) }
     val haptic = LocalHapticFeedback.current
@@ -558,7 +564,7 @@ private fun FeedPage(
             },
     ) {
         when (type) {
-            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it })
+            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, onEnded = onEnded)
             MediaType.IMAGE, MediaType.GIF -> if (item.isGallery) GalleryPage(item, vm) else ImagePage(item, vm)
             MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
         }
