@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.34.1 — 2026-11-15
+
+Offline copies on mobile data
+
+- Saved pictures and comics are now kept on your phone over mobile data too. Only videos wait for Wi-Fi.
+- README rewritten to match the app as it is now: sources, how For You learns, privacy features and tests.
+
 ## 4.34.0 — 2026-11-15
 
 Follow suggestions
