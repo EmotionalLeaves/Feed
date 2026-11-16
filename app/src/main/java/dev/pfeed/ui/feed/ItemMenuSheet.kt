@@ -136,12 +136,7 @@ fun ItemMenuSheet(
             HorizontalDivider(Modifier.padding(vertical = 4.dp))
             MenuRow("Open on $source", Icons.AutoMirrored.Filled.OpenInNew) { openExternal(context, item.pageUrl); onDismiss() }
             if (item.pageUrl.isNotBlank()) MenuRow("Copy link", Icons.Filled.Link) {
-                val cm = context.getSystemService(android.content.ClipboardManager::class.java)
-                val clip = android.content.ClipData.newPlainText("Link", item.pageUrl)
-                // Marked sensitive: Android 13+ doesn't show the link in its clipboard preview.
-                clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
-                cm?.setPrimaryClip(clip)
-                if (android.os.Build.VERSION.SDK_INT < 33) android.widget.Toast.makeText(context, "Link copied", android.widget.Toast.LENGTH_SHORT).show()
+                dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
                 onDismiss()
             }
             val report = vm.reportUrl(item)

@@ -1,6 +1,6 @@
 package dev.pfeed.ui.search
 
-import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import dev.pfeed.ui.feed.Display
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -518,7 +518,7 @@ private fun ContinueCard(item: MediaItem, onClick: () -> Unit) {
             )
             dev.pfeed.ui.common.MediaMask()
             Box(Modifier.align(Alignment.Center).size(38.dp).background(Color.Black.copy(alpha = 0.5f), androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                Icon(if (page != null) Icons.Filled.MenuBook else Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
+                Icon(if (page != null) Icons.AutoMirrored.Filled.MenuBook else Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
             if (total > 0) {
                 Text(

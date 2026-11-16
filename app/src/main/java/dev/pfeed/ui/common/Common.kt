@@ -191,3 +191,12 @@ fun MediaMask(modifier: Modifier = Modifier) {
 /** Blur grid previews (Settings → Privacy). Provided at the top of the app from settings. */
 val LocalBlurPreviews = androidx.compose.runtime.staticCompositionLocalOf { false }
 
+
+/** Copies [text]; marked sensitive, so Android 13+ doesn't show it in the clipboard preview. */
+fun copySensitive(context: Context, label: String, text: String) {
+    val cm = context.getSystemService(android.content.ClipboardManager::class.java) ?: return
+    val clip = android.content.ClipData.newPlainText(label, text)
+    clip.description.extras = android.os.PersistableBundle().apply { putBoolean("android.content.extra.IS_SENSITIVE", true) }
+    cm.setPrimaryClip(clip)
+    if (android.os.Build.VERSION.SDK_INT < 33) Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
+}

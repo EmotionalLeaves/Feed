@@ -72,7 +72,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -268,7 +267,7 @@ private fun HealthCard(
     onCheck: () -> Unit,
     onRetrySkipped: () -> Unit,
 ) {
-    val clipboard = LocalClipboardManager.current
+    val clipContext = androidx.compose.ui.platform.LocalContext.current
     val running = checks.isNotEmpty() && checks.values.any { it == null }
     val done = checks.isNotEmpty() && !running
     val working = checks.values.count { it?.ok == true }
@@ -313,7 +312,7 @@ private fun HealthCard(
                             val r = checks[src.adapter.id]
                             "${if (r?.ok == true) "OK  " else "FAIL"} ${src.adapter.displayName}: ${r?.detail}"
                         }
-                        clipboard.setText(AnnotatedString(report))
+                        dev.pfeed.ui.common.copySensitive(clipContext, "Source report", report)
                     }) { Text("Copy report") }
                 }
             }

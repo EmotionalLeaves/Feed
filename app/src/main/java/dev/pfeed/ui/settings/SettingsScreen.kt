@@ -275,7 +275,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             val context = androidx.compose.ui.platform.LocalContext.current
-            val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
+            val clipContext = androidx.compose.ui.platform.LocalContext.current
             var crash by remember { mutableStateOf(dev.pfeed.CrashLog.read(context)) }
             Section("Help", footer = if (crash != null) "The app closed unexpectedly last time. The report has the app and Android versions and where it failed, nothing you were viewing." else null) {
                 SettingRow("Gestures", subtitle = "Everything you can do on a post", icon = Icons.Filled.TouchApp, iconTint = TextLow, chevron = true, onClick = { dialog = PendingDialog.Gestures })
@@ -285,7 +285,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         "Copy crash report",
                         icon = Icons.Filled.BugReport,
                         iconTint = dev.pfeed.ui.theme.Bad,
-                        onClick = { clipboard.setText(androidx.compose.ui.text.AnnotatedString(crash!!)) },
+                        onClick = { dev.pfeed.ui.common.copySensitive(clipContext, "Crash report", crash!!) },
                         trailing = { TextButton(onClick = { dev.pfeed.CrashLog.clear(context); crash = null }) { Text("Clear") } },
                     )
                 }
