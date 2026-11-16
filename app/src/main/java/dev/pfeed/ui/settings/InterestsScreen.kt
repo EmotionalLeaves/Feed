@@ -227,16 +227,19 @@ private fun InterestRow(feature: String, score: Double, positive: Boolean, onFor
         Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-        Spacer(Modifier.width(12.dp))
-        Box(
-            Modifier.width(110.dp).height(6.dp).clip(RoundedCornerShape(3.dp))
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
-        ) {
+        // The label gets the full width (it was cut off beside the bar); the strength sits under it.
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+            Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+            Spacer(Modifier.height(6.dp))
             Box(
-                Modifier.fillMaxHeight().fillMaxWidth(strength).clip(RoundedCornerShape(3.dp))
-                    .background(if (positive) Accent else Bad),
-            )
+                Modifier.fillMaxWidth(0.85f).height(4.dp).clip(RoundedCornerShape(2.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+            ) {
+                Box(
+                    Modifier.fillMaxHeight().fillMaxWidth(strength).clip(RoundedCornerShape(2.dp))
+                        .then(if (positive) Modifier.background(dev.pfeed.ui.theme.BrandGradient) else Modifier.background(Bad)),
+                )
+            }
         }
         androidx.compose.material3.IconButton(onClick = onForget) {
             Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Forget", tint = TextLow, modifier = Modifier.size(18.dp))
