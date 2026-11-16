@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.5 — 2026-11-16
+
+Typeahead knows your follows
+
+- As you type in Search, suggestions now include the creators and tags you follow.
+
 ## 4.43.4 — 2026-11-16
 
 XVideos and XNXX creators
