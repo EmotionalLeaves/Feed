@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.36.4 — 2026-11-16
+
+Volume up unmutes
+
+- Pressing volume up while the feed is muted turns the sound on, as in other video apps.
+- PornOne: listing parsing loosened to match more of its page layouts.
+
 ## 4.36.3 — 2026-11-16
 
 Topic picker only for new installs
