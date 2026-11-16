@@ -46,7 +46,7 @@ class ComicSitesTest {
         val l = ComicSite.parseList(ComicSite.IMHENTAI, listing)[0]
         val bad = ComicSite.gallery(ComicSite.IMHENTAI, l, gallery.replace("/tag/milf/", "/tag/shotacon/"))!!
         assertFalse(MinorsFilter.allows(bad))
-        assertEquals(null, ComicSite.gallery(ComicSite.IMHENTAI, l, gallery.replace("Tags:", "Other:")))
+        assertEquals(null, ComicSite.gallery(ComicSite.IMHENTAI, l, gallery.replace("/tag/", "/nottag/")))
     }
 
     @Test

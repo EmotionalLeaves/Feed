@@ -111,14 +111,13 @@ class ComicSite private constructor(
         val IMHENTAI = ComicSite("imhentai.xxx", "IMHentai", "https://imhentai.xxx/", "https://imhentai.xxx/search/?key=")
         val HENTAIFOX = ComicSite("hentaifox.com", "HentaiFox", "https://hentaifox.com/", "https://hentaifox.com/search/?q=")
         val HENTAIERA = ComicSite("hentaiera.com", "HentaiEra", "https://hentaiera.com/", "https://hentaiera.com/search/?key=")
-        val HENTAIROX = ComicSite("hentairox.com", "HentaiRox", "https://hentairox.com/", "https://hentairox.com/search/?q=")
-        val ALL = listOf(IMHENTAI, HENTAIFOX, HENTAIERA, HENTAIROX)
+        val ALL = listOf(IMHENTAI, HENTAIFOX, HENTAIERA)
         private val EIGHT_MUSES_LABEL = ComicSite(EightMuses.HOST, "8muses", "", "")
         fun byHost(host: String) = (ALL + EIGHT_MUSES_LABEL).firstOrNull { host == it.host || host.endsWith("." + it.host) }
 
         private val GALLERY_LINK = Regex("""<a href="/gallery/(\d+)/">(?!<img)([^<]*)</a>""")
         private val THUMB = Regex("""<a href="/gallery/(\d+)/"><img[^>]*\bdata-src="(https://[^"]+/thumb\.[a-z]+)"""")
-        /** HentaiRox's cards: <a class="…cover" href="/gallery/1/" aria-label="…"> <img src="…/thumb.jpg"> */
+        /** Card layouts: <a class="…cover" href="/gallery/1/" aria-label="…"> <img src="…/thumb.jpg"> */
         private val THUMB_CARD = Regex("""href="/gallery/(\d+)/"[^>]*>\s*<img[^>]*\bsrc="(https://[^"]+/thumb\.[a-z]+)"""")
         private val HIDDEN = Regex("""id="(load_server|load_dir|load_id|load_pages)" value="([^"]*)"""")
         private val PAGE_TYPES = Regex("""g_th\s*=\s*\$\.parseJSON\('(\{.*?\})'\)""")
@@ -140,7 +139,6 @@ class ComicSite private constructor(
         fun gallery(site: ComicSite, l: Listed, html: String): MediaItem? {
             val fields = HIDDEN.findAll(html).associate { it.groupValues[1] to it.groupValues[2] }
             // The thumbnail is on the gallery's own image server: https://m11.imhentai.xxx/033/abc/thumb.jpg
-            // (HentaiRox has no hidden fields: the thumbnail's folder is all there is, and is enough.)
             val base = l.thumb?.substringBeforeLast('/')
                 ?: fields["load_server"]?.let { srv -> fields["load_dir"]?.let { d -> fields["load_id"]?.let { "https://m$srv.${site.host}/$d/$it" } } }
                 ?: return null
