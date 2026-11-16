@@ -32,14 +32,10 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        probe("multporn") {
-            val (code, b) = get("https://multporn.net/comics/latest_updates")
-            val links = Regex("""href="(/comics/[a-z0-9_]+)"""").findAll(b).map { it.groupValues[1] }.distinct().toList()
-            val first = links.firstOrNull { it.count { c -> c == '_' } >= 1 } ?: links.first()
-            val (gc, g) = get("https://multporn.net$first")
-            val imgs = Regex("""(https://multporn\.net/sites/default/files/comics/[^"' ?]+)""").findAll(g).map { it.value }.distinct().toList()
-            val tags = Regex("""href="(/(?:category|characters|tags?|section)/[^"]+)"""").findAll(g).map { it.groupValues[1] }.distinct().take(15).toList()
-            "$code links=${links.size} sample=${links.take(8)} gallery=$first $gc imgs=${imgs.size} ${imgs.take(3)} tags=$tags :: " + around(g, "jb-image", 0, 300) + " || " + around(b, first, 400, 300)
+        for (u in listOf("https://multporn.net/comics/latest_updates", "https://multporn.net/new")) probe(u) {
+            val (code, b) = get(u)
+            val hrefs = Regex("""href="([^"]+)"""").findAll(b).map { it.groupValues[1] }.filter { it.startsWith("/") && !it.contains("?") }.distinct().toList()
+            "$code len=${b.length} hrefs=${hrefs.size} ${hrefs.drop(20).take(40)} :: " + around(b, "views-row", 0, 900)
         }
     }
 }
