@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.42.4 — 2026-11-16
+
+Storage section
+
+- Settings has its own **Storage** section: the video cache and offline copies of saved posts (with the space they take).
+
 ## 4.42.3 — 2026-11-16
 
 Picture rows from day one
