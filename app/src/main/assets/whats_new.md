@@ -1,3 +1,8 @@
+## 4.41.1 — 2026-11-16
+One taste, many spellings
+
+- For You treats different sites' words for the same thing as one interest: a like on a board's "large breasts" also brings more "big tits" videos, "fellatio" counts as "blowjob", and so on. Searching and hiding tags use the same matching.
+
 ## 4.41.0 — 2026-11-16
 What's new, in the app
 
@@ -7,8 +12,3 @@ What's new, in the app
 History by day
 
 - History is grouped under **Today**, **Yesterday**, **This week** and **Earlier**.
-
-## 4.40.0 — 2026-11-16
-Export to Downloads
-
-- **Export to Downloads** (post menu): a saved post that's already kept on your phone can be copied into your phone's Downloads folder, where your gallery and other apps can see it. Only when you ask: nothing leaves the app's private storage otherwise. Android 10+. Streamed videos (HLS) can't be exported.
