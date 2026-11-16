@@ -1,3 +1,8 @@
+## 4.43.6 — 2026-11-16
+Crash fix for huge images
+
+- Fixed a crash: a very large image (a long strip or a huge original) could become a picture too big for Android to draw, which closed the app. Every image is now sized safely, wherever it appears.
+
 ## 4.43.5 — 2026-11-16
 Typeahead knows your follows
 
@@ -7,8 +12,3 @@ Typeahead knows your follows
 XVideos and XNXX creators
 
 - XVideos and XNXX videos now show their uploader or pornstar, which you can tap and follow like any creator.
-
-## 4.43.3 — 2026-11-16
-xHamster creators
-
-- xHamster videos now show their creator, channel or pornstar, which you can tap and follow like any other creator. They also carry their real upload date.
