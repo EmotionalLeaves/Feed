@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.34.0 — 2026-11-15
+
+Follow suggestions
+
+- After you like or save a second post by the same creator in a session, the app offers to follow them, with a one-tap Follow. It's offered once per creator and never for someone you already follow.
+
 ## 4.33.1 — 2026-11-15
 
 HentaiRox comics
