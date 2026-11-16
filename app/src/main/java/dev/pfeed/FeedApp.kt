@@ -58,13 +58,14 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
 }
 
 /**
- * Every image, however it's requested (feed, thumbnails, warming the cache), decodes to at most
- * 2048 × 8192 pixels. A huge original requested at its own size became a bitmap Android refuses to
- * draw (over ~100 MB), which crashed the app ("Canvas: trying to draw too large bitmap").
+ * Every image, however it's requested (feed, thumbnails, warming the cache), is asked for at most
+ * 1280 × 4096 pixels. Decoding may come out up to twice that each way (it samples by powers of two),
+ * so the largest possible bitmap stays near 80 MB, under the ~100 MB Android will draw. A huge
+ * original asked for at 2048 × 8192 came out at 140 MB and crashed the feed.
  */
 private object MaxSizeInterceptor : coil.intercept.Interceptor {
-    private const val MAX_W = 2048
-    private const val MAX_H = 8192
+    private const val MAX_W = 1280
+    private const val MAX_H = 4096
 
     override suspend fun intercept(chain: coil.intercept.Interceptor.Chain): coil.request.ImageResult {
         val s = chain.size
