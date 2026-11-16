@@ -1,5 +1,6 @@
 package dev.pfeed.ui.library
 
+import kotlinx.coroutines.flow.flowOn
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
@@ -82,6 +83,8 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
     /** Saved posts, with thumbnails from the kept copies once they're downloaded (so Saved works offline). */
     val saved: StateFlow<List<MediaItem>> = kotlinx.coroutines.flow.combine(library.items(LibraryKind.SAVED), offline.bytes) { list, _ -> list.map(offline::withLocalThumbnail) }
+        // Checks files on disk for every post: off the main thread.
+        .flowOn(kotlinx.coroutines.Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val liked: StateFlow<List<MediaItem>> = library.items(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val history: StateFlow<List<MediaItem>> = library.items(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

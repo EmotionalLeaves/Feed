@@ -289,7 +289,8 @@ class FeedViewModel @Inject constructor(
     private fun streamAsync(item: MediaItem): Deferred<StreamInfo?> = streams.getOrPut(item.key) {
         viewModelScope.async {
             // A saved post kept on the phone plays from there: instant, and works offline.
-            offline.local(item.key)?.let { return@async it }
+            // (Looked up on the IO pool: the first lookup lists the folder of kept files.)
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { offline.local(item.key) }?.let { return@async it }
             val resolved: StreamInfo? = try {
                 registry.byId(item.sourceId)?.resolveStream(item)
             } catch (e: CancellationException) {
@@ -466,7 +467,7 @@ class FeedViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Whether [item] is kept on the phone as a file that can be exported (not a stream). */
-    fun canExport(item: MediaItem): Boolean = android.os.Build.VERSION.SDK_INT >= 29 && !item.isGallery && offline.localFile(item.key) != null
+    fun canExport(item: MediaItem): Boolean = android.os.Build.VERSION.SDK_INT >= 29 && !item.isGallery && offline.localFileCached(item.key)
 
     fun exportToDownloads(item: MediaItem) {
         viewModelScope.launch {

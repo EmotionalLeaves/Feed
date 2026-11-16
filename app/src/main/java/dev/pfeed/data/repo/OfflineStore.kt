@@ -64,9 +64,11 @@ class OfflineStore @Inject constructor(
     /** Name hashes of everything currently saved: a download that finishes after its post was unsaved is thrown away. */
     @Volatile private var wantedHashes: Set<String> = emptySet()
 
+    @Volatile private var indexReady = false
+
     /** name hash → finished file. */
     private val index: ConcurrentHashMap<String, File> by lazy {
-        ConcurrentHashMap<String, File>().also { map ->
+        ConcurrentHashMap<String, File>().also { indexReady = true }.also { map ->
             dir.listFiles()?.forEach { f ->
                 if (f.name.endsWith(PART)) f.delete() else map[f.name.substringBefore('.')] = f
             }
@@ -92,6 +94,9 @@ class OfflineStore @Inject constructor(
     }
 
     private val hlsUrls = ConcurrentHashMap<String, String>()
+
+    /** Whether [key] is kept as a plain file, from the in-memory index only (no disk access: safe on the main thread). */
+    fun localFileCached(key: String): Boolean = indexReady && index[hash(key)]?.let { it.extension != HLS_EXT && it.extension != "bin" } == true
 
     /** The kept file itself (not a stream), for exporting; null if not kept or kept as a stream. */
     fun localFile(key: String): File? = index[hash(key)]?.takeIf { it.exists() && it.extension != HLS_EXT && it.extension != "bin" }
@@ -137,6 +142,7 @@ class OfflineStore @Inject constructor(
 
     /** Follows the Saved list for the life of the app: keeps what's saved, drops what isn't. */
     fun start() {
+        scope.launch { index.size } // build the index off the main thread, before anything asks
         scope.launch {
             val tick = flow { while (true) { emit(Unit); delay(RETRY_MS) } }
             combine(
