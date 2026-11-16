@@ -494,6 +494,11 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** A note with one action ("Carrying on from 12:30" · Start over). */
+    private val _offers = MutableSharedFlow<Triple<String, String, () -> Unit>>(extraBufferCapacity = 2)
+    val offers: SharedFlow<Triple<String, String, () -> Unit>> = _offers
+    fun offer(text: String, action: String, run: () -> Unit) { _offers.tryEmit(Triple(text, action, run)) }
+
     /** Confirmations of things that hide posts, each with a way to take it back. */
     private val _undoables = MutableSharedFlow<Pair<String, () -> Unit>>(extraBufferCapacity = 4)
     val undoables: SharedFlow<Pair<String, () -> Unit>> = _undoables

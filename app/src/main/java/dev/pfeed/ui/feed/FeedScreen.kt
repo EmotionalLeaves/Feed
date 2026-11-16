@@ -154,6 +154,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
     LaunchedEffect(Unit) {
+        vm.offers.collect { (text, action, run) ->
+            if (snackbar.showSnackbar(text, actionLabel = action) == androidx.compose.material3.SnackbarResult.ActionPerformed) run()
+        }
+    }
+    LaunchedEffect(Unit) {
         vm.undoables.collect { (text, undo) ->
             if (snackbar.showSnackbar(text, actionLabel = "Undo") == androidx.compose.material3.SnackbarResult.ActionPerformed) undo()
         }

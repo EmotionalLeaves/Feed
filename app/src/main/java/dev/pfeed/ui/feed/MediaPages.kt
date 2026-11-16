@@ -129,6 +129,9 @@ fun VideoPage(
         if (Display.isStillForVideo(item, s)) return@LaunchedEffect
         if (p.currentMediaItem?.mediaId != item.key) {
             firstFrame = false
+            val resumeAt = dev.pfeed.player.ResumePoints.get(item.key)
+            // Say so, with a way back to the start (only for the post actually on screen).
+            if (resumeAt != null && play) vm.offer("Carrying on from ${dev.pfeed.ui.common.formatDuration((resumeAt / 1000).toInt())}", "Start over") { p.seekTo(0) }
             p.setMediaItem(
                 ExoMediaItem.Builder()
                     .setMediaId(item.key)
