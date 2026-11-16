@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.38.2 — 2026-11-16
+
+Mixed search results
+
+- Search results still put the best matches first, but never more than two in a row from one source, so the first screen shows every site that answered.
+
 ## 4.38.1 — 2026-11-16
 
 Browser disguise, new icon
