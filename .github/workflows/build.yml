@@ -140,7 +140,7 @@ jobs:
           arch: x86_64
           disable-animations: true
           emulator-options: -no-snapshot -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
-          script: ./gradlew --no-daemon connectedDebugAndroidTest; code=$?; adb logcat -d -s PFHEALTH:I AndroidRuntime:E TestRunner:E; mkdir -p shots; adb pull /data/local/tmp/shots/. shots/ || true; ./gradlew --no-daemon -q installDebug && adb shell monkey -p dev.pfeed.debug --pct-syskeys 0 --pct-appswitch 0 --pct-anyevent 0 --throttle 90 -s 1794848776 -v 6000 > monkey.txt 2>&1; echo "MONKEY crashes=$(grep -c CRASH monkey.txt) anrs=$(grep -c ANR monkey.txt)"; tail -3 monkey.txt; grep -A25 -m1 'CRASH' monkey.txt || true; grep -B3 -A40 -m1 'ANR in' monkey.txt || true; adb shell ls /data/anr || true; exit $code
+          script: ./gradlew --no-daemon connectedDebugAndroidTest; code=$?; adb logcat -d -s PFHEALTH:I AndroidRuntime:E TestRunner:E; mkdir -p shots; adb pull /data/local/tmp/shots/. shots/ || true; ./gradlew --no-daemon -q installDebug && adb shell monkey -p dev.pfeed.debug --pct-syskeys 0 --pct-appswitch 0 --pct-anyevent 0 --throttle 90 -s $(date +%s) -v 6000 > monkey.txt 2>&1; echo "MONKEY crashes=$(grep -c CRASH monkey.txt) anrs=$(grep -c ANR monkey.txt)"; tail -3 monkey.txt; grep -A25 -m1 'CRASH' monkey.txt || true; grep -B3 -A40 -m1 'ANR in' monkey.txt || true; adb shell ls /data/anr || true; exit $code
 
       - name: Upload design screenshots
         if: always()
