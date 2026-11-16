@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.37.0 — 2026-11-16
+
+Picture rows in Search
+
+- The Search screen now opens with picture rows for your top interests (videos from across the tube sites). Tap one to watch, or **See all** for the full search. These are the same searches For You already runs, so they're usually ready instantly.
+
 ## 4.36.4 — 2026-11-16
 
 Volume up unmutes
