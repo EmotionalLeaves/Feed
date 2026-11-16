@@ -171,7 +171,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     icon = Icons.Filled.DataSaverOn,
                     onChange = vm::setDataSaver,
                 )
-                RowDivider()
+            }
+
+            // Space on the phone: what's kept for good, and what's cached to replay quickly.
+            Section("Storage") {
                 SettingRow(
                     "Video cache",
                     subtitle = "More space, fewer re-downloads",
