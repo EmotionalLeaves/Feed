@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.38.0 — 2026-11-16
+
+Related tags
+
+- Tag pages show a row of related tags under the title (the ones that turn up most alongside it), so you can hop sideways to similar content.
+- Everything you copy (links, reports) is marked sensitive, so Android 13+ doesn't preview it.
+- Code tidy: the build now has no compiler warnings.
+
 ## 4.37.0 — 2026-11-16
 
 Picture rows in Search
