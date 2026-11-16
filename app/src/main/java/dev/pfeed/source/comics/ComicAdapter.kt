@@ -316,7 +316,7 @@ internal object Multporn {
             id = "$HOST/$slug",
             sourceId = ComicAdapter.SOURCE_ID,
             type = MediaType.IMAGE,
-            title = H1.find(html)?.groupValues?.get(1)?.let(::unescape)?.trim() ?: slug.replace('_', ' '),
+            title = H1.find(html)?.groupValues?.get(1)?.let { dev.pfeed.source.tube.TubeSite.unescape(it) }?.trim() ?: slug.replace('_', ' '),
             creator = null,
             tags = (listOf("comic") + tags).distinct(),
             durationSec = null,
