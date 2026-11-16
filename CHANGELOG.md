@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.36.0 — 2026-11-15
+
+Pick your interests; Undo
+
+- **First run:** a quick "What are you into?" screen. Tap a few topics and For You starts from them instead of from nothing. You can skip it; the feed learns from what you watch either way.
+- Hiding a tag, creator or site, and **Not interested**, can be undone straight from the confirmation.
+
 ## 4.35.0 — 2026-11-15
 
 Post age and a Comics filter
