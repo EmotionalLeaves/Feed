@@ -11,7 +11,6 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -183,13 +182,11 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 }
                 if ("video" !in s.hiddenFeedTypes) {
                     RowDivider()
-                    Row(
-                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text("Videos", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-                        androidx.compose.material3.SingleChoiceSegmentedButtonRow {
-                            val options = listOf("any" to "Any length", "short" to "Clips", "long" to "Full")
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
+                        Text("Video length", style = MaterialTheme.typography.bodyLarge)
+                        Spacer(Modifier.height(8.dp))
+                        androidx.compose.material3.SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+                            val options = listOf("any" to "Any", "short" to "Clips", "long" to "Full videos")
                             options.forEachIndexed { index, (value, label) ->
                                 SegmentedButton(
                                     selected = s.videoLength == value,
