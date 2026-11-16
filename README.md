@@ -47,6 +47,8 @@ All versions are pinned in `gradle/libs.versions.toml`. If a newer AGP or Androi
 
 ## Sideload
 
+Download **app-optimized** from the latest CI run's Artifacts. It's the R8-optimized build, signed with the repo's fixed key under the `dev.pfeed.debug` id, so each new one installs over the last and keeps your data. (`app-debug` is the same app unoptimized: bigger and slower.)
+
 1. Copy the APK to the phone (USB, local network, etc.).
 2. Open it from a file manager. If Android blocks it, go to **Settings → Apps → (your file manager) → Install unknown apps** and turn on **Allow from this source**.
 3. Tap **Install**. You can turn the permission off again afterwards.
