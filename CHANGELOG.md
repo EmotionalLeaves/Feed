@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.48.0 — 2026-11-16
+
+Collections
+
+- New: Collections. Hold any post → Add to collection to sort saved posts into your own folders (or start a new one right there).
+- Library → Saved shows your collections as chips above the grid; open one to play, shuffle, rename or delete it. Deleting a collection keeps its posts saved.
+- A post put in a collection is saved too, so it's kept offline. Unsaving a post takes it out of its collections.
+
 ## 4.47.0 — 2026-11-16
 
 Video length
