@@ -149,6 +149,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
     LaunchedEffect(Unit) {
+        vm.undoables.collect { (text, undo) ->
+            if (snackbar.showSnackbar(text, actionLabel = "Undo") == androidx.compose.material3.SnackbarResult.ActionPerformed) undo()
+        }
+    }
+    LaunchedEffect(Unit) {
         vm.followHints.collect { item ->
             val name = Display.creator(item) ?: return@collect
             val r = snackbar.showSnackbar("You keep liking @$name", actionLabel = "Follow", duration = androidx.compose.material3.SnackbarDuration.Long)

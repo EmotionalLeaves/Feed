@@ -456,11 +456,19 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Confirmations of things that hide posts, each with a way to take it back. */
+    private val _undoables = MutableSharedFlow<Pair<String, () -> Unit>>(extraBufferCapacity = 4)
+    val undoables: SharedFlow<Pair<String, () -> Unit>> = _undoables
+
+    private fun undoable(text: String, kind: BlockKind, value: String) {
+        _undoables.tryEmit(text to { viewModelScope.launch { blocks.unblock(kind.name, Blocklist.normalize(value)) }; Unit })
+    }
+
     fun blockCreator(item: MediaItem) {
         val creator = item.creator ?: return
         viewModelScope.launch {
             blocks.block(BlockKind.CREATOR, creator)
-            _messages.tryEmit("Blocked " + (Display.creator(item)?.let { "@$it" } ?: "this creator"))
+            undoable("Blocked " + (Display.creator(item)?.let { "@$it" } ?: "this creator"), BlockKind.CREATOR, creator)
         }
     }
 
@@ -469,15 +477,16 @@ class FeedViewModel @Inject constructor(
         statsFor(item.key).explicit = true
         viewModelScope.launch {
             signals.record(item, Signal(SignalType.NOT_INTERESTED))
-            blocks.block(BlockKind.ORIGIN, dev.pfeed.domain.reco.Spread.origin(item))
-            _messages.tryEmit("Hidden: $label")
+            val origin = dev.pfeed.domain.reco.Spread.origin(item)
+            blocks.block(BlockKind.ORIGIN, origin)
+            undoable("Hidden: $label", BlockKind.ORIGIN, origin)
         }
     }
 
     fun blockTag(tag: String) {
         viewModelScope.launch {
             blocks.block(BlockKind.TAG, tag)
-            _messages.tryEmit("Hiding #${Blocklist.normalize(tag).replace('_', ' ')}")
+            undoable("Hiding #${Blocklist.normalize(tag).replace('_', ' ')}", BlockKind.TAG, tag)
         }
     }
 
