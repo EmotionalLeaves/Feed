@@ -180,7 +180,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SwitchSetting(
                     "Keep saved posts offline",
                     s.keepSavedOffline,
-                    subtitle = if (s.keepSavedOffline) "Saved posts download on Wi-Fi and play without a connection" +
+                    subtitle = if (s.keepSavedOffline) "Saved posts download (videos on Wi-Fi) and play without a connection" +
                         (if (offlineBytes > 0) " · ${formatBytes(offlineBytes)}" else "")
                     else "Off: saved posts stream like everything else",
                     icon = Icons.Filled.DownloadForOffline,

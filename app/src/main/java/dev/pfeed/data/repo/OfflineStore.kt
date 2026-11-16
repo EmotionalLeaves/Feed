@@ -37,7 +37,7 @@ import javax.inject.Singleton
  * the one way in: there's no separate "download" button. Files go to the app's private storage
  * (nothing appears in the gallery, and "Erase everything" removes them); unsaving deletes the copy.
  *
- * Downloads run on Wi-Fi only, two at a time, and are retried every so often until they finish.
+ * Videos download on Wi-Fi only (pictures and comics on any connection), two at a time, retried every so often until they finish.
  * Streamed (HLS) videos are kept too, in the player's offline cache. A post that only plays in the
  * site's embed player can't be kept.
  */
@@ -131,8 +131,10 @@ class OfflineStore @Inject constructor(
         index.entries.removeIf { (h, f) -> (h !in wantedHashes).also { drop -> if (drop) forget(f) } }
         updateSize()
         if (!on) return
-        if (network.isMetered) { saved.forEach { problem(it, "waiting for Wi-Fi") }; return }
+        // On mobile data only pictures and comics are kept (small); videos wait for Wi-Fi.
+        val metered = network.isMetered
         for (item in saved) {
+            if (metered && isVideoish(item)) { problem(item, "waiting for Wi-Fi"); continue }
             if (running.containsKey(item.key)) continue
             if (parts(item).all { (k, _) -> index.containsKey(hash(k)) }) continue
             val job = scope.launch(start = kotlinx.coroutines.CoroutineStart.LAZY) {
@@ -156,7 +158,7 @@ class OfflineStore @Inject constructor(
         for ((key, pageUrl) in parts(item)) {
             if (index.containsKey(hash(key))) continue
             when {
-                network.isMetered -> return problem(item, "waiting for Wi-Fi")
+                network.isMetered && isVideoish(item) -> return problem(item, "waiting for Wi-Fi")
                 dir.usableSpace < MIN_FREE_BYTES -> return problem(item, "phone storage nearly full (${dir.usableSpace shr 20} MB free)")
                 _bytes.value > MAX_TOTAL_BYTES -> return problem(item, "offline copies at their ${MAX_TOTAL_BYTES shr 30} GB limit")
             }
@@ -174,6 +176,9 @@ class OfflineStore @Inject constructor(
     }
 
     private fun problem(item: MediaItem, why: String) { problems[item.key] = why }
+
+    private fun isVideoish(item: MediaItem) =
+        item.type == dev.pfeed.domain.model.MediaType.VIDEO || item.type == dev.pfeed.domain.model.MediaType.EMBED
 
     private suspend fun resolve(item: MediaItem): StreamInfo? = try {
         registry.byId(item.sourceId)?.resolveStream(item)
