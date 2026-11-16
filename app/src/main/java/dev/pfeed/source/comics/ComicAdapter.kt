@@ -110,7 +110,9 @@ class ComicSite private constructor(
     companion object {
         val IMHENTAI = ComicSite("imhentai.xxx", "IMHentai", "https://imhentai.xxx/", "https://imhentai.xxx/search/?key=")
         val HENTAIFOX = ComicSite("hentaifox.com", "HentaiFox", "https://hentaifox.com/", "https://hentaifox.com/search/?q=")
-        val ALL = listOf(IMHENTAI, HENTAIFOX)
+        val HENTAIERA = ComicSite("hentaiera.com", "HentaiEra", "https://hentaiera.com/", "https://hentaiera.com/search/?key=")
+        val HENTAIROX = ComicSite("hentairox.com", "HentaiRox", "https://hentairox.com/", "https://hentairox.com/search/?q=")
+        val ALL = listOf(IMHENTAI, HENTAIFOX, HENTAIERA, HENTAIROX)
         private val EIGHT_MUSES_LABEL = ComicSite(EightMuses.HOST, "8muses", "", "")
         fun byHost(host: String) = (ALL + EIGHT_MUSES_LABEL).firstOrNull { host == it.host || host.endsWith("." + it.host) }
 

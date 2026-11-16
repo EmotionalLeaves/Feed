@@ -32,10 +32,18 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        for (u in listOf("https://multporn.net/new", "https://multporn.net/comics/latest_updates", "https://www.porncomixone.net/", "https://allporncomic.com/", "https://e-hentai.org/?f_cats=1017", "https://hentai2read.com/hentai-list/", "https://www.simply-hentai.com/", "https://hentaiera.com/", "https://hentairox.com/", "https://nhentai.to/")) probe(u) {
-            val (code, b) = get(u)
-            val title = Regex("<title[^>]*>([^<]{0,60})").find(b)?.groupValues?.get(1)
-            "$code len=${b.length} title=$title cf=${b.contains("Just a moment")} :: " + Regex("""href="([^"]+)"""").findAll(b).map { it.groupValues[1] }.filter { it.length > 12 && !it.contains("css") && !it.contains(".js") }.distinct().drop(10).take(12).toList()
+        for (site in listOf(dev.pfeed.source.comics.ComicSite.HENTAIERA, dev.pfeed.source.comics.ComicSite.HENTAIROX)) {
+            for (term in listOf("", "milf")) probe("${site.host} '$term'") {
+                val (code, b) = get(site.listUrl(term, 1))
+                val l = dev.pfeed.source.comics.ComicSite.parseList(site, b)
+                "$code n=${l.size} titles=${l.count { it.title != null }} first=${l.firstOrNull()}" + if (l.isEmpty()) " :: " + around(b, "/gallery/", 200, 500) else ""
+            }
+            probe("${site.host} gallery") {
+                val l = dev.pfeed.source.comics.ComicSite.parseList(site, get(site.listUrl("", 1)).second).first()
+                val (code, html) = get(site.galleryUrl(l.id))
+                val g = dev.pfeed.source.comics.ComicSite.gallery(site, l, html)
+                "$code pages=${g?.pages?.size} tags=${g?.tags?.take(8)} first=${g?.pages?.firstOrNull()} head=${g?.pages?.firstOrNull()?.let { head(it) }}" + if (g == null) " :: " + around(html, "load_", 100, 400) + " || " + around(html, "Tags", 0, 400) else ""
+            }
         }
     }
 }
