@@ -13,6 +13,7 @@ object LauncherDisguise {
         Disguise.NONE to "$PKG.LauncherDefault",
         Disguise.NOTES to "$PKG.LauncherNotes",
         Disguise.CALCULATOR to "$PKG.LauncherCalculator",
+        Disguise.BROWSER to "$PKG.LauncherBrowser",
     )
 
     fun apply(context: Context, disguise: Disguise) {

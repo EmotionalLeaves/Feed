@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A plain globe, like a generic web browser's icon, inside the 66dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="3.5"
+        android:pathData="M54,33 A21,21 0 1,1 53.99,33 Z" />
+    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF" android:strokeWidth="3"
+        android:pathData="M54,33 C44,40 44,68 54,75 M54,33 C64,40 64,68 54,75 M33,54 L75,54 M37,43 L71,43 M37,65 L71,65" />
+</vector>

@@ -111,7 +111,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         if (uri != null) dialog = PendingDialog.ImportPassword(uri)
     }
 
-    val disguiseOptions = listOf(Disguise.NONE to "Feed", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator")
+    val disguiseOptions = listOf(Disguise.NONE to "Feed", Disguise.NOTES to "Notes", Disguise.CALCULATOR to "Calculator", Disguise.BROWSER to "Browser")
     val on = sources.filter { it.enabled }
     val feeds = on.sumOf { feedCount(it.adapter.id, s) ?: 1 }
 

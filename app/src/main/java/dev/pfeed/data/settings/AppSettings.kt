@@ -7,7 +7,7 @@ import kotlinx.serialization.Serializable
 data class SourceConfig(val id: String, val enabled: Boolean)
 
 @Serializable
-enum class Disguise { NONE, NOTES, CALCULATOR }
+enum class Disguise { NONE, NOTES, CALCULATOR, BROWSER }
 
 @Serializable
 data class MastodonFeed(val host: String, val tag: String? = null) {
