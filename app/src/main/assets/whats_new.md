@@ -1,3 +1,8 @@
+## 4.42.3 — 2026-11-16
+Picture rows from day one
+
+- On a new install, before anything has been learned, Search shows picture rows for popular topics, so there's something to tap straight away.
+
 ## 4.42.2 — 2026-11-16
 Comics: From the start
 
@@ -7,8 +12,3 @@ Comics: From the start
 Start over
 
 - Reopening a long video you left partway says where it carries on from, with **Start over** to go back to the beginning.
-
-## 4.42.0 — 2026-11-16
-Full scenes move on
-
-- A full scene (3 minutes or longer) now plays once, and when it ends the feed moves on to the next post. Short clips still loop.

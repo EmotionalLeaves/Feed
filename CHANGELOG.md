@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.42.3 — 2026-11-16
+
+Picture rows from day one
+
+- On a new install, before anything has been learned, Search shows picture rows for popular topics, so there's something to tap straight away.
+
 ## 4.42.2 — 2026-11-16
 
 Comics: From the start
