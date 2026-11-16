@@ -1,5 +1,7 @@
 package dev.pfeed.ui.library
 
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.ui.draw.clip
@@ -99,13 +101,44 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     val liked by vm.liked.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
     val follows by vm.follows.collectAsStateWithLifecycle()
+    var finding by rememberSaveable { mutableStateOf(false) }
+    var query by rememberSaveable { mutableStateOf("") }
+    // Find in the current list: title, creator and tags.
+    fun List<MediaItem>.found(): List<MediaItem> {
+        val q = query.trim().lowercase()
+        if (!finding || q.isEmpty()) return this
+        return filter { item ->
+            item.title?.lowercase()?.contains(q) == true || item.creator?.lowercase()?.contains(q) == true ||
+                item.tags.any { it.lowercase().replace('_', ' ').contains(q) }
+        }
+    }
 
     Column(Modifier.fillMaxSize()) {
         ScreenHeader("Library") {
+            if (tab < 3) androidx.compose.material3.IconButton(onClick = { finding = !finding; if (!finding) query = "" }) {
+                androidx.compose.material3.Icon(if (finding) Icons.Filled.Close else Icons.Filled.Search, contentDescription = if (finding) "Close find" else "Find in library")
+            }
             if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
         }
         // Four equal tabs that always fit, even on narrow phones (a scrolling row cut "Following" off).
         LibraryTabs(tab) { tab = it }
+        if (finding && tab < 3) {
+            androidx.compose.material3.TextField(
+                value = query,
+                onValueChange = { query = it },
+                placeholder = { Text("Find by title, creator or tag", maxLines = 1) },
+                singleLine = true,
+                leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.Search, contentDescription = null) },
+                shape = RoundedCornerShape(28.dp),
+                colors = androidx.compose.material3.TextFieldDefaults.colors(
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent,
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                ),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+        }
         val toFeed = {
             nav.navigate(Routes.FEED) {
                 popUpTo(nav.graph.findStartDestination().id) { saveState = true }
@@ -115,9 +148,9 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
         }
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
         when (tab) {
-            0 -> Grid(saved, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline.", openGrid(saved), onBrowse = toFeed)
-            1 -> Grid(liked, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(liked), onBrowse = toFeed)
-            2 -> Grid(history, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(history))
+            0 -> saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline.", openGrid(l), onBrowse = toFeed) }
+            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed) }
+            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l)) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
                     EmptyState(Icons.Filled.PersonAdd, "Not following anyone", "Tap Follow next to a creator, or open a tag and follow it. Their posts fill the Following feed.")
@@ -170,6 +203,9 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
         MediaGrid(items, onOpen)
     }
 }
+
+@Composable
+private fun NoMatch() = EmptyState(Icons.Filled.Search, "No matches", "Nothing in this list has that in its title, creator or tags.")
 
 @Composable
 private fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
