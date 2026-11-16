@@ -148,6 +148,13 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             .collect { (page, key) -> if (key != null) vm.onPageSettled(page) }
     }
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
+    LaunchedEffect(Unit) {
+        vm.followHints.collect { item ->
+            val name = Display.creator(item) ?: return@collect
+            val r = snackbar.showSnackbar("You keep liking @$name", actionLabel = "Follow", duration = androidx.compose.material3.SnackbarDuration.Long)
+            if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) vm.toggleFollowCreator(item)
+        }
+    }
     LandscapeMode(enabled = landscape)
     BackHandler(enabled = landscape) { vm.setLandscape(false) }
 

@@ -403,6 +403,25 @@ class FeedViewModel @Inject constructor(
             library.add(LibraryKind.LIKED, item)
             signals.record(item, Signal(SignalType.LIKE))
         }
+        noteKeeper(item)
+    }
+
+    /** Creators whose posts you liked or saved this session, and the ones already suggested. */
+    private val keptByCreator = HashMap<String, Int>()
+    private val suggested = HashSet<String>()
+    private val _followHints = MutableSharedFlow<MediaItem>(extraBufferCapacity = 2)
+    /** "You keep liking @name: follow them?" — offered once per creator, after the second like or save. */
+    val followHints: SharedFlow<MediaItem> = _followHints
+
+    private fun noteKeeper(item: MediaItem) {
+        val creator = Display.creator(item)?.let(Blocklist::normalize) ?: return
+        if (isFollowingCreator(item, follows.value) || creator in suggested) return
+        val n = (keptByCreator[creator] ?: 0) + 1
+        keptByCreator[creator] = n
+        if (n >= 2) {
+            suggested += creator
+            _followHints.tryEmit(item)
+        }
     }
 
     fun toggleLike(item: MediaItem) {
@@ -422,6 +441,7 @@ class FeedViewModel @Inject constructor(
                 library.add(LibraryKind.SAVED, item)
                 statsFor(item.key).explicit = true
                 signals.record(item, Signal(SignalType.SAVE))
+                noteKeeper(item)
                 _messages.tryEmit("Saved")
             }
         }
