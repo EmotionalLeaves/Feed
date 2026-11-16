@@ -76,7 +76,7 @@ fun BlocklistScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel())
         }
         if (tags.isNotEmpty()) BlockSection("Tags", tags, Icons.Filled.Tag, vm) { "#" + it.value.replace('_', ' ') }
         if (creators.isNotEmpty()) BlockSection("Creators", creators, Icons.Filled.Person, vm) { "@" + it.value }
-        if (origins.isNotEmpty()) BlockSection("Sources", origins, Icons.Filled.VisibilityOff, vm) { it.value.substringAfter(':') }
+        if (origins.isNotEmpty()) BlockSection("Sources", origins, Icons.Filled.VisibilityOff, vm) { originLabel(it.value) }
         if (hiddenCount > 0) {
             Section("Posts") {
                 SettingRow(
@@ -138,5 +138,17 @@ private fun AddBlock(onAdd: (BlockKind, String) -> Unit) {
             )
             Button(onClick = submit, enabled = text.isNotBlank(), colors = ButtonDefaults.buttonColors(containerColor = Accent)) { Text("Block") }
         }
+    }
+}
+
+/** "tube:pornhub.com" → "Pornhub", "comics:hentaifox.com" → "HentaiFox", "r/gonewild" stays. */
+private fun originLabel(value: String): String {
+    if (!value.contains(':')) return value
+    val kind = value.substringBefore(':')
+    val host = value.substringAfter(':')
+    return when (kind) {
+        "tube" -> dev.pfeed.source.tube.TubeSite.byHost(host)?.label ?: host
+        "comics" -> dev.pfeed.source.comics.ComicSite.byHost(host)?.label ?: host
+        else -> host
     }
 }
