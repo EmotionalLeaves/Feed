@@ -89,9 +89,20 @@ class RedgifsAdapter @Inject constructor(
         // Three pages at once: RedGIFs is usually the richest source of clips for a search. Order must be
         // one of top, top7, top28, latest, score, trending ("best" was rejected with 400, so search found nothing).
         val pages = kotlinx.coroutines.coroutineScope {
-            (1..SEARCH_PAGES).map { p -> async { attempt { searchGifs(q, p, "top") }.getOrDefault(emptyList()) } }.awaitAll()
+            val byText = (1..SEARCH_PAGES).map { p -> async { attempt { searchGifs(q, p, "top") }.getOrDefault(emptyList()) } }
+            // One word could be a creator's name (a creator page searches their name): their own
+            // clips first. Not a user: the lookup just finds nothing.
+            val byUser = if (USERNAME.matches(q)) listOf(async { attempt { userGifs(q) }.getOrDefault(emptyList()) }) else emptyList()
+            (byUser + byText).awaitAll()
         }
         (pages.flatten() + poolMatches(query)).distinctBy { it.key }
+    }
+
+    private suspend fun userGifs(name: String): List<MediaItem> {
+        val url = "https://api.redgifs.com/v2/users/${URLEncoder.encode(name.lowercase(), "UTF-8")}/search?order=new&count=$COUNT&page=1"
+        val root = http.get(id, url, authHeaders(token()))
+        val gifs = (root as? JsonObject)?.get("gifs") as? JsonArray ?: return emptyList()
+        return gifs.mapNotNull { parseGif(it as? JsonObject ?: return@mapNotNull null) }
     }
 
     private suspend fun searchGifs(term: String, page: Int, order: String): List<MediaItem> {
@@ -163,6 +174,8 @@ class RedgifsAdapter @Inject constructor(
     private fun browserUa() = mapOf("User-Agent" to "Mozilla/5.0 (Android; Mobile) PrivateFeed/2")
 
     companion object {
+        private val USERNAME = Regex("[A-Za-z0-9_.-]{3,40}")
+
         const val SOURCE_ID = "redgifs"
         private const val COUNT = 40
         private const val RANDOM_START_PAGES = 5
