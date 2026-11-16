@@ -118,6 +118,8 @@ class ComicSite private constructor(
 
         private val GALLERY_LINK = Regex("""<a href="/gallery/(\d+)/">(?!<img)([^<]*)</a>""")
         private val THUMB = Regex("""<a href="/gallery/(\d+)/"><img[^>]*\bdata-src="(https://[^"]+/thumb\.[a-z]+)"""")
+        /** HentaiRox's cards: <a class="…cover" href="/gallery/1/" aria-label="…"> <img src="…/thumb.jpg"> */
+        private val THUMB_CARD = Regex("""href="/gallery/(\d+)/"[^>]*>\s*<img[^>]*\bsrc="(https://[^"]+/thumb\.[a-z]+)"""")
         private val HIDDEN = Regex("""id="(load_server|load_dir|load_id|load_pages)" value="([^"]*)"""")
         private val PAGE_TYPES = Regex("""g_th\s*=\s*\$\.parseJSON\('(\{.*?\})'\)""")
         private val PAGE_TYPE = Regex(""""(\d+)":"([a-z])""")
@@ -129,7 +131,7 @@ class ComicSite private constructor(
 
         /** Galleries on a listing page: id, title and the thumbnail (which names the image folder). */
         fun parseList(site: ComicSite, html: String): List<Listed> {
-            val thumbs = THUMB.findAll(html).associate { it.groupValues[1] to it.groupValues[2] }
+            val thumbs = (THUMB.findAll(html) + THUMB_CARD.findAll(html)).associate { it.groupValues[1] to it.groupValues[2] }
             val titles = GALLERY_LINK.findAll(html).associate { it.groupValues[1] to unescape(it.groupValues[2]).trim().ifBlank { null } }
             return thumbs.keys.map { id -> Listed(id, titles[id], thumbs[id]) }
         }
@@ -137,11 +139,11 @@ class ComicSite private constructor(
         /** The comic behind [l], from its gallery page. Null if the page doesn't describe one. */
         fun gallery(site: ComicSite, l: Listed, html: String): MediaItem? {
             val fields = HIDDEN.findAll(html).associate { it.groupValues[1] to it.groupValues[2] }
-            val dir = fields["load_dir"] ?: return null
-            val loadId = fields["load_id"] ?: return null
             // The thumbnail is on the gallery's own image server: https://m11.imhentai.xxx/033/abc/thumb.jpg
+            // (HentaiRox has no hidden fields: the thumbnail's folder is all there is, and is enough.)
             val base = l.thumb?.substringBeforeLast('/')
-                ?: fields["load_server"]?.let { "https://m$it.${site.host}/$dir/$loadId" } ?: return null
+                ?: fields["load_server"]?.let { srv -> fields["load_dir"]?.let { d -> fields["load_id"]?.let { "https://m$srv.${site.host}/$d/$it" } } }
+                ?: return null
             val types = PAGE_TYPES.find(html)?.groupValues?.get(1)
                 ?.let { json -> PAGE_TYPE.findAll(json).associate { it.groupValues[1].toInt() to it.groupValues[2] } }
                 .orEmpty()
@@ -152,7 +154,10 @@ class ComicSite private constructor(
             val pages = (1..count).map { n -> "$base/$n.${types[n]?.let { EXT[it] } ?: thumbExts[n] ?: thumbExt}" }
             // Only the gallery's own tag list (from "Tags:" to the end of its list), not sidebars.
             val tagArea = html.indexOf("Tags:").takeIf { it >= 0 }?.let { i -> html.substring(i, html.indexOf("</ul>", i).takeIf { it > i } ?: minOf(html.length, i + 4000)) } ?: ""
-            val tags = TAG.findAll(tagArea).map { it.groupValues[1].replace('-', '_') }.distinct().toList()
+            // Otherwise: the gallery's own details, from its title down to its page thumbnails.
+            val detailArea = H1.find(html)?.range?.first?.let { i -> html.substring(i, html.indexOf("/1t.", i).takeIf { it > i } ?: minOf(html.length, i + 8000)) } ?: ""
+            val tags = (TAG.findAll(tagArea).toList().ifEmpty { TAG.findAll(detailArea).toList() })
+                .map { it.groupValues[1].replace('-', '_') }.distinct().toList()
             if (tags.isEmpty()) return null // can't be checked, so not shown
             return MediaItem(
                 id = "${site.host}/${l.id}",
