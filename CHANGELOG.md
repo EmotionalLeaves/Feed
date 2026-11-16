@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.4 — 2026-11-16
+
+XVideos and XNXX creators
+
+- XVideos and XNXX videos now show their uploader or pornstar, which you can tap and follow like any creator.
+
 ## 4.43.3 — 2026-11-16
 
 xHamster creators
