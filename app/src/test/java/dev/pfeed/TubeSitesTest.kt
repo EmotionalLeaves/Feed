@@ -291,4 +291,28 @@ class TubeSitesTest {
         org.junit.Assert.assertEquals("xhAbC1", list[0].id)
         org.junit.Assert.assertEquals(609, list[0].durationSec)
     }
+
+    @Test
+    fun `thisvid lists tiles and plays the best labelled KVS file`() {
+        val list = """<a href="https://thisvid.com/videos/mates-getting-caught/" title="Mates getting caught" class="tumbpu"><span class="thumb"><img src="//static.thisvid.com/contents/videos_screenshots/14942000/14942221/240x180/2.jpg"></span><span class="duration">4:10</span></a>
+            <a href="https://thisvid.com/videos/a-private-one/" title="A private one" class="tumbpu private"><span class="duration">1:00</span></a>"""
+        val l = dev.pfeed.source.tube.TubeSite.ThisVid.parseList(list)
+        org.junit.Assert.assertEquals(listOf("mates-getting-caught"), l.map { it.id })
+        org.junit.Assert.assertEquals(250, l[0].durationSec)
+        org.junit.Assert.assertEquals("https://static.thisvid.com/contents/videos_screenshots/14942000/14942221/240x180/2.jpg", l[0].thumb)
+        val page = """video_url: 'https://thisvid.com/get_file/5/a/1/1.mp4/?t=1', video_alt_url: 'https://thisvid.com/get_file/5/b/1/1_240p.mp4/?t=2', video_tags: 'str8 guys, mates'"""
+        org.junit.Assert.assertEquals("https://thisvid.com/get_file/5/a/1/1.mp4/?t=1", dev.pfeed.source.tube.TubeSite.ThisVid.stream(page)?.url)
+        org.junit.Assert.assertEquals(listOf("str8_guys", "mates"), dev.pfeed.source.tube.TubeSite.ThisVid.pageTags(page))
+    }
+
+    @Test
+    fun `pornone lists cards and picks the tallest file up to the cap`() {
+        val list = """<a href="https://pornone.com/bedroom/vina-sky-sucks/281149091/#t1" class="popbop vidLinkFX  videocard links"><img src="https://th-eu4.pornone.com/t/91/281149091/b152.jpg"><span class="durlabel"><img alt="HD Video" src="x.svg">38:57</span></a>"""
+        val l = dev.pfeed.source.tube.TubeSite.PornOne.parseList(list)
+        org.junit.Assert.assertEquals("281149091", l.single().id)
+        org.junit.Assert.assertEquals("Vina sky sucks", l.single().title)
+        org.junit.Assert.assertEquals(2337, l.single().durationSec)
+        val page = """src="https://s314.pornone.com/vid2/a/1/81/1/1_720x406_500k.mp4?lang=en" src="https://s306.pornone.com/vid2/b/1/81/1/1_1920x1080_4000k.mp4?lang=en" """
+        org.junit.Assert.assertTrue(dev.pfeed.source.tube.TubeSite.PornOne.stream(page)!!.url.contains("1920x1080"))
+    }
 }
