@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.1 — 2026-11-16
+
+Switch tube sites on and off
+
+- **Sources → Tube sites** has a switch for each of the 15 sites. A site you switch off isn't fetched or searched at all. This is the same as hiding it from a post's menu, and it shows in Hidden & blocked.
+
 ## 4.43.0 — 2026-11-16
 
 Shuffle

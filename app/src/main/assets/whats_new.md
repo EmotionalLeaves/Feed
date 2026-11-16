@@ -1,3 +1,8 @@
+## 4.43.1 — 2026-11-16
+Switch tube sites on and off
+
+- **Sources → Tube sites** has a switch for each of the 15 sites. A site you switch off isn't fetched or searched at all. This is the same as hiding it from a post's menu, and it shows in Hidden & blocked.
+
 ## 4.43.0 — 2026-11-16
 Shuffle
 
@@ -7,8 +12,3 @@ Shuffle
 Storage section
 
 - Settings has its own **Storage** section: the video cache and offline copies of saved posts (with the space they take).
-
-## 4.42.3 — 2026-11-16
-Picture rows from day one
-
-- On a new install, before anything has been learned, Search shows picture rows for popular topics, so there's something to tap straight away.
