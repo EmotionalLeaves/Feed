@@ -63,6 +63,12 @@ class MainActivity : FragmentActivity() {
      * Panic detection at the window level: sees every touch before any view does, including native
      * views embedded in the feed (video surfaces, web embeds) that the Compose-level detector can miss.
      */
+    /** Volume up while the feed is muted turns the sound on, as in other video apps (and still raises the volume). */
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) dev.pfeed.ui.feed.VolumeKeys.up.tryEmit(Unit)
+        return super.onKeyDown(keyCode, event)
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (ev.actionMasked == MotionEvent.ACTION_POINTER_DOWN && ev.pointerCount >= 3) panic()
         return super.dispatchTouchEvent(ev)

@@ -306,6 +306,10 @@ class FeedViewModel @Inject constructor(
 
     fun toggleMute() { _muted.value = !_muted.value }
 
+    init {
+        viewModelScope.launch { VolumeKeys.up.collect { if (_muted.value) _muted.value = false } }
+    }
+
     /** Audio route went away (headphones unplugged): silence the feed rather than use the speaker. */
     fun muteNow() {
         if (!_muted.value) {
@@ -568,4 +572,9 @@ class FeedViewModel @Inject constructor(
         private const val RESTART_DELAY_MS = 5_000L
         private const val GC_BEHIND = 50
     }
+}
+
+/** Volume-key presses from the activity, for the feed's mute state. */
+object VolumeKeys {
+    val up = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 }
