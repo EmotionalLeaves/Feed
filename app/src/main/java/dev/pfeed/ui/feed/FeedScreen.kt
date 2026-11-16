@@ -274,7 +274,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // Very first run: what are you into? (skippable; shapes For You from the first screen). On top of everything.
         val newUser by vm.isNewUser.collectAsStateWithLifecycle()
-        if (!vm.isViewer && vm.tag == null && !landscape && newUser == true) InterestPicker(onDone = vm::pickInterests)
+        if (!vm.isViewer && vm.tag == null && !landscape && (newUser == true || FirstRun.forceInterests)) InterestPicker(onDone = vm::pickInterests)
     }
 
     menuFor?.let { item ->
@@ -820,6 +820,8 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 /** Turned off by the instrumented tests, which need the feed itself on screen. */
 object FirstRun {
     @Volatile var askInterests = true
+    /** Tests: show the picker even though something has been learned. */
+    @Volatile var forceInterests = false
 }
 
 /**

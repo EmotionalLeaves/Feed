@@ -387,6 +387,7 @@ class SmokeTest {
             // The first-run topic picker, as a new install sees it.
             rule.activity.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE).edit().remove("interests_asked").commit()
             dev.pfeed.ui.feed.FirstRun.askInterests = true
+            dev.pfeed.ui.feed.FirstRun.forceInterests = true
             try {
                 rule.onNode(hasText("Feed") and androidx.compose.ui.test.isSelectable()).performClick()
                 waitFor(what = "topic picker") { exists("What are you into?") }
@@ -395,6 +396,7 @@ class SmokeTest {
                 tap("Skip")
             } finally {
                 dev.pfeed.ui.feed.FirstRun.askInterests = false
+                dev.pfeed.ui.feed.FirstRun.forceInterests = false
             }
         } finally {
             rule.runOnUiThread { rule.activity.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
