@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.40.1 — 2026-11-16
+
+History by day
+
+- History is grouped under **Today**, **Yesterday**, **This week** and **Earlier**.
+
 ## 4.40.0 — 2026-11-16
 
 Export to Downloads
