@@ -71,6 +71,15 @@ android {
         debug {
             applicationIdSuffix = ".debug"
         }
+        // The APK you install: the release build (R8-optimized, not debuggable: much faster, above all
+        // Compose) but under the debug build's app id and key, so it installs over the debug APKs
+        // you already have and keeps your library and taste.
+        create("sideload") {
+            initWith(getByName("release"))
+            applicationIdSuffix = ".debug"
+            signingConfig = signingConfigs.getByName("debug")
+            matchingFallbacks += listOf("release")
+        }
     }
 
     compileOptions {
