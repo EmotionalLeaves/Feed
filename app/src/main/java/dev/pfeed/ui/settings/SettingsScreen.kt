@@ -384,7 +384,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             properties = SecureDialog,
             title = { Text("Gestures") },
             text = {
-                Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
                     listOf(
                         "Swipe up / down" to "Next or previous post",
                         "Tap" to "Pause or play",
