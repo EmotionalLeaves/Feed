@@ -35,7 +35,10 @@ class SmokeTest {
          */
         @JvmStatic
         @org.junit.BeforeClass
-        fun noInstantStart() { dev.pfeed.data.repo.PoolCache.enabled = false }
+        fun noInstantStart() {
+            dev.pfeed.data.repo.PoolCache.enabled = false
+            dev.pfeed.ui.feed.FirstRun.askInterests = false
+        }
     }
 
     @get:Rule

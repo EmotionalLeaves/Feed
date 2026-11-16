@@ -1,5 +1,7 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.foundation.layout.widthIn
@@ -269,6 +271,9 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             snackbar,
             Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 56.dp, start = 16.dp, end = 16.dp),
         )
+
+        // Very first run: what are you into? (skippable; shapes For You from the first screen). On top of everything.
+        if (!vm.isViewer && vm.tag == null && !landscape) InterestPicker(onDone = vm::pickInterests)
     }
 
     menuFor?.let { item ->
@@ -810,3 +815,73 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
     }
 }
 
+
+/** Turned off by the instrumented tests, which need the feed itself on screen. */
+object FirstRun {
+    @Volatile var askInterests = true
+}
+
+private val STARTER_TOPICS = listOf(
+    "amateur", "milf", "lesbian", "anal", "blowjob", "big tits", "big ass", "pov", "bdsm",
+    "bondage", "femdom", "cosplay", "hentai", "3d", "furry", "asian", "latina", "ebony", "redhead",
+    "creampie", "gangbang", "threesome", "solo", "feet", "lingerie", "public", "rough", "gay", "trans",
+)
+
+/**
+ * Shown once, on the very first launch: tap a few topics and For You starts from them instead of
+ * from nothing. Skipping is fine; it learns from watching either way.
+ */
+@Composable
+private fun InterestPicker(onDone: (List<String>) -> Unit) {
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE) }
+    var show by remember { mutableStateOf(FirstRun.askInterests && !prefs.getBoolean("interests_asked", false)) }
+    if (!show) return
+    val picked = remember { mutableStateListOf<String>() }
+    fun finish(topics: List<String>) {
+        prefs.edit().putBoolean("interests_asked", true).apply()
+        show = false
+        onDone(topics)
+    }
+    Box(
+        Modifier.fillMaxSize().background(Color(0xFF09090B)).pointerInput(Unit) { detectTapGestures { } }
+            .statusBarsPadding().padding(horizontal = 20.dp),
+    ) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(top = 28.dp, bottom = 120.dp)) {
+            Text("What are you into?", color = Color.White, style = MaterialTheme.typography.headlineMedium)
+            Spacer(Modifier.height(8.dp))
+            Text("Pick a few and For You starts from them. It keeps learning from what you watch.", color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.height(24.dp))
+            @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                STARTER_TOPICS.forEach { topic ->
+                    val on = topic in picked
+                    Text(
+                        topic,
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(50))
+                            .then(if (on) Modifier.background(dev.pfeed.ui.theme.BrandGradient) else Modifier.background(Color.White.copy(alpha = 0.08f)))
+                            .clickable { if (on) picked.remove(topic) else picked.add(topic) }
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                    )
+                }
+            }
+        }
+        Column(
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF09090B), Color(0xFF09090B))))
+                .padding(top = 24.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            dev.pfeed.ui.common.BrandButton(
+                if (picked.isEmpty()) "Pick at least one" else "Start with ${picked.size}",
+                onClick = { finish(picked.toList()) },
+                enabled = picked.isNotEmpty(),
+                modifier = Modifier.fillMaxWidth(),
+            )
+            androidx.compose.material3.TextButton(onClick = { finish(emptyList()) }) { Text("Skip", color = Color.White.copy(alpha = 0.6f)) }
+        }
+    }
+}

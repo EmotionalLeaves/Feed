@@ -456,6 +456,14 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** First run: the topics picked teach For You straight away, then the feed starts over with them. */
+    fun pickInterests(topics: List<String>) {
+        viewModelScope.launch {
+            topics.forEach { runCatching { signals.recordInterest(it) } }
+            if (topics.isNotEmpty()) refresh()
+        }
+    }
+
     /** Confirmations of things that hide posts, each with a way to take it back. */
     private val _undoables = MutableSharedFlow<Pair<String, () -> Unit>>(extraBufferCapacity = 4)
     val undoables: SharedFlow<Pair<String, () -> Unit>> = _undoables

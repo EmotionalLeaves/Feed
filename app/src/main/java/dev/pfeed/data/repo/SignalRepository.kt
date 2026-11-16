@@ -86,7 +86,12 @@ class SignalRepository @Inject constructor(
      * A search is a stated interest: its words count like watching a matching post most of the way
      * (a mild nudge, so one curious search doesn't take over For You; searching again adds up).
      */
-    suspend fun recordSearch(query: String) {
+    suspend fun recordSearch(query: String) = nudge(query, SEARCH_NUDGE)
+
+    /** A topic picked on first run: a firm start for For You, about as strong as a like. */
+    suspend fun recordInterest(topic: String) = nudge(topic, PICK_NUDGE)
+
+    private suspend fun nudge(query: String, target: Double) {
         val q = query.trim().takeIf { it.length >= 2 } ?: return
         val words = q.split(Regex("\\s+")).filter { it.length >= 2 }
         val probe = MediaItem(
@@ -102,7 +107,7 @@ class SignalRepository @Inject constructor(
         val model = AffinityModel(settings.get().halfLifeDays)
         db.withTransaction {
             val current = affinityDao.tags(tags).associate { it.tag to model.decayed(it.score, it.updatedAt, now) }
-            affinityDao.upsertTags(TasteModel.update(tags, current, SignalWeights.delta(Signal(SignalType.VIEW, SEARCH_NUDGE))).map { (t, v) -> TagAffinityEntity(t, v, now) })
+            affinityDao.upsertTags(TasteModel.update(tags, current, SignalWeights.delta(Signal(SignalType.VIEW, target))).map { (t, v) -> TagAffinityEntity(t, v, now) })
         }
     }
 
@@ -143,6 +148,7 @@ class SignalRepository @Inject constructor(
     companion object {
         const val TASTE_MODEL_VERSION = 3
         private const val SEARCH_NUDGE = 1.5
+        private const val PICK_NUDGE = 3.0
     }
 
     /** Strongest learned likes and dislikes, for the "what it has learned" screen. */
