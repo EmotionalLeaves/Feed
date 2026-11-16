@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.36.3 — 2026-11-16
+
+Topic picker only for new installs
+
+- The "What are you into?" screen now appears only on a new install, when nothing has been learned yet. It no longer appears for people updating the app.
+
 ## 4.36.2 — 2026-11-15
 
 Why this post
