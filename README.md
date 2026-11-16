@@ -67,7 +67,7 @@ Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 - **Comics** turn sideways page by page; tap the page counter for a strip of every page. Pages taller than the screen scroll, and a comic reopens on the page you were reading.
 - **Search** asks every site at once and streams results in as each answers (best first, mixed across sites). Before you type, it shows what to **Continue** (videos and comics you left partway), picture rows for your top interests, your recent searches and topics. Filters: videos, images, GIFs, comics, length, source.
 - **Videos:** clips loop; full scenes (3 min+) play once and the feed moves on; a long video reopened partway carries on where you left it (with Start over).
-- **Library:** Saved, Liked, History (grouped by day) and Following, with Find, Play all and Shuffle; a kept post can be exported to the phone's Downloads from its menu. **Saved posts are kept on the phone** (videos download on Wi-Fi, pictures and comics on any connection, into private storage) and play offline.
+- **Library:** Saved, Liked, History (grouped by day) and Following, with Find, Play all and Shuffle. **Collections** sort saved posts into your own folders (hold a post → Add to collection; rename or delete from the Library); a kept post can be exported to the phone's Downloads from its menu. **Saved posts are kept on the phone** (videos download on Wi-Fi, pictures and comics on any connection, into private storage) and play offline.
 - The app lock (PIN, then biometrics) is optional: turn it on in **Settings → Privacy**.
 
 ## Sources

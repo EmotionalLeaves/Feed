@@ -286,6 +286,7 @@ private fun CollectionChips(
                 selected = selected == null,
                 onClick = { onSelect(null) },
                 label = { Text("All · $savedCount") },
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
             )
         }
         items(collections, key = { it.name }) { c ->
@@ -294,6 +295,7 @@ private fun CollectionChips(
                 onClick = { onSelect(c.name) },
                 label = { Text("${c.name} · ${c.count}", maxLines = 1) },
                 leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
             )
         }
     }
