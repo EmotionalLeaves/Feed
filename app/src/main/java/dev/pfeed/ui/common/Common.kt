@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -79,6 +78,8 @@ fun MediaGrid(
     modifier: Modifier = Modifier,
     /** A short label for the tile's corner (where it's from), or null for none. */
     label: ((MediaItem) -> String?)? = null,
+    /** Groups the grid under headings ("Today", "Yesterday"…); null for one plain grid. */
+    sectionOf: ((MediaItem) -> String)? = null,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
@@ -87,83 +88,102 @@ fun MediaGrid(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
-        itemsIndexed(items, key = { _, it -> it.key }) { index, item ->
-            val shape = RoundedCornerShape(4.dp)
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(3f / 4f)
-                    .clip(shape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onOpen(index) },
-            ) {
-                // Placeholder glyph shows while the thumbnail loads (or if it never does).
-                Icon(
-                    if (item.type == MediaType.IMAGE) Icons.Filled.Image else Icons.Filled.PlayArrow,
-                    contentDescription = null,
-                    tint = Color.White.copy(alpha = 0.15f),
-                    modifier = Modifier.align(Alignment.Center).size(28.dp),
-                )
-                AsyncImage(
-                    model = item.thumbnailUrl,
-                    contentDescription = item.title,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().then(if (LocalBlurPreviews.current) Modifier.blur(28.dp) else Modifier),
-                )
-                MediaMask()
-                val badge = when (item.type) {
-                    MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
-                    MediaType.GIF -> "GIF"
-                    MediaType.IMAGE -> null
-                }
-                if (badge != null) {
-                    Box(
-                        Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)
-                            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))),
-                    )
-                    Row(
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        if (item.type != MediaType.GIF) {
-                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                        }
-                        if (badge.isNotEmpty()) {
-                            Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
-                        }
-                    }
-                }
-                label?.invoke(item)?.let { text ->
+        var lastSection: String? = null
+        items.forEachIndexed { index, post ->
+            // Optional date (or other) sections: a full-width heading where the section changes.
+            val section = sectionOf?.invoke(post)
+            if (section != null && section != lastSection) {
+                lastSection = section
+                item(key = "section:$section", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                     Text(
-                        text,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
-                        maxLines = 1,
-                        modifier = Modifier.align(Alignment.TopStart).padding(5.dp)
-                            .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(5.dp))
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                        section,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = Color.White.copy(alpha = 0.75f),
+                        modifier = Modifier.padding(start = 12.dp, top = 14.dp, bottom = 6.dp),
                     )
                 }
-                // A saved post that's on the phone: opens without a connection.
-                if (item.extras[dev.pfeed.data.repo.OfflineStore.KEPT] != null) {
-                    Icon(
-                        Icons.Filled.DownloadDone,
-                        contentDescription = "On this phone",
-                        tint = Color.White,
-                        modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp)
-                            .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(2.dp),
-                    )
+            }
+            item(key = post.key) { GridTile(post, index, onOpen, label) }
+        }
+    }
+}
+
+@Composable
+private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?) {
+    val shape = RoundedCornerShape(4.dp)
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(3f / 4f)
+            .clip(shape)
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .clickable { onOpen(index) },
+    ) {
+        // Placeholder glyph shows while the thumbnail loads (or if it never does).
+        Icon(
+            if (item.type == MediaType.IMAGE) Icons.Filled.Image else Icons.Filled.PlayArrow,
+            contentDescription = null,
+            tint = Color.White.copy(alpha = 0.15f),
+            modifier = Modifier.align(Alignment.Center).size(28.dp),
+        )
+        AsyncImage(
+            model = item.thumbnailUrl,
+            contentDescription = item.title,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().then(if (LocalBlurPreviews.current) Modifier.blur(28.dp) else Modifier),
+        )
+        MediaMask()
+        val badge = when (item.type) {
+            MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
+            MediaType.GIF -> "GIF"
+            MediaType.IMAGE -> null
+        }
+        if (badge != null) {
+            Box(
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))),
+            )
+            Row(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (item.type != MediaType.GIF) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
                 }
-                // Part-watched long video: how far you got (it carries on from there).
-                val resumeAt = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) }
-                val total = item.durationSec?.times(1000L)
-                if (resumeAt != null && total != null && total > 0) {
-                    Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
-                        Box(Modifier.fillMaxHeight().fillMaxWidth((resumeAt.toFloat() / total).coerceIn(0.02f, 1f)).background(dev.pfeed.ui.theme.Accent))
-                    }
+                if (badge.isNotEmpty()) {
+                    Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                 }
+            }
+        }
+        label?.invoke(item)?.let { text ->
+            Text(
+                text,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                maxLines = 1,
+                modifier = Modifier.align(Alignment.TopStart).padding(5.dp)
+                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(5.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+            )
+        }
+        // A saved post that's on the phone: opens without a connection.
+        if (item.extras[dev.pfeed.data.repo.OfflineStore.KEPT] != null) {
+            Icon(
+                Icons.Filled.DownloadDone,
+                contentDescription = "On this phone",
+                tint = Color.White,
+                modifier = Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(2.dp),
+            )
+        }
+        // Part-watched long video: how far you got (it carries on from there).
+        val resumeAt = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) }
+        val total = item.durationSec?.times(1000L)
+        if (resumeAt != null && total != null && total > 0) {
+            Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.25f))) {
+                Box(Modifier.fillMaxHeight().fillMaxWidth((resumeAt.toFloat() / total).coerceIn(0.02f, 1f)).background(dev.pfeed.ui.theme.Accent))
             }
         }
     }

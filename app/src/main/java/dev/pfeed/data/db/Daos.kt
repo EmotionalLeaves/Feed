@@ -38,6 +38,11 @@ interface LibraryDao {
     )
     fun itemsJson(kind: String, limit: Int): Flow<List<String>>
 
+    @Query(
+        "SELECT l.itemKey AS itemKey, l.at AS at FROM library l WHERE l.kind = :kind ORDER BY l.at DESC LIMIT :limit",
+    )
+    fun times(kind: String, limit: Int): Flow<List<KeyAt>>
+
     @Query("DELETE FROM library WHERE kind = 'HISTORY' AND at < :before")
     suspend fun purgeHistory(before: Long)
 
@@ -134,3 +139,6 @@ interface CredentialDao {
     @Query("DELETE FROM credentials WHERE sourceId = :sourceId")
     suspend fun delete(sourceId: String)
 }
+
+/** When a post went into a library list. */
+data class KeyAt(val itemKey: String, val at: Long)

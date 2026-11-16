@@ -35,6 +35,10 @@ class LibraryRepository @Inject constructor(
         rows.mapNotNull { runCatching { json.decodeFromString(MediaItem.serializer(), it) }.getOrNull() }
     }
 
+    /** When each post in [kind] was added (watched, for History), by key. */
+    fun times(kind: LibraryKind): Flow<Map<String, Long>> =
+        libraryDao.times(kind.name, MAX_ITEMS).map { rows -> rows.associate { it.itemKey to it.at } }
+
     suspend fun add(kind: LibraryKind, given: MediaItem) {
         val item = OfflineStore.original(given)
         val now = System.currentTimeMillis()

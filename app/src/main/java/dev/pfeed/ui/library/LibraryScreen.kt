@@ -84,6 +84,7 @@ class LibraryViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val liked: StateFlow<List<MediaItem>> = library.items(LibraryKind.LIKED).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val history: StateFlow<List<MediaItem>> = library.items(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val historyTimes: StateFlow<Map<String, Long>> = library.times(LibraryKind.HISTORY).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
     val follows: StateFlow<List<FollowEntity>> = library.followRows.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun open(items: List<MediaItem>, index: Int, title: String) = holder.put(items, index, title = title)
@@ -100,6 +101,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     val saved by vm.saved.collectAsStateWithLifecycle()
     val liked by vm.liked.collectAsStateWithLifecycle()
     val history by vm.history.collectAsStateWithLifecycle()
+    val historyTimes by vm.historyTimes.collectAsStateWithLifecycle()
     val follows by vm.follows.collectAsStateWithLifecycle()
     var finding by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
@@ -150,7 +152,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
         when (tab) {
             0 -> saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline.", openGrid(l), onBrowse = toFeed) }
             1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed) }
-            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l)) }
+            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
                     EmptyState(Icons.Filled.PersonAdd, "Not following anyone", "Tap Follow next to a creator, or open a tag and follow it. Their posts fill the Following feed.")
@@ -181,8 +183,22 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     }
 }
 
+/** History headings: Today, Yesterday, This week, Earlier. */
+private fun whenWatched(at: Long?): String {
+    if (at == null) return "Earlier"
+    val zone = java.time.ZoneId.systemDefault()
+    val day = java.time.Instant.ofEpochMilli(at).atZone(zone).toLocalDate()
+    val today = java.time.LocalDate.now(zone)
+    return when {
+        day == today -> "Today"
+        day == today.minusDays(1) -> "Yesterday"
+        day.isAfter(today.minusDays(7)) -> "This week"
+        else -> "Earlier"
+    }
+}
+
 @Composable
-private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null) {
+private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null) {
     if (items.isEmpty()) {
         EmptyState(icon, title, hint, action = onBrowse?.let { go ->
             {
@@ -200,7 +216,7 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
             )
             dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
         }
-        MediaGrid(items, onOpen)
+        MediaGrid(items, onOpen, sectionOf = sectionOf)
     }
 }
 
