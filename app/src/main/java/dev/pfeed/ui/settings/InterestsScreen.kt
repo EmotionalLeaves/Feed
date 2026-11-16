@@ -157,6 +157,10 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 onDone = { vm.addInterests(it); picking = false },
                 onSkip = { picking = false },
                 skipLabel = "Cancel",
+                // Topics it already likes aren't offered again.
+                exclude = (interests?.first.orEmpty()).map { it.first }.toSet().let { liked ->
+                    dev.pfeed.ui.common.STARTER_TOPICS.filter { Features.normalizeTag(it) in liked }.toSet()
+                },
             )
         }
     }
