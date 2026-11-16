@@ -51,4 +51,12 @@ class BlocklistTest {
         assertFalse(Blocklist.EMPTY.allows(item("3", title = "underage something")))
         assertTrue(Blocklist.EMPTY.allows(item("4", tags = listOf("bdsm", "young_woman"))))
     }
+
+    @org.junit.Test
+    fun `hiding a tag hides its other spellings`() {
+        val b = dev.pfeed.domain.filter.Blocklist(tags = setOf("big tits"))
+        val post = item("x/1", tags = listOf("large_breasts", "solo"))
+        org.junit.Assert.assertFalse(b.allows(post))
+        org.junit.Assert.assertTrue(b.allows(item("x/2", tags = listOf("solo"))))
+    }
 }

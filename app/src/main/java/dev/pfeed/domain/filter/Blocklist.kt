@@ -21,8 +21,14 @@ data class Blocklist(
         val creator = item.creator?.let(::normalize)
         if (creator != null && creator in creators) return false
         if (tags.isEmpty()) return true
-        return item.tags.none { normalize(it) in tags }
+        return item.tags.none { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }
     }
+
+    /**
+     * Hidden tags in the form posts' tags are compared in: "big tits", "big_tits" and "large breasts"
+     * are one tag (see Features.normalizeTag), so hiding one hides them all.
+     */
+    private val canonicalTags: Set<String> by lazy { tags.mapTo(HashSet()) { dev.pfeed.domain.reco.Features.normalizeTag(it) } }
 
     fun filter(items: List<MediaItem>): List<MediaItem> = items.filter(::allows)
 
