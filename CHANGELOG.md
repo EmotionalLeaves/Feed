@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.41.0 — 2026-11-16
+
+What's new, in the app
+
+- **Settings → tap the version** at the bottom to see What's new: notes for the last three releases, built into the app.
+
 ## 4.40.1 — 2026-11-16
 
 History by day
