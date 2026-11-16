@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.43.0 — 2026-11-16
+
+Shuffle
+
+- **Library → Shuffle** (beside Play all) plays Saved or Liked in a random order.
+
 ## 4.42.4 — 2026-11-16
 
 Storage section

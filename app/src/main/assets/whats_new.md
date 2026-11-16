@@ -1,3 +1,8 @@
+## 4.43.0 — 2026-11-16
+Shuffle
+
+- **Library → Shuffle** (beside Play all) plays Saved or Liked in a random order.
+
 ## 4.42.4 — 2026-11-16
 Storage section
 
@@ -7,8 +12,3 @@ Storage section
 Picture rows from day one
 
 - On a new install, before anything has been learned, Search shows picture rows for popular topics, so there's something to tap straight away.
-
-## 4.42.2 — 2026-11-16
-Comics: From the start
-
-- Reopening a comic partway says which page it carries on from, with **From the start** to go back to page 1.
