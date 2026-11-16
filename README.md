@@ -58,10 +58,12 @@ You can also run `adb install -r app/build/outputs/apk/release/app-release.apk`.
 Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 
 - **Feed** has three modes along the top: **For You** (learned from what you watch), **Following** (creators and tags you follow) and **Latest**. Swipe up for the next post; pull down on the first post to refresh.
-- **Gestures:** tap to pause, double-tap to like, hold the right side of a video for 2×, press and hold for the menu (Not interested, hide a tag/creator/site, open or copy the link, report), three fingers anywhere to leave instantly. Pinch to zoom; zoomed in, one finger pans.
+- **Gestures:** tap to pause, double-tap to like, hold the right side of a video for 2×, press and hold for the menu (why it's here, Not interested, hide a tag/creator/site, open or copy the link, report; hiding can be undone), three fingers anywhere to leave instantly. Pinch to zoom; zoomed in, one finger pans. Sideways, double-tap a video's edges to skip 10 s. Volume up unmutes.
+- **First run** asks what you're into (skippable); add more any time in **Settings → Your taste**.
+- **Tag pages** show related tags to hop to; after you like two posts by the same creator, the app offers to follow them.
 - **Comics** turn sideways page by page; tap the page counter for a strip of every page. Pages taller than the screen scroll, and a comic reopens on the page you were reading.
-- **Search** asks every site at once and streams results in as each answers. Before you type, it shows what to **Continue** (videos and comics you left partway), your recent searches and topics.
-- **Library:** Saved, Liked, History and Following. **Saved posts are kept on the phone** (downloaded on Wi-Fi into private storage) and play offline.
+- **Search** asks every site at once and streams results in as each answers (best first, mixed across sites). Before you type, it shows what to **Continue** (videos and comics you left partway), picture rows for your top interests, your recent searches and topics. Filters: videos, images, GIFs, comics, length, source.
+- **Library:** Saved, Liked, History and Following, with Find. **Saved posts are kept on the phone** (videos download on Wi-Fi, pictures and comics on any connection, into private storage) and play offline.
 - The app lock (PIN, then biometrics) is optional: turn it on in **Settings → Privacy**.
 
 ## Sources
@@ -152,7 +154,7 @@ dev.pfeed
 | Optional app lock: PIN (PBKDF2-SHA256, salted; lockout after 5 wrong tries) then biometrics; locks again after a chosen time away | `AppLockManager`, `SecretStore` |
 | `FLAG_SECURE` on the window, dialogs and sheets (no screenshots, blank in Recents) | `MainActivity`, `SecureDialog` |
 | Encrypted database (SQLCipher, key wrapped by the Android Keystore) | `SecretStore.databasePassphrase` |
-| Disguised home-screen icon and name | `LauncherDisguise` |
+| Disguised home-screen icon and name (Notes, Calculator or Browser) | `LauncherDisguise` |
 | Panic: three fingers anywhere locks and leaves | `AppRoot.panicGesture` |
 | Private mode: no history, no search history, nothing learned | Settings → Privacy |
 | Blur previews in Library and Search | Settings → Privacy |
