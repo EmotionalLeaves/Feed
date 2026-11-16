@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.32.0 — 2026-11-15
+
+Two more video sites
+
+- **ThisVid**: amateur and home-made videos. Tags are checked first, like Rule34Video, and private (friends-only) videos are skipped.
+- **PornOne**: long full scenes, up to 1080p.
+- There are now 15 video sites, and all of them play directly.
+
 ## 4.31.1 — 2026-11-15
 
 Comics teach For You properly; Copy link
