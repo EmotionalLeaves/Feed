@@ -110,7 +110,7 @@ class SearchRepository @Inject constructor(
                     // Search is latency-bound: dedup on titles/durations plus any hashes already memoised.
                     val unique = Deduplicator().filter(collected, hasher.cached(collected))
                     SearchResult(
-                        items = unique.sortedByDescending { scores[it.key] ?: 0.0 },
+                        items = mixSources(unique.sortedByDescending { scores[it.key] ?: 0.0 }),
                         errors = errors.toList(),
                         elapsedMs = System.currentTimeMillis() - started,
                         pending = pending,
@@ -160,9 +160,25 @@ class SearchRepository @Inject constructor(
     /** Where per-source search work runs, outside the search's own scope (see [searchOne]). */
     private val detached = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
+    /**
+     * Best first, but no more than [MAX_RUN] in a row from one source: the grid's first screen shows
+     * every site that answered rather than a block of one (the order within each source is kept).
+     */
+    internal fun mixSources(sorted: List<MediaItem>): List<MediaItem> {
+        val queue = ArrayList(sorted)
+        val out = ArrayList<MediaItem>(sorted.size)
+        while (queue.isNotEmpty()) {
+            val runSource = out.takeLast(MAX_RUN).map { it.sourceId }.distinct().singleOrNull()?.takeIf { out.size >= MAX_RUN }
+            val i = if (runSource == null) 0 else queue.indexOfFirst { it.sourceId != runSource }.takeIf { it >= 0 } ?: 0
+            out += queue.removeAt(i)
+        }
+        return out
+    }
+
     companion object {
         private const val PER_SOURCE_TIMEOUT_MS = 14_000L
         private const val MAX_PER_SOURCE = 150
+        private const val MAX_RUN = 2
 
         /** The search's own small pool (IO-backed, so feed work on Default can't queue it). */
         @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
