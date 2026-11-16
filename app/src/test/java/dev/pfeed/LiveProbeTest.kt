@@ -32,10 +32,15 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        for (u in listOf("https://multporn.net/comics/latest_updates", "https://multporn.net/new")) probe(u) {
-            val (code, b) = get(u)
-            val hrefs = Regex("""href="([^"]+)"""").findAll(b).map { it.groupValues[1] }.filter { it.startsWith("/") && !it.contains("?") }.distinct().toList()
-            "$code len=${b.length} hrefs=${hrefs.size} ${hrefs.drop(20).take(40)} :: " + around(b, "views-row", 0, 900)
+        probe("multporn new rows") {
+            val b = get("https://multporn.net/new").second
+            val i = b.indexOf("views-row-1 ")
+            b.substring(i, minOf(b.length, i + 1800))
+        }
+        probe("multporn gallery") {
+            val (code, g) = get("https://multporn.net/comics/sparring_session")
+            val imgs = Regex("""(https?:)?//[^"' ]+\.(?:jpg|jpeg|png|webp|gif)""").findAll(g).map { it.value }.distinct().toList()
+            "$code len=${g.length} imgs=${imgs.size} ${imgs.filter { it.contains("comic") || it.contains("files") }.take(6)} cats=${Regex("""href="(/category/[^"]+)"""").findAll(g).map { it.groupValues[1] }.distinct().take(12).toList()} :: " + around(g, "field-name-field-com-pages", 0, 600) + " || " + around(g, "jb-idx", 0, 300)
         }
     }
 }
