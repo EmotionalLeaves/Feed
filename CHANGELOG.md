@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.33.0 — 2026-11-15
+
+HentaiEra comics
+
+- **HentaiEra** joins Comic sites (with IMHentai, HentaiFox and 8muses): more doujinshi, manga and western comics. As always, every gallery's own tags are checked, and ones without tags aren't shown.
+
 ## 4.32.0 — 2026-11-15
 
 Two more video sites
