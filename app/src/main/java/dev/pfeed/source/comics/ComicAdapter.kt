@@ -28,7 +28,7 @@ import javax.inject.Singleton
  * whose tags the minors filter rejects never become items; one that can't be read is dropped.
  */
 @Singleton
-class ComicAdapter @Inject constructor(private val http: HttpJson) : CachingAdapter() {
+class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAdapter() {
     override val id = SOURCE_ID
     override val displayName = "Comic sites"
     override val requiresAuth = false
@@ -79,7 +79,7 @@ class ComicAdapter @Inject constructor(private val http: HttpJson) : CachingAdap
         listed.map { l ->
             async {
                 gate.withPermit {
-                    attempt { ComicSite.gallery(site, l, http.getRaw(id, site.galleryUrl(l.id))) }.getOrNull()
+                    attempt { ComicSite.gallery(site, l, http.getRaw(id, site.galleryUrl(l.id)))?.let { g -> verified(site, g) } }.getOrNull()
                 }
             }
         }.awaitAll().filterNotNull().filter(MinorsFilter::allows)
@@ -93,6 +93,18 @@ class ComicAdapter @Inject constructor(private val http: HttpJson) : CachingAdap
     }
 }
 
+/**
+ * For a site whose page format is assumed (see ComicSite.pageExt): check the first page exists, and
+ * fall back to JPEG pages if it doesn't. A gallery whose first page loads either way isn't shown.
+ */
+private suspend fun ComicAdapter.verified(site: ComicSite, g: MediaItem): MediaItem? {
+    if (!site.assumesPageExt) return g
+    if (http.reachable(g.pages.firstOrNull() ?: return g)) return g
+    val jpg = g.pages.map { it.substringBeforeLast('.') + ".jpg" }
+    if (!http.reachable(jpg.first())) return null
+    return g.copy(pages = jpg, extras = g.extras + ("media" to jpg.first()))
+}
+
 /** One site on the shared gallery engine. */
 class ComicSite private constructor(
     val host: String,
@@ -102,6 +114,7 @@ class ComicSite private constructor(
     /** The format every full page comes in, when the site serves them all the same (HentaiRox: webp). */
     private val pageExt: String? = null,
 ) {
+    val assumesPageExt: Boolean get() = pageExt != null
     data class Listed(val id: String, val title: String?, val thumb: String?)
 
     fun listUrl(term: String, page: Int): String =

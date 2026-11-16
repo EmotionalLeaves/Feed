@@ -71,4 +71,14 @@ class ComicSitesTest {
         assertEquals(null, dev.pfeed.source.comics.EightMuses.issue("/porn/album/X", """<a class="c-tile" href="/porn/album/X/Y">"""))
         assertEquals(null, dev.pfeed.source.comics.EightMuses.issue("/porn/album/X/Y", html.replace("/porn/tag/", "/porn/nottag/")))
     }
+
+    @Test
+    fun `hentairox counts pages from its details and serves them as webp`() {
+        val html = """<h1 id="gallery-title">A comic</h1><div class="hr-gallery-metadata"><span>Tags:</span><a class="hr-gallery-tag" href="/tag/big-breasts/">big breasts</a></div><span>167 pages</span>
+            <a href="/g/1/1/"><img src="https://m11.hentairox.com/033/abc/1t.jpg"></a><a href="/g/1/2/"><img src="https://m11.hentairox.com/033/abc/2t.jpg"></a>"""
+        val g = ComicSite.gallery(ComicSite.HENTAIROX, ComicSite.Listed("1", "A comic", "https://m11.hentairox.com/033/abc/thumb.jpg"), html)!!
+        assertEquals(167, g.pages.size)
+        assertEquals("https://m11.hentairox.com/033/abc/1.webp", g.pages.first())
+        assertEquals(listOf("comic", "big_breasts"), g.tags)
+    }
 }
