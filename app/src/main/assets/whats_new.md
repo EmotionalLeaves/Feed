@@ -1,3 +1,9 @@
+## 4.46.0 — 2026-11-16
+Hands-free
+
+- New: Hands-free mode, from the hold menu on any post. The feed moves on by itself — pictures after 6 s, galleries flip a page every 4 s, short clips move on after looping about 12 s, longer videos at their end.
+- Tap a post to pause the countdown; a Hands-free pill at the top stops it (with an undo).
+
 ## 4.45.4 — 2026-11-16
 Add topics shows only new ones
 
@@ -7,8 +13,3 @@ Add topics shows only new ones
 Clear the video cache
 
 - **Settings → Storage → Video cache → Clear** empties the cache of recently watched videos. Saved posts kept offline aren't touched.
-
-## 4.45.2 — 2026-11-16
-App code compiled ahead of time
-
-- A baseline profile compiles the app's own code ahead of time at install. Cold start measured 0.79 s on the test emulator (it was 1.7–2.3 s with the old debug APK).
