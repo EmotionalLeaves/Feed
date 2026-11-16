@@ -13,6 +13,7 @@ import androidx.compose.ui.test.performClick
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.toList
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -360,12 +361,31 @@ class SmokeTest {
                     .filter { it.type == dev.pfeed.domain.model.MediaType.IMAGE && !it.isGallery }.take(5)
             }
             runBlocking { savedForShot.forEach { rule.activity.library.add(dev.pfeed.data.repo.LibraryKind.SAVED, it) } }
+            // Two collections: one with three of them, one renamed after creation.
+            val lib = rule.activity.library
+            runBlocking {
+                savedForShot.take(3).forEach { lib.addToCollection("Cosplay", it) }
+                savedForShot.lastOrNull()?.let { lib.addToCollection("temp name", it) }
+                lib.renameCollection("temp name", "Favourites")
+                val cols = lib.collections.first()
+                val first = savedForShot.firstOrNull()?.let { lib.collectionsOf(it) }
+                android.util.Log.i("PFHEALTH", "collections: ${cols.joinToString { "${it.name}=${it.count}" }}; first post in $first")
+            }
             Thread.sleep(8_000) // time for them to be kept
             rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "library") { exists("Saved", substring = true) }
             Thread.sleep(1_500)
             shot("04_library")
-            runBlocking { savedForShot.forEach { rule.activity.library.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) } }
+            runCatching {
+                rule.onAllNodes(hasText("Cosplay · ", substring = true))[0].performClick()
+                Thread.sleep(1_500)
+                shot("04b_collection")
+                rule.onAllNodes(hasText("All · ", substring = true))[0].performClick()
+            }.onFailure { android.util.Log.i("PFHEALTH", "collections: chip not found (${it.message?.take(80)})") }
+            runBlocking {
+                savedForShot.forEach { lib.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
+                android.util.Log.i("PFHEALTH", "collections after unsaving: ${lib.collections.first().joinToString { "${it.name}=${it.count}" }.ifEmpty { "none" }}")
+            }
             rule.onNode(hasText("Settings") and androidx.compose.ui.test.isSelectable()).performClick()
             waitFor(what = "settings") { exists("App lock") }
             shot("05_settings")
