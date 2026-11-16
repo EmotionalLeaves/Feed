@@ -266,6 +266,36 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
         )
 
+        // A tag page: the tags that show up most alongside it, to hop sideways to.
+        val pageTag = vm.tag
+        if (pageTag != null && !pageTag.startsWith("@") && !landscape && items.size >= 6) {
+            val related = remember(items.size, pageTag) {
+                val self = dev.pfeed.domain.reco.Features.normalizeTag(pageTag)
+                items.take(60).flatMap { Display.tags(it, max = 12) }
+                    .groupBy { dev.pfeed.domain.reco.Features.normalizeTag(it.second) }
+                    .filterKeys { it != self }
+                    .entries.sortedByDescending { it.value.size }
+                    .take(8)
+                    .map { it.value.first() }
+            }
+            if (related.isNotEmpty()) Row(
+                Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 54.dp)
+                    .horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                related.forEach { (label, raw) ->
+                    Text(
+                        "#$label",
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelMedium,
+                        maxLines = 1,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
+                            .clickable { nav.navigate(Routes.tag(raw)) }.padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
+
         // Confirmations appear under the top bar, clear of the caption and buttons.
         dev.pfeed.ui.common.AppSnackbarHost(
             snackbar,
