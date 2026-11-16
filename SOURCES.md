@@ -1,37 +1,29 @@
-# Integrated sources
+# Sources
 
-Every network domain this app contacts is either listed here or entered by the owner at runtime (an RSS feed URL). Per the build spec, a new domain needs the owner's approval first, and a source that can't be integrated within its terms is skipped and noted here.
+Every network domain the app contacts is listed here, or is entered by you at runtime (an RSS feed, a direct link, a JSON endpoint, an extra board or instance).
 
-| ID | Source | How it's accessed | Network | Terms |
-|---|---|---|---|---|
-| `rss` | RSS / Atom feeds the owner adds | HTTP GET of the feed URL and of the media URLs inside it (`enclosure`, `media:content`, `media:thumbnail`, `media:player`) | Only the hosts in feeds the owner adds | Uses each publisher's syndication feed as published. Media is played from the URLs the feed provides, and nothing is scraped beyond the feed. The owner is responsible for adding only feeds whose terms allow personal viewing. |
-| `local` | Local files | Storage Access Framework tree URI with a persisted read permission | None | Reads only folders the owner picks. |
-| `direct` | Direct media/page URLs the owner pastes | None to list; the URL is played directly | Only the hosts of URLs the owner adds | The owner supplies their own links. |
-| `reddit` | Subreddits the owner adds | HTTP GET of `https://www.reddit.com/r/<sub>/hot.json` and `/search.json` (public, read-only, no auth) | `www.reddit.com`, `v.redd.it`, `i.redd.it`, `preview.redd.it` | Reddit's public JSON is a documented read interface. This is personal, read-only use at human scale; it sends the app's User-Agent and does not log in, post, or vote. Heavy automated use would need Reddit's official API and its terms. |
-| `mastodon` | Instance host + optional hashtag | HTTP GET of `/api/v1/timelines/public` and `/api/v1/timelines/tag/:tag` (`only_media`) | Only the instances the owner adds | Documented, auth-free public-timeline API. The owner chooses instances whose rules allow it. |
-| `booru` | Danbooru-style host + optional tags | HTTP GET of `/posts.json` (Danbooru / e621 / moebooru-compatible) | Only the hosts the owner adds | Public, documented image-board API. Some hosts ask for a descriptive User-Agent and rate-limit; the owner should respect each host's terms and limits. |
-| `json` | Owner-defined JSON mapping | HTTP GET of the owner's URL template | Only the hosts in the owner's templates | A general-purpose mapper. The owner points it at an endpoint they're allowed to read and describes the field layout. No site-specific code ships in the app. |
-| `api` | **Not yet chosen**: see below | Retrofit + OAuth 2.0 (PKCE) in a Custom Tab | None until configured | n/a |
+All requests go through one OkHttp client. It sends a normal mobile browser's User-Agent and the site's own address as Referer. Encrypted DNS (1.1.1.1) is used automatically when a network blocks a name, and always when you turn it on. Every post from every source passes the always-on minors filter and the porn-only filter before it can appear.
 
-## `api`: first API adapter (pending owner decision)
+| ID | Source | How it's read | Domains |
+|---|---|---|---|
+| `tube` | Tube sites (15) | Each site's own listing, search and video pages; the stream is taken from the page (HLS or MP4) and played directly, else the site's embed player. Rule34Video and ThisVid pages are read first so their tags can be checked. | xvideos.com, xnxx.com, pornhub.com, youporn.com, tube8.com, xhamster.com (+ xhamster2.com, xhamster.desi, xhamster19.com mirrors), redtube.com, eporner.com (official API), tnaflix.com, porntrex.com, youjizz.com, erome.com, rule34video.com, thisvid.com, pornone.com, and their CDNs |
+| `redgifs` | RedGIFs | Public API with a temporary token | api.redgifs.com, media.redgifs.com |
+| `reddit` | Subreddits | Public RSS listings and search, paced to one request every 6 s | www.reddit.com, i.redd.it, preview.redd.it |
+| `booru` | Image boards | Each board's public API (Gelbooru, Danbooru, e621, Moebooru and compatible) | The boards in Sources (Gelbooru, Rule34, e621, Danbooru, Konachan, Yande.re, Hypnohub and more) |
+| `philomena` | Derpibooru / Furbooru | Public API | derpibooru.org, furbooru.org |
+| `mastodon` | Fediverse | Public and hashtag timelines (`only_media`) | The instances in Sources (pawoo.net and baraag.net are always excluded) |
+| `kemono` | Coomer | Public API | coomer.st |
+| `nhentai` | nhentai | Public API, paced | nhentai.net, its image servers |
+| `comics` | Comic sites | Each site's listing, search and gallery pages; every gallery's own tags are read and checked | imhentai.xxx, hentaifox.com, hentaiera.com, hentairox.com, comics.8muses.com, and their image servers |
+| `rss` | RSS / Atom | The feeds you add | Yours |
+| `direct` | Direct links | The links you paste | Yours |
+| `json` | Any JSON API | Your URL template and field mapping | Yours |
+| `local` | Local folder | Storage Access Framework | None |
+| `api` | OAuth API adapter | Plumbing only, off until configured (`api.*` in `local.properties`) | None until configured |
 
-The spec asks for a fully working adapter for a source with a documented public API that permits third-party clients. It also says to ask the owner before contacting any new domain. Both rules apply here, so the agent did not pick a service. The adapter's plumbing is complete:
+## Tried and skipped
 
-- Retrofit client, bearer-token interceptor
-- OAuth 2.0 authorization code + PKCE via Custom Tabs, redirect `pfeed://oauth/callback`
-- Tokens stored only in the SQLCipher DB, refreshed on expiry or 401, cleared with a clear "sign in again" error when refresh fails
-- 401/403/429/5xx, network and parse errors all surface as messages, never crashes
-
-While `api.baseUrl` is empty the adapter reports **Not configured** and stays disabled.
-
-### To enable it
-
-1. Pick a source and confirm that its API terms allow a private third-party client for personal use (including content type, caching and display requirements).
-2. Register an OAuth client with redirect URI `pfeed://oauth/callback` if the API needs sign-in.
-3. Fill `api.displayName`, `api.baseUrl` (https only), `api.authUrl`, `api.tokenUrl`, `api.clientId` and `api.scopes` in `local.properties`. No client secret is used or stored.
-4. Replace the placeholder endpoints and DTOs in `source/api/ApiService.kt` with the source's documented ones, and adjust `ApiSourceAdapter.toMediaItem`.
-5. Fill in this row: source name, API docs URL, domains contacted, and a note confirming the integration follows that source's terms, including any attribution or report-link requirements (`reportUrl`).
-
-## Skipped sources
-
-No site-specific scrapers are included. Some content sites offer neither a feed nor a public API and only serve media through a player that checks the session or signature. Integrating one of those means reverse-engineering its player and defeating that check, which breaks on every site change and strips away the vetting that keeps an aggregator from surfacing illegal or non-consensual content. Those are left to the `direct` and `json` adapters, which the owner configures for a source they're allowed to read.
+- **SpankBang, Hanime, PornTube:** Cloudflare challenge pages, no listing without a browser.
+- **Multporn:** its listing gives about three comics a page and its search doesn't answer.
+- **Motherless:** the domain doesn't resolve, even over encrypted DNS.
+- **Erome photo-only albums:** they carry no tags to check, so only Erome videos are used.
