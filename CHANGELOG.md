@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.45.2 — 2026-11-16
+
+App code compiled ahead of time
+
+- A baseline profile compiles the app's own code ahead of time at install. Cold start measured 0.79 s on the test emulator (it was 1.7–2.3 s with the old debug APK).
+
 ## 4.45.1 — 2026-11-16
 
 Smoother from the first minute

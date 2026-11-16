@@ -1,3 +1,8 @@
+## 4.45.2 — 2026-11-16
+App code compiled ahead of time
+
+- A baseline profile compiles the app's own code ahead of time at install. Cold start measured 0.79 s on the test emulator (it was 1.7–2.3 s with the old debug APK).
+
 ## 4.45.1 — 2026-11-16
 Smoother from the first minute
 
@@ -8,8 +13,3 @@ A much faster APK
 
 - **New download: app-optimized.** Each build now also produces an optimized APK (R8-shrunk and not debuggable). It starts about twice as fast (0.9 s against 1.7–2.3 s on the test emulator), scrolls more smoothly and is 13 MB instead of 34 MB. It uses the same app id and key as the APK you have, so it installs over it and keeps your library, taste and settings.
 - Search filters: order by best match, longest or shortest.
-
-## 4.44.1 — 2026-11-16
-Sort search results
-
-- Search filters (the sliders icon) have an **Order** choice: best match, longest first (full scenes), or shortest first (quick clips).
