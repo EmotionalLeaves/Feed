@@ -247,13 +247,23 @@ fun VideoPage(
  * read, so turning a page is instant.
  */
 @Composable
-fun GalleryPage(item: MediaItem, vm: FeedViewModel) {
+fun GalleryPage(item: MediaItem, vm: FeedViewModel, active: Boolean = true) {
     // Opens on the page you were reading last time.
     val pager = androidx.compose.foundation.pager.rememberPagerState(
         initialPage = remember(item.key) { dev.pfeed.player.ComicPages.get(item.key)?.coerceIn(0, item.pages.size - 1) ?: 0 },
         pageCount = { item.pages.size },
     )
     val privateMode by vm.privateMode.collectAsState()
+    // Reopened partway: say which page, with a way back to the first (once, when it's on screen).
+    var offeredPage by remember(item.key) { mutableStateOf(false) }
+    val startPage = remember(item.key) { pager.currentPage }
+    val pageScope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(active) {
+        if (active && startPage > 0 && !offeredPage) {
+            offeredPage = true
+            vm.offer("Carrying on from page ${startPage + 1} of ${item.pages.size}", "From the start") { pageScope.launch { pager.scrollToPage(0) } }
+        }
+    }
     LaunchedEffect(item.key, pager.currentPage) {
         item.pages.drop(pager.currentPage + 1).take(2).forEach { vm.warmImage(it) }
         vm.onComicPage(item, pager.currentPage)
