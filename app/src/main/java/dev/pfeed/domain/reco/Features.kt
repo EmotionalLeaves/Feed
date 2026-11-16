@@ -36,7 +36,33 @@ object Features {
     /** True for tags that are on nearly everything (ratings, file formats, "highres"…). */
     fun isGeneric(tag: String): Boolean = normalizeTag(tag) in GENERIC
 
-    fun normalizeTag(tag: String): String = Blocklist.normalize(tag).replace(' ', '_')
+    fun normalizeTag(tag: String): String = Blocklist.normalize(tag).replace(' ', '_').let { SAME_AS[it] ?: it }
+
+    /**
+     * Different sites' words for the same thing, so a taste learned on one site carries to the others
+     * (a like on a board's "large_breasts" also means more of a tube's "big tits").
+     */
+    private val SAME_AS: Map<String, String> = buildMap {
+        fun same(canonical: String, vararg others: String) = others.forEach { put(it, canonical) }
+        same("big_tits", "big_breasts", "large_breasts", "big_boobs", "bigtits", "big_titties")
+        same("big_ass", "big_butt", "big_booty", "bigass", "big_bum")
+        same("blowjob", "blow_job", "blowjobs", "fellatio", "bj")
+        same("cumshot", "cum_shot", "cumshots", "cum_shots")
+        same("deepthroat", "deep_throat", "deepthroating")
+        same("creampie", "creampies", "cream_pie")
+        same("threesome", "threesomes", "3some", "ffm_threesome", "mmf_threesome")
+        same("doggystyle", "doggy_style", "doggy")
+        same("redhead", "redheads", "red_hair", "ginger")
+        same("lesbian", "lesbians", "lesbian_sex")
+        same("anal", "anal_sex", "anal_penetration")
+        same("cosplay", "cosplayer", "cosplayers")
+        same("femdom", "female_domination")
+        same("pov", "point_of_view", "pov_sex")
+        same("amateur", "amateurs", "homemade")
+        same("feet", "foot_fetish", "feet_fetish", "foot")
+        same("milf", "milfs")
+        same("trans", "transgender", "shemale", "tranny", "ts")
+    }
 
     fun of(item: MediaItem): List<String> {
         val tags = item.tags.asSequence()

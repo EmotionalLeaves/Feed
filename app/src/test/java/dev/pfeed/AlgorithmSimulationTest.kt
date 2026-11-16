@@ -197,6 +197,11 @@ class AlgorithmSimulationTest {
     fun `tag spellings from different sources meet`() {
         assertEquals(Features.normalizeTag("rough_sex"), Features.normalizeTag("Rough Sex"))
         assertEquals(Features.normalizeTag("#rough_sex"), Features.normalizeTag("rough sex"))
+        // Different sites' words for the same thing are one taste.
+        assertEquals("big_tits", Features.normalizeTag("large_breasts"))
+        assertEquals("big_tits", Features.normalizeTag("Big Boobs"))
+        assertEquals("blowjob", Features.normalizeTag("fellatio"))
+        assertEquals("redhead", Features.normalizeTag("red hair"))
     }
 
     @Test
