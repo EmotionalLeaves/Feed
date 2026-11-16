@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.36.2 — 2026-11-15
+
+Why this post
+
+- The post menu (press and hold) says why a post is in your feed, for example "Because you like #milf, #pov": the learned interests it matches most.
+
 ## 4.36.1 — 2026-11-15
 
 Add topics from Your taste
