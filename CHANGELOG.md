@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.45.1 — 2026-11-16
+
+Smoother from the first minute
+
+- Ahead-of-time profiles for Compose and the other libraries are now installed on sideloaded installs too (normally the Play Store does it), so the app is smoother from its first minutes of use. Cold start measured 0.84 s.
+
 ## 4.45.0 — 2026-11-16
 
 A much faster APK
