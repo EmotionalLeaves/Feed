@@ -33,35 +33,29 @@ class LiveProbeTest {
     @Test
     fun probe() {
         val ua = dev.pfeed.di.ArchiveHeaders.BROWSER_UA
-        fun g(url: String): Pair<Int, String> = OkHttpClient.Builder().followRedirects(true).build()
-            .newCall(Request.Builder().url(url).header("User-Agent", ua).header("Accept", "text/html").build()).execute().use { it.code to it.body?.string().orEmpty() }
+        val c = OkHttpClient.Builder().followRedirects(true).build()
+        fun g(url: String, ref: String? = null): Pair<Int, String> = c.newCall(Request.Builder().url(url).header("User-Agent", ua).header("Accept", "text/html").apply { if (ref != null) header("Referer", ref) }.build()).execute().use { it.code to it.body?.string().orEmpty() }
+        fun h(url: String, ref: String): String = c.newCall(Request.Builder().url(url).header("User-Agent", ua).header("Referer", ref).header("Range", "bytes=0-0").build()).execute().use { "${it.code} ${it.header("Content-Type")}" }
         val sites = listOf(
-            "https://spankbang.com/new_videos/" to "/video/",
-            "https://motherless.com/videos/recent" to "motherless.com/",
-            "https://hqporner.com/" to "/hdporn/",
-            "https://thisvid.com/latest-updates/" to "/videos/",
-            "https://www.txxx.com/latest-updates/" to "/videos/",
-            "https://beeg.com/" to "beeg",
-            "https://www.porn.com/videos" to "/videos/",
-            "https://www.pornhat.com/" to "/video/",
-            "https://www.fapster.xxx/" to "/videos/",
-            "https://www.porndig.com/" to "/videos/",
-            "https://www.pornone.com/newest/" to "/",
-            "https://hanime.tv/" to "/videos/hentai/",
-            "https://www.ixxx.com/" to "/",
-            "https://www.4tube.com/videos" to "/videos/",
-            "https://www.fux.com/videos" to "/videos/",
-            "https://www.porntube.com/videos" to "/videos/",
-            "https://www.pornerbros.com/videos" to "/videos/",
-            "https://www.sunporno.com/" to "/videos/",
-            "https://www.drtuber.com/" to "/video/",
-            "https://www.vjav.com/latest-updates/" to "/videos/",
-            "https://www.ok.xxx/" to "/video/",
+            Triple("https://thisvid.com/latest-updates/", Regex("""href="(https://thisvid\.com/videos/[^"]+)""""), "https://thisvid.com/"),
+            Triple("https://hqporner.com/", Regex("""href="(/hdporn/[^"]+\.html)""""), "https://hqporner.com"),
+            Triple("https://www.drtuber.com/", Regex("""href="(/video/\d+/[^"]+)""""), "https://www.drtuber.com"),
+            Triple("https://www.pornone.com/newest/", Regex("""href="(https://pornone\.com/[^"/]+/[^"/]+/\d+/)""""), ""),
+            Triple("https://www.ok.xxx/", Regex("""href="(https://ok\.xxx/video/\d+/)""""), ""),
+            Triple("https://www.porndig.com/", Regex("""href="(/videos/\d+/[^"]+)""""), "https://www.porndig.com"),
+            Triple("https://www.fapster.xxx/", Regex("""href="(https://www\.fapster\.xxx/videos/\d+/[^"]+)""""), ""),
         )
-        for ((u, marker) in sites) probe(u) {
-            val (code, body) = g(u)
-            val title = Regex("<title[^>]*>([^<]{0,70})").find(body)?.groupValues?.get(1)
-            "$code len=${body.length} markers=${Regex(Regex.escape(marker)).findAll(body).count()} title=$title mp4=${body.indexOf(".mp4")} m3u8=${body.indexOf(".m3u8")} cf=${body.contains("cf-chl") || body.contains("Just a moment")}"
+        for ((list, re, prefix) in sites) probe(list) {
+            val (lc, lb) = g(list)
+            val links = re.findAll(lb).map { it.groupValues[1] }.distinct().toList()
+            val first = links.firstOrNull() ?: return@probe "list $lc no links (len ${lb.length}) " + around(lb, "href=\"", 0, 200)
+            val url = if (first.startsWith("http")) first else prefix + first
+            val (vc, page) = g(url, list)
+            val kvs = Regex("""video(?:_alt)?_url\d*:\s*'([^']+)'""").findAll(page).map { it.groupValues[1].take(120) }.toList()
+            val mp4 = Regex("""(https?:)?//[^"' ]+\.mp4[^"' ]*""").findAll(page).map { it.value.take(140) }.distinct().take(4).toList()
+            val m3u8 = Regex("""https?:[^"' ]+\.m3u8[^"' ]*""").find(page)?.value?.take(140)
+            val headTry = (kvs.firstOrNull { it.startsWith("http") } ?: mp4.firstOrNull()?.let { if (it.startsWith("//")) "https:$it" else it })?.let { runCatching { h(it, url) }.getOrNull() }
+            "links=${links.size} page=$vc len=${page.length} kvs=$kvs mp4=$mp4 m3u8=$m3u8 head=$headTry lic=${page.contains("license_code")} :: " + around(page, "<video", 0, 300)
         }
     }
 }
