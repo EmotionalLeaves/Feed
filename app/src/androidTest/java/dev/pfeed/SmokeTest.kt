@@ -377,6 +377,11 @@ class SmokeTest {
             shot("07_taste")
             androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
             waitFor(what = "settings again") { exists("App lock") }
+            rule.onNodeWithText("Hidden & blocked").performClick()
+            Thread.sleep(1_000)
+            shot("07b_blocked")
+            androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            waitFor(what = "settings again") { exists("App lock") }
             rule.onNodeWithText("Sources").performClick()
             waitFor(what = "sources") { exists("Check sources") }
             shot("08_sources")
