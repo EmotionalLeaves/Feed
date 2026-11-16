@@ -1,3 +1,8 @@
+## 4.43.7 — 2026-11-16
+Gestures help updated
+
+- **Settings → Gestures** lists every gesture, including the newer ones: pinch and pan, pull to refresh, double-tap an edge to skip while sideways, volume up for sound, and the comic page strip.
+
 ## 4.43.6 — 2026-11-16
 Crash fix for huge images
 
@@ -7,8 +12,3 @@ Crash fix for huge images
 Typeahead knows your follows
 
 - As you type in Search, suggestions now include the creators and tags you follow.
-
-## 4.43.4 — 2026-11-16
-XVideos and XNXX creators
-
-- XVideos and XNXX videos now show their uploader or pornstar, which you can tap and follow like any creator.
