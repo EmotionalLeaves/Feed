@@ -1,3 +1,8 @@
+## 4.41.2 — 2026-11-16
+Hidden tags match every spelling
+
+- Hiding a tag now also hides its other spellings: hiding "big tits" hides posts tagged "big_tits" or "large breasts". Before, a tag typed with a space didn't match the same tag written with an underscore.
+
 ## 4.41.1 — 2026-11-16
 One taste, many spellings
 
@@ -7,8 +12,3 @@ One taste, many spellings
 What's new, in the app
 
 - **Settings → tap the version** at the bottom to see What's new: notes for the last three releases, built into the app.
-
-## 4.40.1 — 2026-11-16
-History by day
-
-- History is grouped under **Today**, **Yesterday**, **This week** and **Earlier**.
