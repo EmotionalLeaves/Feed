@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.42.2 — 2026-11-16
+
+Comics: From the start
+
+- Reopening a comic partway says which page it carries on from, with **From the start** to go back to page 1.
+
 ## 4.42.1 — 2026-11-16
 
 Start over
