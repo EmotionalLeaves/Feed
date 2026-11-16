@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.33.1 — 2026-11-15
+
+HentaiRox comics
+
+- **HentaiRox** joins Comic sites. Each gallery's first page is checked before it's shown, so comics that wouldn't load are left out.
+
 ## 4.33.0 — 2026-11-15
 
 HentaiEra comics
