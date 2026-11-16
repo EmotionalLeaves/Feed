@@ -41,18 +41,13 @@ class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAda
 
     override suspend fun entries(): List<String> =
         ComicSite.ALL.flatMap { site -> (listOf("") + SourceCatalog.comicTags).map { "${site.host}|$it" } } +
-            EightMuses.artists(http, id).map { "${EightMuses.HOST}|$it" } + "${Multporn.HOST}|"
+            EightMuses.artists(http, id).map { "${EightMuses.HOST}|$it" }
 
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         if (entry.startsWith(EightMuses.HOST + "|")) {
             val offset = token?.toIntOrNull() ?: 0
             val (items, next) = EightMuses.page(http, id, entry.substringAfter('|'), offset)
             return EntryPage(items.filter(MinorsFilter::allows), next?.toString())
-        }
-        if (entry.startsWith(Multporn.HOST + "|")) {
-            val page = token?.toIntOrNull() ?: 0
-            val slugs = Multporn.slugs(http.getRaw(id, Multporn.listUrl(page)))
-            return EntryPage(multporn(slugs), if (slugs.isEmpty() || page >= MAX_PAGES) null else (page + 1).toString())
         }
         val site = ComicSite.byHost(entry.substringBefore('|')) ?: return EntryPage(emptyList(), null)
         val tag = entry.substringAfter('|', "")
@@ -71,21 +66,14 @@ class ComicAdapter @Inject constructor(internal val http: HttpJson) : CachingAda
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
         val found = coroutineScope {
-            (ComicSite.ALL.map { site ->
+            ComicSite.ALL.map { site ->
                 async { attempt { readAll(site, ComicSite.parseList(site, http.getRaw(id, site.listUrl(q, 1))).take(SEARCH_LIMIT)) }.getOrDefault(emptyList()) }
-            } + async { attempt { multporn(Multporn.slugs(http.getRaw(id, Multporn.searchUrl(q))).take(SEARCH_LIMIT)) }.getOrDefault(emptyList()) })
-                .awaitAll().flatten()
+            }.awaitAll().flatten()
         }
         (found + poolMatches(query)).distinctBy { it.key }
     }
 
     private val gate = Semaphore(PAGE_CONCURRENCY)
-
-    private suspend fun multporn(slugs: List<String>): List<MediaItem> = coroutineScope {
-        slugs.map { slug ->
-            async { gate.withPermit { attempt { Multporn.comic(slug, http.getRaw(id, "https://${Multporn.HOST}/comics/$slug")) }.getOrNull() } }
-        }.awaitAll().filterNotNull().filter(MinorsFilter::allows)
-    }
 
     private suspend fun readAll(site: ComicSite, listed: List<ComicSite.Listed>): List<MediaItem> = coroutineScope {
         listed.map { l ->
@@ -141,8 +129,7 @@ class ComicSite private constructor(
         val HENTAIROX = ComicSite("hentairox.com", "HentaiRox", "https://hentairox.com/", "https://hentairox.com/search/?q=", pageExt = "webp")
         val ALL = listOf(IMHENTAI, HENTAIFOX, HENTAIERA, HENTAIROX)
         private val EIGHT_MUSES_LABEL = ComicSite(EightMuses.HOST, "8muses", "", "")
-        private val MULTPORN_LABEL = ComicSite(Multporn.HOST, "Multporn", "", "")
-        fun byHost(host: String) = (ALL + EIGHT_MUSES_LABEL + MULTPORN_LABEL).firstOrNull { host == it.host || host.endsWith("." + it.host) }
+        fun byHost(host: String) = (ALL + EIGHT_MUSES_LABEL).firstOrNull { host == it.host || host.endsWith("." + it.host) }
 
         private val GALLERY_LINK = Regex("""<a href="/gallery/(\d+)/">(?!<img)([^<]*)</a>""")
         private val THUMB = Regex("""<a href="/gallery/(\d+)/"><img[^>]*\bdata-src="(https://[^"]+/thumb\.[a-z]+)"""")
@@ -277,51 +264,6 @@ internal object EightMuses {
             durationSec = null,
             thumbnailUrl = "$BASE/image/th/${thumbs.first()}",
             pageUrl = BASE + path,
-            publishedAt = null,
-            extras = mapOf("media" to pages.first(), "rating" to "e"),
-            pages = if (pages.size > 1) pages else emptyList(),
-        )
-    }
-}
-
-
-/**
- * Multporn: western, cartoon and parody porn comics. The "new" listing links each comic
- * (/comics/slug); its page holds every page image (a resized copy; the original sits at the same
- * path without the style folder) and its categories, which are its tags. No categories: not shown.
- */
-internal object Multporn {
-    const val HOST = "multporn.net"
-    private const val BASE = "https://$HOST"
-    private val COMIC = Regex("""href="/comics/([a-z0-9_]+)"""")
-    private val PAGE = Regex("""<p class="jb-image"><img src="(https://multporn\.net/sites/default/files/styles/[^/]+/public/(comics/[^"?]+))""")
-    private val CATEGORY = Regex("""href="/category/([a-z0-9_]+)"""")
-    private val H1 = Regex("""<h1[^>]*>([^<]+)</h1>""")
-
-    fun listUrl(page: Int) = "$BASE/new" + if (page > 0) "?page=$page" else ""
-    fun searchUrl(q: String) = "$BASE/search/node/${java.net.URLEncoder.encode(q, "UTF-8").replace("+", "%20")}"
-
-    /** Comic slugs on a listing page, in order. */
-    fun slugs(html: String): List<String> = COMIC.findAll(html).map { it.groupValues[1] }.distinct().toList()
-
-    /** The comic on its page, or null (no pages, or no categories to check it by). */
-    fun comic(slug: String, html: String): MediaItem? {
-        val pages = PAGE.findAll(html).map { "$BASE/sites/default/files/${it.groupValues[2]}" }.distinct().toList()
-        if (pages.isEmpty()) return null
-        // Its own categories sit above its pages; the sidebar's come after.
-        val head = html.substring(0, html.indexOf("jb-image").takeIf { it > 0 } ?: html.length)
-        val tags = CATEGORY.findAll(head).map { it.groupValues[1] }.distinct().toList()
-        if (tags.isEmpty()) return null
-        return MediaItem(
-            id = "$HOST/$slug",
-            sourceId = ComicAdapter.SOURCE_ID,
-            type = MediaType.IMAGE,
-            title = H1.find(html)?.groupValues?.get(1)?.let { dev.pfeed.source.tube.TubeSite.unescape(it) }?.trim() ?: slug.replace('_', ' '),
-            creator = null,
-            tags = (listOf("comic") + tags).distinct(),
-            durationSec = null,
-            thumbnailUrl = PAGE.find(html)?.groupValues?.get(1),
-            pageUrl = "$BASE/comics/$slug",
             publishedAt = null,
             extras = mapOf("media" to pages.first(), "rating" to "e"),
             pages = if (pages.size > 1) pages else emptyList(),
