@@ -410,7 +410,10 @@ class SmokeTest {
                     val local = if (p.isGallery) a.offlineStore.local("${p.key}#0") else a.offlineStore.local(p.key)
                     android.util.Log.i("PFHEALTH", "offline ${p.sourceId}/${p.type}${if (p.isGallery) " (${p.pages.size} pages)" else ""}: ${if (done(p)) "kept" else "NOT kept"} in ${System.currentTimeMillis() - t0} ms ${local?.mimeType ?: a.offlineStore.problem(p.key)} ${p.id.substringBefore('/')}; total ${a.offlineStore.bytes.value / 1024} KB")
                 }
-                assertTrue("nothing was kept offline", picks.isEmpty() || picks.any(::done))
+                // The emulator sometimes reports a metered (mobile) connection: downloads rightly wait for Wi-Fi then.
+                val metered = picks.isNotEmpty() && picks.all { a.offlineStore.problem(it.key) == "waiting for Wi-Fi" }
+                if (metered) android.util.Log.i("PFHEALTH", "offline: this emulator's connection is metered; saved posts wait for Wi-Fi (as intended)")
+                assertTrue("nothing was kept offline", picks.isEmpty() || metered || picks.any(::done))
             } finally {
                 picks.forEach { a.library.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
             }
