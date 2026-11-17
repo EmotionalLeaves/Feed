@@ -28,6 +28,10 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.BookmarkBorder
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.NorthWest
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Close
@@ -163,7 +167,7 @@ class SearchViewModel @Inject constructor(
     private val signals: SignalRepository,
     private val settingsRepo: dev.pfeed.data.settings.SettingsRepository,
     private val registry: SourceRegistry,
-    library: dev.pfeed.data.repo.LibraryRepository,
+    private val library: dev.pfeed.data.repo.LibraryRepository,
     private val blocks: dev.pfeed.data.repo.BlockRepository,
 ) : ViewModel() {
     private val _topicRows = MutableStateFlow<List<Pair<String, List<MediaItem>>>>(emptyList())
@@ -300,6 +304,18 @@ class SearchViewModel @Inject constructor(
     }
 
     /** Opens the results at [index]; past the last one it keeps going as an endless feed of the search. */
+    val savedKeys: StateFlow<Set<String>> = library.keys(dev.pfeed.data.repo.LibraryKind.SAVED)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** Save (or unsave) a result straight from the grid; saving teaches For You, as it does in the feed. */
+    fun toggleSave(item: MediaItem) = viewModelScope.launch {
+        if (item.key in savedKeys.value) library.remove(dev.pfeed.data.repo.LibraryKind.SAVED, item)
+        else {
+            library.add(dev.pfeed.data.repo.LibraryKind.SAVED, item)
+            runCatching { signals.record(item, dev.pfeed.domain.reco.Signal(dev.pfeed.domain.reco.SignalType.SAVE)) }
+        }
+    }
+
     fun open(index: Int): String = holder.put(
         visible.value,
         index,
@@ -327,6 +343,46 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val followed by vm.followed.collectAsStateWithLifecycle()
     val watchedKeys by vm.watched.collectAsStateWithLifecycle()
+    val savedKeys by vm.savedKeys.collectAsStateWithLifecycle()
+    // Press and hold a result: save it, or open it on its site, without leaving the results.
+    var holding by remember { mutableStateOf<MediaItem?>(null) }
+    holding?.let { item ->
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val saved = item.key in savedKeys
+        @OptIn(ExperimentalMaterial3Api::class)
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { holding = null },
+            properties = androidx.compose.material3.ModalBottomSheetProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    item.title?.takeIf { it.isNotBlank() } ?: Display.source(item, ""),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                dev.pfeed.ui.common.SettingRow(
+                    if (saved) "Remove from Saved" else "Save",
+                    icon = if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
+                    onClick = { vm.toggleSave(item); holding = null },
+                )
+                if (item.pageUrl.isNotBlank()) dev.pfeed.ui.common.SettingRow(
+                    "Open on the site",
+                    icon = Icons.AutoMirrored.Filled.OpenInNew,
+                    iconTint = dev.pfeed.ui.theme.TextLow,
+                    onClick = { dev.pfeed.ui.common.openExternal(context, item.pageUrl); holding = null },
+                )
+                if (item.pageUrl.isNotBlank()) dev.pfeed.ui.common.SettingRow(
+                    "Copy link",
+                    icon = Icons.Filled.Link,
+                    iconTint = dev.pfeed.ui.theme.TextLow,
+                    onClick = { dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl); holding = null },
+                )
+            }
+        }
+    }
     val focus = LocalFocusManager.current
     var showFilters by remember { mutableStateOf(false) }
 
@@ -413,6 +469,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
         } else {
             ResultsPane(
                 watched = watchedKeys,
+                onLongPress = { holding = it },
                 ui = ui,
                 visible = visible,
                 filtered = visible.size < ui.results.size,
@@ -675,6 +732,7 @@ private fun ResultsPane(
     visible: List<MediaItem>,
     filtered: Boolean,
     watched: Set<String> = emptySet(),
+    onLongPress: ((MediaItem) -> Unit)? = null,
     onOpen: (Int) -> Unit,
     onResetFilters: () -> Unit,
 ) {
@@ -709,7 +767,7 @@ private fun ResultsPane(
         Box(Modifier.fillMaxSize()) {
             when {
                 // Results come from every site at once: each tile says which.
-                visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen, label = { Display.source(it, it.sourceId) }, seen = { it.key in watched })
+                visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen, label = { Display.source(it, it.sourceId) }, seen = { it.key in watched }, onLongPress = onLongPress)
                 ui.loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     dev.pfeed.ui.common.BrandSpinner(size = 40.dp)
                     Spacer(Modifier.height(12.dp))
