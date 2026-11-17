@@ -435,28 +435,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         dev.pfeed.ui.common.AppSnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
     }
 
-    if (showWhatsNew) {
-        val assets = androidx.compose.ui.platform.LocalContext.current.assets
-        val notes = remember { runCatching { assets.open("whats_new.md").bufferedReader().readText() }.getOrDefault("") }
-        AlertDialog(
-            onDismissRequest = { showWhatsNew = false },
-            properties = dev.pfeed.ui.common.SecureDialog,
-            title = { Text("What's new") },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState())) {
-                    notes.lines().forEach { line ->
-                        when {
-                            line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
-                            line.startsWith("- ") -> Text("• " + line.removePrefix("- ").replace("**", ""), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
-                            line.isBlank() -> {}
-                            else -> Text(line.replace("**", ""), style = MaterialTheme.typography.bodySmall, color = dev.pfeed.ui.theme.TextMid)
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton(onClick = { showWhatsNew = false }) { Text("Done") } },
-        )
-    }
+    if (showWhatsNew) dev.pfeed.ui.common.WhatsNewDialog { showWhatsNew = false }
 
     when (val d = dialog) {
         PendingDialog.ChangePin -> ChangePinDialog(onDismiss = { dialog = null }) { cur, new -> vm.changePin(cur, new); dialog = null }

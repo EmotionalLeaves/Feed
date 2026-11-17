@@ -114,6 +114,7 @@ fun AppRoot(lockManager: AppLockManager, onPanic: () -> Unit) {
             AgeGateScreen(onConfirm = { AgeGate.confirm(context); adult = true })
             return@Box
         }
+        if (dev.pfeed.ui.common.WhatsNew.showing) dev.pfeed.ui.common.WhatsNewDialog { dev.pfeed.ui.common.WhatsNew.showing = false }
         // The lock screen sits outside the Scaffold, so give it the app's text colour itself
         // (without this its title drew in the default black, invisible on the dark background).
         if (locked) androidx.compose.runtime.CompositionLocalProvider(

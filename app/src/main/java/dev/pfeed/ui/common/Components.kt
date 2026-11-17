@@ -3,6 +3,8 @@ package dev.pfeed.ui.common
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.setValue
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.graphicsLayer
@@ -412,4 +414,34 @@ fun InitialAvatar(name: String, size: androidx.compose.ui.unit.Dp = 32.dp, modif
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
         )
     }
+}
+
+/** The last few releases' notes (assets/whats_new.md), as a dialog. */
+@Composable
+fun WhatsNewDialog(onDismiss: () -> Unit) {
+    val assets = androidx.compose.ui.platform.LocalContext.current.assets
+    val notes = androidx.compose.runtime.remember { runCatching { assets.open("whats_new.md").bufferedReader().readText() }.getOrDefault("") }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = onDismiss,
+        properties = SecureDialog,
+        title = { Text("What's new") },
+        text = {
+            Column(Modifier.verticalScroll(androidx.compose.foundation.rememberScrollState())) {
+                notes.lines().forEach { line ->
+                    when {
+                        line.startsWith("## ") -> Text(line.removePrefix("## "), style = MaterialTheme.typography.titleSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+                        line.startsWith("- ") -> Text("• " + line.removePrefix("- ").replace("**", ""), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(bottom = 4.dp))
+                        line.isBlank() -> {}
+                        else -> Text(line.replace("**", ""), style = MaterialTheme.typography.bodySmall, color = TextMid)
+                    }
+                }
+            }
+        },
+        confirmButton = { androidx.compose.material3.TextButton(onClick = onDismiss) { Text("Done") } },
+    )
+}
+
+/** Asked for from outside Settings (the "Updated" note on the feed): shown over everything. */
+object WhatsNew {
+    var showing by androidx.compose.runtime.mutableStateOf(false)
 }

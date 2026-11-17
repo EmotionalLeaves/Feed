@@ -187,6 +187,23 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
     }
     LaunchedEffect(pagerState.settledPage) { vm.refreshLikedTags() }
+    // Just updated: say so once, with the notes a tap away.
+    if (vm.tag == null && !vm.isViewer) {
+        val ctx = LocalContext.current
+        LaunchedEffect(Unit) {
+            val prefs = ctx.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE)
+            val seen = prefs.getString("version_seen", null)
+            val now = dev.pfeed.BuildConfig.VERSION_NAME
+            if (seen != now) {
+                prefs.edit().putString("version_seen", now).apply()
+                // Not on a fresh install: there's nothing "new" to someone who just arrived.
+                if (seen != null) {
+                    kotlinx.coroutines.delay(2_500)
+                    vm.offer("Updated to $now", "What's new") { dev.pfeed.ui.common.WhatsNew.showing = true }
+                }
+            }
+        }
+    }
     // Feed tapped again in the tab bar: back to the top, or a fresh batch if you're already there.
     if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
         dev.pfeed.ui.BottomBar.reselected.collect { route ->
