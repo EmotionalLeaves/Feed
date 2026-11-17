@@ -571,4 +571,31 @@ class SmokeTest {
             assertTrue("For You served nothing", got.isNotEmpty())
         }
     }
+
+    /** "More like this": a feed around one post finds posts that share its tags. */
+    @Test
+    fun moreLikeThis() {
+        val a = rule.activity
+        runBlocking {
+            val seed = a.searchRepository.search("blonde pov").toList().lastOrNull()?.items.orEmpty()
+                .firstOrNull { it.tags.size >= 3 } ?: return@runBlocking android.util.Log.i("PFHEALTH", "similar: no seed found").let { }
+            val features = dev.pfeed.domain.reco.Features.of(seed).filterNot(dev.pfeed.domain.reco.Features::isMeta)
+            val queries = (listOfNotNull(seed.creator) + features.filterNot { it.startsWith("w:") }.take(3).map { it.replace('_', ' ') }).distinct()
+            val spec = dev.pfeed.data.repo.FeedSpec.Similar(seed.key, queries, features.toSet(), seed.creator)
+            val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
+            val session = a.feedSessions.create(spec, scope)
+            val got = ArrayList<dev.pfeed.domain.model.MediaItem>()
+            val t0 = System.currentTimeMillis()
+            while (got.size < 30 && System.currentTimeMillis() - t0 < 90_000) {
+                val r = session.loadMore()
+                got += r.items
+                if (r.items.isEmpty()) kotlinx.coroutines.delay(1_000)
+                if (r.endReached) break
+            }
+            session.close()
+            val sharing = got.count { c -> dev.pfeed.domain.reco.Features.of(c).any { it in features } }
+            android.util.Log.i("PFHEALTH", "similar: seed ${seed.key} queries=$queries; ${got.size} posts in ${System.currentTimeMillis() - t0} ms; $sharing share a tag; seed returned: ${got.any { it.key == seed.key }}")
+            assertTrue("More like this served nothing", got.isNotEmpty())
+        }
+    }
 }

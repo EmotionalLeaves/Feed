@@ -80,11 +80,19 @@ class FeedViewModel @Inject constructor(
     val playerPool: PlayerPool,
 ) : ViewModel() {
 
-    val tag: String? = savedState.get<String>("tag")
+    private val rawTag: String? = savedState.get<String>("tag")
+    /** "More like this" pages come in as a tag of the form "~like:<token>", the post kept in the holder. */
+    private val similarSeed: MediaItem? = rawTag?.takeIf { it.startsWith(SIMILAR_PREFIX) }
+        ?.let { holder.get(it.removePrefix(SIMILAR_PREFIX))?.first?.firstOrNull() }
+    val isSimilar: Boolean = similarSeed != null
+    val tag: String? = if (rawTag?.startsWith(SIMILAR_PREFIX) == true) null else rawTag
+    private val similarSpec: FeedSpec.Similar? = similarSeed?.let(::similarTo)
+    /** The app's own feed (For You / Following / Latest), not a tag, creator, list or "more like" page. */
+    val isMainFeed: Boolean get() = tag == null && !isViewer && !isSimilar
     private val viewerToken: String? = savedState.get<String>("token")
     val isViewer: Boolean = viewerToken != null
     /** Heading for a viewer opened from Library or Search. */
-    val viewerTitle: String? = viewerToken?.let { holder.title(it) }
+    val viewerTitle: String? = viewerToken?.let { holder.title(it) } ?: similarSeed?.let { "More like this" }
 
     private val _mode = MutableStateFlow(FeedMode.FOR_YOU)
     val mode: StateFlow<FeedMode> = _mode
@@ -210,7 +218,7 @@ class FeedViewModel @Inject constructor(
         retryJob?.cancel()
         retryDelayMs = RETRY_MIN_MS
         session?.close()
-        session = sessions.create(tag?.let { FeedSpec.Tag(it) } ?: FeedSpec.Main(_mode.value), viewModelScope)
+        session = sessions.create(similarSpec ?: tag?.let { FeedSpec.Tag(it) } ?: FeedSpec.Main(_mode.value), viewModelScope)
         raw.value = emptyList()
         lastSettled = 0
         endReached = false
@@ -515,6 +523,19 @@ class FeedViewModel @Inject constructor(
     }
 
     /** Why For You showed [item]: the learned interests it matches most, as labels ("#milf"). */
+    /** The page for "More like this": its token goes in the tag route. */
+    fun similarRoute(item: MediaItem): String = SIMILAR_PREFIX + holder.put(listOf(item), 0, title = "More like this")
+
+    private fun similarTo(item: MediaItem): FeedSpec.Similar {
+        val features = dev.pfeed.domain.reco.Features.of(item).filterNot(dev.pfeed.domain.reco.Features::isMeta)
+        val creator = Display.creator(item)
+        // Searches: the creator, then the post's first few real tags (sites list the important ones first).
+        val tags = features.filterNot { it.startsWith("w:") }.take(3).map { it.replace('_', ' ') }
+        val words = features.filter { it.startsWith("w:") }.take(2).map { it.removePrefix("w:") }
+        val queries = (listOfNotNull(creator) + tags + words).distinct().ifEmpty { listOfNotNull(item.title?.take(40)) }
+        return FeedSpec.Similar(item.key, queries, features.toSet(), item.creator)
+    }
+
     /** Tags For You has learned you like (normalised), refreshed now and then: they're lit on posts. */
     private val _likedTags = MutableStateFlow<Set<String>>(emptySet())
     val likedTags: StateFlow<Set<String>> = _likedTags
@@ -634,6 +655,7 @@ class FeedViewModel @Inject constructor(
 
     companion object {
         private const val LOAD_AHEAD = 10
+        const val SIMILAR_PREFIX = "~like:"
         private const val LIKED_TAGS_REFRESH_MS = 60_000L
         /** A longer video hands-free let play to the end: watched, but not chosen like a manual full watch. */
         private const val HANDS_FREE_FULL_VIEW = 0.5

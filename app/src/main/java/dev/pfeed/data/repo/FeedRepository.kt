@@ -31,6 +31,11 @@ import javax.inject.Singleton
 sealed interface FeedSpec {
     data class Main(val mode: FeedMode) : FeedSpec
     data class Tag(val tag: String) : FeedSpec
+    /**
+     * More like one post: [queries] (its creator and strongest tags) are searched on every source,
+     * and the results ranked by how much they share with the post ([signature]).
+     */
+    data class Similar(val seedKey: String, val queries: List<String>, val signature: Set<String>, val creator: String?) : FeedSpec
 }
 
 data class LoadResult(
@@ -164,6 +169,8 @@ class FeedSession(
             // Coomer creators are stored as "name@service"; search by the name.
             following -> (follows.creators.map { it.substringBefore('@') } + follows.tags)
                 .map { it.replace('_', ' ').trim() }.filter { it.length >= 2 }.distinct()
+            // More like this: every one of the post's queries, not just the first.
+            spec is FeedSpec.Similar -> spec.queries.drop(1)
             else -> null
         }
         // Keep fresh candidates flowing every time, not only when the pool runs low: otherwise the
@@ -350,7 +357,7 @@ class FeedSession(
      * source to *search* for that tag, so it isn't limited to whatever the main feed happened to load.
      */
     private suspend fun fetch(a: SourceAdapter, cursor: String?, prefs: FeedPrefs): Result<Page<MediaItem>> = try {
-        val tag = (spec as? FeedSpec.Tag)?.tag
+        val tag = (spec as? FeedSpec.Tag)?.tag ?: (spec as? FeedSpec.Similar)?.queries?.firstOrNull()
         Result.success(if (tag != null) a.search(tag.removePrefix("@").replace('_', ' '), cursor) else a.fetchFeed(cursor, prefs))
     } catch (e: CancellationException) {
         throw e
@@ -404,6 +411,25 @@ class FeedSession(
                 pooledAt.keys.retainAll(candidateKeys)
             }
             picked
+        } else if (spec is FeedSpec.Similar) {
+            // Closest first: shared tags (cosine over the post's features), the same creator counts
+            // extra; the post itself never comes back. Spread keeps one site from filling a screen.
+            val sig = spec.signature
+            val creator = spec.creator?.let(Blocklist::normalize)
+            fun closeness(c: MediaItem): Double {
+                val f = Features.of(c).filterNot(Features::isMeta).toSet()
+                val shared = f.count { it in sig }
+                val cos = if (f.isEmpty() || sig.isEmpty()) 0.0 else shared / kotlin.math.sqrt(f.size.toDouble() * sig.size)
+                val same = if (creator != null && c.creator?.let(Blocklist::normalize) == creator) 0.6 else 0.0
+                return cos + same
+            }
+            candidates.removeAll { it.key == spec.seedKey }
+            Spread.order(
+                candidates.map { it to closeness(it) }.sortedByDescending { it.second }.map { it.first },
+                recentShown,
+                BATCH,
+                allowForcedRun = allowForcedRun,
+            )
         } else if (spec is FeedSpec.Tag) {
             val t = Features.normalizeTag(spec.tag)
             // "@name" is a creator page: their own posts first, then what searching their name found.

@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CreateNewFolder
@@ -67,6 +68,8 @@ fun ItemMenuSheet(
     item: MediaItem,
     vm: FeedViewModel,
     onDismiss: () -> Unit,
+    /** Opens an endless feed built around this post (its creator and tags). */
+    onMoreLikeThis: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var pickTag by remember { mutableStateOf<String?>(null) } // "block" while picking a tag to hide
@@ -157,6 +160,19 @@ fun ItemMenuSheet(
                 QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open site", modifier = Modifier.weight(1f)) { openExternal(context, item.pageUrl); onDismiss() }
             }
             HorizontalDivider()
+            if (onMoreLikeThis != null) {
+                ListItem(
+                    headlineContent = { Text("More like this", fontWeight = FontWeight.Bold) },
+                    supportingContent = { Text("An endless feed built around this post: its creator and tags") },
+                    leadingContent = {
+                        Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(dev.pfeed.ui.theme.BrandGradient), contentAlignment = Alignment.Center) {
+                            Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(20.dp))
+                        }
+                    },
+                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                    modifier = Modifier.clickable { onDismiss(); onMoreLikeThis() },
+                )
+            }
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
             if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
             if (creator != null) {

@@ -189,7 +189,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     }
     LaunchedEffect(pagerState.settledPage) { vm.refreshLikedTags() }
     // Just updated: say so once, with the notes a tap away.
-    if (vm.tag == null && !vm.isViewer) {
+    if (vm.isMainFeed) {
         val ctx = LocalContext.current
         LaunchedEffect(Unit) {
             val prefs = ctx.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE)
@@ -206,14 +206,14 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
     }
     // Feed tapped again in the tab bar: back to the top, or a fresh batch if you're already there.
-    if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
+    if (vm.isMainFeed) LaunchedEffect(Unit) {
         dev.pfeed.ui.BottomBar.reselected.collect { route ->
             if (route != dev.pfeed.ui.Routes.FEED) return@collect
             if (pagerState.currentPage > 0) pagerState.animateScrollToPage(0) else vm.refresh()
         }
     }
     // A site turned out to be blocked where you are: say so once, with the way around it.
-    if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
+    if (vm.isMainFeed) LaunchedEffect(Unit) {
         var known = dev.pfeed.source.net.GeoBlock.sites.value
         dev.pfeed.source.net.GeoBlock.sites.collect { now ->
             val fresh = now - known
@@ -236,7 +236,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         if (items.isNotEmpty()) {
             // Main feed: pull down on the first post for a fresh batch, as in any feed app.
             val pull = androidx.compose.material3.pulltorefresh.rememberPullToRefreshState()
-            val canPull = vm.tag == null && !vm.isViewer && !landscape
+            val canPull = vm.isMainFeed && !landscape
             androidx.compose.material3.pulltorefresh.PullToRefreshBox(
                 isRefreshing = false,
                 onRefresh = { if (canPull) vm.refresh() },
@@ -305,7 +305,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 onRefresh = vm::refresh,
                 onSources = { nav.navigate(Routes.SOURCES) },
                 // An empty Following feed needs something to follow, not a retry.
-                onBrowse = if (mode == FeedMode.FOLLOWING && vm.tag == null && !vm.isViewer) ({ vm.setMode(FeedMode.FOR_YOU) }) else null,
+                onBrowse = if (mode == FeedMode.FOLLOWING && vm.isMainFeed) ({ vm.setMode(FeedMode.FOR_YOU) }) else null,
                 // Nothing loading (often: no connection) but saved posts are on the phone: offer them.
                 onSaved = if (saved.isNotEmpty() && !vm.isViewer) ({ nav.navigate(Routes.LIBRARY) }) else null,
                 modifier = Modifier.align(Alignment.Center),
@@ -326,21 +326,21 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
 
         // First run: show the gestures once, out of the way, until the first swipe.
-        if (items.isNotEmpty() && !landscape && !vm.isViewer && vm.tag == null) {
+        if (items.isNotEmpty() && !landscape && vm.isMainFeed) {
             GestureTips(page = pagerState.settledPage, modifier = Modifier.align(Alignment.Center))
         }
 
         if (!landscape) TopBar(
             title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
-            showModes = vm.tag == null && !vm.isViewer,
+            showModes = vm.isMainFeed,
             mode = mode,
             onMode = vm::setMode,
-            onBack = if (vm.tag != null || vm.isViewer) ({ nav.popBackStack(); Unit }) else null,
+            onBack = if (!vm.isMainFeed) ({ nav.popBackStack(); Unit }) else null,
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
             onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
             // Only where there's room beside the three feed tabs.
-            onSearch = if (vm.tag == null && !vm.isViewer && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({
+            onSearch = if (vm.isMainFeed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({
                 nav.navigate(Routes.SEARCH) {
                     popUpTo(nav.graph.findStartDestination().id) { saveState = true }
                     launchSingleTop = true
@@ -380,7 +380,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // Following: the people you follow as a row of round avatars under the tabs, one tap from their page.
         val handsFreeNow by HandsFree.on.collectAsStateWithLifecycle()
-        if (mode == FeedMode.FOLLOWING && vm.tag == null && !vm.isViewer && !landscape && !handsFreeNow && follows.creators.isNotEmpty()) {
+        if (mode == FeedMode.FOLLOWING && vm.isMainFeed && !landscape && !handsFreeNow && follows.creators.isNotEmpty()) {
             androidx.compose.foundation.lazy.LazyRow(
                 Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 54.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
@@ -457,7 +457,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // Very first run: what are you into? (skippable; shapes For You from the first screen). On top of everything.
         val newUser by vm.isNewUser.collectAsStateWithLifecycle()
-        if (!vm.isViewer && vm.tag == null && !landscape && (newUser == true || FirstRun.forceInterests)) Box(Modifier.fillMaxSize().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) { InterestPicker(onDone = vm::pickInterests) }
+        if (vm.isMainFeed && !landscape && (newUser == true || FirstRun.forceInterests)) Box(Modifier.fillMaxSize().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) { InterestPicker(onDone = vm::pickInterests) }
     }
 
     menuFor?.let { item ->
@@ -465,6 +465,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             item = item,
             vm = vm,
             onDismiss = { menuFor = null },
+            onMoreLikeThis = { nav.openTag(vm.similarRoute(item)) },
         )
     }
 }
