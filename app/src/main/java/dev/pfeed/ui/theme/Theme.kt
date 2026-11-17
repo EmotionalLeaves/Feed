@@ -57,15 +57,16 @@ private val Scheme = darkColorScheme(
 
 /**
  * Plus Jakarta Sans (SIL Open Font License, see assets/OFL-PlusJakartaSans.txt): a rounder, more
- * characterful face than the system font, bundled so it looks the same on every phone.
+ * characterful face than the system font, bundled so it looks the same on every phone. Loaded off the
+ * main thread (the system font stands in for the first moments) so it never slows the app's start.
  */
 val Jakarta = androidx.compose.ui.text.font.FontFamily(
-    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_regular, FontWeight.Normal),
-    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_medium, FontWeight.Medium),
-    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_semibold, FontWeight.SemiBold),
-    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_bold, FontWeight.Bold),
-    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_extrabold, FontWeight.ExtraBold),
-    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_extrabold, FontWeight.Black),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_regular, FontWeight.Normal, loadingStrategy = androidx.compose.ui.text.font.FontLoadingStrategy.Async),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_medium, FontWeight.Medium, loadingStrategy = androidx.compose.ui.text.font.FontLoadingStrategy.Async),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_semibold, FontWeight.SemiBold, loadingStrategy = androidx.compose.ui.text.font.FontLoadingStrategy.Async),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_bold, FontWeight.Bold, loadingStrategy = androidx.compose.ui.text.font.FontLoadingStrategy.Async),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_extrabold, FontWeight.ExtraBold, loadingStrategy = androidx.compose.ui.text.font.FontLoadingStrategy.Async),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_extrabold, FontWeight.Black, loadingStrategy = androidx.compose.ui.text.font.FontLoadingStrategy.Async),
 )
 
 private val base = Typography().let { t ->
