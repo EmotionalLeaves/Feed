@@ -686,6 +686,7 @@ private fun FeedPage(
                 }
             },
     ) {
+        if (!landscape && type != MediaType.EMBED && !item.isGallery) AmbientBackdrop(item)
         when (type) {
             MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, onEnded = onEnded)
             MediaType.IMAGE, MediaType.GIF ->

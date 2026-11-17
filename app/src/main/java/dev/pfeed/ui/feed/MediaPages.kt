@@ -55,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -85,6 +86,26 @@ fun Thumbnail(item: MediaItem, modifier: Modifier = Modifier, contentScale: Cont
         contentScale = contentScale,
         modifier = modifier.fillMaxSize(),
     )
+}
+
+/**
+ * Behind a post that doesn't fill the screen (a sideways video, a square picture): its own picture,
+ * tiny, blurred and dimmed, filling the bars instead of flat black. A 96-px copy keeps it cheap.
+ */
+@Composable
+fun AmbientBackdrop(item: MediaItem) {
+    val url = item.thumbnailUrl?.takeUnless { dev.pfeed.source.parse.MediaTypes.classify(it) == dev.pfeed.domain.model.MediaType.VIDEO } ?: return
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val request = remember(url) { coil.request.ImageRequest.Builder(context).data(url).size(96).build() }
+    Box(Modifier.fillMaxSize()) {
+        AsyncImage(
+            model = request,
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.fillMaxSize().blur(36.dp).graphicsLayer { scaleX = 1.15f; scaleY = 1.15f },
+        )
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
+    }
 }
 
 @OptIn(UnstableApi::class)
