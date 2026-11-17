@@ -28,6 +28,8 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.NorthWest
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.PlayArrow
@@ -464,12 +466,34 @@ private fun SuggestionsPane(
             val matches = (vocab.filter { it.lowercase().startsWith(t) } + vocab.filter { it.lowercase().contains(t) })
                 .distinct().filter { it.lowercase() != t }.take(8)
             matches.forEach { q ->
+                // What kind of suggestion it is, at a glance: one you searched before, one you follow,
+                // or a topic; and the part you've typed in bold.
+                val kind = when {
+                    recent.any { it.equals(q, true) } -> Icons.Filled.History
+                    followed.any { it.equals(q, true) } -> Icons.Filled.Favorite
+                    else -> Icons.Filled.Search
+                }
                 Row(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).clickable { onPick(q) }.padding(vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Icon(Icons.Filled.Search, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
-                    Text(q, style = MaterialTheme.typography.bodyLarge)
+                    Icon(kind, contentDescription = null, tint = if (kind == Icons.Filled.Favorite) Accent else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f), modifier = Modifier.padding(horizontal = 8.dp).size(20.dp))
+                    val at = q.lowercase().indexOf(t)
+                    Text(
+                        androidx.compose.ui.text.buildAnnotatedString {
+                            if (at < 0) append(q) else {
+                                append(q.substring(0, at))
+                                pushStyle(androidx.compose.ui.text.SpanStyle(fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Color.White))
+                                append(q.substring(at, at + t.length))
+                                pop()
+                                append(q.substring(at + t.length))
+                            }
+                        },
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = Color.White.copy(alpha = 0.75f),
+                        modifier = Modifier.weight(1f),
+                    )
+                    Icon(Icons.Filled.NorthWest, contentDescription = null, tint = Color.White.copy(alpha = 0.35f), modifier = Modifier.padding(horizontal = 8.dp).size(18.dp))
                 }
             }
             if (matches.isNotEmpty()) Spacer(Modifier.height(12.dp))
