@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.PlayArrow
@@ -82,6 +83,8 @@ fun MediaGrid(
     sectionOf: ((MediaItem) -> String)? = null,
     /** Called as the last rows come into view, to fetch more. */
     onNearEnd: (() -> Unit)? = null,
+    /** Posts you've already watched: dimmed, with a small eye, so new ones stand out. */
+    seen: ((MediaItem) -> Boolean)? = null,
     contentTopPadding: androidx.compose.ui.unit.Dp = 2.dp,
 ) {
     LazyVerticalGrid(
@@ -107,7 +110,7 @@ fun MediaGrid(
                 }
             }
             item(key = post.key) {
-                GridTile(post, index, onOpen, label)
+                GridTile(post, index, onOpen, label, seen = seen?.invoke(post) == true)
                 if (onNearEnd != null && index >= items.size - NEAR_END_TILES) androidx.compose.runtime.LaunchedEffect(items.size) { onNearEnd() }
             }
         }
@@ -117,7 +120,7 @@ fun MediaGrid(
 private const val NEAR_END_TILES = 9
 
 @Composable
-private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?) {
+private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?, seen: Boolean = false) {
     val shape = RoundedCornerShape(6.dp)
     Box(
         Modifier
@@ -171,6 +174,16 @@ private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, 
                     Icon(Icons.Filled.PlayArrow, contentDescription = "Video", tint = Color.White, modifier = Modifier.size(15.dp))
                 }
             }
+        }
+        if (seen) {
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+            Icon(
+                Icons.Filled.Visibility,
+                contentDescription = "Watched",
+                tint = Color.White.copy(alpha = 0.85f),
+                modifier = Modifier.align(Alignment.TopStart).padding(5.dp).size(18.dp)
+                    .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(3.dp),
+            )
         }
         // A saved post that's on the phone: opens without a connection.
         if (item.extras[dev.pfeed.data.repo.OfflineStore.KEPT] != null) {

@@ -171,6 +171,10 @@ class SearchViewModel @Inject constructor(
      */
     val topicRows: StateFlow<List<Pair<String, List<MediaItem>>>> = _topicRows
     /** Long videos and comics you left partway, most recent first: they carry on from where you stopped. */
+    /** Posts you've watched before (from history): marked in the results so you can skip them. */
+    val watched: StateFlow<Set<String>> = library.keys(dev.pfeed.data.repo.LibraryKind.HISTORY)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     val continueWatching: StateFlow<List<MediaItem>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
         .map { list ->
             list.filter { dev.pfeed.player.ResumePoints.get(it.key) != null || (it.isGallery && dev.pfeed.player.ComicPages.get(it.key) != null) }.take(12)
@@ -320,6 +324,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val followed by vm.followed.collectAsStateWithLifecycle()
+    val watchedKeys by vm.watched.collectAsStateWithLifecycle()
     val focus = LocalFocusManager.current
     var showFilters by remember { mutableStateOf(false) }
 
@@ -405,6 +410,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
             )
         } else {
             ResultsPane(
+                watched = watchedKeys,
                 ui = ui,
                 visible = visible,
                 filtered = visible.size < ui.results.size,
@@ -644,6 +650,7 @@ private fun ResultsPane(
     ui: SearchUi,
     visible: List<MediaItem>,
     filtered: Boolean,
+    watched: Set<String> = emptySet(),
     onOpen: (Int) -> Unit,
     onResetFilters: () -> Unit,
 ) {
@@ -678,7 +685,7 @@ private fun ResultsPane(
         Box(Modifier.fillMaxSize()) {
             when {
                 // Results come from every site at once: each tile says which.
-                visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen, label = { Display.source(it, it.sourceId) })
+                visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen, label = { Display.source(it, it.sourceId) }, seen = { it.key in watched })
                 ui.loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
                     dev.pfeed.ui.common.BrandSpinner(size = 40.dp)
                     Spacer(Modifier.height(12.dp))
