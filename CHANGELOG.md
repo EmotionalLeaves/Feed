@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.64.0 — 2026-11-16
+
+Collection covers
+
+- In Library → Saved, each collection chip shows the latest post you put in it as a little round cover. Collections with no posts yet keep the folder icon.
+
 ## 4.63.1 — 2026-11-16
 
 Smoother feed

@@ -1,3 +1,8 @@
+## 4.64.0 — 2026-11-16
+Collection covers
+
+- In Library → Saved, each collection chip shows the latest post you put in it as a little round cover. Collections with no posts yet keep the folder icon.
+
 ## 4.63.1 — 2026-11-16
 Smoother feed
 
@@ -12,10 +17,3 @@ Steadier memory, polish
 - Browse-card colours are chosen to sit well beside the app's pink and orange.
 - The Blocked sites screen title fits on one line, and its proxy choices no longer wrap.
 - Shorter wording on Your taste and Hidden & blocked.
-
-## 4.62.0 — 2026-11-16
-Browse cards, brand spinner
-
-- Search's Popular topics are now colour cards, two to a row, each in its own colour, which is the same every time.
-- A new loading spinner in the app's pink-to-orange gradient everywhere something is on its way: a video starting, the feed filling, a search.
-- Save now gives the same little pop as Like when you tap it.
