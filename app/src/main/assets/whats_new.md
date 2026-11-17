@@ -1,3 +1,8 @@
+## 4.73.0 — 2026-11-16
+Where you are, when paused
+
+- Pause a video that's a minute or longer and a pill under the play button shows where you are in it (12:30 / 35:45).
+
 ## 4.72.0 — 2026-11-16
 Tap to turn comic pages
 
@@ -7,9 +12,3 @@ Tap to turn comic pages
 Smarter suggestions
 
 - Search suggestions now show what each one is (a past search, something you follow, or a topic) and bold the part you've typed.
-
-## 4.70.0 — 2026-11-16
-Following, at a glance
-
-- The Following feed shows the creators you follow as a row of round avatars under the tabs. Tap one for everything by them.
-- The adults-only screen eases in when the app first opens.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.73.0 — 2026-11-16
+
+Where you are, when paused
+
+- Pause a video that's a minute or longer and a pill under the play button shows where you are in it (12:30 / 35:45).
+
 ## 4.72.0 — 2026-11-16
 
 Tap to turn comic pages
