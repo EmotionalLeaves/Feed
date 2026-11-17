@@ -851,6 +851,18 @@ private fun FeedPage(
             ) {
                 Icon(Icons.Filled.PlayArrow, contentDescription = "Paused", tint = Color.White, modifier = Modifier.size(56.dp))
             }
+            // Paused on a longer video: where you are in it, under the play button.
+            val p = player
+            if (p != null && p.duration >= 60_000) {
+                Text(
+                    "${formatTime(p.currentPosition)} / ${formatTime(p.duration)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.align(Alignment.Center).padding(top = 132.dp)
+                        .clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
+                        .padding(horizontal = 12.dp, vertical = 5.dp),
+                )
+            }
         }
         seekFlash?.let { (edge, at) ->
             LaunchedEffect(at) { kotlinx.coroutines.delay(650); if (seekFlash?.second == at) seekFlash = null }
