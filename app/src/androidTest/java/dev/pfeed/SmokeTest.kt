@@ -430,6 +430,16 @@ class SmokeTest {
                 shot("04b_collection")
                 rule.onAllNodes(hasText("All · ", substring = true))[0].performClick()
             }.onFailure { android.util.Log.i("PFHEALTH", "collections: chip not found (${it.message?.take(80)})") }
+            // Your week: the recap on top of History, once there's a week's worth to sum up.
+            runCatching {
+                runBlocking { savedForShot.forEach { lib.add(dev.pfeed.data.repo.LibraryKind.HISTORY, it) } }
+                rule.onAllNodes(hasText("History"))[0].performClick()
+                waitFor(what = "week recap", timeoutMs = 6_000) { exists("YOUR WEEK") }
+                Thread.sleep(800)
+                shot("04c_week")
+                android.util.Log.i("PFHEALTH", "week recap: shown")
+                rule.onAllNodes(hasText("Saved"))[0].performClick()
+            }.onFailure { android.util.Log.i("PFHEALTH", "week recap: not shown (${it.message?.take(80)})") }
             runBlocking {
                 savedForShot.forEach { lib.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
                 android.util.Log.i("PFHEALTH", "collections after unsaving: ${lib.collections.first().joinToString { "${it.name}=${it.count}" }.ifEmpty { "none" }}")
