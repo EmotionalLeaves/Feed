@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.80.0 — 2026-11-16
+
+Live grids, Your week
+
+- New: Live grids. In Search results, Library and tag grids, the video nearest the middle of the screen plays silently in its tile, and every few seconds the next one takes over. Turn it off in Settings → Playback. Off Wi-Fi it waits, unless you've allowed autoplay on mobile data.
+- New: Your week. A card at the top of History shows how long you watched in the last seven days and how many posts, a bar for each day, who you watched most and your top tags. Tap one to go there.
+
 ## 4.79.0 — 2026-11-16
 
 Picture-in-picture, swipe right to save

@@ -1,3 +1,9 @@
+## 4.80.0 — 2026-11-16
+Live grids, Your week
+
+- New: Live grids. In Search results, Library and tag grids, the video nearest the middle of the screen plays silently in its tile, and every few seconds the next one takes over. Turn it off in Settings → Playback. Off Wi-Fi it waits, unless you've allowed autoplay on mobile data.
+- New: Your week. A card at the top of History shows how long you watched in the last seven days and how many posts, a bar for each day, who you watched most and your top tags. Tap one to go there.
+
 ## 4.79.0 — 2026-11-16
 Picture-in-picture, swipe right to save
 
@@ -10,11 +16,3 @@ Your mixes, Clean screen
 - New: Your mixes on Search. Playlists that weave two of your interests together, shown as big cards with three covers fanned out. Tap one to play the whole mix.
 - New: Clean screen. In the hold menu, it hides everything over the post: caption, buttons, top bar and tab bar. Touch the screen and a 'Show everything' button appears for a moment.
 - Copy link moved from the round buttons into the menu list to make room.
-
-## 4.77.0 — 2026-11-16
-More like this, Wall, no XNXX
-
-- New: More like this. Hold any post and pick More like this at the top of the menu for an endless feed built around that post. Its creator and strongest tags are searched on every source, and results are ranked by how much they share with the post.
-- New: Wall. Tap the grid button at the top left of the feed for four clips playing at once, muted, a screen at a time. Swipe up for the next four, or tap one to watch it full screen from there.
-- XNXX is gone: it's no longer listed, searched or shown. Posts you'd already saved from it still play.
-- If you pick a speed other than 1×, a small badge on videos reminds you, and the hold-for-speed badge shows the real speed.
