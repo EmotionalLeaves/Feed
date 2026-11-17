@@ -80,11 +80,14 @@ fun MediaGrid(
     label: ((MediaItem) -> String?)? = null,
     /** Groups the grid under headings ("Today", "Yesterday"…); null for one plain grid. */
     sectionOf: ((MediaItem) -> String)? = null,
+    /** Called as the last rows come into view, to fetch more. */
+    onNearEnd: (() -> Unit)? = null,
+    contentTopPadding: androidx.compose.ui.unit.Dp = 2.dp,
 ) {
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = 2.dp, bottom = 16.dp),
+        contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = contentTopPadding, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
@@ -103,10 +106,15 @@ fun MediaGrid(
                     )
                 }
             }
-            item(key = post.key) { GridTile(post, index, onOpen, label) }
+            item(key = post.key) {
+                GridTile(post, index, onOpen, label)
+                if (onNearEnd != null && index >= items.size - NEAR_END_TILES) androidx.compose.runtime.LaunchedEffect(items.size) { onNearEnd() }
+            }
         }
     }
 }
+
+private const val NEAR_END_TILES = 9
 
 @Composable
 private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?) {

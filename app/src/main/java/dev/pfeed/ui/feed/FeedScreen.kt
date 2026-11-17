@@ -44,6 +44,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -140,6 +141,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val pagerScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
+    var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
     // Keep the screen awake while the feed is on screen (long videos, long comics).
@@ -205,7 +207,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 val item = items.getOrNull(page) ?: return@VerticalPager
                 FeedPage(
                     item = item,
-                    playing = active && page == pagerState.settledPage,
+                    playing = active && !gridView && page == pagerState.settledPage,
                     muted = muted,
                     liked = item.key in liked,
                     saved = item.key in saved,
@@ -282,11 +284,41 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onBack = if (vm.tag != null || vm.isViewer) ({ nav.popBackStack(); Unit }) else null,
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
+            onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
         )
+
+        // The page as a grid: everything loaded so far (and more as you scroll); tap one to watch from there.
+        if (gridView && !landscape) {
+            BackHandler { gridView = false }
+            Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
+                Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { gridView = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the feed") }
+                    Text(
+                        vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') }.orEmpty(),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        "${items.size} posts",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(end = 16.dp),
+                    )
+                }
+                dev.pfeed.ui.common.MediaGrid(
+                    items = items,
+                    onOpen = { index -> gridView = false; pagerScope.launch { pagerState.scrollToPage(index) } },
+                    onNearEnd = vm::loadMore,
+                )
+            }
+        }
 
         // Hands-free is on: say so, with a quick way to stop it.
         val handsFreeOn by HandsFree.on.collectAsStateWithLifecycle()
-        if (handsFreeOn && !landscape && items.isNotEmpty()) {
+        if (handsFreeOn && !landscape && !gridView && items.isNotEmpty()) {
             Row(
                 Modifier.align(Alignment.TopStart).statusBarsPadding()
                     .padding(start = 12.dp, top = if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp)
@@ -306,7 +338,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // A tag page: the tags that show up most alongside it, to hop sideways to.
         val pageTag = vm.tag
-        if (pageTag != null && !pageTag.startsWith("@") && !landscape && items.size >= 6) {
+        if (pageTag != null && !pageTag.startsWith("@") && !landscape && !gridView && items.size >= 6) {
             val related = remember(items.size, pageTag) {
                 val self = dev.pfeed.domain.reco.Features.normalizeTag(pageTag)
                 items.take(60).flatMap { Display.tags(it, max = 12) }
@@ -451,6 +483,8 @@ private fun TopBar(
     onBack: (() -> Unit)?,
     followTag: Pair<String, Boolean>?,
     onFollowTag: () -> Unit,
+    /** Tag and creator pages: see everything loaded as a grid. */
+    onGrid: (() -> Unit)? = null,
 ) {
     Box(Modifier.fillMaxWidth().statusBarsPadding().height(52.dp)) {
         if (onBack != null) {
@@ -472,11 +506,14 @@ private fun TopBar(
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.Center).padding(horizontal = 64.dp),
+                modifier = Modifier.align(Alignment.Center).padding(horizontal = if (onGrid != null) 120.dp else 64.dp),
             )
         }
-        if (followTag != null) {
-            FollowPill(following = followTag.second, onClick = onFollowTag, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 12.dp))
+        Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (onGrid != null) {
+                IconButton(onClick = onGrid) { Icon(Icons.Filled.GridView, "Show as a grid", tint = Color.White) }
+            }
+            if (followTag != null) FollowPill(following = followTag.second, onClick = onFollowTag)
         }
     }
 }
