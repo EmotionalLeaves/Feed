@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.70.0 — 2026-11-16
+
+Following, at a glance
+
+- The Following feed shows the creators you follow as a row of round avatars under the tabs. Tap one for everything by them.
+- The adults-only screen eases in when the app first opens.
+
 ## 4.69.0 — 2026-11-16
 
 Lock screen feel
