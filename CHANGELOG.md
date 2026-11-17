@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.75.0 — 2026-11-16
+
+Hold a search result
+
+- In search results, press and hold a tile to save it straight from the grid, open it on its site, or copy its link. Saving here teaches For You just like saving in the feed.
+
 ## 4.74.0 — 2026-11-16
 
 Hold a Library tile
