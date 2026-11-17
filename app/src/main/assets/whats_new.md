@@ -1,3 +1,9 @@
+## 4.68.0 — 2026-11-16
+Follow feedback, update notes
+
+- Tapping Follow gives a quick pop and shows a tick as it turns to Following.
+- From your next update on, the feed will say 'Updated to …' once after the app updates, with What's new a tap away.
+
 ## 4.67.0 — 2026-11-16
 Creator avatars on posts
 
@@ -7,8 +13,3 @@ Creator avatars on posts
 Watched marks in search
 
 - Search results you've already watched are dimmed and marked with a small eye, so the new ones stand out.
-
-## 4.65.0 — 2026-11-16
-Your tags, lit
-
-- Each post's tags that For You knows you like are now lit pink and listed first, so you can see at a glance why a post showed up.

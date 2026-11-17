@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.68.0 — 2026-11-16
+
+Follow feedback, update notes
+
+- Tapping Follow gives a quick pop and shows a tick as it turns to Following.
+- From your next update on, the feed will say 'Updated to …' once after the app updates, with What's new a tap away.
+
 ## 4.67.0 — 2026-11-16
 
 Creator avatars on posts
