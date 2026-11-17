@@ -142,16 +142,29 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             val scroll = rememberScrollState()
             val sectionY = remember { mutableStateMapOf<String, Int>() }
             fun Modifier.anchor(name: String) = onGloballyPositioned { sectionY[name] = it.positionInParent().y.toInt() }
+            val jumpNames = listOf("Feed", "Playback", "Storage", "Privacy", "Network", "Backup", "Help")
+            // The section you're in is lit, and its chip kept in view.
+            val currentSection by remember {
+                androidx.compose.runtime.derivedStateOf {
+                    if (scroll.value < 8) null
+                    else jumpNames.lastOrNull { n -> (sectionY[n] ?: Int.MAX_VALUE) <= scroll.value + 48 }
+                }
+            }
+            val chipRow = androidx.compose.foundation.lazy.rememberLazyListState()
+            LaunchedEffect(currentSection) { currentSection?.let { chipRow.animateScrollToItem(jumpNames.indexOf(it)) } }
             androidx.compose.foundation.lazy.LazyRow(
+                state = chipRow,
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
                 modifier = Modifier.padding(bottom = 6.dp),
             ) {
-                items(listOf("Feed", "Playback", "Storage", "Privacy", "Network", "Backup", "Help")) { name ->
-                    androidx.compose.material3.SuggestionChip(
+                items(jumpNames) { name ->
+                    androidx.compose.material3.FilterChip(
+                        selected = name == currentSection,
                         onClick = { sectionY[name]?.let { y -> scope.launch { scroll.animateScrollTo(y) } } },
                         label = { Text(name) },
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
                     )
                 }
             }
@@ -354,7 +367,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     "Encrypted DNS",
                     s.encryptedDns,
                     subtitle = if (s.encryptedDns) "Every lookup goes privately over 1.1.1.1"
-                    else "Used when your network blocks a site. On: always, so it can't see where you go",
+                    else "Automatic when a network blocks a site. On: always",
                     icon = Icons.Filled.Shield,
                     iconTint = Good,
                     onChange = vm::setEncryptedDns,

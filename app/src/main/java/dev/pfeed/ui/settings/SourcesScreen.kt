@@ -205,6 +205,13 @@ fun SourcesScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     }
 }
 
+/** The sites behind each source that can block a whole state or country. */
+private val GEO_SITES = mapOf(
+    "redgifs" to setOf("redgifs.com"),
+    "reddit" to setOf("reddit.com", "redd.it"),
+    "tube" to setOf("pornhub.com", "youporn.com", "redtube.com", "tube8.com", "xvideos.com", "xnxx.com", "xhamster.com"),
+)
+
 /** One line of status for a source row: the most important thing about it right now. */
 private data class RowStatus(val text: String, val color: Color)
 
@@ -215,10 +222,15 @@ private fun statusOf(
     checking: Boolean,
     resting: List<String>,
     auth: String?,
+    geoBlocked: Set<String> = emptySet(),
 ): RowStatus {
     val id = src.adapter.id
+    val blockedHere = GEO_SITES[id]?.filter { it in geoBlocked }.orEmpty()
     return when {
         !src.enabled -> RowStatus("Off", TextLow)
+        blockedHere.isNotEmpty() && !dev.pfeed.source.net.AppProxy.config.active ->
+            if (id == "tube") RowStatus("${blockedHere.joinToString(", ") { siteLabel(it) }} blocked where you are; the rest work", Warn)
+            else RowStatus("Blocked where you are: Settings → Network to get it back", Bad)
         checking && check == null -> RowStatus("Checking…", TextLow)
         check != null && !check.ok -> RowStatus(check.detail, Bad)
         resting.isNotEmpty() -> RowStatus("Paused a few minutes: ${resting.take(2).joinToString(", ")} not responding", Warn)
@@ -241,7 +253,8 @@ private fun SourceRow(
 ) {
     val auth by vm.authStatus.collectAsStateWithLifecycle()
     val resting = remember(src, tick, check) { if (src.enabled) vm.restingSites(src.adapter.id) else emptyList() }
-    val status = statusOf(src, s, check, checking, resting, auth[src.adapter.id])
+    val geoBlocked by dev.pfeed.source.net.GeoBlock.sites.collectAsStateWithLifecycle()
+    val status = statusOf(src, s, check, checking, resting, auth[src.adapter.id], geoBlocked)
     SettingRow(
         title = src.adapter.displayName,
         icon = iconFor(src.adapter.id),
@@ -338,7 +351,7 @@ private fun FindMore(vm: SettingsViewModel) {
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("A topic, e.g. cosplay", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                placeholder = { Text("e.g. cosplay", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, null) },
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
