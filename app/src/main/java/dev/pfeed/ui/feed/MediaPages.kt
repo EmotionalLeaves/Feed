@@ -90,21 +90,58 @@ fun Thumbnail(item: MediaItem, modifier: Modifier = Modifier, contentScale: Cont
 
 /**
  * Behind a post that doesn't fill the screen (a sideways video, a square picture): its own picture,
- * tiny, blurred and dimmed, filling the bars instead of flat black. A 96-px copy keeps it cheap.
+ * blurred and dimmed, filling the bars instead of flat black. The blur is done once, on a tiny copy
+ * (see [SoftBlur]), and simply stretched: a live blur effect redrawn every frame under a playing
+ * video cost far too much.
  */
 @Composable
 fun AmbientBackdrop(item: MediaItem) {
     val url = item.thumbnailUrl?.takeUnless { dev.pfeed.source.parse.MediaTypes.classify(it) == dev.pfeed.domain.model.MediaType.VIDEO } ?: return
     val context = androidx.compose.ui.platform.LocalContext.current
-    val request = remember(url) { coil.request.ImageRequest.Builder(context).data(url).size(96).build() }
+    val request = remember(url) {
+        coil.request.ImageRequest.Builder(context).data(url).size(96).transformations(SoftBlur).memoryCacheKey("$url#soft").build()
+    }
     Box(Modifier.fillMaxSize()) {
         AsyncImage(
             model = request,
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize().blur(36.dp).graphicsLayer { scaleX = 1.15f; scaleY = 1.15f },
+            filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium,
+            modifier = Modifier.fillMaxSize(),
         )
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
+    }
+}
+
+/** Shrinks a picture to a few dozen pixels and box-blurs it: stretched to full screen it reads as a soft glow. */
+private object SoftBlur : coil.transform.Transformation {
+    override val cacheKey = "softblur1"
+    override suspend fun transform(input: android.graphics.Bitmap, size: coil.size.Size): android.graphics.Bitmap {
+        val w = 24
+        val h = (input.height * w / input.width.coerceAtLeast(1)).coerceIn(8, 64)
+        val small = android.graphics.Bitmap.createScaledBitmap(input.copy(android.graphics.Bitmap.Config.ARGB_8888, false), w, h, true)
+        val px = IntArray(w * h)
+        small.getPixels(px, 0, w, 0, 0, w, h)
+        repeat(3) { boxBlur(px, w, h, 2) }
+        return android.graphics.Bitmap.createBitmap(px, w, h, android.graphics.Bitmap.Config.ARGB_8888)
+    }
+
+    private fun boxBlur(px: IntArray, w: Int, h: Int, r: Int) {
+        val out = IntArray(px.size)
+        for (pass in 0..1) {
+            val src = if (pass == 0) px else out
+            val dst = if (pass == 0) out else px
+            for (y in 0 until h) for (x in 0 until w) {
+                var a = 0; var rr = 0; var g = 0; var b = 0; var n = 0
+                for (k in -r..r) {
+                    val xx = if (pass == 0) (x + k).coerceIn(0, w - 1) else x
+                    val yy = if (pass == 0) y else (y + k).coerceIn(0, h - 1)
+                    val c = src[yy * w + xx]
+                    a += c ushr 24; rr += (c shr 16) and 0xff; g += (c shr 8) and 0xff; b += c and 0xff; n++
+                }
+                dst[y * w + x] = ((a / n) shl 24) or ((rr / n) shl 16) or ((g / n) shl 8) or (b / n)
+            }
+        }
     }
 }
 

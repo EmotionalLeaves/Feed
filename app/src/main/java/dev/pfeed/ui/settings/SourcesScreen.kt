@@ -368,7 +368,7 @@ private fun FindMore(vm: SettingsViewModel) {
         when (val st = state) {
             is SearchState.Idle -> Unit
             is SearchState.Loading -> Row(Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp, color = Accent)
+                dev.pfeed.ui.common.BrandSpinner(size = 18.dp, stroke = 2.dp)
                 Spacer(Modifier.width(12.dp))
                 Text("Looking on Reddit, Mastodon and the boards…", style = MaterialTheme.typography.bodySmall, color = TextMid)
             }

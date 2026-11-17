@@ -269,7 +269,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     modifier = Modifier.align(Alignment.Center),
                 ) {
                     Row(Modifier.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        dev.pfeed.ui.common.BrandSpinner(size = 16.dp, stroke = 2.dp)
                         Spacer(Modifier.width(10.dp))
                         Text("Loading more…", color = Color.White, style = MaterialTheme.typography.labelLarge)
                     }
