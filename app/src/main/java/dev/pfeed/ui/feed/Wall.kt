@@ -93,56 +93,10 @@ fun Wall(items: List<MediaItem>, vm: FeedViewModel, active: Boolean, onPick: (In
     }
 }
 
-@OptIn(UnstableApi::class)
 @Composable
 private fun WallTile(item: MediaItem, vm: FeedViewModel, playing: Boolean, onClick: () -> Unit) {
-    val stream by produceState<StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
-    val isVideo = Display.effectiveType(item, stream) == MediaType.VIDEO
-    val pool = vm.playerPool
-    val version by pool.changes.collectAsState()
-    // Only the tiles on the screen you're looking at hold a player.
-    val player = remember(item.key, version, playing, isVideo) { if (playing && isVideo) pool.acquire(item.key) else null }
-    var firstFrame by remember(item.key) { mutableStateOf(false) }
-    DisposableEffect(item.key, playing, isVideo) {
-        onDispose { if (playing && isVideo) pool.release(item.key) }
-    }
-    LaunchedEffect(player, stream) {
-        val p = player ?: return@LaunchedEffect
-        val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
-        // Small decodes: four at once on a phone.
-        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().setMaxVideoSize(Int.MAX_VALUE, WALL_MAX_HEIGHT).build()
-        if (p.currentMediaItem?.mediaId != item.key) {
-            firstFrame = false
-            p.setMediaItem(ExoMediaItem.Builder().setMediaId(item.key).setUri(s.url).apply { s.mimeType?.let { setMimeType(it) } }.build())
-            p.prepare()
-        }
-        p.repeatMode = Player.REPEAT_MODE_ONE
-        dev.pfeed.player.PlayerPool.applyMute(p, muted = true)
-        p.playWhenReady = true
-    }
-    DisposableEffect(player) {
-        val p = player
-        val l = object : Player.Listener { override fun onRenderedFirstFrame() { firstFrame = true } }
-        p?.addListener(l)
-        onDispose { p?.removeListener(l); p?.playWhenReady = false }
-    }
     Box(Modifier.fillMaxSize().clickable(onClick = onClick)) {
-        if (player != null) {
-            AndroidView(
-                factory = { ctx ->
-                    PlayerView(ctx).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
-                        setShutterBackgroundColor(AndroidColor.TRANSPARENT)
-                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
-                    }
-                },
-                update = { view -> if (view.player !== player) view.player = player },
-                onRelease = { view -> view.player = null },
-                modifier = Modifier.fillMaxSize(),
-            )
-        }
-        if (!firstFrame || player == null) Thumbnail(item)
+        MutedLoop(item, vm.playerPool, vm::resolve, playing, WALL_MAX_HEIGHT, Modifier.fillMaxSize())
         dev.pfeed.ui.common.MediaMask()
         // Who and how long, quietly along the bottom.
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.3f).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))))
@@ -165,3 +119,67 @@ private fun WallTile(item: MediaItem, vm: FeedViewModel, playing: Boolean, onCli
 
 private const val PER_PAGE = 4
 private const val WALL_MAX_HEIGHT = 480
+
+/**
+ * A post playing silently on a loop, small: the Wall's tiles and the grids' live previews.
+ * Shows the thumbnail until the first frame is on screen, and holds a player from the shared
+ * pool only while [playing] (the pool has four; null from it just leaves the thumbnail).
+ */
+@OptIn(UnstableApi::class)
+@Composable
+fun MutedLoop(
+    item: MediaItem,
+    pool: dev.pfeed.player.PlayerPool,
+    resolve: suspend (MediaItem) -> StreamInfo?,
+    playing: Boolean,
+    maxHeight: Int,
+    modifier: Modifier = Modifier,
+) {
+    val stream by produceState<StreamInfo?>(initialValue = null, item.key) { value = runCatching { resolve(item) }.getOrNull() }
+    val isVideo = Display.effectiveType(item, stream) == MediaType.VIDEO
+    val version by pool.changes.collectAsState()
+    val owner = "loop:" + item.key
+    val player = remember(item.key, version, playing, isVideo) { if (playing && isVideo) pool.acquire(owner) else null }
+    var firstFrame by remember(item.key) { mutableStateOf(false) }
+    DisposableEffect(item.key, playing, isVideo) {
+        onDispose { if (playing && isVideo) pool.release(owner) }
+    }
+    LaunchedEffect(player, stream) {
+        val p = player ?: return@LaunchedEffect
+        val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
+        // Small decodes: several at once on a phone.
+        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon().setMaxVideoSize(Int.MAX_VALUE, maxHeight).build()
+        if (p.currentMediaItem?.mediaId != item.key) {
+            firstFrame = false
+            p.setMediaItem(ExoMediaItem.Builder().setMediaId(item.key).setUri(s.url).apply { s.mimeType?.let { setMimeType(it) } }.build())
+            p.prepare()
+        }
+        p.repeatMode = Player.REPEAT_MODE_ONE
+        dev.pfeed.player.PlayerPool.applyMute(p, muted = true)
+        p.playWhenReady = true
+    }
+    DisposableEffect(player) {
+        val p = player
+        val l = object : Player.Listener { override fun onRenderedFirstFrame() { firstFrame = true } }
+        p?.addListener(l)
+        onDispose { p?.removeListener(l); p?.playWhenReady = false }
+    }
+    Box(modifier) {
+        if (player != null) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_ZOOM
+                        setShutterBackgroundColor(AndroidColor.TRANSPARENT)
+                        layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                    }
+                },
+                update = { view -> if (view.player !== player) view.player = player },
+                onRelease = { view -> view.player = null },
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+        if (!firstFrame || player == null) Thumbnail(item)
+    }
+}

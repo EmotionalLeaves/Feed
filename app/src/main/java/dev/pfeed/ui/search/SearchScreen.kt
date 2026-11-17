@@ -170,6 +170,7 @@ class SearchViewModel @Inject constructor(
     private val registry: SourceRegistry,
     private val library: dev.pfeed.data.repo.LibraryRepository,
     private val blocks: dev.pfeed.data.repo.BlockRepository,
+    val livePreviews: dev.pfeed.ui.common.LivePreviews,
 ) : ViewModel() {
     private val _topicRows = MutableStateFlow<List<Pair<String, List<MediaItem>>>>(emptyList())
     /**
@@ -331,9 +332,17 @@ private val POPULAR = listOf(
     "milf", "deepthroat", "gangbang", "hentai", "femdom", "lingerie", "creampie", "redhead",
 )
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
+    // Grids on this screen come alive: the video nearest the middle plays in its tile.
+    androidx.compose.runtime.CompositionLocalProvider(
+        dev.pfeed.ui.common.LocalLivePreview provides dev.pfeed.ui.common.rememberLivePreview(vm.livePreviews),
+    ) { SearchScreenContent(nav, vm) }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val ui by vm.ui.collectAsStateWithLifecycle()
     val filters by vm.filters.collectAsStateWithLifecycle()
     val sources by vm.sources.collectAsStateWithLifecycle()

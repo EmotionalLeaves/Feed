@@ -78,6 +78,7 @@ class FeedViewModel @Inject constructor(
     private val offline: dev.pfeed.data.repo.OfflineStore,
     private val holder: TransientFeedHolder,
     val playerPool: PlayerPool,
+    val livePreviews: dev.pfeed.ui.common.LivePreviews,
 ) : ViewModel() {
 
     private val rawTag: String? = savedState.get<String>("tag")

@@ -90,6 +90,7 @@ class LibraryViewModel @Inject constructor(
     private val library: LibraryRepository,
     private val holder: TransientFeedHolder,
     private val offline: dev.pfeed.data.repo.OfflineStore,
+    val livePreviews: dev.pfeed.ui.common.LivePreviews,
 ) : ViewModel() {
     /** Saved posts, with thumbnails from the kept copies once they're downloaded (so Saved works offline). */
     val saved: StateFlow<List<MediaItem>> = kotlinx.coroutines.flow.combine(library.items(LibraryKind.SAVED), offline.bytes) { list, _ -> list.map(offline::withLocalThumbnail) }
@@ -142,6 +143,14 @@ private val tabs = listOf("Saved", "Liked", "History", "Following")
 
 @Composable
 fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
+    // Grids on this screen come alive: the video nearest the middle plays in its tile.
+    androidx.compose.runtime.CompositionLocalProvider(
+        dev.pfeed.ui.common.LocalLivePreview provides dev.pfeed.ui.common.rememberLivePreview(vm.livePreviews),
+    ) { LibraryScreenContent(nav, vm) }
+}
+
+@Composable
+private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
     var confirmClear by remember { mutableStateOf(false) }
     val saved by vm.saved.collectAsStateWithLifecycle()

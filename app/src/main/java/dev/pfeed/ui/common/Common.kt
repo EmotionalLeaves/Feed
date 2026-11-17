@@ -34,6 +34,9 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.collectLatest
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -89,9 +92,44 @@ fun MediaGrid(
     /** Press and hold a tile: actions for that post (remove it from a list, and so on). */
     onLongPress: ((MediaItem) -> Unit)? = null,
     contentTopPadding: androidx.compose.ui.unit.Dp = 2.dp,
+    /**
+     * Plays a post silently in its tile. When given, the grid brings itself to life: once scrolling
+     * stops, the video nearest the middle of the screen starts playing in place, and every few
+     * seconds the spotlight moves on to the next one in view. Null keeps every tile still.
+     */
+    livePreview: (@Composable (MediaItem) -> Unit)? = LocalLivePreview.current,
 ) {
+    val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    var spot by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Any?>(null) }
+    val byKey = androidx.compose.runtime.remember(items) { items.associateBy { it.key } }
+    if (livePreview != null) {
+        androidx.compose.runtime.LaunchedEffect(gridState, byKey) {
+            androidx.compose.runtime.snapshotFlow { gridState.isScrollInProgress }.collectLatest { scrolling ->
+                if (scrolling) { spot = null; return@collectLatest }
+                kotlinx.coroutines.delay(PREVIEW_SETTLE_MS)
+                val info = gridState.layoutInfo
+                val top = info.viewportStartOffset
+                val bottom = info.viewportEndOffset
+                val middle = (top + bottom) / 2
+                // Videos whose tile is wholly on screen, nearest the middle first.
+                val order = info.visibleItemsInfo
+                    .filter { it.offset.y >= top - 1 && it.offset.y + it.size.height <= bottom + 1 }
+                    .filter { byKey[it.key]?.type.let { t -> t == MediaType.VIDEO || t == MediaType.GIF } }
+                    .sortedBy { kotlin.math.abs(it.offset.y + it.size.height / 2 - middle) }
+                    .map { it.key }
+                if (order.isEmpty()) { spot = null; return@collectLatest }
+                var i = 0
+                while (true) {
+                    spot = order[i % order.size]
+                    kotlinx.coroutines.delay(PREVIEW_DWELL_MS)
+                    i++
+                }
+            }
+        }
+    }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
+        state = gridState,
         modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 2.dp, end = 2.dp, top = contentTopPadding, bottom = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(2.dp),
@@ -113,7 +151,10 @@ fun MediaGrid(
                 }
             }
             item(key = post.key) {
-                GridTile(post, index, onOpen, label, seen = seen?.invoke(post) == true, onLongPress = onLongPress)
+                GridTile(
+                    post, index, onOpen, label, seen = seen?.invoke(post) == true, onLongPress = onLongPress,
+                    live = if (livePreview != null && spot == post.key) ({ livePreview(post) }) else null,
+                )
                 if (onNearEnd != null && index >= items.size - NEAR_END_TILES) androidx.compose.runtime.LaunchedEffect(items.size) { onNearEnd() }
             }
         }
@@ -121,10 +162,20 @@ fun MediaGrid(
 }
 
 private const val NEAR_END_TILES = 9
+private const val PREVIEW_SETTLE_MS = 450L
+private const val PREVIEW_DWELL_MS = 5_000L
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?, seen: Boolean = false, onLongPress: ((MediaItem) -> Unit)? = null) {
+private fun GridTile(
+    item: MediaItem,
+    index: Int,
+    onOpen: (index: Int) -> Unit,
+    label: ((MediaItem) -> String?)?,
+    seen: Boolean = false,
+    onLongPress: ((MediaItem) -> Unit)? = null,
+    live: (@Composable () -> Unit)? = null,
+) {
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val shape = RoundedCornerShape(6.dp)
     Box(
@@ -151,6 +202,8 @@ private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, 
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize().then(if (LocalBlurPreviews.current) Modifier.blur(28.dp) else Modifier),
         )
+        // The live preview, playing in place over the still (never while previews are blurred).
+        if (live != null && !LocalBlurPreviews.current) live()
         MediaMask()
         val badge = when (item.type) {
             MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""

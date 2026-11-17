@@ -59,6 +59,8 @@ data class AppSettings(
     val localFolders: List<String> = emptyList(),
     val cacheSizeMb: Int = 1024,
     val autoplayOnMobileData: Boolean = false,
+    /** Grids play the video nearest the middle silently in its tile, moving on every few seconds. */
+    val livePreviews: Boolean = true,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

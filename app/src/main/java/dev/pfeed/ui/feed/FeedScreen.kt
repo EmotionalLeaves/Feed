@@ -392,6 +392,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     items = items,
                     onOpen = { index -> gridView = false; pagerScope.launch { pagerState.scrollToPage(index) } },
                     onNearEnd = vm::loadMore,
+                    livePreview = dev.pfeed.ui.common.rememberLivePreview(vm.livePreviews, playing = active),
                 )
             }
         }

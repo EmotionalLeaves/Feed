@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
@@ -262,6 +263,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.autoplayOnMobileData) null else "Videos wait for a tap when you're off Wi-Fi",
                     icon = Icons.Filled.SignalCellularAlt,
                     onChange = vm::setAutoplayOnMobile,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Live grids",
+                    s.livePreviews,
+                    subtitle = "In grids, the video nearest the middle plays silently in its tile, then the next",
+                    icon = Icons.Filled.GridView,
+                    onChange = vm::setLivePreviews,
                 )
                 RowDivider()
                 SwitchSetting(
