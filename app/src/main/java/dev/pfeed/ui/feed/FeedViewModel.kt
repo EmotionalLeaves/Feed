@@ -530,7 +530,9 @@ class FeedViewModel @Inject constructor(
         val features = dev.pfeed.domain.reco.Features.of(item).filterNot(dev.pfeed.domain.reco.Features::isMeta)
         val creator = Display.creator(item)
         // Searches: the creator, then the post's first few real tags (sites list the important ones first).
-        val tags = features.filterNot { it.startsWith("w:") }.take(3).map { it.replace('_', ' ') }
+        // Real words only: boards carry tags like ":o" or "2 horns" that make useless searches.
+        fun searchable(t: String) = t.length >= 3 && t.count { it.isLetter() } >= 3 && !t.first().isDigit()
+        val tags = features.filterNot { it.startsWith("w:") }.map { it.replace('_', ' ') }.filter(::searchable).take(3)
         val words = features.filter { it.startsWith("w:") }.take(2).map { it.removePrefix("w:") }
         val queries = (listOfNotNull(creator) + tags + words).distinct().ifEmpty { listOfNotNull(item.title?.take(40)) }
         return FeedSpec.Similar(item.key, queries, features.toSet(), item.creator)
