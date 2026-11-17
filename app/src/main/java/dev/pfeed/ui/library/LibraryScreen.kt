@@ -137,6 +137,10 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     val collections by vm.collections.collectAsStateWithLifecycle()
     val collection by vm.collection.collectAsStateWithLifecycle()
     val collectionItems by vm.collectionItems.collectAsStateWithLifecycle()
+    // Library tapped again in the tab bar: out of a collection, back to everything saved.
+    LaunchedEffect(Unit) {
+        dev.pfeed.ui.BottomBar.reselected.collect { route -> if (route == dev.pfeed.ui.Routes.LIBRARY) vm.collection.value = null }
+    }
     var renaming by remember { mutableStateOf<String?>(null) }
     var deleting by remember { mutableStateOf<String?>(null) }
     // A collection that's gone (deleted elsewhere, or emptied by unsaving): back to all saved posts.

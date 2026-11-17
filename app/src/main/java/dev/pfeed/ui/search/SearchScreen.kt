@@ -58,6 +58,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
@@ -322,6 +324,11 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     var showFilters by remember { mutableStateOf(false) }
 
     val run: (String) -> Unit = { q -> focus.clearFocus(); vm.search(q) }
+    // Search tapped again in the tab bar: straight into the search box.
+    val searchBox = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) {
+        dev.pfeed.ui.BottomBar.reselected.collect { route -> if (route == dev.pfeed.ui.Routes.SEARCH) runCatching { searchBox.requestFocus() } }
+    }
 
     Column(Modifier.fillMaxSize()) {
         dev.pfeed.ui.common.ScreenHeader("Search")
@@ -348,7 +355,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { run(ui.query) }),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).focusRequester(searchBox),
             )
             IconButton(onClick = { showFilters = true }) {
                 BadgedBox(badge = { if (filters.sheetCount > 0) Badge(containerColor = Accent) { Text("${filters.sheetCount}") } }) {

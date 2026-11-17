@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.layout.layout
@@ -291,7 +292,11 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
                 }
             },
     ) {
-        androidx.compose.foundation.layout.Row(Modifier.fillMaxSize(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        // On a tablet or a wide screen the tabs stay together in the middle instead of spreading to the edges.
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxHeight().widthIn(max = MAX_BAR_WIDTH).fillMaxWidth().align(androidx.compose.ui.Alignment.Center),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
             tabs.forEach { tab ->
                 val selected = tab == current
                 val tint by androidx.compose.animation.animateColorAsState(
@@ -339,8 +344,10 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
                     .padding(bottom = 4.dp)
                     .layout { measurable, constraints ->
                         val p = measurable.measure(constraints)
-                        val slot = constraints.maxWidth / tabs.size.toFloat()
-                        layout(constraints.maxWidth, p.height) { p.place((slot * (indicatorX + 0.5f) - p.width / 2f).toInt(), 0) }
+                        val rowWidth = minOf(constraints.maxWidth, MAX_BAR_WIDTH.roundToPx())
+                        val start = (constraints.maxWidth - rowWidth) / 2f
+                        val slot = rowWidth / tabs.size.toFloat()
+                        layout(constraints.maxWidth, p.height) { p.place((start + slot * (indicatorX + 0.5f) - p.width / 2f).toInt(), 0) }
                     }
                     .width(14.dp)
                     .height(2.dp)
@@ -355,6 +362,7 @@ private fun Modifier.androidx_semantics(label: String, selected: Boolean): Modif
     this.then(Modifier.semantics(mergeDescendants = true) { this.selected = selected; this.contentDescription = label })
 
 private val BAR_HEIGHT = 52.dp
+private val MAX_BAR_WIDTH = 520.dp
 private const val IDLE_DIM_MS = 3_500L
 /** After dimming, how much longer before the bar is out of sight entirely. */
 private const val IDLE_HIDE_MS = 8_000L
