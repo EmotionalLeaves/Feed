@@ -518,7 +518,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         "Swipe a comic, or tap its left / right edge" to "Turn the page (tap the page count for every page)",
                         "Pinch" to "Zoom; zoomed in, one finger moves around",
                         "Pull down on the first post" to "Fresh posts",
-                        "Sideways: double-tap an edge" to "Skip 10 s back or ahead",
+                        "Double-tap an edge of a long video (or any video sideways)" to "Skip 10 s back or ahead; keep tapping to skip more",
                         "Volume up" to "Sound on",
                         "Tap @name or #tag" to "Everything by them, or with that tag",
                         "Three fingers anywhere" to "Leave the app instantly",

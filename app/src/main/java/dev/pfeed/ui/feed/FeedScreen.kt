@@ -51,6 +51,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ViewModule
@@ -785,6 +786,8 @@ private fun FeedPage(
     val savedNow by androidx.compose.runtime.rememberUpdatedState(saved)
     /** Which edge was just double-tapped to skip (−1 back, 1 ahead), and when: shows a brief "10 s" badge. */
     var seekFlash by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
+    // Seconds skipped by double-taps in a row on the same edge (10, 20, 30…), as in video players.
+    var seekRun by remember(item.key) { mutableIntStateOf(0) }
     // What the post really is once its file is known: a board/Reddit post listed as an image can turn
     // out to be an MP4/WebM, which must play as a video (drawn as an image it froze on one frame).
     val stream by produceState<dev.pfeed.domain.model.StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
@@ -819,22 +822,37 @@ private fun FeedPage(
                             offset.x > size.width * (1 - EDGE_TAP) -> 1
                             else -> 0
                         }
+                        // Straight after a double-tap skip, more taps on that side keep skipping.
+                        val run = seekFlash
+                        val p = player
+                        val side = if (offset.x < size.width * 0.3f) -1 else if (offset.x > size.width * 0.7f) 1 else 0
+                        if (run != null && p != null && side == run.first && System.currentTimeMillis() - run.second < SEEK_RUN_MS) {
+                            p.seekTo((p.currentPosition + side * SEEK_STEP_MS).coerceIn(0L, (p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE)))
+                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                            seekRun += (SEEK_STEP_MS / 1000).toInt()
+                            seekFlash = side to System.currentTimeMillis()
+                            return@detectTapGestures
+                        }
                         if (item.isGallery && edge != 0 && !landscape) galleryTurn = edge to System.nanoTime() else paused = !paused
                     },
                     onDoubleTap = { offset ->
-                        // Sideways, watching a video: double-tap the left or right edge to skip 10 s,
-                        // as in video players. The middle (and everything upright) is a like.
+                        // A long video (or any video sideways): double-tap the left or right edge to skip
+                        // 10 s, as in video players; again and again to skip further. The middle is a like.
                         val p = player
                         val edge = when {
                             offset.x < size.width * 0.3f -> -1
                             offset.x > size.width * 0.7f -> 1
                             else -> 0
                         }
-                        if (landscape && isVideo && p != null && edge != 0) {
+                        val long = (p?.duration ?: 0L) >= LONG_VIDEO_MS || (item.durationSec ?: 0) * 1000L >= LONG_VIDEO_MS
+                        if ((landscape || long) && isVideo && p != null && edge != 0) {
                             val to = (p.currentPosition + edge * SEEK_STEP_MS).coerceIn(0L, (p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE))
                             p.seekTo(to)
                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            seekFlash = edge to System.currentTimeMillis()
+                            val now = System.currentTimeMillis()
+                            val last = seekFlash
+                            seekRun = if (last != null && last.first == edge && now - last.second < SEEK_RUN_MS) seekRun + (SEEK_STEP_MS / 1000).toInt() else (SEEK_STEP_MS / 1000).toInt()
+                            seekFlash = edge to now
                             return@detectTapGestures
                         }
                         heartAt = offset
@@ -944,13 +962,27 @@ private fun FeedPage(
             }
         }
         seekFlash?.let { (edge, at) ->
-            LaunchedEffect(at) { kotlinx.coroutines.delay(650); if (seekFlash?.second == at) seekFlash = null }
-            Surface(
-                color = Color.Black.copy(alpha = 0.55f),
-                shape = RoundedCornerShape(50),
-                modifier = Modifier.align(if (edge < 0) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 48.dp),
+            LaunchedEffect(at) { kotlinx.coroutines.delay(SEEK_RUN_MS); if (seekFlash?.second == at) seekFlash = null }
+            // A soft half-moon swells from that edge, with the running total in it.
+            val swell = remember(at) { Animatable(0f) }
+            LaunchedEffect(at) { swell.snapTo(0f); swell.animateTo(1f, tween(380, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                val r = size.height * (0.55f + 0.1f * swell.value)
+                val cx = if (edge < 0) -r * 0.55f else size.width + r * 0.55f
+                drawCircle(Color.White.copy(alpha = 0.10f + 0.06f * (1f - swell.value)), radius = r, center = androidx.compose.ui.geometry.Offset(cx, size.height / 2))
+            }
+            Column(
+                Modifier.align(if (edge < 0) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 30.dp)
+                    .graphicsLayer { val k = 0.85f + 0.15f * swell.value; scaleX = k; scaleY = k },
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Text(if (edge < 0) "◀◀  10 s" else "10 s  ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+                Icon(
+                    if (edge < 0) Icons.Filled.FastRewind else Icons.Filled.FastForward,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(34.dp),
+                )
+                Text("$seekRun s", color = Color.White, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
             }
         }
         if (speeding) {
@@ -1334,6 +1366,8 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 
 /** How far left a swipe must go to open the creator's page. */
+private const val LONG_VIDEO_MS = 90_000L
+private const val SEEK_RUN_MS = 800L
 private const val SWIPE_TO_CREATOR_DP = 90
 /** How much of each side of a comic page turns the page when tapped. */
 private const val EDGE_TAP = 0.22f
