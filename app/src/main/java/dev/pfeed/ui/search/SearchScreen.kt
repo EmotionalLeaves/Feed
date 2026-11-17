@@ -64,6 +64,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
@@ -456,6 +457,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
             SuggestionsPane(
                 continueWatching = continueWatching,
                 topicRows = topicRows,
+                onMix = { name, list -> nav.navigate(Routes.viewer(vm.openList(list, 0, "Mix · $name"))) },
                 onTopicItem = { topic, index -> nav.navigate(Routes.viewer(vm.openList(topicRows.first { it.first == topic }.second, index, topic))) },
                 onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
                 typed = ui.query,
@@ -502,6 +504,7 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
 private fun SuggestionsPane(
     continueWatching: List<MediaItem>,
     topicRows: List<Pair<String, List<MediaItem>>>,
+    onMix: (String, List<MediaItem>) -> Unit = { _, _ -> },
     onTopicItem: (String, Int) -> Unit,
     onContinue: (Int) -> Unit,
     typed: String,
@@ -563,6 +566,28 @@ private fun SuggestionsPane(
             }
             Spacer(Modifier.height(20.dp))
         }
+        // Your mixes: two of your interests woven together, as playlists you can start in one tap.
+        val mixes = remember(topicRows) {
+            val rows = topicRows.filter { it.second.size >= 4 }
+            val pairs = listOf(0 to 1, 2 to 3, 0 to 2, 1 to 3).filter { (a, b) -> a < rows.size && b < rows.size }.take(3)
+            pairs.map { (a, b) ->
+                val first = rows[a].second; val second = rows[b].second
+                val woven = (0 until maxOf(first.size, second.size)).flatMap { i -> listOfNotNull(first.getOrNull(i), second.getOrNull(i)) }
+                    .distinctBy { it.key }
+                "${rows[a].first} + ${rows[b].first}" to woven
+            }
+        }
+        if (t.isEmpty() && mixes.isNotEmpty()) {
+            SectionTitle("Your mixes")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(mixes.size, key = { mixes[it].first }) { i ->
+                    val (name, list) = mixes[i]
+                    MixCard(i + 1, name, list) { onMix(name, list) }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
         if (t.isEmpty()) topicRows.forEach { (topic, items) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 SectionTitle(topic.replaceFirstChar { it.uppercase() }, Modifier.weight(1f))
@@ -614,6 +639,52 @@ private fun SuggestionsPane(
 }
 
 private val BROWSE_HUES = listOf(338f, 352f, 12f, 24f, 290f, 268f, 248f, 205f, 318f, 190f)
+
+/** A mix: a big card with three of its posts fanned out, its name, and how many it holds. */
+@Composable
+private fun MixCard(number: Int, name: String, items: List<MediaItem>, onClick: () -> Unit) {
+    val hue = remember(name) { BROWSE_HUES[(name.hashCode() and 0x7fffffff) % BROWSE_HUES.size] }
+    Box(
+        Modifier
+            .width(168.dp)
+            .height(214.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.hsl(hue, 0.6f, 0.42f), Color.hsl((hue + 40f) % 360f, 0.65f, 0.16f))))
+            .clickable(onClick = onClick),
+    ) {
+        // Three covers, fanned like a hand of cards.
+        items.take(3).forEachIndexed { i, item ->
+            val angle = listOf(-9f, 0f, 9f)[i]
+            Box(
+                Modifier
+                    .align(Alignment.TopCenter)
+                    .padding(top = 18.dp)
+                    .graphicsLayer { rotationZ = angle; translationX = (i - 1) * 26.dp.toPx(); translationY = if (i == 1) 0f else 8.dp.toPx() }
+                    .width(80.dp)
+                    .height(108.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            ) {
+                coil.compose.AsyncImage(
+                    model = item.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().then(if (dev.pfeed.ui.common.LocalBlurPreviews.current) Modifier.blur(16.dp) else Modifier),
+                )
+                dev.pfeed.ui.common.MediaMask()
+            }
+        }
+        Column(Modifier.align(Alignment.BottomStart).padding(14.dp)) {
+            Text("Mix $number", color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelMedium)
+            Text(name, color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text("${items.size} posts", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelSmall)
+        }
+        Box(
+            Modifier.align(Alignment.BottomEnd).padding(12.dp).size(38.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.White),
+            contentAlignment = Alignment.Center,
+        ) { Icon(Icons.Filled.PlayArrow, contentDescription = "Play", tint = Color.Black, modifier = Modifier.size(24.dp)) }
+    }
+}
 
 /** A topic to browse, as a colour card with its name. */
 @Composable
