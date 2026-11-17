@@ -20,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -50,6 +51,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SwipeRight
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
@@ -775,6 +778,10 @@ private fun FeedPage(
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
     var speeding by remember(item.key) { mutableStateOf(false) }
     var galleryTurn by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
+    // Sideways swipe in progress (for the hints at the edges), and saves made by swiping right.
+    var swipeDx by remember(item.key) { mutableFloatStateOf(0f) }
+    var saveFlash by remember(item.key) { mutableIntStateOf(0) }
+    val savedNow by androidx.compose.runtime.rememberUpdatedState(saved)
     /** Which edge was just double-tapped to skip (−1 back, 1 ahead), and when: shows a brief "10 s" badge. */
     var seekFlash by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
     // What the post really is once its file is known: a board/Reddit post listed as an image can turn
@@ -836,22 +843,33 @@ private fun FeedPage(
                     },
                 )
             }
-            // Swipe left on a post (not a comic, which turns pages that way): their page, everything
-            // by them across every source, as in other short-video apps. Child gestures that use the
-            // drag (zoomed pan, the scrub bar) consume it first, so this only sees a free swipe.
+            // Sideways swipes (not on a comic, which turns pages that way):
+            //  · left: their page, everything by them across every source, as in other short-video apps;
+            //  · right: save it, with a bookmark that flies in.
+            // Child gestures that use the drag (zoomed pan, the scrub bar) consume it first.
             .pointerInput(item.key, landscape, type) {
+                if (landscape || item.isGallery || type == MediaType.EMBED) return@pointerInput
                 val creator = Display.creator(item)
-                if (landscape || item.isGallery || creator == null || type == MediaType.EMBED) return@pointerInput
                 var dx = 0f
                 detectHorizontalDragGestures(
                     onDragStart = { dx = 0f },
                     onDragEnd = {
-                        if (dx < -SWIPE_TO_CREATOR_DP.dp.toPx()) {
-                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                            onOpenTag("@$creator")
+                        val far = SWIPE_TO_CREATOR_DP.dp.toPx()
+                        when {
+                            dx < -far && creator != null -> {
+                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                onOpenTag("@$creator")
+                            }
+                            dx > far -> {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                if (!savedNow) vm.toggleSave(item)
+                                saveFlash++
+                            }
                         }
+                        swipeDx = 0f
                     },
-                ) { change, amount -> dx += amount; change.consume() }
+                    onDragCancel = { swipeDx = 0f },
+                ) { change, amount -> dx += amount; swipeDx = dx; change.consume() }
             }
             // Press-and-hold: on a video's right third → 2× speed; elsewhere → the menu.
             // awaitLongPressOrCancellation ignores quick taps and swipes (movement cancels it), so
@@ -956,6 +974,45 @@ private fun FeedPage(
             )
         }
         HeartBurst(heartAt, heartTick)
+        // While swiping sideways: what letting go will do, growing at the edge you're pulling toward.
+        if (swipeDx != 0f && !landscape) {
+            val far = with(androidx.compose.ui.platform.LocalDensity.current) { SWIPE_TO_CREATOR_DP.dp.toPx() }
+            val pull = (kotlin.math.abs(swipeDx) / far).coerceIn(0f, 1f)
+            val right = swipeDx > 0
+            Row(
+                Modifier.align(if (right) Alignment.CenterStart else Alignment.CenterEnd).padding(horizontal = 18.dp)
+                    .graphicsLayer { alpha = pull; scaleX = 0.7f + 0.3f * pull; scaleY = 0.7f + 0.3f * pull }
+                    .clip(RoundedCornerShape(50)).background(if (pull >= 1f) Accent else Color.Black.copy(alpha = 0.55f))
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(if (right) Icons.Filled.Bookmark else Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(if (right) (if (saved) "Saved" else "Save") else "Their page", color = Color.White, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold)
+            }
+        }
+        // Saved by swiping right: a big bookmark pops in the middle and fades.
+        if (saveFlash > 0) {
+            val pop = remember { Animatable(0f) }
+            LaunchedEffect(saveFlash) { pop.snapTo(0f); pop.animateTo(1f, tween(650)) }
+            val v = pop.value
+            Icon(
+                Icons.Filled.Bookmark,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.align(Alignment.Center).size(96.dp)
+                    .graphicsLayer {
+                        val grow = if (v < 0.35f) v / 0.35f else 1f
+                        scaleX = 0.6f + 0.5f * grow; scaleY = 0.6f + 0.5f * grow
+                        alpha = if (v < 0.6f) 1f else (1f - v) / 0.4f
+                        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawContent()
+                        drawRect(dev.pfeed.ui.theme.BrandGradient, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+                    },
+            )
+        }
         if (landscape) {
             IconButton(
                 onClick = { onLandscape(false) },
@@ -1253,6 +1310,7 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
             listOf(
                 Triple(Icons.Filled.SwipeUp, "Swipe up", "Next post"),
                 Triple(Icons.Filled.SwipeLeft, "Swipe left", "Everything by them"),
+                Triple(Icons.Filled.SwipeRight, "Swipe right", "Save it"),
                 Triple(Icons.Filled.Favorite, "Double-tap", "Like"),
                 Triple(Icons.Filled.FastForward, "Hold the right side", "Play at 2×"),
                 Triple(Icons.Filled.TouchApp, "Press and hold", "More options"),
