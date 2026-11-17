@@ -237,7 +237,8 @@ object BottomBar {
 @Composable
 private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Unit) {
     val background = if (immersive) {
-        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))
+        // Light: the post already darkens its own bottom edge for the caption.
+        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.3f)))
     } else {
         androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.background)
     }
@@ -245,9 +246,10 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
     var idle by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(BottomBar.lastTouch, immersive) {
         idle = false
-        if (immersive) { kotlinx.coroutines.delay(IDLE_DIM_MS); idle = true }
+        // Hands-free: nobody's touching the screen on purpose, so the bar settles back sooner.
+        if (immersive) { kotlinx.coroutines.delay(if (dev.pfeed.ui.feed.HandsFree.on.value) IDLE_DIM_MS / 2 else IDLE_DIM_MS); idle = true }
     }
-    val fade by androidx.compose.animation.core.animateFloatAsState(if (idle) 0.4f else 1f, androidx.compose.animation.core.tween(if (idle) 900 else 150), label = "barFade")
+    val fade by androidx.compose.animation.core.animateFloatAsState(if (idle) 0.35f else 1f, androidx.compose.animation.core.tween(if (idle) 900 else 150), label = "barFade")
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val collapse = if (immersive) 0f else BottomBar.collapse
     androidx.compose.foundation.layout.Row(
