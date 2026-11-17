@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.61.0 — 2026-11-16
+
+New typeface
+
+- The app now uses Plus Jakarta Sans, a rounder, more characterful typeface. It's bundled with the app, so it looks the same on every phone, and it loads in the background so the app doesn't start any slower.
+- The underline under Following / For You / Latest slides to the feed you pick, and Library's tabs do the same.
+
 ## 4.60.0 — 2026-11-16
 
 Search button, roomier Search, follow avatars
