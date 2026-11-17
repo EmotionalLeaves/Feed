@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.Apps
@@ -261,6 +262,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.autoplayOnMobileData) null else "Videos wait for a tap when you're off Wi-Fi",
                     icon = Icons.Filled.SignalCellularAlt,
                     onChange = vm::setAutoplayOnMobile,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Picture-in-picture",
+                    s.pictureInPicture,
+                    subtitle = "Leave the app while a video plays and it keeps going in a small window. Other apps and people nearby can see that window",
+                    icon = Icons.Filled.PictureInPictureAlt,
+                    onChange = vm::setPictureInPicture,
                 )
                 RowDivider()
                 SwitchSetting(

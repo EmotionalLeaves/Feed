@@ -148,7 +148,9 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val landscape by vm.landscape.collectAsStateWithLifecycle()
 
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
-    val active = lifecycleState.isAtLeast(Lifecycle.State.RESUMED) && !locked
+    // In picture-in-picture the app is paused but still on screen: keep playing there.
+    val inPip by Pip.active.collectAsStateWithLifecycle()
+    val active = (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) || (inPip && lifecycleState.isAtLeast(Lifecycle.State.STARTED))) && !locked
 
     val pagerState = rememberPagerState(initialPage = vm.startIndex) { items.size }
     val pagerScope = rememberCoroutineScope()
@@ -342,7 +344,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
 
         val cleanOn by CleanScreen.on.collectAsStateWithLifecycle()
-        if (!landscape && !wallMode && !cleanOn) TopBar(
+        if (!landscape && !wallMode && !cleanOn && !Pip.active.collectAsStateWithLifecycle().value) TopBar(
             title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.isMainFeed,
             mode = mode,
@@ -884,7 +886,8 @@ private fun FeedPage(
 
         // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
         val clean by CleanScreen.on.collectAsStateWithLifecycle()
-        val bare = landscape || clean
+        val pipNow by Pip.active.collectAsStateWithLifecycle()
+        val bare = landscape || clean || pipNow
         val barInset = if (bare) 0.dp else dev.pfeed.ui.LocalBottomBarInset.current
         if (!bare) Box(
             Modifier.align(Alignment.TopCenter).fillMaxWidth().height(140.dp)
@@ -960,7 +963,7 @@ private fun FeedPage(
             ) {
                 Icon(Icons.Filled.FullscreenExit, contentDescription = "Exit landscape", tint = Color.White)
             }
-        } else if (!clean) Overlay(
+        } else if (!clean && !pipNow) Overlay(
             item = item,
             sourceLabel = Display.source(item, vm.sourceName(item.sourceId)),
             creator = remember(item.key) { Display.creator(item) },
@@ -981,7 +984,7 @@ private fun FeedPage(
             onTag = onOpenTag,
             onMenu = onMenu,
         )
-        if (isVideo && !clean) {
+        if (isVideo && !clean && !pipNow) {
             ScrubBar(
                 player = player,
                 modifier = Modifier.align(Alignment.BottomCenter),

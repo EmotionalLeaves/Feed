@@ -36,3 +36,10 @@ object CleanScreen {
     val on: StateFlow<Boolean> = _on
     fun set(value: Boolean) { _on.value = value }
 }
+
+/** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
+object Pip {
+    private val _active = MutableStateFlow(false)
+    val active: StateFlow<Boolean> = _active
+    fun set(value: Boolean) { _active.value = value }
+}

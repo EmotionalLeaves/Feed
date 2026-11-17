@@ -77,6 +77,8 @@ data class AppSettings(
     val videoLength: String = "any",
     /** Leave out AI-generated art (Stable Diffusion, NovelAI…) everywhere: feeds, search, tag pages. */
     val hideAiArt: Boolean = true,
+    /** Leaving the app while a video plays keeps it going in a small floating window. Off by default. */
+    val pictureInPicture: Boolean = false,
     /** Your proxy for sites blocked where you are: "off", "http", "socks" or "orbot" (Tor via Orbot, 127.0.0.1:9050). */
     val proxyType: String = "off",
     val proxyHost: String = "",

@@ -157,7 +157,8 @@ private fun MainNav(locked: Boolean) {
     // Typing (search, a collection name): the keyboard has the bottom of the screen, not the bar.
     @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
     val typing = androidx.compose.foundation.layout.WindowInsets.isImeVisible
-    val barVisible = currentTab != null && !BottomBar.hidden && !typing
+    val pip by dev.pfeed.ui.feed.Pip.active.collectAsStateWithLifecycle()
+    val barVisible = currentTab != null && !BottomBar.hidden && !typing && !pip
     // Reading down a list tucks the bar away; any scroll back up (or a new screen) brings it back.
     val density = androidx.compose.ui.platform.LocalDensity.current
     val barScroll = androidx.compose.runtime.remember(density) {

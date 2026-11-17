@@ -61,6 +61,10 @@ class PlayerPool @Inject constructor(
         _changes.value = _changes.value + 1
     }
 
+    /** The video size of a player that's playing right now (for the picture-in-picture shape), or null. */
+    @MainThread
+    fun anyPlaying(): Pair<Int, Int>? = players.firstOrNull { it?.isPlaying == true }?.videoSize?.let { it.width to it.height }
+
     /** Frees decoders entirely (activity finishing). Players are recreated lazily. */
     @MainThread
     fun releaseAll() {

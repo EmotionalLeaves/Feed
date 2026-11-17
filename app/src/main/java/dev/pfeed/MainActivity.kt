@@ -59,6 +59,33 @@ class MainActivity : FragmentActivity() {
         }
     }
 
+    /**
+     * Picture-in-picture (Settings → Playback, off by default): leaving the app while a video plays
+     * keeps it going in a small window. Locked, or nothing playing: the app just goes to the background.
+     */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.O) return
+        if (lockManager.locked.value) return
+        val playing = playerPool.anyPlaying() ?: return
+        val pipOn = kotlinx.coroutines.runBlocking { settingsRepository.get().pictureInPicture }
+        if (!pipOn) return
+        val ratio = playing.let { (w, h) ->
+            if (w <= 0 || h <= 0) android.util.Rational(9, 16)
+            else android.util.Rational(w, h).let { r ->
+                // Android only takes ratios between 1:2.39 and 2.39:1.
+                val v = w.toFloat() / h
+                when { v > 2.39f -> android.util.Rational(239, 100); v < 1 / 2.39f -> android.util.Rational(100, 239); else -> r }
+            }
+        }
+        runCatching { enterPictureInPictureMode(android.app.PictureInPictureParams.Builder().setAspectRatio(ratio).build()) }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: android.content.res.Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        dev.pfeed.ui.feed.Pip.set(isInPictureInPictureMode)
+    }
+
     private var lastPanicAt = 0L
 
     /**
