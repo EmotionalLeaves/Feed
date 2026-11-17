@@ -1,5 +1,12 @@
 package dev.pfeed.ui.library
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.border
 import dev.pfeed.ui.openTag
 import kotlinx.coroutines.flow.flowOn
 import androidx.compose.material.icons.filled.Shuffle
@@ -241,7 +248,7 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                 }
             }
             1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Liked" }) }
-            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }, onLongPress = { holding = it to "History" }) }
+            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }, onLongPress = { holding = it to "History" }, header = if (query.isBlank()) ({ WeekRecap(history, historyTimes, onOpenTag = { nav.openTag(it) }) }) else null) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
                     EmptyState(Icons.Filled.PersonAdd, "Not following anyone", "Tap Follow next to a creator, or open a tag and follow it. Their posts fill the Following feed.")
@@ -425,7 +432,7 @@ private fun whenWatched(at: Long?): String {
 }
 
 @Composable
-private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null, onLongPress: ((MediaItem) -> Unit)? = null) {
+private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null, onLongPress: ((MediaItem) -> Unit)? = null, header: (@Composable () -> Unit)? = null) {
     if (items.isEmpty()) {
         EmptyState(icon, title, hint, action = onBrowse?.let { go ->
             {
@@ -433,6 +440,7 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
             }
         })
     } else Column {
+        header?.invoke()
         // How many, and the quickest way in: play the whole list as a feed.
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 12.dp, top = 10.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -496,4 +504,96 @@ private fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
     }
+}
+
+/** What you watched over the last seven days, from History. */
+private data class Week(val posts: Int, val minutes: Int, val creator: String?, val creatorCount: Int, val tags: List<Pair<String, String>>, val days: List<Int>)
+
+private fun week(history: List<MediaItem>, times: Map<String, Long>, now: Long = System.currentTimeMillis()): Week? {
+    val dayMs = 86_400_000L
+    val recent = history.filter { (times[it.key] ?: 0L) > now - 7 * dayMs }
+    if (recent.size < WEEK_MIN_POSTS) return null
+    val seconds = recent.sumOf { it.durationSec ?: if (it.type == dev.pfeed.domain.model.MediaType.IMAGE) 6 else 20 }
+    val creators = recent.mapNotNull { dev.pfeed.ui.feed.Display.creator(it) }.groupingBy { it }.eachCount()
+    val top = creators.maxByOrNull { it.value }
+    val tags = recent.flatMap { dev.pfeed.ui.feed.Display.tags(it, 6) }
+        .groupBy { it.first.lowercase() }
+        .entries.sortedByDescending { it.value.size }
+        .take(3).map { it.value.first() }
+    // Posts per day, oldest first, for the little bars.
+    val days = (6 downTo 0).map { back ->
+        val end = now - back * dayMs
+        recent.count { val t = times[it.key] ?: 0L; t > end - dayMs && t <= end }
+    }
+    return Week(recent.size, (seconds / 60).toInt(), top?.key?.takeIf { top.value >= 2 }, top?.value ?: 0, tags, days)
+}
+
+private const val WEEK_MIN_POSTS = 5
+
+@Composable
+private fun WeekRecap(history: List<MediaItem>, times: Map<String, Long>, onOpenTag: (String) -> Unit) {
+    val w = remember(history, times) { week(history, times) } ?: return
+    val shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+    Column(
+        Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(dev.pfeed.ui.theme.Accent.copy(alpha = 0.32f), dev.pfeed.ui.theme.AccentWarm.copy(alpha = 0.14f), Color.White.copy(alpha = 0.04f))))
+            .border(1.dp, Color.White.copy(alpha = 0.08f), shape)
+            .padding(16.dp),
+    ) {
+        Row(verticalAlignment = Alignment.Bottom) {
+            Column(Modifier.weight(1f)) {
+                Text("YOUR WEEK", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f), letterSpacing = 1.4.sp)
+                Spacer(Modifier.height(4.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(timeLabel(w.minutes), style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+                    Spacer(Modifier.width(8.dp))
+                    Text("· ${w.posts} posts", style = MaterialTheme.typography.titleSmall, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(bottom = 4.dp))
+                }
+            }
+            // Seven little bars, one a day, today on the right.
+            val peak = (w.days.maxOrNull() ?: 0).coerceAtLeast(1)
+            Row(Modifier.height(40.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                w.days.forEachIndexed { i, n ->
+                    Box(
+                        Modifier.width(6.dp).fillMaxHeight(0.12f + 0.88f * n / peak)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
+                            .background(if (i == w.days.lastIndex) dev.pfeed.ui.theme.BrandGradient else Brush.linearGradient(listOf(Color.White.copy(alpha = 0.35f), Color.White.copy(alpha = 0.35f)))),
+                    )
+                }
+            }
+        }
+        if (w.creator != null || w.tags.isNotEmpty()) {
+            Spacer(Modifier.height(14.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                w.creator?.let { c ->
+                    Row(
+                        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.3f))
+                            .clickable { onOpenTag("@$c") }.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        dev.pfeed.ui.common.InitialAvatar(c, 24.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Most: @$c", style = MaterialTheme.typography.labelLarge, color = Color.White, maxLines = 1)
+                    }
+                }
+                w.tags.forEach { (label, tag) ->
+                    Text(
+                        "#$label",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = Color.White.copy(alpha = 0.9f),
+                        maxLines = 1,
+                        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.3f))
+                            .clickable { onOpenTag(tag) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+private fun timeLabel(minutes: Int): String = when {
+    minutes < 60 -> "${minutes.coerceAtLeast(1)} min"
+    minutes % 60 == 0 -> "${minutes / 60} h"
+    else -> "${minutes / 60} h ${minutes % 60} min"
 }
