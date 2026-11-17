@@ -882,7 +882,7 @@ private fun FeedPage(
                 shape = RoundedCornerShape(50),
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 60.dp),
             ) {
-                Text("2×  ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+                Text("${PlaybackSpeed.label((chosenSpeed * 2f).coerceAtMost(3f))}  ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
             }
         }
         HeartBurst(heartAt, heartTick)
