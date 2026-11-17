@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.56.0 — 2026-11-16
+
+Tab bar steps back
+
+- The tab bar tucks away as you scroll down Search, Library or Settings, and comes back when you scroll up. It also steps aside while the keyboard is open.
+- Over the feed, only the current tab shows its name, the fade is lighter, and in hands-free mode the bar settles back sooner.
+- Settings: the jump chips light up the section you're in. Sources rows now say when a site is blocked where you are; for tube sites they name which ones, since the rest still work.
+
 ## 4.55.0 — 2026-11-16
 
 Calmer tab bar, tidier Settings
