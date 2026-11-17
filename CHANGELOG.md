@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.72.0 — 2026-11-16
+
+Tap to turn comic pages
+
+- Comics: tap the left or right edge of a page to turn it, as in a reader app. Swiping still works, and the middle still pauses (tap) and likes (double-tap).
+
 ## 4.71.0 — 2026-11-16
 
 Smarter suggestions
