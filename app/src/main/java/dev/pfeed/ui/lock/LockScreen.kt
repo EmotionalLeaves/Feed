@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -58,6 +59,15 @@ fun LockScreen(lock: AppLockManager) {
     var pin by remember { mutableStateOf("") }
     var firstPin by remember { mutableStateOf("") }
     var message by remember { mutableStateOf<String?>(null) }
+    // A wrong PIN shakes the dots (and buzzes), like a lock screen should.
+    val shake = remember { androidx.compose.animation.core.Animatable(0f) }
+    var shakes by remember { mutableStateOf(0) }
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    LaunchedEffect(shakes) {
+        if (shakes == 0) return@LaunchedEffect
+        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+        for (x in listOf(14f, -12f, 9f, -6f, 3f, 0f)) shake.animateTo(x, androidx.compose.animation.core.tween(45))
+    }
     var busy by remember { mutableStateOf(false) }
 
     val biometricAvailable = remember(activity) {
@@ -97,7 +107,7 @@ fun LockScreen(lock: AppLockManager) {
             }
             Stage.CONFIRM -> {
                 if (pin != firstPin) {
-                    message = "PINs didn't match. Start again."
+                    message = "PINs didn't match. Start again."; shakes++
                     pin = ""; firstPin = ""; stage = Stage.CREATE
                     return
                 }
@@ -111,11 +121,13 @@ fun LockScreen(lock: AppLockManager) {
                 val chars = pin.toCharArray()
                 pin = ""
                 scope.launch {
-                    message = when (val r = lock.unlockWithPin(chars)) {
+                    val r = lock.unlockWithPin(chars)
+                    message = when (r) {
                         AppLockManager.PinResult.Ok -> null
                         is AppLockManager.PinResult.Wrong -> "Wrong PIN (${r.attemptsLeft} left)"
                         is AppLockManager.PinResult.LockedOut -> "Too many attempts. Wait ${r.seconds} s."
                     }
+                    if (r != AppLockManager.PinResult.Ok) shakes++
                     busy = false
                 }
             }
@@ -154,7 +166,7 @@ fun LockScreen(lock: AppLockManager) {
                 style = MaterialTheme.typography.headlineSmall,
             )
             Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.graphicsLayer { translationX = shake.value * density }) {
                 repeat(maxOf(MIN_PIN, pin.length)) { i ->
                     Box(
                         Modifier
