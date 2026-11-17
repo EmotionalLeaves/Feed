@@ -23,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -62,8 +63,12 @@ fun AgeGateScreen(onConfirm: () -> Unit) {
             // Opaque to touches: nothing underneath reacts while this is up.
             .pointerInput(Unit) { awaitPointerEventScope { while (true) awaitPointerEvent() } },
     ) {
+        // A soft entrance: the content rises and fades in.
+        val enter = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0f) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { enter.animateTo(1f, androidx.compose.animation.core.tween(450, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
         Column(
-            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 28.dp),
+            Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 28.dp)
+                .graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() },
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
