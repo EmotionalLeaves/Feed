@@ -496,7 +496,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         "Hold the right side of a video" to "Play at 2× while held",
                         "Press and hold" to "More: why it's here, hide, block, copy or open the link, export",
                         "Swipe left on a post" to "Everything by its creator, from every source",
-                        "Swipe left / right on a comic" to "Turn the page (tap the page count for every page)",
+                        "Swipe a comic, or tap its left / right edge" to "Turn the page (tap the page count for every page)",
                         "Pinch" to "Zoom; zoomed in, one finger moves around",
                         "Pull down on the first post" to "Fresh posts",
                         "Sideways: double-tap an edge" to "Skip 10 s back or ahead",

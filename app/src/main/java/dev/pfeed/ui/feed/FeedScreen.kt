@@ -719,6 +719,7 @@ private fun FeedPage(
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
     var speeding by remember(item.key) { mutableStateOf(false) }
+    var galleryTurn by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
     /** Which edge was just double-tapped to skip (−1 back, 1 ahead), and when: shows a brief "10 s" badge. */
     var seekFlash by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
     // What the post really is once its file is known: a board/Reddit post listed as an image can turn
@@ -746,7 +747,15 @@ private fun FeedPage(
             .fillMaxSize()
             .pointerInput(item.key, landscape, isVideo) {
                 detectTapGestures(
-                    onTap = { paused = !paused },
+                    // A comic: tap the left or right edge to turn the page (as in a reader app).
+                    onTap = { offset ->
+                        val edge = when {
+                            offset.x < size.width * EDGE_TAP -> -1
+                            offset.x > size.width * (1 - EDGE_TAP) -> 1
+                            else -> 0
+                        }
+                        if (item.isGallery && edge != 0 && !landscape) galleryTurn = edge to System.nanoTime() else paused = !paused
+                    },
                     onDoubleTap = { offset ->
                         // Sideways, watching a video: double-tap the left or right edge to skip 10 s,
                         // as in video players. The middle (and everything upright) is a like.
@@ -811,7 +820,7 @@ private fun FeedPage(
         when (type) {
             MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, onEnded = onEnded)
             MediaType.IMAGE, MediaType.GIF ->
-                if (item.isGallery) GalleryPage(item, vm, active = playing, autoFlip = handsFree && playing && !paused, onEnded = onEnded)
+                if (item.isGallery) GalleryPage(item, vm, active = playing, autoFlip = handsFree && playing && !paused, onEnded = onEnded, turn = galleryTurn)
                 else ImagePage(item, vm)
             // A site's own player keeps its controls clear of the tab bar.
             MediaType.EMBED -> Box(Modifier.fillMaxSize().padding(bottom = if (landscape) 0.dp else dev.pfeed.ui.LocalBottomBarInset.current)) { EmbedPage(item, active = playing, vm = vm) }
@@ -1183,6 +1192,8 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 /** How far left a swipe must go to open the creator's page. */
 private const val SWIPE_TO_CREATOR_DP = 90
+/** How much of each side of a comic page turns the page when tapped. */
+private const val EDGE_TAP = 0.22f
 private const val SEEK_STEP_MS = 10_000L
 
 /** Turned off by the instrumented tests, which need the feed itself on screen. */

@@ -328,6 +328,8 @@ fun GalleryPage(
     /** Hands-free: flip a page every few seconds, then [onEnded] after the last. */
     autoFlip: Boolean = false,
     onEnded: () -> Unit = {},
+    /** A tap on the left (-1) or right (1) edge, with when it happened: turn the page. */
+    turn: Pair<Int, Long>? = null,
 ) {
     // Opens on the page you were reading last time.
     val pager = androidx.compose.foundation.pager.rememberPagerState(
@@ -349,6 +351,11 @@ fun GalleryPage(
         item.pages.drop(pager.currentPage + 1).take(2).forEach { vm.warmImage(it) }
         vm.onComicPage(item, pager.currentPage)
         if (!privateMode) dev.pfeed.player.ComicPages.save(item.key, pager.currentPage, item.pages.size)
+    }
+    LaunchedEffect(turn) {
+        val (dir, _) = turn ?: return@LaunchedEffect
+        val to = (pager.currentPage + dir).coerceIn(0, item.pages.size - 1)
+        if (to != pager.currentPage) pager.animateScrollToPage(to)
     }
     LaunchedEffect(autoFlip, pager.settledPage) {
         if (!autoFlip) return@LaunchedEffect
