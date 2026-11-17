@@ -103,7 +103,6 @@ android {
     }
     testOptions {
         unitTests.isReturnDefaultValues = true
-            unitTests.all { it.testLogging { showStandardStreams = true } }
     }
 }
 

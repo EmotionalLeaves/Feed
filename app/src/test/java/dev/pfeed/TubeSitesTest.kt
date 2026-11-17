@@ -317,4 +317,21 @@ class TubeSitesTest {
         val page = """src="https://s314.pornone.com/vid2/a/1/81/1/1_720x406_500k.mp4?lang=en" src="https://s306.pornone.com/vid2/b/1/81/1/1_1920x1080_4000k.mp4?lang=en" """
         org.junit.Assert.assertTrue(dev.pfeed.source.tube.TubeSite.PornOne.stream(page)!!.url.contains("1920x1080"))
     }
+
+    @Test
+    fun `pornhat lists cards with model, length and age, and plays its best source as HLS`() {
+        val list = """<div class="item thumb-bl thumb-bl-video video_1"> <a href="/video/ali-jones-gets-tooled/" title="Ali Jones Gets Tooled"  data-preview-custom="x"> <img class="thumb lazy-load" src="data:image/gif;base64,R0" data-original="https://static.pornhat.com/contents/videos_screenshots/812000/812262/640x360/1.jpg" alt="Ali Jones Gets Tooled"/></a>
+            <a href="/sites/pervz/" title="Pervz"><span>Pervz</span></a> <a href="/models/ali-jones/" title="Ali Jones"><span>Ali Jones</span></a>
+            <ul class="video-meta"> <li><i class="fa fa-clock-o"></i> <span>17:07</span></li> <li><i class="fa fa-calendar-o"></i> <span>2 hours ago</span></li></ul></div>"""
+        val v = dev.pfeed.source.tube.TubeSite.PornHat.parseList(list).single()
+        org.junit.Assert.assertEquals("812262", v.id)
+        org.junit.Assert.assertEquals("Ali Jones Gets Tooled", v.title)
+        org.junit.Assert.assertEquals("Ali Jones", v.creator)
+        org.junit.Assert.assertEquals(1027, v.durationSec)
+        org.junit.Assert.assertTrue(v.published!!.isBefore(java.time.Instant.now().minusSeconds(7_000)))
+        val page = """<source src="https://www.pornhat.com/get_file/13/a/812000/812262/812262_360p.mp4/" type="video/mp4" title="360p" label="360p"> <source src="https://www.pornhat.com/get_file/13/b/812000/812262/812262_720p.mp4/" type="video/mp4" title="720p" label="720p">"""
+        val st = dev.pfeed.source.tube.TubeSite.PornHat.stream(page)!!
+        org.junit.Assert.assertTrue(st.url.endsWith("_720p.mp4/"))
+        org.junit.Assert.assertEquals(dev.pfeed.source.parse.MediaTypes.HLS_MIME, st.mime)
+    }
 }

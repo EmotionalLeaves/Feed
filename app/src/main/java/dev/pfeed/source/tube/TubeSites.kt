@@ -568,7 +568,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val HREF = Regex("""href="(/video/[^"]+/)"\s+title="([^"]*)"""")
         private val IMG = Regex("""data-original="(https://[^"]+\.jpg)"""")
         private val ID = Regex("""videos_screenshots/\d+/(\d+)/""")
-        private val DUR = Regex("""class="[^"]*(?:time|duration)[^"]*"[^>]*>\s*(?:<[^>]+>\s*)*(\d{1,2}:\d{2}(?::\d{2})?)""")
+        private val DUR = Regex("""fa-clock-o"></i>\s*<span>(\d{1,2}:\d{2}(?::\d{2})?)</span>""")
+        private val AGO = Regex("""fa-calendar-o"></i>\s*<span>(\d+)\s+(minute|hour|day|week|month|year)s?\s+ago</span>""")
         private val MODEL = Regex("""href="/models/[^"]+/"\s+title="([^"]+)"""")
         private val STUDIO = Regex("""href="/sites/[^"]+/"\s+title="([^"]+)"""")
         private val SOURCE = Regex("""<source src="(https://[^"]+)"[^>]*label="(\d+)p"""")
@@ -587,6 +588,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     pageUrl = "https://www.pornhat.com" + link.groupValues[1],
                     thumb = thumb,
                     durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    published = AGO.find(c)?.let { ago(it.groupValues[1].toLong(), it.groupValues[2]) },
                     creator = (MODEL.find(c) ?: STUDIO.find(c))?.groupValues?.get(1)?.let(::unescape),
                 )
             }.distinctBy { it.id }
@@ -599,6 +601,11 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun pageTags(pageHtml: String): List<String> =
             TAG.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') }.filter { it != "hd" }.distinct().take(30).toList()
         override fun embedUrl(id: String) = "https://www.pornhat.com/embed/$id"
+
+        /** "2 hours ago" → roughly when. */
+        private fun ago(n: Long, unit: String): java.time.Instant = java.time.Instant.now().minusSeconds(
+            n * when (unit) { "minute" -> 60L; "hour" -> 3_600L; "day" -> 86_400L; "week" -> 604_800L; "month" -> 2_592_000L; else -> 31_536_000L },
+        )
     }
 
     object Youjizz : TubeSite("youjizz.com", "YouJizz") {
