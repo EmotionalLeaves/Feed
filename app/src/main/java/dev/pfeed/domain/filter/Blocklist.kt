@@ -19,6 +19,8 @@ data class Blocklist(
         if (!MinorsFilter.allows(item)) return false
         if (!ContentRating.isAdult(item)) return false
         if (hideAi && AiArt.isAi(item)) return false
+        // Sites the app has dropped: nothing from them, even posts fetched before they went.
+        if (item.sourceId == "tube" && item.id.substringBefore('/').removePrefix("www.").lowercase() in dev.pfeed.source.tube.TubeSite.RETIRED) return false
         if (item.key in items) return false
         if (origins.isNotEmpty() && normalize(dev.pfeed.domain.reco.Spread.origin(item)) in origins) return false
         val creator = item.creator?.let(::normalize)

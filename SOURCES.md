@@ -6,7 +6,7 @@ All requests go through one OkHttp client. It sends a normal mobile browser's Us
 
 | ID | Source | How it's read | Domains |
 |---|---|---|---|
-| `tube` | Tube sites (16) | Each site's own listing, search and video pages; the stream is taken from the page (HLS or MP4) and played directly, else the site's embed player. Rule34Video and ThisVid pages are read first so their tags can be checked. | xvideos.com, xnxx.com, pornhub.com, youporn.com, tube8.com, xhamster.com (+ xhamster2.com, xhamster.desi, xhamster19.com mirrors), redtube.com, eporner.com (official API), tnaflix.com, porntrex.com, youjizz.com, erome.com, rule34video.com, thisvid.com, pornone.com, pornhat.com (+ cdn.privatehost.com), and their CDNs |
+| `tube` | Tube sites (15) | Each site's own listing, search and video pages; the stream is taken from the page (HLS or MP4) and played directly, else the site's embed player. Rule34Video and ThisVid pages are read first so their tags can be checked. | xvideos.com, pornhub.com, youporn.com, tube8.com, xhamster.com (+ xhamster2.com, xhamster.desi, xhamster19.com mirrors), redtube.com, eporner.com (official API), tnaflix.com, porntrex.com, youjizz.com, erome.com, rule34video.com, thisvid.com, pornone.com, pornhat.com (+ cdn.privatehost.com), and their CDNs |
 | `redgifs` | RedGIFs | Public API with a temporary token | api.redgifs.com, media.redgifs.com |
 | `reddit` | Subreddits | Public RSS listings and search, paced to one request every 6 s | www.reddit.com, i.redd.it, preview.redd.it |
 | `booru` | Image boards | Each board's public API (Gelbooru, Danbooru, e621, Moebooru and compatible) | The boards in Sources (Gelbooru, Rule34, e621, Danbooru, Konachan, Yande.re, Hypnohub and more) |
@@ -22,6 +22,8 @@ All requests go through one OkHttp client. It sends a normal mobile browser's Us
 | `api` | OAuth API adapter | Plumbing only, off until configured (`api.*` in `local.properties`) | None until configured |
 
 ## Tried and skipped
+
+- **XNXX:** removed at your request (posts already saved from it still play).
 
 - **SpankBang, Hanime, PornTube:** Cloudflare challenge pages, no listing without a browser.
 - **AnyPorn, AlphaPorno:** answer 403 to every request. **SxyPrn:** region-blocked. **4tube, Fux:** blocked by state legislation where the checks run. **PornoXO:** Cloudflare challenge. **Txxx, HClips, VJav:** pages are drawn by script with no listing in the HTML. **XXXBunker:** a traffic-verification page. **Beeg:** its API answers, but needs more work to map.

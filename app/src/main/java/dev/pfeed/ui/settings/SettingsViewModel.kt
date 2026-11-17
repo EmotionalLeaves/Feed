@@ -84,7 +84,7 @@ class SettingsViewModel @Inject constructor(
     val tubeReport: StateFlow<Map<String, String?>> = _tubeReport
 
     fun checkTubeSites() {
-        _tubeReport.value = dev.pfeed.source.tube.TubeSite.ALL.associate { it.label to null }
+        _tubeReport.value = dev.pfeed.source.tube.TubeSite.ACTIVE.associate { it.label to null }
         viewModelScope.launch { _tubeReport.value = tube.siteReport().toMap() }
     }
 

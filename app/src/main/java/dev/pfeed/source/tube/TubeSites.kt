@@ -71,6 +71,14 @@ sealed class TubeSite(val host: String, val label: String) {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
         val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat) }
+        /**
+         * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
+         * [ALL] only so posts already saved from them can still play.
+         */
+        val RETIRED: Set<String> = setOf("xnxx.com")
+        /** The sites the app actually uses. */
+        val ACTIVE: List<TubeSite> by lazy { ALL.filter { it.host !in RETIRED } }
+
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { site ->
             (listOf(site.host) + site.mirrors).any { host == it || host.endsWith(".$it") }
         }

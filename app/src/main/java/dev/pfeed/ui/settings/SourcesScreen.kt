@@ -519,7 +519,7 @@ private fun TubeSites(vm: SettingsViewModel) {
         footer = "Each site in ${SourceCatalog.tubeSections.size} sections: newest, top and ${SourceCatalog.tubeSections.size - 2} categories. " +
             "Sites that hide their stream play in their own player.",
     ) {
-        TubeSite.ALL.forEachIndexed { i, site ->
+        TubeSite.ACTIVE.forEachIndexed { i, site ->
             if (i > 0) RowDivider(indent = false)
             val r = report[site.label]
             // Each site can be switched off on its own (the same as hiding it from a post's menu).
@@ -813,7 +813,7 @@ internal fun feedCount(id: String, s: AppSettings): Int? = when (id) {
     "local" -> s.localFolders.size
     "kemono" -> s.kemonoHosts.size
     "redgifs" -> SourceCatalog.redgifsTerms.size
-    "tube" -> TubeSite.ALL.size * SourceCatalog.tubeSections.size
+    "tube" -> TubeSite.ACTIVE.size * SourceCatalog.tubeSections.size
     "nhentai" -> SourceCatalog.nhentaiQueries.size
     "comics" -> dev.pfeed.source.comics.ComicSite.ALL.size * (SourceCatalog.comicTags.size + 1)
     else -> null
@@ -832,7 +832,7 @@ internal fun feedSummary(id: String, s: AppSettings): String? = when (id) {
     }
     "kemono" -> s.kemonoHosts.joinToString(" + ").ifBlank { null }
     "redgifs" -> "${SourceCatalog.redgifsTerms.size} trending categories"
-    "tube" -> "${TubeSite.ALL.size} video sites"
+    "tube" -> "${TubeSite.ACTIVE.size} video sites"
     "nhentai" -> "${SourceCatalog.nhentaiQueries.size} comic feeds"
     "comics" -> dev.pfeed.source.comics.ComicSite.ALL.joinToString(" + ") { it.label }
     "philomena" -> "derpibooru + furbooru"

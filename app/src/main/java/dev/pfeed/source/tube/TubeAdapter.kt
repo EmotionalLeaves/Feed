@@ -34,7 +34,7 @@ class TubeAdapter @Inject constructor(
     /** Sites switched off (in Sources, or hidden from a post's menu): not asked at all. */
     private suspend fun activeSites(): List<TubeSite> {
         val hidden = runCatching { blocks.current().origins }.getOrDefault(emptySet())
-        return TubeSite.ALL.filter { "tube:${it.host}" !in hidden }
+        return TubeSite.ACTIVE.filter { "tube:${it.host}" !in hidden }
     }
 
     override val id = SOURCE_ID
@@ -123,7 +123,7 @@ class TubeAdapter @Inject constructor(
      * (or only through the site's embed)? For diagnostics (the on-device health test).
      */
     suspend fun siteReport(): List<Pair<String, String>> = coroutineScope {
-        TubeSite.ALL.map { site ->
+        TubeSite.ACTIVE.map { site ->
             async {
                 site.label to (withTimeoutOrNull(30_000) {
                     attempt {

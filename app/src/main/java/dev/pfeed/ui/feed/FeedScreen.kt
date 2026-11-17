@@ -885,6 +885,18 @@ private fun FeedPage(
                 Text("${PlaybackSpeed.label((chosenSpeed * 2f).coerceAtMost(3f))}  ▶▶", color = Color.White, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
             }
         }
+        // A speed other than 1× is picked: a small reminder on videos.
+        if (isVideo && chosenSpeed != 1f && !speeding && !landscape) {
+            Text(
+                PlaybackSpeed.label(chosenSpeed),
+                color = Color.White,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 60.dp, end = 14.dp)
+                    .clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
+            )
+        }
         HeartBurst(heartAt, heartTick)
         if (landscape) {
             IconButton(
