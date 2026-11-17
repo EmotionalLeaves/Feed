@@ -85,8 +85,10 @@ class BooruAdapter @Inject constructor(
     @Volatile private var encoded: Pair<List<BooruFeed>, List<String>>? = null
 
     override suspend fun entries(): List<String> {
-        val feeds = settings.get().booruFeeds
-        encoded?.let { (src, out) -> if (src === feeds) return out }
+        val s = settings.get()
+        // AI-only boards aren't even asked when AI art is hidden.
+        val feeds = if (s.hideAiArt) s.booruFeeds.filterNot { dev.pfeed.domain.filter.AiArt.HOSTS.contains(BooruFamily.bareHost(it.host)) } else s.booruFeeds
+        encoded?.let { (src, out) -> if (src == feeds) return out }
         val out = feeds
             .filterNot { DefaultSources.isSfwOnlyHost(it.host) }
             .map { json.encodeToString(BooruFeed.serializer(), it) }
@@ -126,7 +128,7 @@ class BooruAdapter @Inject constructor(
         val tag = toTag(query)
         if (tag.isEmpty()) return@cachedSearch emptyList()
         val hosts = settings.get().booruFeeds.map { BooruFamily.bareHost(it.host) }.distinct()
-            .filterNot { DefaultSources.isSfwOnlyHost(it) }
+            .filterNot { DefaultSources.isSfwOnlyHost(it) || (settings.get().hideAiArt && it in dev.pfeed.domain.filter.AiArt.HOSTS) }
         // "rough sex" → the tag rough_sex, and also rough + sex as two tags (boards AND them;
         // Danbooru allows two tags for anonymous users, so at most two words).
         val words = query.trim().lowercase().removePrefix("#").split(Regex("\\s+")).filter { it.isNotBlank() }

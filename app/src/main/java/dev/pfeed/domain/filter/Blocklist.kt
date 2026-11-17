@@ -12,10 +12,13 @@ data class Blocklist(
     val items: Set<String> = emptySet(),
     /** Hidden sources: "r/name", "booru:host", "mastodon:host", "kemono:host", "redgifs"… */
     val origins: Set<String> = emptySet(),
+    /** Settings → Hide AI-generated art. */
+    val hideAi: Boolean = false,
 ) {
     fun allows(item: MediaItem): Boolean {
         if (!MinorsFilter.allows(item)) return false
         if (!ContentRating.isAdult(item)) return false
+        if (hideAi && AiArt.isAi(item)) return false
         if (item.key in items) return false
         if (origins.isNotEmpty() && normalize(dev.pfeed.domain.reco.Spread.origin(item)) in origins) return false
         val creator = item.creator?.let(::normalize)

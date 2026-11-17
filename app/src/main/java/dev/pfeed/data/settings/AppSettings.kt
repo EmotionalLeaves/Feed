@@ -75,6 +75,8 @@ data class AppSettings(
     val hiddenFeedTypes: Set<String> = emptySet(),
     /** Which videos the main feeds show by length: "any", "short" (clips under 3 min) or "long" (3 min and up). */
     val videoLength: String = "any",
+    /** Leave out AI-generated art (Stable Diffusion, NovelAI…) everywhere: feeds, search, tag pages. */
+    val hideAiArt: Boolean = true,
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),

@@ -162,7 +162,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             // What the main feeds show: everything by default; switch a kind off to leave it out.
-            Section("Feed shows", footer = "Clips are under 3 minutes; full videos are 3 minutes and up. Search and tag pages still show everything.") {
+            Section("Feed shows", footer = "Clips are under 3 minutes; full videos are 3 minutes and up. Kinds and lengths apply to the main feeds; search and tag pages still show them all.") {
                 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
                 androidx.compose.foundation.layout.FlowRow(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
@@ -199,6 +199,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         }
                     }
                 }
+                RowDivider()
+                SwitchSetting(
+                    "Hide AI-generated art",
+                    s.hideAiArt,
+                    subtitle = "Stable Diffusion, NovelAI, Midjourney and the like, by their tags, titles and AI-only boards. Everywhere, search included.",
+                    icon = Icons.Filled.AutoAwesome,
+                    onChange = vm::setHideAiArt,
+                )
             }
 
             Section("Playback") {

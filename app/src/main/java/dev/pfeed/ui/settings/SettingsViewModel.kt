@@ -218,6 +218,7 @@ class SettingsViewModel @Inject constructor(
     }
 
     fun setVideoLength(length: String) = update { it.copy(videoLength = length) }
+    fun setHideAiArt(hide: Boolean) = update { it.copy(hideAiArt = hide) }
 
     /** Space taken by offline copies of saved posts. */
     val offlineBytes = offline.bytes
