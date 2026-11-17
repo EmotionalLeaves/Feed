@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.51.0 — 2026-11-16
+
+Backups keep your library
+
+- Settings → Backup now carries saved and liked posts and your collections, along with settings, hidden things and follows, in one password-encrypted file. Moving to a new phone keeps your library; saved videos download again after the import.
+- Importing adds to what's already here and never removes anything.
+
 ## 4.50.0 — 2026-11-16
 
 Adults-only gate
