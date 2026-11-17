@@ -515,6 +515,22 @@ class FeedViewModel @Inject constructor(
     }
 
     /** Why For You showed [item]: the learned interests it matches most, as labels ("#milf"). */
+    /** Tags For You has learned you like (normalised), refreshed now and then: they're lit on posts. */
+    private val _likedTags = MutableStateFlow<Set<String>>(emptySet())
+    val likedTags: StateFlow<Set<String>> = _likedTags
+    private var likedTagsAt = 0L
+    fun refreshLikedTags() {
+        val now = System.currentTimeMillis()
+        if (now - likedTagsAt < LIKED_TAGS_REFRESH_MS) return
+        likedTagsAt = now
+        viewModelScope.launch {
+            val aff = runCatching { signals.affinities().tags }.getOrDefault(emptyMap())
+            _likedTags.value = aff.entries.asSequence()
+                .filter { it.value >= 0.4 && !dev.pfeed.domain.reco.Features.isMeta(it.key) && !it.key.startsWith("@") }
+                .sortedByDescending { it.value }.take(60).map { it.key }.toSet()
+        }
+    }
+
     suspend fun reasons(item: MediaItem): List<String> {
         val aff = runCatching { signals.affinities().tags }.getOrDefault(emptyMap())
         return dev.pfeed.domain.reco.Features.of(item)
@@ -618,6 +634,7 @@ class FeedViewModel @Inject constructor(
 
     companion object {
         private const val LOAD_AHEAD = 10
+        private const val LIKED_TAGS_REFRESH_MS = 60_000L
         /** A longer video hands-free let play to the end: watched, but not chosen like a manual full watch. */
         private const val HANDS_FREE_FULL_VIEW = 0.5
         private const val PRELOAD_AHEAD = 6

@@ -185,6 +185,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) vm.toggleFollowCreator(item)
         }
     }
+    LaunchedEffect(pagerState.settledPage) { vm.refreshLikedTags() }
     // Feed tapped again in the tab bar: back to the top, or a fresh batch if you're already there.
     if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
         dev.pfeed.ui.BottomBar.reselected.collect { route ->
@@ -814,6 +815,7 @@ private fun FeedPage(
             sourceLabel = Display.source(item, vm.sourceName(item.sourceId)),
             creator = remember(item.key) { Display.creator(item) },
             tags = remember(item.key) { Display.tags(item) },
+            likedTags = vm.likedTags.collectAsStateWithLifecycle().value,
             liked = liked,
             saved = saved,
             muted = muted,
@@ -872,6 +874,8 @@ private fun Overlay(
     sourceLabel: String,
     creator: String?,
     tags: List<Pair<String, String>>,
+    /** Tags you like (normalised): lit pink on the post, so you see why it's here at a glance. */
+    likedTags: Set<String> = emptySet(),
     liked: Boolean,
     saved: Boolean,
     muted: Boolean,
@@ -944,7 +948,10 @@ private fun Overlay(
             }
             if (tags.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    tags.forEach { (label, raw) ->
+                    // Tags you like first, lit in the brand colour.
+                    val ordered = remember(tags, likedTags) { tags.sortedByDescending { dev.pfeed.domain.reco.Features.normalizeTag(it.second) in likedTags } }
+                    ordered.forEach { (label, raw) ->
+                        val yours = dev.pfeed.domain.reco.Features.normalizeTag(raw) in likedTags
                         Text(
                             "#$label",
                             color = Color.White,
@@ -952,7 +959,7 @@ private fun Overlay(
                             maxLines = 1,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(50))
-                                .background(Color.Black.copy(alpha = 0.4f))
+                                .background(if (yours) Accent.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.4f))
                                 .clickable { onTag(raw) }
                                 .padding(horizontal = 12.dp, vertical = 6.dp),
                         )
