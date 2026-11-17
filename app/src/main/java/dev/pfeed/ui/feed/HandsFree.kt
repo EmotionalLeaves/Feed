@@ -20,3 +20,12 @@ object HandsFree {
     const val PLAY_ONCE_MIN_MS = 20_000L
     const val SHORT_VIDEO_TOTAL_MS = 12_000L
 }
+
+/** Playback speed for videos, picked in the hold menu; for the whole app until it restarts. */
+object PlaybackSpeed {
+    private val _value = MutableStateFlow(1f)
+    val value: StateFlow<Float> = _value
+    val steps = listOf(1f, 1.25f, 1.5f, 2f, 0.75f)
+    fun next() { _value.value = steps[(steps.indexOf(_value.value) + 1) % steps.size] }
+    fun label(v: Float) = (if (v % 1f == 0f) "${v.toInt()}" else "$v") + "×"
+}

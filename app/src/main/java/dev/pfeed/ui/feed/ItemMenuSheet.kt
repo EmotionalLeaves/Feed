@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.filled.CreateNewFolder
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -141,15 +142,19 @@ fun ItemMenuSheet(
             val handsFree by HandsFree.on.collectAsState()
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                QuickAction(Icons.Filled.CreateNewFolder, "Collection") { pickTag = "collect" }
-                QuickAction(Icons.Filled.Autorenew, if (handsFree) "Stop hands-free" else "Hands-free", lit = handsFree) { HandsFree.set(!handsFree); onDismiss() }
-                if (item.pageUrl.isNotBlank()) QuickAction(Icons.Filled.Link, "Copy link") {
+                QuickAction(Icons.Filled.CreateNewFolder, "Collection", modifier = Modifier.weight(1f)) { pickTag = "collect" }
+                QuickAction(Icons.Filled.Autorenew, if (handsFree) "Stop hands-free" else "Hands-free", lit = handsFree, modifier = Modifier.weight(1f)) { HandsFree.set(!handsFree); onDismiss() }
+                if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
+                    // Tap to step through 1×, 1.25×, 1.5×, 2×, 0.75×; it stays for every video.
+                    val speed by PlaybackSpeed.value.collectAsState()
+                    QuickAction(Icons.Filled.Speed, "Speed ${PlaybackSpeed.label(speed)}", lit = speed != 1f, modifier = Modifier.weight(1f)) { PlaybackSpeed.next() }
+                }
+                if (item.pageUrl.isNotBlank()) QuickAction(Icons.Filled.Link, "Copy link", modifier = Modifier.weight(1f)) {
                     dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
                     onDismiss()
                 }
-                QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open on site") { openExternal(context, item.pageUrl); onDismiss() }
+                QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open site", modifier = Modifier.weight(1f)) { openExternal(context, item.pageUrl); onDismiss() }
             }
             HorizontalDivider()
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
@@ -173,9 +178,9 @@ fun ItemMenuSheet(
 
 /** A round button with its name under it, for the menu's top row. */
 @Composable
-private fun QuickAction(icon: ImageVector, label: String, lit: Boolean = false, onClick: () -> Unit) {
+private fun QuickAction(icon: ImageVector, label: String, lit: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
     androidx.compose.foundation.layout.Column(
-        Modifier.width(78.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
+        modifier.clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Box(
@@ -187,7 +192,7 @@ private fun QuickAction(icon: ImageVector, label: String, lit: Boolean = false, 
             contentAlignment = Alignment.Center,
         ) { Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp)) }
         Spacer(Modifier.size(6.dp))
-        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(label, style = MaterialTheme.typography.labelSmall, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 

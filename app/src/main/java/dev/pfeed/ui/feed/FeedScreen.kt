@@ -729,7 +729,9 @@ private fun FeedPage(
     val isVideo = type == MediaType.VIDEO
 
     // Hold the right side of a video to play at 2×; release to go back to 1×.
-    LaunchedEffect(player, speeding) { player?.setPlaybackSpeed(if (speeding) 2f else 1f) }
+    // Holding the right side doubles whatever speed is picked in the menu (1× → 2×, 1.5× → 3×).
+    val chosenSpeed by PlaybackSpeed.value.collectAsStateWithLifecycle()
+    LaunchedEffect(player, speeding, chosenSpeed) { player?.setPlaybackSpeed(if (speeding) (chosenSpeed * 2f).coerceAtMost(3f) else chosenSpeed) }
 
     // Hands-free: a picture stays up a few seconds, then the feed moves on (tap pauses the countdown).
     val handsFree by HandsFree.on.collectAsStateWithLifecycle()
