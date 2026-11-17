@@ -59,7 +59,7 @@ fun NetworkScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
 
     Column(Modifier.fillMaxSize().imePadding()) {
         ScreenHeader(
-            "Blocked where you are",
+            "Blocked sites",
             subtitle = "Some sites shut out whole states or countries. A proxy gets their posts back.",
             onBack = { nav.popBackStack() },
         )
@@ -88,7 +88,7 @@ fun NetworkScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 footer = "Orbot is a free Tor app from the Play Store: install it, start it, then pick Orbot here. " +
                     "Or use a VPN app, which covers every app on the phone. Your proxy's password stays on this phone and isn't put in backups.",
             ) {
-                val options = listOf("off" to "Off", "orbot" to "Orbot", "http" to "HTTP", "socks" to "SOCKS5")
+                val options = listOf("off" to "Off", "orbot" to "Orbot", "http" to "HTTP", "socks" to "SOCKS")
                 SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp)) {
                     options.forEachIndexed { index, (value, label) ->
                         SegmentedButton(
@@ -96,7 +96,7 @@ fun NetworkScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                             onClick = { vm.setProxy(type = value) },
                             shape = SegmentedButtonDefaults.itemShape(index, options.size),
                             icon = {},
-                            label = { Text(label, style = MaterialTheme.typography.labelMedium) },
+                            label = { Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, softWrap = false) },
                         )
                     }
                 }
