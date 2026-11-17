@@ -3,6 +3,9 @@ package dev.pfeed.ui.common
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -294,11 +297,15 @@ fun BrandButton(
     compact: Boolean = false,
 ) {
     val shape = androidx.compose.foundation.shape.RoundedCornerShape(50)
+    val press = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by press.collectIsPressedAsState()
+    val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.96f else 1f, label = "brandPress")
     Row(
         modifier
+            .graphicsLayer { scaleX = squeeze; scaleY = squeeze }
             .clip(shape)
             .then(if (enabled) Modifier.background(dev.pfeed.ui.theme.BrandGradient) else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest))
-            .clickable(enabled = enabled, onClick = onClick)
+            .clickable(enabled = enabled, interactionSource = press, indication = androidx.compose.material3.ripple(color = Color.White), onClick = onClick)
             .padding(horizontal = if (compact) 14.dp else 22.dp, vertical = if (compact) 8.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,

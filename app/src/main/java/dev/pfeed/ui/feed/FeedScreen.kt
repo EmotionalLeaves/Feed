@@ -19,6 +19,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.awaitLongPressOrCancellation
@@ -908,12 +909,20 @@ private fun RailButton(
     /** On: the icon is painted in the brand gradient (a liked heart, a saved bookmark). */
     branded: Boolean = false,
 ) {
+    // A little give when pressed, like a physical button.
+    val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by press.collectIsPressedAsState()
+    val squeeze by androidx.compose.animation.core.animateFloatAsState(if (pressed) 0.88f else 1f, androidx.compose.animation.core.spring(dampingRatio = 0.5f, stiffness = 900f), label = "railPress")
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier.clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(2.dp),
+        modifier = Modifier
+            .graphicsLayer { scaleX = squeeze; scaleY = squeeze }
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(interactionSource = press, indication = null, onClick = onClick)
+            .padding(2.dp),
     ) {
         Box(
-            Modifier.size(46.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.3f)),
+            Modifier.size(46.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.24f)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
@@ -935,7 +944,7 @@ private fun RailButton(
             )
         }
         Spacer(Modifier.height(3.dp))
-        Text(label, color = Color.White, style = MaterialTheme.typography.labelSmall.shadowed())
+        Text(label, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelSmall.shadowed())
     }
 }
 
