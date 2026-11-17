@@ -1,5 +1,6 @@
 package dev.pfeed.ui.search
 
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import dev.pfeed.ui.feed.Display
 import androidx.compose.ui.draw.blur
@@ -567,6 +568,10 @@ private fun SuggestionsPane(
             }
             if (matches.isNotEmpty()) Spacer(Modifier.height(12.dp))
         }
+        if (t.isEmpty() && topicRows.isNotEmpty()) {
+            Hero(topicRows, onTopicItem)
+            Spacer(Modifier.height(22.dp))
+        }
         if (t.isEmpty() && continueWatching.isNotEmpty()) {
             SectionTitle("Continue")
             Spacer(Modifier.height(10.dp))
@@ -650,6 +655,90 @@ private fun SuggestionsPane(
 private val BROWSE_HUES = listOf(338f, 352f, 12f, 24f, 290f, 268f, 248f, 205f, 318f, 190f)
 
 /** A mix: a big card with three of its posts fanned out, its name, and how many it holds. */
+/**
+ * The top of Search: one big card per thing you like, playing silently, sliding to the next on
+ * its own every few seconds. Tap to watch it among the rest of that topic.
+ */
+@Composable
+private fun Hero(topicRows: List<Pair<String, List<MediaItem>>>, onTopicItem: (String, Int) -> Unit) {
+    val picks = remember(topicRows) {
+        topicRows.take(HERO_MAX).mapNotNull { (topic, items) ->
+            val i = items.indexOfFirst { it.type == MediaType.VIDEO || it.type == MediaType.GIF }.takeIf { it >= 0 } ?: 0
+            items.getOrNull(i)?.let { Triple(topic, i, it) }
+        }
+    }
+    if (picks.isEmpty()) return
+    val pager = androidx.compose.foundation.pager.rememberPagerState { picks.size }
+    // Moves on by itself, unless you're holding or swiping it.
+    val dragged by pager.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(pager, picks.size, dragged) {
+        if (dragged || picks.size < 2) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(HERO_DWELL_MS)
+            pager.animateScrollToPage((pager.currentPage + 1) % picks.size, animationSpec = androidx.compose.animation.core.tween(650))
+        }
+    }
+    val live = dev.pfeed.ui.common.LocalLivePreview.current
+    Column {
+        androidx.compose.foundation.pager.HorizontalPager(
+            state = pager,
+            pageSpacing = 10.dp,
+            modifier = Modifier.fillMaxWidth(),
+        ) { page ->
+            val (topic, index, item) = picks[page]
+            Box(
+                Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(22.dp))
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    .clickable { onTopicItem(topic, index) },
+            ) {
+                coil.compose.AsyncImage(
+                    model = item.thumbnailUrl,
+                    contentDescription = item.title,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+                if (live != null && page == pager.settledPage) live(item)
+                dev.pfeed.ui.common.MediaMask()
+                Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.75f))))
+                Column(Modifier.align(Alignment.BottomStart).padding(16.dp)) {
+                    Text(
+                        topic.replaceFirstChar { it.uppercase() },
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                        color = Color.White,
+                        maxLines = 1,
+                    )
+                    val by = Display.creator(item)?.let { "@$it" } ?: Display.source(item, item.sourceId)
+                    Text(by, style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.75f), maxLines = 1)
+                }
+                Row(
+                    Modifier.align(Alignment.BottomEnd).padding(14.dp).clip(RoundedCornerShape(50)).background(dev.pfeed.ui.theme.BrandGradient)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text("Watch", style = MaterialTheme.typography.labelLarge, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, color = Color.White)
+                }
+            }
+        }
+        // Where you are: a dash for the current card, dots for the rest.
+        if (picks.size > 1) Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.Center) {
+            repeat(picks.size) { i ->
+                val on = i == pager.currentPage
+                val w by androidx.compose.animation.core.animateDpAsState(if (on) 18.dp else 6.dp, label = "heroDot")
+                Box(
+                    Modifier.padding(horizontal = 3.dp).height(6.dp).width(w).clip(RoundedCornerShape(50))
+                        .background(if (on) Accent else Color.White.copy(alpha = 0.25f)),
+                )
+            }
+        }
+    }
+}
+
+private const val HERO_MAX = 6
+private const val HERO_DWELL_MS = 6_500L
+
 @Composable
 private fun MixCard(number: Int, name: String, items: List<MediaItem>, onClick: () -> Unit) {
     val hue = remember(name) { BROWSE_HUES[(name.hashCode() and 0x7fffffff) % BROWSE_HUES.size] }
