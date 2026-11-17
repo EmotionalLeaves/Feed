@@ -80,6 +80,13 @@ class SmokeTest {
     }
 
     /** Taps a text, retrying while the screen is too busy to be inspected. */
+    /** A tab in the bottom bar (brought back first, in case scrolling tucked the bar away). */
+    private fun tab(name: String) {
+        dev.pfeed.ui.BottomBar.collapse = 0f
+        rule.waitForIdle()
+        rule.onNode(hasText(name) and androidx.compose.ui.test.isSelectable()).performClick()
+    }
+
     private fun tap(text: String) = waitFor(timeoutMs = 30_000, what = "tap '$text'") {
         rule.onAllNodes(hasText(text), useUnmergedTree = true)[0].performClick()
         true
@@ -193,13 +200,13 @@ class SmokeTest {
         waitFor(what = "feed visible") { exists("For You") || exists("Latest") || exists("Following") }
 
         // 4. Every tab opens.
-        rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
+        tab("Search")
         waitFor(what = "search screen") { exists("Search every site") && exists("Popular") }
 
-        rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
+        tab("Library")
         waitFor(what = "library screen") { exists("Saved", substring = true) && exists("Following", substring = true) }
 
-        rule.onNode(hasText("Settings") and androidx.compose.ui.test.isSelectable()).performClick()
+        tab("Settings")
         waitFor(what = "settings screen") { exists("Sources") && exists("App lock") }
 
         // 5. Sources screen lists every source, the health check and the topic finder.
@@ -216,7 +223,7 @@ class SmokeTest {
         waitFor(what = "tap back") { rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back"), useUnmergedTree = true)[0].performClick(); true }
         waitFor(what = "back to settings") { exists("App lock") }
 
-        rule.onNode(hasText("Feed") and androidx.compose.ui.test.isSelectable()).performClick()
+        tab("Feed")
         waitFor(what = "back on feed") { exists("For You") }
 
         // 6. Panic gesture: three fingers down at once locks the app. Sent as real MotionEvents through
@@ -349,7 +356,7 @@ class SmokeTest {
             runCatching { poll(90_000, "a post on screen") { shown.get() > before } }
             Thread.sleep(1_500)
             shot("01_feed")
-            rule.onNode(hasText("Search") and androidx.compose.ui.test.isSelectable()).performClick()
+            tab("Search")
             waitFor(what = "search screen") { exists("Popular") }
             // Topic rows arrive once the video sites answer.
             runCatching { waitFor(timeoutMs = 25_000, what = "topic rows") { exists("See all") } }
@@ -393,7 +400,7 @@ class SmokeTest {
                 }.let { android.util.Log.i("PFHEALTH", "backup: ${it.getOrElse { e -> "FAILED ${e.javaClass.simpleName}: ${e.message?.take(100)}" }}") }
             }
             Thread.sleep(8_000) // time for them to be kept
-            rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()
+            tab("Library")
             waitFor(what = "library") { exists("Saved", substring = true) }
             Thread.sleep(1_500)
             shot("04_library")
@@ -407,7 +414,7 @@ class SmokeTest {
                 savedForShot.forEach { lib.remove(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
                 android.util.Log.i("PFHEALTH", "collections after unsaving: ${lib.collections.first().joinToString { "${it.name}=${it.count}" }.ifEmpty { "none" }}")
             }
-            rule.onNode(hasText("Settings") and androidx.compose.ui.test.isSelectable()).performClick()
+            tab("Settings")
             waitFor(what = "settings") { exists("App lock") }
             shot("05_settings")
             waitFor(what = "scroll settings") { rule.onAllNodes(hasText("Encrypted DNS"), useUnmergedTree = true)[0].performScrollTo(); true }
@@ -438,7 +445,7 @@ class SmokeTest {
             dev.pfeed.ui.feed.FirstRun.askInterests = true
             dev.pfeed.ui.feed.FirstRun.forceInterests = true
             try {
-                rule.onNode(hasText("Feed") and androidx.compose.ui.test.isSelectable()).performClick()
+                tab("Feed")
                 waitFor(what = "topic picker") { exists("What are you into?") }
                 tap("milf"); tap("cosplay")
                 shot("10_interests")

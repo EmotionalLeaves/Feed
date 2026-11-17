@@ -287,9 +287,12 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
             ) {
                 Icon(if (selected) tab.icon else tab.outline, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
                 androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
+                // Over the feed only the current tab is named: fewer words on top of the video.
+                val labelAlpha by androidx.compose.animation.core.animateFloatAsState(if (selected || !immersive) 1f else 0f, label = "tabLabel")
                 Text(
                     tab.label,
                     color = tint,
+                    modifier = Modifier.graphicsLayer { alpha = labelAlpha },
                     fontSize = 10.5.sp,
                     fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
                     maxLines = 1,
