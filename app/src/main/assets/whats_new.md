@@ -1,3 +1,9 @@
+## 4.69.0 — 2026-11-16
+Lock screen feel
+
+- A wrong PIN shakes the dots and gives a buzz, and a PIN that doesn't match when you set one does too.
+- The PIN dots swell a little as they fill, and each key gives a light tick.
+
 ## 4.68.0 — 2026-11-16
 Follow feedback, update notes
 
@@ -8,8 +14,3 @@ Follow feedback, update notes
 Creator avatars on posts
 
 - On each post, the creator's name now has a round, coloured initial beside it. It's the same colour as in Library → Following, so a creator is easy to recognise, and tapping it opens their page.
-
-## 4.66.0 — 2026-11-16
-Watched marks in search
-
-- Search results you've already watched are dimmed and marked with a small eye, so the new ones stand out.

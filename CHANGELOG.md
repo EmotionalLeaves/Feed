@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.69.0 — 2026-11-16
+
+Lock screen feel
+
+- A wrong PIN shakes the dots and gives a buzz, and a PIN that doesn't match when you set one does too.
+- The PIN dots swell a little as they fill, and each key gives a light tick.
+
 ## 4.68.0 — 2026-11-16
 
 Follow feedback, update notes
