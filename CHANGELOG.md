@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.71.0 — 2026-11-16
+
+Smarter suggestions
+
+- Search suggestions now show what each one is (a past search, something you follow, or a topic) and bold the part you've typed.
+
 ## 4.70.0 — 2026-11-16
 
 Following, at a glance

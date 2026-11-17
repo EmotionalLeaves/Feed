@@ -1,3 +1,8 @@
+## 4.71.0 — 2026-11-16
+Smarter suggestions
+
+- Search suggestions now show what each one is (a past search, something you follow, or a topic) and bold the part you've typed.
+
 ## 4.70.0 — 2026-11-16
 Following, at a glance
 
@@ -9,9 +14,3 @@ Lock screen feel
 
 - A wrong PIN shakes the dots and gives a buzz, and a PIN that doesn't match when you set one does too.
 - The PIN dots swell a little as they fill, and each key gives a light tick.
-
-## 4.68.0 — 2026-11-16
-Follow feedback, update notes
-
-- Tapping Follow gives a quick pop and shows a tick as it turns to Following.
-- From your next update on, the feed will say 'Updated to …' once after the app updates, with What's new a tap away.
