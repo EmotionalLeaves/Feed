@@ -222,13 +222,13 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                 }
                 items(follows, key = { it.kind + ":" + it.value }) { row ->
                     val isTag = row.kind == FollowKind.TAG.name
-                    SettingRow(
-                        if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}",
-                        subtitle = if (isTag) "Tag" else "Creator",
-                        icon = if (isTag) Icons.Filled.Tag else Icons.Filled.Person,
-                        // Tags open their feed; creators open their page (everything by them, every source).
-                        onClick = { nav.navigate(Routes.tag(if (isTag) row.value else "@" + row.value)) },
-                        trailing = { TextButton(onClick = { vm.unfollow(row) }) { Text("Unfollow") } },
+                    // Tags open their feed; creators open their page (everything by them, every source).
+                    FollowRow(
+                        name = if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}",
+                        kind = if (isTag) "Tag" else "Creator",
+                        isTag = isTag,
+                        onOpen = { nav.navigate(Routes.tag(if (isTag) row.value else "@" + row.value)) },
+                        onUnfollow = { vm.unfollow(row) },
                     )
                 }
             }
@@ -302,6 +302,42 @@ private fun CollectionChips(
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
             )
         }
+    }
+}
+
+/** A followed creator or tag: a round initial (or #) in a colour of its own, the name, and Unfollow. */
+@Composable
+private fun FollowRow(name: String, kind: String, isTag: Boolean, onOpen: () -> Unit, onUnfollow: () -> Unit) {
+    val hue = remember(name) { ((name.lowercase().hashCode() and 0x7fffffff) % 360).toFloat() }
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                .background(
+                    if (isTag) androidx.compose.ui.graphics.SolidColor(Color.hsl(hue, 0.45f, 0.28f))
+                    else androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.hsl(hue, 0.6f, 0.5f), Color.hsl((hue + 40f) % 360f, 0.6f, 0.4f))),
+                ),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                if (isTag) "#" else name.removePrefix("@").take(1).uppercase(),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            )
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(kind, style = MaterialTheme.typography.bodySmall, color = dev.pfeed.ui.theme.TextLow)
+        }
+        androidx.compose.material3.OutlinedButton(
+            onClick = onUnfollow,
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp, vertical = 4.dp),
+            modifier = Modifier.height(34.dp),
+        ) { Text("Unfollow", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.85f)) }
     }
 }
 
