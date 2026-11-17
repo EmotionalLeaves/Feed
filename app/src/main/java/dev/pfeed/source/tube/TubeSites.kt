@@ -70,7 +70,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat) }
         fun byHost(host: String): TubeSite? = ALL.firstOrNull { site ->
             (listOf(site.host) + site.mirrors).any { host == it || host.endsWith(".$it") }
         }
@@ -551,6 +551,52 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun stream(pageHtml: String): TubeStream? =
             best(URLS.findAll(pageHtml).mapNotNull { m -> textOf(pageHtml, m.groupValues[1])?.let { it to m.groupValues[2] } }.toList())
         override fun embedUrl(id: String) = "https://www.porntrex.com/embed/$id"
+    }
+
+    /**
+     * PornHat (a KVS site): listings carry models and studios but not tags; the video page has plain
+     * <source> tags labelled 360p…720p (its get_file links are signed per visit, so they're read
+     * from the page each time) and the full tag list.
+     */
+    object PornHat : TubeSite("pornhat.com", "PornHat") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> if (page == 0) "https://www.pornhat.com/" else "https://www.pornhat.com/${page + 1}/"
+            "top" -> "https://www.pornhat.com/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "https://www.pornhat.com/search/${enc(section.lowercase()).replace("+", "-")}/${if (page == 0) "" else "${page + 1}/"}"
+        }
+        private val MARK = Regex("""class="item thumb-bl thumb-bl-video[^"]*"""")
+        private val HREF = Regex("""href="(/video/[^"]+/)"\s+title="([^"]*)"""")
+        private val IMG = Regex("""data-original="(https://[^"]+\.jpg)"""")
+        private val ID = Regex("""videos_screenshots/\d+/(\d+)/""")
+        private val DUR = Regex("""class="[^"]*(?:time|duration)[^"]*"[^>]*>\s*(?:<[^>]+>\s*)*(\d{1,2}:\d{2}(?::\d{2})?)""")
+        private val MODEL = Regex("""href="/models/[^"]+/"\s+title="([^"]+)"""")
+        private val STUDIO = Regex("""href="/sites/[^"]+/"\s+title="([^"]+)"""")
+        private val SOURCE = Regex("""<source src="(https://[^"]+)"[^>]*label="(\d+)p"""")
+        private val TAG = Regex("""href="(?:https://www\.pornhat\.com)?/tags/([a-z0-9-]+)/"""")
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList()
+            return hits.mapIndexedNotNull { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 6000))
+                val link = HREF.find(c) ?: return@mapIndexedNotNull null
+                val thumb = IMG.find(c)?.groupValues?.get(1)
+                val id = thumb?.let { ID.find(it)?.groupValues?.get(1) } ?: link.groupValues[1].trim('/').substringAfterLast('/')
+                TubeVideo(
+                    id = id,
+                    title = unescape(link.groupValues[2]).trim().ifEmpty { null },
+                    pageUrl = "https://www.pornhat.com" + link.groupValues[1],
+                    thumb = thumb,
+                    durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    creator = (MODEL.find(c) ?: STUDIO.find(c))?.groupValues?.get(1)?.let(::unescape),
+                )
+            }.distinctBy { it.id }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            best(SOURCE.findAll(pageHtml).map { it.groupValues[2].toInt() to unescape(it.groupValues[1]) }.toList())
+        override fun pageTags(pageHtml: String): List<String> =
+            TAG.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') }.filter { it != "hd" }.distinct().take(30).toList()
+        override fun embedUrl(id: String) = "https://www.pornhat.com/embed/$id"
     }
 
     object Youjizz : TubeSite("youjizz.com", "YouJizz") {

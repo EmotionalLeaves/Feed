@@ -24,22 +24,19 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        for (site in listOf("https://www.pornhat.com", "https://www.sunporno.com")) {
-            val (_, home) = get("$site/")
-            probe("$site item") { around(home, "class=\"item", 0, 2200) }
-            for (path in listOf("/search/milf/", "/tags/milf/", "/latest-updates/2/", "/top-rated/", "/categories/milf/", "/search/?q=milf")) probe("$site$path") {
-                val (c, b) = get(site + path)
-                "code=$c len=${b.length} items=${b.split("class=\"item").size - 1} title=${Regex("<title>([^<]{0,80})").find(b)?.groupValues?.get(1)}"
-            }
-            probe("$site page") {
-                val link = Regex("href=\"((?:https://www\\.[a-z]+\\.com)?/(?:video|v)/[^\"]+)\"").find(home)?.groupValues?.get(1) ?: return@probe "no link"
-                val url = if (link.startsWith("/")) site + link else link
-                val (c, page) = get(url)
-                "url=$url code=$c sources=" + Regex("<source[^>]+>").findAll(page).map { it.value.take(260) }.joinToString(" | ") +
-                    " flash=" + Regex("video(?:_alt)?_url\\d*(?:_text)?:\\s*'[^']{0,140}'").findAll(page).map { it.value }.joinToString(" | ") +
-                    " tags=" + links(page, "tags") + " cats=" + links(page, "categories") + " models=" + links(page, "models") + " pornstars=" + links(page, "pornstars") +
-                    " date=" + around(page, "uploadDate", 0, 80) + " dur=" + around(page, "duration", 0, 80)
-            }
+        val site = dev.pfeed.source.tube.TubeSite.PornHat
+        for ((sec, page) in listOf("new" to 0, "new" to 1, "top" to 0, "top" to 1, "milf" to 0, "milf" to 1, "big tits" to 0)) probe("list $sec $page") {
+            val u = site.listUrl(sec, page)
+            val (code, body) = get(u)
+            val l = site.parseList(body)
+            "$u code=$code n=${l.size} durs=${l.count { it.durationSec != null }} creators=${l.count { it.creator != null }} thumbs=${l.count { it.thumb != null }} first=${l.firstOrNull()}"
+        }
+        probe("stream") {
+            val v = site.parseList(get(site.listUrl("new", 0)).second).first()
+            val (c, page) = get(v.pageUrl)
+            val st = site.stream(page)
+            val h = st?.let { s -> client.newCall(Request.Builder().url(s.url).header("Range", "bytes=0-0").header("Referer", v.pageUrl).build()).execute().use { "${it.code} ${it.header("Content-Type")} ${it.request.url.host}" } }
+            "page=$c stream=$st head=$h tags=${site.pageTags(page)}"
         }
     }
 }
