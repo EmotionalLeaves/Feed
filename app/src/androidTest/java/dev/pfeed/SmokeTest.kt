@@ -430,12 +430,15 @@ class SmokeTest {
             shot("06_settings_more")
             runCatching {
                 rule.onAllNodes(hasText("Blocked where you are"), useUnmergedTree = true)[0].performScrollTo().performClick()
-                waitFor(what = "network screen") { exists("Proxy") }
+                waitFor(what = "network screen") { exists("Orbot") }
                 Thread.sleep(600)
                 shot("06b_network")
                 androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
                 waitFor(what = "back to settings") { exists("App lock") }
-            }.onFailure { android.util.Log.i("PFHEALTH", "network shot: ${it.message?.take(100)}") }
+            }.onFailure {
+                android.util.Log.i("PFHEALTH", "network shot: ${it.message?.take(100)}")
+                if (!exists("App lock")) androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+            }
             waitFor(what = "scroll to top") { rule.onAllNodes(hasText("Sources"), useUnmergedTree = true)[0].performScrollTo(); true }
             rule.onNodeWithText("Your taste").performClick()
             Thread.sleep(1_000)

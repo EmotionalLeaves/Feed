@@ -141,7 +141,11 @@ fun ScrubBar(player: ExoPlayer?, modifier: Modifier = Modifier, onScrubbedBack: 
                 .align(Alignment.BottomStart)
                 .background(Color.White.copy(alpha = 0.3f)),
         ) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(fraction).background(Color.White))
+            // White while watching (quiet); the brand gradient while you scrub.
+            Box(
+                Modifier.fillMaxHeight().fillMaxWidth(fraction)
+                    .then(if (dragging) Modifier.background(dev.pfeed.ui.theme.BrandGradient) else Modifier.background(Color.White)),
+            )
         }
         if (dragging) {
             Box(
