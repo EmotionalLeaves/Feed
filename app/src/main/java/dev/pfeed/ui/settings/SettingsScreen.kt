@@ -6,6 +6,10 @@ import androidx.compose.ui.graphics.Color
 import dev.pfeed.ui.theme.Accent
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.width
@@ -134,7 +138,24 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             ScreenHeader("Settings")
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            // Jump straight to a section: the page is long.
+            val scroll = rememberScrollState()
+            val sectionY = remember { mutableStateMapOf<String, Int>() }
+            fun Modifier.anchor(name: String) = onGloballyPositioned { sectionY[name] = it.positionInParent().y.toInt() }
+            androidx.compose.foundation.lazy.LazyRow(
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(bottom = 6.dp),
+            ) {
+                items(listOf("Feed", "Playback", "Storage", "Privacy", "Network", "Backup", "Help")) { name ->
+                    androidx.compose.material3.SuggestionChip(
+                        onClick = { sectionY[name]?.let { y -> scope.launch { scroll.animateScrollTo(y) } } },
+                        label = { Text(name) },
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(50),
+                    )
+                }
+            }
+        Column(Modifier.fillMaxSize().verticalScroll(scroll)) {
 
             // At a glance: what you've kept, and a way straight to it.
             val counts by vm.libraryCounts.collectAsStateWithLifecycle()
@@ -171,7 +192,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             // What the main feeds show: everything by default; switch a kind off to leave it out.
-            Section("Feed shows", footer = "Clips are under 3 minutes; full videos are 3 minutes and up. Kinds and lengths apply to the main feeds; search and tag pages still show them all.") {
+            Section("Feed shows", modifier = Modifier.anchor("Feed"), footer = "Clips are under 3 minutes; full videos are 3 minutes and up. Kinds and lengths apply to the main feeds; search and tag pages still show them all.") {
                 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
                 androidx.compose.foundation.layout.FlowRow(
                     Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 12.dp),
@@ -218,7 +239,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 )
             }
 
-            Section("Playback") {
+            Section("Playback", modifier = Modifier.anchor("Playback")) {
                 SwitchSetting("Start muted", s.defaultMute, icon = Icons.AutoMirrored.Filled.VolumeOff, onChange = vm::setDefaultMute)
                 RowDivider()
                 SwitchSetting(
@@ -239,7 +260,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             // Space on the phone: what's kept for good, and what's cached to replay quickly.
-            Section("Storage") {
+            Section("Storage", modifier = Modifier.anchor("Storage")) {
                 SettingRow(
                     "Video cache",
                     subtitle = "More space, fewer re-downloads",
@@ -267,6 +288,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
 
             Section(
                 "Privacy & security",
+                modifier = Modifier.anchor("Privacy"),
                 footer = "Touch the screen with three fingers at any time to leave the app instantly" +
                     if (lockOn) " and lock it." else ".",
             ) {
@@ -327,7 +349,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             }
 
             // How the app reaches the sites: private lookups, and a way around state and country blocks.
-            Section("Network") {
+            Section("Network", modifier = Modifier.anchor("Network")) {
                 SwitchSetting(
                     "Encrypted DNS",
                     s.encryptedDns,
@@ -353,7 +375,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 )
             }
 
-            Section("Backup", footer = "Settings, hidden things, follows, saved and liked posts and collections, in one file encrypted with a password you choose. Your PIN, sign-ins and history aren't included; saved videos download again after an import.") {
+            Section("Backup", modifier = Modifier.anchor("Backup"), footer = "Settings, hidden things, follows, saved and liked posts and collections, in one file encrypted with a password you choose. Your PIN, sign-ins and history aren't included; saved videos download again after an import.") {
                 SettingRow("Export backup", icon = Icons.Filled.Upload, iconTint = TextLow, onClick = { exportLauncher.launch("feed-backup.json") })
                 RowDivider()
                 SettingRow("Import backup", icon = Icons.Filled.Download, iconTint = TextLow, onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
@@ -362,7 +384,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             val context = androidx.compose.ui.platform.LocalContext.current
             val clipContext = androidx.compose.ui.platform.LocalContext.current
             var crash by remember { mutableStateOf(dev.pfeed.CrashLog.read(context)) }
-            Section("Help", footer = if (crash != null) "The app closed unexpectedly last time. The report has the app and Android versions and where it failed, nothing you were viewing." else null) {
+            Section("Help", modifier = Modifier.anchor("Help"), footer = if (crash != null) "The app closed unexpectedly last time. The report has the app and Android versions and where it failed, nothing you were viewing." else null) {
                 SettingRow("Gestures", subtitle = "Everything you can do on a post", icon = Icons.Filled.TouchApp, iconTint = TextLow, chevron = true, onClick = { dialog = PendingDialog.Gestures })
                 if (crash != null) {
                     RowDivider()
