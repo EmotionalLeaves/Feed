@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.50.0 — 2026-11-16
+
+Adults-only gate
+
+- New: an 18+ confirmation the first time the app opens (you'll see it once after this update too). Leave closes the app; nothing plays behind it, and it never comes back once you've confirmed.
+
 ## 4.49.0 — 2026-11-16
 
 Swipe left for the creator
