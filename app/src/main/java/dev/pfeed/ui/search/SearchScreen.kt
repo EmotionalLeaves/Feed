@@ -526,10 +526,13 @@ private fun SuggestionsPane(
     }
 }
 
+private val BROWSE_HUES = listOf(338f, 352f, 12f, 24f, 290f, 268f, 248f, 205f, 318f, 190f)
+
 /** A topic to browse, as a colour card with its name. */
 @Composable
 private fun BrowseCard(topic: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val hue = remember(topic) { ((topic.hashCode() and 0x7fffffff) % 360).toFloat() }
+    // Hues picked to sit well beside the app's pink and orange (no swampy greens).
+    val hue = remember(topic) { BROWSE_HUES[(topic.hashCode() and 0x7fffffff) % BROWSE_HUES.size] }
     Box(
         modifier
             .height(62.dp)

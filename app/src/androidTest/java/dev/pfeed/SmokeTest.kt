@@ -83,6 +83,8 @@ class SmokeTest {
     /** A tab in the bottom bar (brought back first, in case scrolling tucked the bar away). */
     private fun tab(name: String) {
         dev.pfeed.ui.BottomBar.collapse = 0f
+        // Wake it too: over the feed it hides after a while, and a tap on a hidden bar only wakes it.
+        dev.pfeed.ui.BottomBar.lastTouch = System.currentTimeMillis()
         rule.waitForIdle()
         rule.onNode(
             hasText(name) and androidx.compose.ui.test.isSelectable() and
