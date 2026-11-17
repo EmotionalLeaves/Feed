@@ -118,7 +118,7 @@ private const val NEAR_END_TILES = 9
 
 @Composable
 private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?) {
-    val shape = RoundedCornerShape(4.dp)
+    val shape = RoundedCornerShape(6.dp)
     Box(
         Modifier
             .fillMaxWidth()
@@ -146,35 +146,31 @@ private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, 
             MediaType.GIF -> "GIF"
             MediaType.IMAGE -> null
         }
-        if (badge != null) {
+        val source = label?.invoke(item)
+        // One quiet line along the bottom: where it's from on the left, how long on the right.
+        if (badge != null || source != null) {
             Box(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.35f)
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))),
+                Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.32f)
+                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.65f)))),
             )
             Row(
-                Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(6.dp),
+                Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = 6.dp, vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (item.type != MediaType.GIF) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                }
-                if (badge.isNotEmpty()) {
+                Text(
+                    source.orEmpty(),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.78f),
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (!badge.isNullOrEmpty()) {
                     Text(badge, style = MaterialTheme.typography.labelMedium, color = Color.White, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                } else if (badge != null && item.type != MediaType.GIF) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = "Video", tint = Color.White, modifier = Modifier.size(15.dp))
                 }
             }
-        }
-        label?.invoke(item)?.let { text ->
-            Text(
-                text,
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White,
-                maxLines = 1,
-                modifier = Modifier.align(Alignment.TopStart).padding(5.dp)
-                    .background(Color.Black.copy(alpha = 0.55f), RoundedCornerShape(5.dp))
-                    .padding(horizontal = 5.dp, vertical = 1.dp),
-            )
         }
         // A saved post that's on the phone: opens without a connection.
         if (item.extras[dev.pfeed.data.repo.OfflineStore.KEPT] != null) {

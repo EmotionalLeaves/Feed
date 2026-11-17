@@ -135,6 +135,10 @@ fun LockScreen(lock: AppLockManager) {
             .systemBarsPadding(),
         contentAlignment = Alignment.Center,
     ) {
+        // Keys sized to the screen: roomy on a tall phone, still all on screen (with breathing room
+        // above the lock) on a short one.
+        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val key = ((maxHeight - 300.dp) / 4 - 14.dp).coerceIn(52.dp, 76.dp)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 Modifier.size(64.dp).background(dev.pfeed.ui.theme.AccentSoft, CircleShape),
@@ -165,10 +169,10 @@ fun LockScreen(lock: AppLockManager) {
             Spacer(Modifier.height(24.dp))
             val rows = listOf(listOf("1", "2", "3"), listOf("4", "5", "6"), listOf("7", "8", "9"), listOf("bio", "0", "del"))
             rows.forEach { row ->
-                Row(horizontalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.padding(vertical = 8.dp)) {
-                    row.forEach { key ->
-                        Box(Modifier.size(72.dp), contentAlignment = Alignment.Center) {
-                            when (key) {
+                Row(horizontalArrangement = Arrangement.spacedBy(key / 3), modifier = Modifier.padding(vertical = 7.dp)) {
+                    row.forEach { k ->
+                        Box(Modifier.size(key), contentAlignment = Alignment.Center) {
+                            when (k) {
                                 "bio" -> if (stage == Stage.ENTER && biometricAvailable) {
                                     IconButton(onClick = ::showBiometric) { Icon(Icons.Filled.Fingerprint, "Use biometrics") }
                                 }
@@ -176,10 +180,10 @@ fun LockScreen(lock: AppLockManager) {
                                     Icon(Icons.AutoMirrored.Filled.Backspace, "Delete")
                                 }
                                 else -> TextButton(
-                                    onClick = { if (pin.length < MAX_PIN) pin += key },
-                                    modifier = Modifier.size(72.dp).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
+                                    onClick = { if (pin.length < MAX_PIN) pin += k },
+                                    modifier = Modifier.size(key).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
                                     shape = CircleShape,
-                                ) { Text(key, fontSize = 28.sp, fontWeight = FontWeight.Normal, color = MaterialTheme.colorScheme.onBackground) }
+                                ) { Text(k, fontSize = (key.value * 0.38f).sp, fontWeight = FontWeight.Normal, color = MaterialTheme.colorScheme.onBackground) }
                             }
                         }
                     }
@@ -192,6 +196,7 @@ fun LockScreen(lock: AppLockManager) {
                 enabled = pin.length >= MIN_PIN && !busy,
                 modifier = Modifier.width(220.dp),
             )
+        }
         }
     }
 }

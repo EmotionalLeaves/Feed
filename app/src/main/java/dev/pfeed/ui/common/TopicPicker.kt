@@ -83,8 +83,8 @@ fun TopicPicker(
         }
         Column(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                .background(Brush.verticalGradient(listOf(Color.Transparent, Color(0xFF09090B), Color(0xFF09090B))))
-                .padding(top = 24.dp, bottom = 16.dp),
+                .background(Brush.verticalGradient(0f to Color.Transparent, 0.35f to Color(0xFF09090B), 1f to Color(0xFF09090B)))
+                .padding(top = 48.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             BrandButton(
