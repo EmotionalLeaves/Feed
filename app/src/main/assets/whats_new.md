@@ -1,3 +1,13 @@
+## 4.58.0 — 2026-11-16
+Design pass
+
+- Videos and pictures that don't fill the screen sit on a soft, blurred copy of themselves instead of black bars.
+- Grid tiles are calmer: the source and length share one quiet line along the bottom, with rounder corners. Search's topic rows match.
+- Buttons give a little when pressed (Like, Save and the rest of the rail, plus the main pink buttons).
+- The lock keypad sizes itself to your screen, so nothing crowds the top on smaller phones.
+- Your taste names how strong each interest is: Strong, Steady, Light or Less.
+- A softer fade behind the topic picker's Start button.
+
 ## 4.57.0 — 2026-11-16
 Tab bar, finished
 
@@ -12,10 +22,3 @@ Tab bar steps back
 - The tab bar tucks away as you scroll down Search, Library or Settings, and comes back when you scroll up. It also steps aside while the keyboard is open.
 - Over the feed, only the current tab shows its name, the fade is lighter, and in hands-free mode the bar settles back sooner.
 - Settings: the jump chips light up the section you're in. Sources rows now say when a site is blocked where you are; for tube sites they name which ones, since the rest still work.
-
-## 4.55.0 — 2026-11-16
-Calmer tab bar, tidier Settings
-
-- Tab bar: over the feed it fades back after a few seconds of just watching and returns the moment you touch the screen. Tabs give a light haptic tick, and tapping Feed again jumps back to the top, or loads fresh posts if you're already there.
-- Settings has chips under the title that jump to each section, and a card at the top with your Saved, Liked and Following counts that opens the Library.
-- Settings is regrouped into Privacy & security and Network (Encrypted DNS, Blocked where you are), with shorter descriptions. Erase everything now sits on its own at the bottom.

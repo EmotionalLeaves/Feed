@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.58.0 — 2026-11-16
+
+Design pass
+
+- Videos and pictures that don't fill the screen sit on a soft, blurred copy of themselves instead of black bars.
+- Grid tiles are calmer: the source and length share one quiet line along the bottom, with rounder corners. Search's topic rows match.
+- Buttons give a little when pressed (Like, Save and the rest of the rail, plus the main pink buttons).
+- The lock keypad sizes itself to your screen, so nothing crowds the top on smaller phones.
+- Your taste names how strong each interest is: Strong, Steady, Light or Less.
+- A softer fade behind the topic picker's Start button.
+
 ## 4.57.0 — 2026-11-16
 
 Tab bar, finished
