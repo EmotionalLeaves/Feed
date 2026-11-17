@@ -29,3 +29,10 @@ object PlaybackSpeed {
     fun next() { _value.value = steps[(steps.indexOf(_value.value) + 1) % steps.size] }
     fun label(v: Float) = (if (v % 1f == 0f) "${v.toInt()}" else "$v") + "×"
 }
+
+/** Clean screen: only the post, nothing drawn over it (no caption, buttons, top bar or tab bar). */
+object CleanScreen {
+    private val _on = MutableStateFlow(false)
+    val on: StateFlow<Boolean> = _on
+    fun set(value: Boolean) { _on.value = value }
+}

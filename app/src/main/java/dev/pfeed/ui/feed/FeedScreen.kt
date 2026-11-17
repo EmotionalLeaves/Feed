@@ -227,6 +227,12 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
     }
     LandscapeMode(enabled = landscape)
+    // Clean screen hides the tab bar too (only on the feed; leaving it brings everything back).
+    val cleanScreen by CleanScreen.on.collectAsStateWithLifecycle()
+    DisposableEffect(cleanScreen, landscape) {
+        if (cleanScreen && !landscape) dev.pfeed.ui.BottomBar.hidden = true
+        onDispose { if (cleanScreen && !landscape) dev.pfeed.ui.BottomBar.hidden = false }
+    }
     // Sideways, the tab bar steps aside for the video.
     DisposableEffect(landscape) {
         dev.pfeed.ui.BottomBar.hidden = landscape
@@ -335,7 +341,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             GestureTips(page = pagerState.settledPage, modifier = Modifier.align(Alignment.Center))
         }
 
-        if (!landscape && !wallMode) TopBar(
+        val cleanOn by CleanScreen.on.collectAsStateWithLifecycle()
+        if (!landscape && !wallMode && !cleanOn) TopBar(
             title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.isMainFeed,
             mode = mode,
@@ -393,6 +400,26 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     active = active,
                     onPick = { index -> wallMode = false; pagerScope.launch { pagerState.scrollToPage(index) } },
                     onClose = { wallMode = false },
+                )
+            }
+        }
+
+        // Clean screen: after a touch, a small way back for a couple of seconds.
+        if (cleanOn && !landscape) {
+            var showExit by remember { mutableStateOf(true) }
+            LaunchedEffect(dev.pfeed.ui.BottomBar.lastTouch) { showExit = true; kotlinx.coroutines.delay(2_500); showExit = false }
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showExit,
+                enter = androidx.compose.animation.fadeIn(),
+                exit = androidx.compose.animation.fadeOut(),
+                modifier = Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(12.dp),
+            ) {
+                Text(
+                    "Show everything",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { CleanScreen.set(false) }.padding(horizontal = 14.dp, vertical = 8.dp),
                 )
             }
         }
@@ -856,12 +883,14 @@ private fun FeedPage(
         dev.pfeed.ui.common.MediaMask()
 
         // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
-        val barInset = if (landscape) 0.dp else dev.pfeed.ui.LocalBottomBarInset.current
-        if (!landscape) Box(
+        val clean by CleanScreen.on.collectAsStateWithLifecycle()
+        val bare = landscape || clean
+        val barInset = if (bare) 0.dp else dev.pfeed.ui.LocalBottomBarInset.current
+        if (!bare) Box(
             Modifier.align(Alignment.TopCenter).fillMaxWidth().height(140.dp)
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))),
         )
-        if (!landscape) Box(
+        if (!bare) Box(
             Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(320.dp + barInset)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))),
         )
@@ -931,7 +960,7 @@ private fun FeedPage(
             ) {
                 Icon(Icons.Filled.FullscreenExit, contentDescription = "Exit landscape", tint = Color.White)
             }
-        } else Overlay(
+        } else if (!clean) Overlay(
             item = item,
             sourceLabel = Display.source(item, vm.sourceName(item.sourceId)),
             creator = remember(item.key) { Display.creator(item) },
@@ -952,7 +981,7 @@ private fun FeedPage(
             onTag = onOpenTag,
             onMenu = onMenu,
         )
-        if (isVideo) {
+        if (isVideo && !clean) {
             ScrubBar(
                 player = player,
                 modifier = Modifier.align(Alignment.BottomCenter),

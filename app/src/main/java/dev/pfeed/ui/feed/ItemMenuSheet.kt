@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Autorenew
@@ -153,10 +154,7 @@ fun ItemMenuSheet(
                     val speed by PlaybackSpeed.value.collectAsState()
                     QuickAction(Icons.Filled.Speed, "Speed ${PlaybackSpeed.label(speed)}", lit = speed != 1f, modifier = Modifier.weight(1f)) { PlaybackSpeed.next() }
                 }
-                if (item.pageUrl.isNotBlank()) QuickAction(Icons.Filled.Link, "Copy link", modifier = Modifier.weight(1f)) {
-                    dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
-                    onDismiss()
-                }
+                QuickAction(Icons.Filled.Fullscreen, "Clean screen", modifier = Modifier.weight(1f)) { CleanScreen.set(true); onDismiss() }
                 QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open site", modifier = Modifier.weight(1f)) { openExternal(context, item.pageUrl); onDismiss() }
             }
             HorizontalDivider()
@@ -179,6 +177,10 @@ fun ItemMenuSheet(
                 MenuRow("Block @$creator", Icons.Filled.PersonOff, "Never show their posts") { vm.blockCreator(item); onDismiss() }
             }
             MenuRow("Hide $source", Icons.Filled.VisibilityOff, "Never show posts from it") { vm.hideOrigin(item, source); onDismiss() }
+            if (item.pageUrl.isNotBlank()) MenuRow("Copy link", Icons.Filled.Link) {
+                dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
+                onDismiss()
+            }
             // Kept on the phone already: copy it out to Downloads (visible to the gallery and other apps).
             if (vm.canExport(item)) MenuRow("Export to Downloads", Icons.Filled.Download, "Outside this app: other apps can see it") {
                 vm.exportToDownloads(item)
