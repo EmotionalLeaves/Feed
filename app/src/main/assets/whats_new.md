@@ -1,3 +1,8 @@
+## 4.74.0 — 2026-11-16
+Hold a Library tile
+
+- In the Library, press and hold any tile to take it off that list (Saved, Liked, History or a collection), open it on its site, or copy its link.
+
 ## 4.73.0 — 2026-11-16
 Where you are, when paused
 
@@ -7,8 +12,3 @@ Where you are, when paused
 Tap to turn comic pages
 
 - Comics: tap the left or right edge of a page to turn it, as in a reader app. Swiping still works, and the middle still pauses (tap) and likes (double-tap).
-
-## 4.71.0 — 2026-11-16
-Smarter suggestions
-
-- Search suggestions now show what each one is (a past search, something you follow, or a topic) and bold the part you've typed.
