@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.67.0 — 2026-11-16
+
+Creator avatars on posts
+
+- On each post, the creator's name now has a round, coloured initial beside it. It's the same colour as in Library → Following, so a creator is easy to recognise, and tapping it opens their page.
+
 ## 4.66.0 — 2026-11-16
 
 Watched marks in search
