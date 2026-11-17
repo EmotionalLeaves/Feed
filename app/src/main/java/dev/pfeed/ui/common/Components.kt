@@ -256,11 +256,18 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
+        // A soft brand-tinted halo around the icon: the app's colour, without shouting.
         Box(
-            Modifier.size(72.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            Modifier.size(84.dp).clip(CircleShape)
+                .background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(dev.pfeed.ui.theme.Accent.copy(alpha = 0.22f), Color.Transparent))),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = TextMid, modifier = Modifier.size(32.dp))
+            Box(
+                Modifier.size(64.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = dev.pfeed.ui.theme.Accent.copy(alpha = 0.9f), modifier = Modifier.size(30.dp))
+            }
         }
         Spacer(Modifier.height(18.dp))
         Text(title, style = MaterialTheme.typography.titleLarge, textAlign = TextAlign.Center)

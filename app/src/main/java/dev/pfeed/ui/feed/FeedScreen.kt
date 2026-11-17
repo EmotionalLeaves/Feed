@@ -46,6 +46,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Autorenew
@@ -473,6 +475,21 @@ private fun FeedEmptyState(
                 style = MaterialTheme.typography.bodyMedium,
             )
         } else {
+            Box(
+                Modifier.size(84.dp).clip(CircleShape)
+                    .background(Brush.radialGradient(listOf(Accent.copy(alpha = 0.22f), Color.Transparent))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(Modifier.size(64.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.08f)), contentAlignment = Alignment.Center) {
+                    Icon(
+                        if (onBrowse != null) Icons.Filled.PersonAdd else Icons.Filled.CloudOff,
+                        contentDescription = null,
+                        tint = Accent,
+                        modifier = Modifier.size(30.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(18.dp))
             Text(
                 hint,
                 color = Color.White,
