@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.63.1 — 2026-11-16
+
+Smoother feed
+
+- The soft backdrop behind posts that don't fill the screen is now blurred once, on a tiny copy, instead of live on every frame. Scrolling and playback are smoother again, and it looks the same.
+- The 'loading more' pill and the source checks use the new brand spinner.
+
 ## 4.63.0 — 2026-11-16
 
 Steadier memory, polish

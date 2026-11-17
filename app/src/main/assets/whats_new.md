@@ -1,3 +1,9 @@
+## 4.63.1 — 2026-11-16
+Smoother feed
+
+- The soft backdrop behind posts that don't fill the screen is now blurred once, on a tiny copy, instead of live on every frame. Scrolling and playback are smoother again, and it looks the same.
+- The 'loading more' pill and the source checks use the new brand spinner.
+
 ## 4.63.0 — 2026-11-16
 Steadier memory, polish
 
@@ -13,9 +19,3 @@ Browse cards, brand spinner
 - Search's Popular topics are now colour cards, two to a row, each in its own colour, which is the same every time.
 - A new loading spinner in the app's pink-to-orange gradient everywhere something is on its way: a video starting, the feed filling, a search.
 - Save now gives the same little pop as Like when you tap it.
-
-## 4.61.0 — 2026-11-16
-New typeface
-
-- The app now uses Plus Jakarta Sans, a rounder, more characterful typeface. It's bundled with the app, so it looks the same on every phone, and it loads in the background so the app doesn't start any slower.
-- The underline under Following / For You / Latest slides to the feed you pick, and Library's tabs do the same.
