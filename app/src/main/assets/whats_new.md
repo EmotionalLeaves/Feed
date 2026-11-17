@@ -1,3 +1,8 @@
+## 4.66.0 — 2026-11-16
+Watched marks in search
+
+- Search results you've already watched are dimmed and marked with a small eye, so the new ones stand out.
+
 ## 4.65.0 — 2026-11-16
 Your tags, lit
 
@@ -7,9 +12,3 @@ Your tags, lit
 Collection covers
 
 - In Library → Saved, each collection chip shows the latest post you put in it as a little round cover. Collections with no posts yet keep the folder icon.
-
-## 4.63.1 — 2026-11-16
-Smoother feed
-
-- The soft backdrop behind posts that don't fill the screen is now blurred once, on a tiny copy, instead of live on every frame. Scrolling and playback are smoother again, and it looks the same.
-- The 'loading more' pill and the source checks use the new brand spinner.

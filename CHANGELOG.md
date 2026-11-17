@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.66.0 — 2026-11-16
+
+Watched marks in search
+
+- Search results you've already watched are dimmed and marked with a small eye, so the new ones stand out.
+
 ## 4.65.0 — 2026-11-16
 
 Your tags, lit
