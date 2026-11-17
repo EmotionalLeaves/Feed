@@ -77,7 +77,7 @@ object GeoBlock {
         if (response.code !in 200..403) return
         val peeked = runCatching { response.peekBody(PEEK).string() }.getOrNull() ?: return
         val short = peeked.length < PEEK
-        if (short && looksBlocked(peeked)) mark(site)
+        if (short && (looksBlocked(peeked) || (response.code == 403 && refusedForPlace(peeked)))) mark(site)
         else if (!short && response.isSuccessful && !viaProxy && blocked.containsKey(site)) clear(site)
     }
 
@@ -87,6 +87,13 @@ object GeoBlock {
         "your elected officials", "age verification laws", "access from your state", "blocked in your state", "blocked in your region",
         "unavailableforlegalreasons", "unavailable for legal reasons",
     )
+
+    /** A short 403 that gives the place as the reason (RedGIFs' API answers blocked states this way). */
+    internal fun refusedForPlace(body: String): Boolean {
+        val t = body.lowercase()
+        if (t.contains("just a moment") || t.contains("cf-chl")) return false // a bot check, not a place block
+        return listOf("your region", "your state", "your location", "your country", "geo", "legal reasons", "age verification").any { t.contains(it) }
+    }
 
     internal fun looksBlocked(body: String): Boolean {
         val t = body.lowercase()
