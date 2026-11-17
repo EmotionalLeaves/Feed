@@ -76,7 +76,7 @@ class FeedViewModel @Inject constructor(
     private val dwellBaseline: DwellBaseline,
     private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
     private val offline: dev.pfeed.data.repo.OfflineStore,
-    holder: TransientFeedHolder,
+    private val holder: TransientFeedHolder,
     val playerPool: PlayerPool,
 ) : ViewModel() {
 

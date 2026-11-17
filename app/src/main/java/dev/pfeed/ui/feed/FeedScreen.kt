@@ -50,6 +50,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwipeLeft
@@ -154,6 +155,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val snackbar = remember { SnackbarHostState() }
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
     var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
     // Keep the screen awake while the feed is on screen (long videos, long comics).
@@ -252,6 +254,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     )
                 },
             ) {
+            // Wall mode: the pager steps aside (its pages would hold the players the wall needs).
+            if (!wallMode) {
             VerticalPager(
                 state = pagerState,
                 beyondViewportPageCount = 1,
@@ -279,6 +283,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         }
                     },
                 )
+            }
             }
             }
             // "Loading more" only when you're actually waiting at the end, not as a constant badge.
@@ -326,11 +331,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
 
         // First run: show the gestures once, out of the way, until the first swipe.
-        if (items.isNotEmpty() && !landscape && vm.isMainFeed) {
+        if (items.isNotEmpty() && !landscape && !wallMode && vm.isMainFeed) {
             GestureTips(page = pagerState.settledPage, modifier = Modifier.align(Alignment.Center))
         }
 
-        if (!landscape) TopBar(
+        if (!landscape && !wallMode) TopBar(
             title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.isMainFeed,
             mode = mode,
@@ -339,6 +344,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
             onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
+            onWall = if (vm.isMainFeed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({ wallMode = true }) else null,
             // Only where there's room beside the three feed tabs.
             onSearch = if (vm.isMainFeed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({
                 nav.navigate(Routes.SEARCH) {
@@ -378,9 +384,22 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             }
         }
 
+        if (wallMode && !landscape && items.isNotEmpty()) {
+            BackHandler { wallMode = false }
+            Box(Modifier.fillMaxSize().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) {
+                Wall(
+                    items = items,
+                    vm = vm,
+                    active = active,
+                    onPick = { index -> wallMode = false; pagerScope.launch { pagerState.scrollToPage(index) } },
+                    onClose = { wallMode = false },
+                )
+            }
+        }
+
         // Following: the people you follow as a row of round avatars under the tabs, one tap from their page.
         val handsFreeNow by HandsFree.on.collectAsStateWithLifecycle()
-        if (mode == FeedMode.FOLLOWING && vm.isMainFeed && !landscape && !handsFreeNow && follows.creators.isNotEmpty()) {
+        if (mode == FeedMode.FOLLOWING && vm.isMainFeed && !landscape && !wallMode && !handsFreeNow && follows.creators.isNotEmpty()) {
             androidx.compose.foundation.lazy.LazyRow(
                 Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 54.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
@@ -401,7 +420,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // Hands-free is on: say so, with a quick way to stop it.
         val handsFreeOn by HandsFree.on.collectAsStateWithLifecycle()
-        if (handsFreeOn && !landscape && !gridView && items.isNotEmpty()) {
+        if (handsFreeOn && !landscape && !gridView && !wallMode && items.isNotEmpty()) {
             Row(
                 Modifier.align(Alignment.TopStart).statusBarsPadding()
                     .padding(start = 12.dp, top = if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp)
@@ -586,11 +605,17 @@ private fun TopBar(
     onGrid: (() -> Unit)? = null,
     /** Main feed: a search button at the top right, as in other short-video apps. */
     onSearch: (() -> Unit)? = null,
+    /** Main feed: open the Wall (four clips at once). */
+    onWall: (() -> Unit)? = null,
 ) {
     Box(Modifier.fillMaxWidth().statusBarsPadding().height(52.dp)) {
         if (onBack != null) {
             IconButton(onClick = onBack, modifier = Modifier.align(Alignment.CenterStart)) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back", tint = Color.White)
+            }
+        } else if (onWall != null) {
+            IconButton(onClick = onWall, modifier = Modifier.align(Alignment.CenterStart).padding(start = 4.dp)) {
+                Icon(Icons.Filled.ViewModule, "Wall: four clips at once", tint = Color.White)
             }
         }
         if (showModes) {
