@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.65.0 — 2026-11-16
+
+Your tags, lit
+
+- Each post's tags that For You knows you like are now lit pink and listed first, so you can see at a glance why a post showed up.
+
 ## 4.64.0 — 2026-11-16
 
 Collection covers
