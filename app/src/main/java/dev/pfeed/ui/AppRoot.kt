@@ -1,5 +1,6 @@
 package dev.pfeed.ui
 
+import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.Search
@@ -79,9 +80,16 @@ private val tabs = listOf(
 @Composable
 fun AppRoot(lockManager: AppLockManager, onPanic: () -> Unit) {
     val locked by lockManager.locked.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var adult by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(AgeGate.confirmed(context)) }
     Box(Modifier.fillMaxSize().panicGesture(onPanic)) {
         // The app stays composed under the lock screen (so view-model state survives), but media pauses.
-        MainNav(locked = locked)
+        // Behind the age gate it's the same: the feed loads, nothing plays.
+        MainNav(locked = locked || !adult)
+        if (!adult) {
+            AgeGateScreen(onConfirm = { AgeGate.confirm(context); adult = true })
+            return@Box
+        }
         // The lock screen sits outside the Scaffold, so give it the app's text colour itself
         // (without this its title drew in the default black, invisible on the dark background).
         if (locked) androidx.compose.runtime.CompositionLocalProvider(

@@ -39,6 +39,7 @@ class SmokeTest {
         fun noInstantStart() {
             dev.pfeed.data.repo.PoolCache.enabled = false
             dev.pfeed.ui.feed.FirstRun.askInterests = false
+            dev.pfeed.ui.AgeGate.required = false
         }
     }
 
@@ -331,6 +332,18 @@ class SmokeTest {
         // The app blocks screenshots (FLAG_SECURE); lift that for this test only, with the posts masked.
         rule.runOnUiThread { rule.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
         try {
+            // The 18+ gate a fresh install opens on.
+            runCatching {
+                dev.pfeed.ui.AgeGate.required = true
+                rule.activityRule.scenario.recreate()
+                rule.runOnUiThread { rule.activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) }
+                waitFor(what = "age gate") { exists("Adults only") }
+                Thread.sleep(800)
+                shot("00_age_gate")
+                tap("I'm 18 or older")
+                waitFor(what = "past the age gate") { !exists("Adults only") }
+            }.onFailure { android.util.Log.i("PFHEALTH", "age gate: ${it.message?.take(120)}") }
+            dev.pfeed.ui.AgeGate.required = false
             val shown = rule.activity.mediaHealth.shownCount
             val before = shown.get()
             runCatching { poll(90_000, "a post on screen") { shown.get() > before } }

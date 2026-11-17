@@ -46,6 +46,7 @@ class MainActivity : FragmentActivity() {
             navigationBarStyle = SystemBarStyle.dark(android.graphics.Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+        if (intent?.getBooleanExtra(dev.pfeed.ui.AgeGate.EXTRA_CONFIRMED, false) == true) dev.pfeed.ui.AgeGate.confirm(this)
         setContent {
             PFeedTheme {
                 val blurFlow = androidx.compose.runtime.remember { settingsRepository.flow.map { it.blurPreviews } }
