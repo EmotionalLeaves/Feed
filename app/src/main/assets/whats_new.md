@@ -1,3 +1,10 @@
+## 4.62.0 — 2026-11-16
+Browse cards, brand spinner
+
+- Search's Popular topics are now colour cards, two to a row, each in its own colour, which is the same every time.
+- A new loading spinner in the app's pink-to-orange gradient everywhere something is on its way: a video starting, the feed filling, a search.
+- Save now gives the same little pop as Like when you tap it.
+
 ## 4.61.0 — 2026-11-16
 New typeface
 
@@ -11,10 +18,3 @@ Search button, roomier Search, follow avatars
 - Search's big title steps aside once you start searching, so results get more room.
 - Library → Following shows each creator or tag with a round, coloured initial (or #) and a cleaner Unfollow button.
 - The gesture tips now include swipe left for everything by a post's creator.
-
-## 4.59.0 — 2026-11-16
-Quicker post menu
-
-- The hold menu now opens with a row of round buttons: Collection, Hands-free, Copy link and Open on site. The 'less of this' options (Not interested, hide a tag, block, hide a site, report) follow as a list.
-- Long captions fold to two lines; tap them to read the rest.
-- Empty screens (an empty Following feed, an empty library list, no connection) show their icon in a soft brand-coloured halo.

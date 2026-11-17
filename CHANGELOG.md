@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.62.0 — 2026-11-16
+
+Browse cards, brand spinner
+
+- Search's Popular topics are now colour cards, two to a row, each in its own colour, which is the same every time.
+- A new loading spinner in the app's pink-to-orange gradient everywhere something is on its way: a video starting, the feed filling, a search.
+- Save now gives the same little pop as Like when you tap it.
+
 ## 4.61.0 — 2026-11-16
 
 New typeface
