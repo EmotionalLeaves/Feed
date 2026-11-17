@@ -19,6 +19,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -549,10 +551,35 @@ private fun TopBar(
             }
         }
         if (showModes) {
-            Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
-                    ModeTab(label, selected = m == mode) { onMode(m) }
+            // One white bar under the feed you're on, sliding (and resizing) to the next one you pick.
+            val centers = remember { androidx.compose.runtime.mutableStateMapOf<FeedMode, Float>() }
+            val target = centers[mode]
+            val bar = remember { androidx.compose.animation.core.Animatable(Float.NaN) }
+            LaunchedEffect(target) {
+                val t = target ?: return@LaunchedEffect
+                // First placement: straight there; after that, slide.
+                if (bar.value.isNaN()) bar.snapTo(t) else bar.animateTo(t, androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 500f))
+            }
+            val barX = bar.value
+            Box(Modifier.align(Alignment.Center)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                    listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
+                        ModeTab(
+                            label,
+                            selected = m == mode,
+                            modifier = Modifier.onGloballyPositioned { c -> centers[m] = c.positionInParent().x + c.size.width / 2f },
+                        ) { onMode(m) }
+                    }
                 }
+                if (!barX.isNaN()) Box(
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .padding(bottom = 7.dp)
+                        .graphicsLayer { translationX = bar.value - 11.dp.toPx() }
+                        .width(22.dp)
+                        .height(3.dp)
+                        .background(Color.White, RoundedCornerShape(2.dp)),
+                )
             }
         } else if (title != null) {
             Text(
@@ -578,20 +605,18 @@ private fun TopBar(
 }
 
 @Composable
-private fun ModeTab(label: String, selected: Boolean, onClick: () -> Unit) {
-    val indicator by animateDpAsState(if (selected) 22.dp else 0.dp, label = "modeIndicator")
+private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val tint by androidx.compose.animation.animateColorAsState(if (selected) Color.White else Color.White.copy(alpha = 0.6f), label = "modeTint")
     Column(
-        Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 6.dp, vertical = 10.dp),
+        modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 17.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
             label,
-            color = if (selected) Color.White else Color.White.copy(alpha = 0.6f),
+            color = tint,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
             style = MaterialTheme.typography.titleSmall.shadowed(),
         )
-        Spacer(Modifier.height(4.dp))
-        Box(Modifier.width(indicator).height(3.dp).background(Color.White, RoundedCornerShape(2.dp)))
     }
 }
 
