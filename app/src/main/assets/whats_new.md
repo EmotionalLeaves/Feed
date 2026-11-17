@@ -1,3 +1,10 @@
+## 4.55.0 — 2026-11-16
+Calmer tab bar, tidier Settings
+
+- Tab bar: over the feed it fades back after a few seconds of just watching and returns the moment you touch the screen. Tabs give a light haptic tick, and tapping Feed again jumps back to the top, or loads fresh posts if you're already there.
+- Settings has chips under the title that jump to each section, and a card at the top with your Saved, Liked and Following counts that opens the Library.
+- Settings is regrouped into Privacy & security and Network (Encrypted DNS, Blocked where you are), with shorter descriptions. Erase everything now sits on its own at the bottom.
+
 ## 4.54.0 — 2026-11-16
 AI filter, blocked-site fix, slimmer tab bar
 
@@ -10,8 +17,3 @@ PornHat
 
 - New source: PornHat, a 16th tube site. It has new uploads, top rated and search, with each video's model or studio as its creator, its length and when it went up. Videos play in up to 720p, and it can be turned off in Sources → Tube sites.
 - Checked a dozen other tube sites; the ones that block apps, are region-locked, or draw their pages by script are listed in SOURCES.md.
-
-## 4.52.0 — 2026-11-16
-Grid view for tags and creators
-
-- New: tag and creator pages have a grid button at the top. You see everything loaded as tiles, and more loads as you scroll; tap one to watch from there. Back returns to the feed where you were.

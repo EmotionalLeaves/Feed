@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.55.0 — 2026-11-16
+
+Calmer tab bar, tidier Settings
+
+- Tab bar: over the feed it fades back after a few seconds of just watching and returns the moment you touch the screen. Tabs give a light haptic tick, and tapping Feed again jumps back to the top, or loads fresh posts if you're already there.
+- Settings has chips under the title that jump to each section, and a card at the top with your Saved, Liked and Following counts that opens the Library.
+- Settings is regrouped into Privacy & security and Network (Encrypted DNS, Blocked where you are), with shorter descriptions. Erase everything now sits on its own at the bottom.
+
 ## 4.54.0 — 2026-11-16
 
 AI filter, blocked-site fix, slimmer tab bar
