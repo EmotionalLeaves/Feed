@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.49.0 — 2026-11-16
+
+Swipe left for the creator
+
+- New: swipe left on a post to open its creator's page, with everything by them from every source. Comics still turn pages that way, and a zoomed-in picture still pans.
+
 ## 4.48.0 — 2026-11-16
 
 Collections
