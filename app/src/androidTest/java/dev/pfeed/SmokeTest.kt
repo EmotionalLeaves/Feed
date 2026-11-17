@@ -10,6 +10,8 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performTouchInput
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.toList
@@ -392,6 +394,18 @@ class SmokeTest {
                 runCatching { poll(60_000, "a result on screen") { shown.get() > b } }
                 Thread.sleep(1_000)
                 shot("03b_viewer")
+                // Swipe left on the post: the creator's profile (header, counts, grid).
+                runCatching {
+                    rule.onRoot().performTouchInput {
+                        swipe(androidx.compose.ui.geometry.Offset(width * 0.75f, height * 0.4f), androidx.compose.ui.geometry.Offset(width * 0.08f, height * 0.4f), 250)
+                    }
+                    waitFor(timeoutMs = 20_000, what = "creator profile") { exists("posts") && (exists("Follow") || exists("Following")) }
+                    Thread.sleep(2_500)
+                    shot("03c_creator")
+                    android.util.Log.i("PFHEALTH", "creator profile: shown")
+                    androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+                    Thread.sleep(1_000)
+                }.onFailure { android.util.Log.i("PFHEALTH", "creator profile: not shown (${it.message?.take(80)})") }
                 androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
                 Thread.sleep(1_000)
             }

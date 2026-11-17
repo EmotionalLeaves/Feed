@@ -51,6 +51,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ViewDay
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.SwipeRight
 import androidx.compose.material.icons.filled.Person
@@ -160,7 +163,9 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val pagerScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
-    var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    // A creator's page opens as their profile: a header and a grid of everything by them.
+    val creatorPage = vm.tag?.startsWith("@") == true
+    var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(creatorPage) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
@@ -370,30 +375,47 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // The page as a grid: everything loaded so far (and more as you scroll); tap one to watch from there.
         if (gridView && !landscape) {
-            BackHandler { gridView = false }
+            // On a creator's profile the grid is the page itself, so back leaves it.
+            BackHandler(enabled = !creatorPage) { gridView = false }
             Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = { gridView = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the feed") }
+                    if (creatorPage) IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    else IconButton(onClick = { gridView = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the feed") }
                     Text(
-                        vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') }.orEmpty(),
+                        if (creatorPage) "" else vm.tag?.let { "#" + it.replace('_', ' ') }.orEmpty(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    Text(
+                    if (creatorPage) {
+                        if (items.isNotEmpty()) IconButton(onClick = { gridView = false }) { Icon(Icons.Filled.ViewDay, "Watch as a feed") }
+                    } else Text(
                         "${items.size} posts",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
                         modifier = Modifier.padding(end = 16.dp),
                     )
                 }
+                val tag = vm.tag.orEmpty()
+                val profile: (@Composable () -> Unit)? = if (creatorPage) ({
+                    CreatorHeader(
+                        name = tag.removePrefix("@"),
+                        items = items,
+                        loading = loading,
+                        following = vm.isFollowingPage(tag, follows),
+                        onFollow = { vm.toggleFollowTag(tag) },
+                        onPlay = { gridView = false; pagerScope.launch { pagerState.scrollToPage(0) } },
+                        onShuffle = { gridView = false; pagerScope.launch { pagerState.scrollToPage(items.indices.random()) } },
+                    )
+                }) else null
                 dev.pfeed.ui.common.MediaGrid(
                     items = items,
                     onOpen = { index -> gridView = false; pagerScope.launch { pagerState.scrollToPage(index) } },
                     onNearEnd = vm::loadMore,
                     livePreview = dev.pfeed.ui.common.rememberLivePreview(vm.livePreviews, playing = active),
+                    header = profile,
                 )
             }
         }
@@ -1275,6 +1297,80 @@ private fun RailButton(
 }
 
 /** Save with the same little pop as Like when it turns on. */
+/** The top of a creator's profile: who, how much, from where, and the two things to do. */
+@Composable
+private fun CreatorHeader(
+    name: String,
+    items: List<MediaItem>,
+    loading: Boolean,
+    following: Boolean,
+    onFollow: () -> Unit,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+) {
+    val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
+    val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
+    Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // A gradient ring around their initial, like a story ring.
+        Box(
+            Modifier.size(96.dp).clip(androidx.compose.foundation.shape.CircleShape).background(dev.pfeed.ui.theme.BrandGradient).padding(3.dp)
+                .clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.background).padding(3.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            dev.pfeed.ui.common.InitialAvatar(name, 84.dp)
+        }
+        Spacer(Modifier.height(12.dp))
+        Text("@$name", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.ExtraBold, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(10.dp))
+        // Counts, as on any profile.
+        Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
+            listOf(
+                (if (loading && items.isEmpty()) "…" else "${items.size}${if (loading) "+" else ""}") to "posts",
+                "$videos" to "videos",
+                "${sites.size}" to if (sites.size == 1) "site" else "sites",
+            ).forEach { (n, what) ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(n, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text(what, style = MaterialTheme.typography.labelMedium, color = Color.White.copy(alpha = 0.55f))
+                }
+            }
+        }
+        if (sites.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "On " + sites.take(3).joinToString(", ") + if (sites.size > 3) " and ${sites.size - 3} more" else "",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.5f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (following) {
+                androidx.compose.material3.OutlinedButton(onClick = onFollow, shape = RoundedCornerShape(50)) {
+                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Following")
+                }
+            } else dev.pfeed.ui.common.BrandButton("Follow", onClick = onFollow, icon = Icons.Filled.Add, compact = true)
+            if (items.isNotEmpty()) {
+                androidx.compose.material3.FilledTonalButton(onClick = onPlay, shape = RoundedCornerShape(50)) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Play all")
+                }
+                IconButton(onClick = onShuffle) { Icon(Icons.Filled.Shuffle, "Shuffle", tint = Color.White.copy(alpha = 0.8f)) }
+            }
+        }
+        if (items.isEmpty()) {
+            Spacer(Modifier.height(48.dp))
+            if (loading) dev.pfeed.ui.common.BrandSpinner()
+            else Text("Nothing by them right now", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
+        }
+    }
+}
+
 @Composable
 private fun SaveButton(saved: Boolean, onSave: () -> Unit) {
     val pop = remember { Animatable(1f) }

@@ -98,6 +98,8 @@ fun MediaGrid(
      * seconds the spotlight moves on to the next one in view. Null keeps every tile still.
      */
     livePreview: (@Composable (MediaItem) -> Unit)? = LocalLivePreview.current,
+    /** Full-width content above the tiles that scrolls with them (a profile, say). */
+    header: (@Composable () -> Unit)? = null,
 ) {
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
     var spot by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Any?>(null) }
@@ -135,6 +137,7 @@ fun MediaGrid(
         horizontalArrangement = Arrangement.spacedBy(2.dp),
         verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
+        if (header != null) item(key = "header", span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
         var lastSection: String? = null
         items.forEachIndexed { index, post ->
             // Optional date (or other) sections: a full-width heading where the section changes.
