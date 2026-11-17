@@ -372,6 +372,7 @@ private const val IDLE_HIDE_MS = 8_000L
  * another creator…) can stack without end, each holding its own feed in memory; past a few deep,
  * the new page takes the current one's place, so Back still steps through the last few.
  */
+@android.annotation.SuppressLint("RestrictedApi") // reading the back stack's depth; nothing is changed through it
 fun NavController.openTag(tag: String) {
     val depth = currentBackStack.value.count { it.destination.route == Routes.TAG || it.destination.route == Routes.VIEWER }
     val top = currentBackStackEntry?.destination
