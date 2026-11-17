@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.53.0 — 2026-11-16
+
+PornHat
+
+- New source: PornHat, a 16th tube site. It has new uploads, top rated and search, with each video's model or studio as its creator, its length and when it went up. Videos play in up to 720p, and it can be turned off in Sources → Tube sites.
+- Checked a dozen other tube sites; the ones that block apps, are region-locked, or draw their pages by script are listed in SOURCES.md.
+
 ## 4.52.0 — 2026-11-16
 
 Grid view for tags and creators
