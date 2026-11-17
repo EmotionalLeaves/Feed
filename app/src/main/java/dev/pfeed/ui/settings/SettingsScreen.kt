@@ -6,6 +6,10 @@ import androidx.compose.ui.graphics.Color
 import dev.pfeed.ui.theme.Accent
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.clickable
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -132,6 +136,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             ScreenHeader("Settings")
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
 
+            // At a glance: what you've kept, and a way straight to it.
+            val counts by vm.libraryCounts.collectAsStateWithLifecycle()
+            LibraryCard(counts) { nav.navigate(Routes.LIBRARY) { launchSingleTop = true } }
+
             Section {
                 SettingRow(
                     "Sources",
@@ -204,7 +212,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SwitchSetting(
                     "Hide AI-generated art",
                     s.hideAiArt,
-                    subtitle = "Stable Diffusion, NovelAI, Midjourney and the like, by their tags, titles and AI-only boards. Everywhere, search included.",
+                    subtitle = "Stable Diffusion, NovelAI, Midjourney… by tags, titles and AI-only boards. Search too.",
                     icon = Icons.Filled.AutoAwesome,
                     onChange = vm::setHideAiArt,
                 )
@@ -249,16 +257,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SwitchSetting(
                     "Keep saved posts offline",
                     s.keepSavedOffline,
-                    subtitle = if (s.keepSavedOffline) "Saved posts download (videos on Wi-Fi) and play without a connection" +
+                    subtitle = if (s.keepSavedOffline) "Play without a connection; videos download on Wi-Fi" +
                         (if (offlineBytes > 0) " · ${formatBytes(offlineBytes)}" else "")
-                    else "Off: saved posts stream like everything else",
+                    else "Saved posts stream like everything else",
                     icon = Icons.Filled.DownloadForOffline,
                     onChange = vm::setKeepSavedOffline,
                 )
             }
 
             Section(
-                "Privacy",
+                "Privacy & security",
                 footer = "Touch the screen with three fingers at any time to leave the app instantly" +
                     if (lockOn) " and lock it." else ".",
             ) {
@@ -293,8 +301,8 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SwitchSetting(
                     "Private mode",
                     s.privateMode,
-                    subtitle = if (s.privateMode) "On: nothing goes into history or search history, and For You isn't learning"
-                    else "Browse without adding to history or teaching For You",
+                    subtitle = if (s.privateMode) "History, search history and For You are paused"
+                    else "Watch without history or teaching For You",
                     icon = Icons.Filled.VisibilityOff,
                     iconTint = Good,
                     onChange = vm::setPrivateMode,
@@ -303,34 +311,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SwitchSetting(
                     "Blur previews",
                     s.blurPreviews,
-                    subtitle = "Library and search thumbnails stay blurred until you open one",
+                    subtitle = "Library and search tiles, until you open one",
                     icon = Icons.Filled.BlurOn,
                     iconTint = Good,
                     onChange = vm::setBlurPreviews,
-                )
-                RowDivider()
-                SwitchSetting(
-                    "Encrypted DNS",
-                    s.encryptedDns,
-                    subtitle = if (s.encryptedDns) "Every site is looked up privately over 1.1.1.1"
-                    else "Used automatically when your network blocks a site. On: always, so the network can't see which sites you open",
-                    icon = Icons.Filled.Shield,
-                    iconTint = Good,
-                    onChange = vm::setEncryptedDns,
-                )
-                RowDivider()
-                val geoBlocked by dev.pfeed.source.net.GeoBlock.sites.collectAsStateWithLifecycle()
-                SettingRow(
-                    "Blocked where you are",
-                    subtitle = when {
-                        s.proxyType != "off" -> "Proxy on (${if (s.proxyType == "orbot") "Orbot" else s.proxyType.uppercase()})" + if (geoBlocked.isNotEmpty()) " · ${geoBlocked.size} site${if (geoBlocked.size == 1) "" else "s"} routed through it" else ""
-                        geoBlocked.isNotEmpty() -> "${geoBlocked.size} site${if (geoBlocked.size == 1) "" else "s"} blocked in your state or country. Get them back with a proxy"
-                        else -> "Sites that block your state or country, and a proxy to get around it"
-                    },
-                    icon = Icons.Filled.VpnLock,
-                    iconTint = if (geoBlocked.isNotEmpty() && s.proxyType == "off") dev.pfeed.ui.theme.Bad else Good,
-                    chevron = true,
-                    onClick = { nav.navigate(dev.pfeed.ui.Routes.NETWORK) },
                 )
                 RowDivider()
                 SettingRow(
@@ -340,14 +324,32 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     iconTint = Good,
                     onClick = { dialog = PendingDialog.PickHistory },
                 )
+            }
+
+            // How the app reaches the sites: private lookups, and a way around state and country blocks.
+            Section("Network") {
+                SwitchSetting(
+                    "Encrypted DNS",
+                    s.encryptedDns,
+                    subtitle = if (s.encryptedDns) "Every lookup goes privately over 1.1.1.1"
+                    else "Used when your network blocks a site. On: always, so it can't see where you go",
+                    icon = Icons.Filled.Shield,
+                    iconTint = Good,
+                    onChange = vm::setEncryptedDns,
+                )
                 RowDivider()
+                val geoBlocked by dev.pfeed.source.net.GeoBlock.sites.collectAsStateWithLifecycle()
                 SettingRow(
-                    "Erase everything",
-                    subtitle = "Saves, likes, history, what For You learned, sources and settings",
-                    icon = Icons.Filled.DeleteForever,
-                    iconTint = dev.pfeed.ui.theme.Bad,
-                    titleColor = dev.pfeed.ui.theme.Bad,
-                    onClick = { dialog = PendingDialog.EraseAll },
+                    "Blocked where you are",
+                    subtitle = when {
+                        s.proxyType != "off" -> "Through ${if (s.proxyType == "orbot") "Orbot" else s.proxyType.uppercase()}" + if (geoBlocked.isNotEmpty()) " · ${geoBlocked.size} site${if (geoBlocked.size == 1) "" else "s"}" else ""
+                        geoBlocked.isNotEmpty() -> "${geoBlocked.size} site${if (geoBlocked.size == 1) "" else "s"} blocked here. Tap to get ${if (geoBlocked.size == 1) "it" else "them"} back"
+                        else -> "Sites that block your state or country"
+                    },
+                    icon = Icons.Filled.VpnLock,
+                    iconTint = if (geoBlocked.isNotEmpty() && s.proxyType == "off") dev.pfeed.ui.theme.Bad else Good,
+                    chevron = true,
+                    onClick = { nav.navigate(dev.pfeed.ui.Routes.NETWORK) },
                 )
             }
 
@@ -372,6 +374,17 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         trailing = { TextButton(onClick = { dev.pfeed.CrashLog.clear(context); crash = null }) { Text("Clear") } },
                     )
                 }
+            }
+
+            Section {
+                SettingRow(
+                    "Erase everything",
+                    subtitle = "Saves, likes, history, what For You learned, sources and settings",
+                    icon = Icons.Filled.DeleteForever,
+                    iconTint = dev.pfeed.ui.theme.Bad,
+                    titleColor = dev.pfeed.ui.theme.Bad,
+                    onClick = { dialog = PendingDialog.EraseAll },
+                )
             }
 
             Text(
@@ -631,4 +644,30 @@ private fun PasswordDialog(title: String, confirmTwice: Boolean, onDismiss: () -
         confirmButton = { TextButton(onClick = { onConfirm(pw) }, enabled = valid) { Text("OK") } },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
     )
+}
+
+/** Saved · Liked · Following, as three numbers on one card. */
+@Composable
+private fun LibraryCard(counts: Triple<Int, Int, Int>, onOpen: () -> Unit) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onOpen)
+            .padding(vertical = 16.dp),
+    ) {
+        listOf(counts.first to "Saved", counts.second to "Liked", counts.third to "Following").forEachIndexed { i, (n, label) ->
+            if (i > 0) Box(Modifier.width(0.5.dp).height(36.dp).align(Alignment.CenterVertically).background(MaterialTheme.colorScheme.outlineVariant))
+            Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    "%,d".format(n),
+                    style = MaterialTheme.typography.titleLarge.copy(brush = dev.pfeed.ui.theme.BrandGradient),
+                    fontWeight = FontWeight.ExtraBold,
+                )
+                Text(label, style = MaterialTheme.typography.labelMedium, color = TextLow)
+            }
+        }
+    }
 }

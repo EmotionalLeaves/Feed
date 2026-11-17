@@ -68,7 +68,16 @@ class SettingsViewModel @Inject constructor(
     private val mediaHealth: dev.pfeed.data.repo.MediaHealth,
     private val tube: dev.pfeed.source.tube.TubeAdapter,
     offline: dev.pfeed.data.repo.OfflineStore,
+    library: dev.pfeed.data.repo.LibraryRepository,
 ) : ViewModel() {
+
+    /** Saved, liked and followed counts, for the card at the top of Settings. */
+    val libraryCounts: StateFlow<Triple<Int, Int, Int>> = kotlinx.coroutines.flow.combine(
+        library.count(dev.pfeed.data.repo.LibraryKind.SAVED),
+        library.count(dev.pfeed.data.repo.LibraryKind.LIKED),
+        library.followRows,
+    ) { saved, liked, follows -> Triple(saved, liked, follows.size) }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), Triple(0, 0, 0))
 
     /** Per-site result of checking the tube sites, by site label; null while checking. */
     private val _tubeReport = MutableStateFlow<Map<String, String?>>(emptyMap())

@@ -29,6 +29,8 @@ class LibraryRepository @Inject constructor(
     private val itemDao = db.itemDao()
     private val followDao = db.followDao()
 
+    fun count(kind: LibraryKind): Flow<Int> = libraryDao.count(kind.name)
+
     fun keys(kind: LibraryKind): Flow<Set<String>> = libraryDao.keys(kind.name).map { it.toSet() }
 
     fun items(kind: LibraryKind): Flow<List<MediaItem>> = libraryDao.itemsJson(kind.name, MAX_ITEMS).map { rows ->
