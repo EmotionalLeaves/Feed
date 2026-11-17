@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.60.0 — 2026-11-16
+
+Search button, roomier Search, follow avatars
+
+- The feed has a search button at the top right, on phones wide enough to fit it beside the feed tabs.
+- Search's big title steps aside once you start searching, so results get more room.
+- Library → Following shows each creator or tag with a round, coloured initial (or #) and a cleaner Unfollow button.
+- The gesture tips now include swipe left for everything by a post's creator.
+
 ## 4.59.0 — 2026-11-16
 
 Quicker post menu
