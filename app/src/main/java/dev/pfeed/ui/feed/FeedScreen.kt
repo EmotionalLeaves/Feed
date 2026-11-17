@@ -20,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.animation.animateContentSize
@@ -374,6 +375,27 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     onOpen = { index -> gridView = false; pagerScope.launch { pagerState.scrollToPage(index) } },
                     onNearEnd = vm::loadMore,
                 )
+            }
+        }
+
+        // Following: the people you follow as a row of round avatars under the tabs, one tap from their page.
+        val handsFreeNow by HandsFree.on.collectAsStateWithLifecycle()
+        if (mode == FeedMode.FOLLOWING && vm.tag == null && !vm.isViewer && !landscape && !handsFreeNow && follows.creators.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(
+                Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 54.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(follows.creators.sorted(), key = { it }) { name ->
+                    Column(
+                        Modifier.width(52.dp).clip(RoundedCornerShape(10.dp)).clickable { nav.openTag("@$name") },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp, modifier = Modifier.border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape))
+                        Spacer(Modifier.height(3.dp))
+                        Text(name, color = Color.White, style = MaterialTheme.typography.labelSmall.shadowed(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
         }
 
