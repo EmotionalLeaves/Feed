@@ -86,10 +86,16 @@ class LibraryRepository @Inject constructor(
 
     // ── collections: named folders of saved posts ──
 
-    data class Collection(val name: String, val count: Int)
+    /** [cover]: the thumbnail of the post most recently put in it. */
+    data class Collection(val name: String, val count: Int, val cover: String? = null)
 
     val collections: Flow<List<Collection>> = libraryDao.collections().map { rows ->
-        rows.map { Collection(it.kind.removePrefix(COLLECTION), it.count) }
+        rows.map { row ->
+            val cover = libraryDao.latestJson(row.kind)?.let { j ->
+                runCatching { json.decodeFromString(MediaItem.serializer(), j) }.getOrNull()?.thumbnailUrl
+            }
+            Collection(row.kind.removePrefix(COLLECTION), row.count, cover)
+        }
     }
 
     fun collectionItems(name: String): Flow<List<MediaItem>> = libraryDao.itemsJson(COLLECTION + name, MAX_ITEMS).map { rows ->

@@ -56,6 +56,11 @@ interface LibraryDao {
     )
     fun collections(): Flow<List<KindCount>>
 
+    @Query(
+        "SELECT i.json FROM library l INNER JOIN items i ON i.itemKey = l.itemKey WHERE l.kind = :kind ORDER BY l.at DESC LIMIT 1",
+    )
+    suspend fun latestJson(kind: String): String?
+
     @Query("SELECT kind FROM library WHERE itemKey = :itemKey AND kind LIKE 'C:%'")
     suspend fun collectionsOf(itemKey: String): List<String>
 

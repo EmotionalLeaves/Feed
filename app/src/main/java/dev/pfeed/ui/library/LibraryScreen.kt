@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.layout
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -300,7 +301,22 @@ private fun CollectionChips(
                 selected = selected == c.name,
                 onClick = { onSelect(c.name) },
                 label = { Text("${c.name} · ${c.count}", maxLines = 1) },
-                leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                // The latest post in it, as a little round cover (a folder until it has one).
+                leadingIcon = {
+                    if (c.cover != null) {
+                        Box(Modifier.size(20.dp).clip(androidx.compose.foundation.shape.CircleShape).background(MaterialTheme.colorScheme.surfaceVariant)) {
+                            coil.compose.AsyncImage(
+                                model = c.cover,
+                                contentDescription = null,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize().then(if (dev.pfeed.ui.common.LocalBlurPreviews.current) Modifier.blur(6.dp) else Modifier),
+                            )
+                            dev.pfeed.ui.common.MediaMask()
+                        }
+                    } else {
+                        androidx.compose.material3.Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
+                    }
+                },
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
             )
         }
