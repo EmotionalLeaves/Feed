@@ -49,6 +49,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SwipeLeft
 import androidx.compose.material.icons.filled.CloudOff
@@ -625,17 +626,37 @@ private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modif
 @Composable
 private fun FollowPill(following: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val shape = RoundedCornerShape(50)
-    Text(
-        if (following) "Following" else "Follow",
-        color = Color.White.copy(alpha = if (following) 0.85f else 1f),
-        style = MaterialTheme.typography.labelMedium,
-        fontWeight = FontWeight.SemiBold,
-        modifier = modifier
+    // Following: a quick pop and a tick, then it settles into the quiet outlined style.
+    val pop = remember { Animatable(1f) }
+    var previous by remember { mutableStateOf(following) }
+    LaunchedEffect(following) {
+        if (following && !previous) {
+            pop.animateTo(1.12f, tween(100))
+            pop.animateTo(1f, spring(dampingRatio = 0.45f))
+        }
+        previous = following
+    }
+    Row(
+        modifier
+            .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
             .clip(shape)
             .then(if (following) Modifier.border(1.dp, Color.White.copy(alpha = 0.5f), shape) else Modifier.background(dev.pfeed.ui.theme.BrandGradient))
             .clickable(onClick = onClick)
+            .animateContentSize()
             .padding(horizontal = 14.dp, vertical = 6.dp),
-    )
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (following) {
+            Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+        }
+        Text(
+            if (following) "Following" else "Follow",
+            color = Color.White.copy(alpha = if (following) 0.85f else 1f),
+            style = MaterialTheme.typography.labelMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+    }
 }
 
 @Composable
