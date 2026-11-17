@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -151,7 +152,10 @@ private fun MainNav(locked: Boolean) {
     // Feed screens are full-bleed: media runs behind the status bar, the bottom bar turns black.
     val immersive = route == Routes.FEED || route == Routes.TAG || route == Routes.VIEWER
 
-    val barVisible = currentTab != null && !BottomBar.hidden
+    // Typing (search, a collection name): the keyboard has the bottom of the screen, not the bar.
+    @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+    val typing = androidx.compose.foundation.layout.WindowInsets.isImeVisible
+    val barVisible = currentTab != null && !BottomBar.hidden && !typing
     // Reading down a list tucks the bar away; any scroll back up (or a new screen) brings it back.
     val density = androidx.compose.ui.platform.LocalDensity.current
     val barScroll = androidx.compose.runtime.remember(density) {
