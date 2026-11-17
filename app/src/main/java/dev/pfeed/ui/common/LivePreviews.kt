@@ -15,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 import androidx.compose.runtime.getValue
+import androidx.compose.foundation.layout.fillMaxSize
 
 /**
  * What the grids need to play their live previews: a player from the shared pool and the post's
@@ -64,11 +65,10 @@ fun rememberLivePreview(lp: LivePreviews, playing: Boolean = true): (@androidx.c
     val on by androidx.compose.runtime.produceState(false, lp) { value = lp.allowed() }
     if (!on) return null
     return { item ->
-        dev.pfeed.ui.feed.MutedLoop(item, lp.pool, lp::resolve, playing, PREVIEW_MAX_HEIGHT, androidx.compose.ui.Modifier.fillMaxSizeCompat())
+        dev.pfeed.ui.feed.MutedLoop(item, lp.pool, lp::resolve, playing, PREVIEW_MAX_HEIGHT, androidx.compose.ui.Modifier.fillMaxSize())
     }
 }
 
-private fun androidx.compose.ui.Modifier.fillMaxSizeCompat() = androidx.compose.foundation.layout.fillMaxSize().let { this.then(it) }
 private const val PREVIEW_MAX_HEIGHT = 360
 
 /** Set by a screen whose grids should come alive; [MediaGrid] picks it up. */
