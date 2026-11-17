@@ -41,6 +41,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.layout.layout
@@ -122,6 +124,16 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun open(items: List<MediaItem>, index: Int, title: String) = holder.put(items, index, title = title)
+
+    /** Takes a post off one list: Saved (and so its collections), Liked, History, or one collection. */
+    fun removeFrom(list: String, item: MediaItem) = viewModelScope.launch {
+        when (list) {
+            "Saved" -> library.remove(LibraryKind.SAVED, item)
+            "Liked" -> library.remove(LibraryKind.LIKED, item)
+            "History" -> library.remove(LibraryKind.HISTORY, item)
+            else -> library.removeFromCollection(list, item)
+        }
+    }
     fun unfollow(row: FollowEntity) = viewModelScope.launch { library.unfollow(FollowKind.valueOf(row.kind), row.value) }
     fun clearHistory() = viewModelScope.launch { library.clearHistory() }
 }
@@ -146,6 +158,8 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     }
     var renaming by remember { mutableStateOf<String?>(null) }
     var deleting by remember { mutableStateOf<String?>(null) }
+    // Press and hold a tile: what you can do with that post, in the list you're looking at.
+    var holding by remember { mutableStateOf<Pair<MediaItem, String>?>(null) }
     // A collection that's gone (deleted elsewhere, or emptied by unsaving): back to all saved posts.
     LaunchedEffect(collections, collection) {
         val c = collection
@@ -212,13 +226,13 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                 if (collections.isNotEmpty() || collection != null) CollectionChips(collections, collection, saved.size) { vm.collection.value = it }
                 val open = collection
                 if (open == null) {
-                    saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
+                    saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Saved" }) }
                 } else {
-                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }) }
+                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to open }) }
                 }
             }
-            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l)) }
-            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }) }
+            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Liked" }) }
+            2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }, onLongPress = { holding = it to "History" }) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
                     EmptyState(Icons.Filled.PersonAdd, "Not following anyone", "Tap Follow next to a creator, or open a tag and follow it. Their posts fill the Following feed.")
@@ -234,6 +248,43 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                         onUnfollow = { vm.unfollow(row) },
                     )
                 }
+            }
+        }
+    }
+    holding?.let { (item, list) ->
+        val context = androidx.compose.ui.platform.LocalContext.current
+        @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+        androidx.compose.material3.ModalBottomSheet(
+            onDismissRequest = { holding = null },
+            properties = androidx.compose.material3.ModalBottomSheetProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+        ) {
+            Column(Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    item.title?.takeIf { it.isNotBlank() } ?: dev.pfeed.ui.feed.Display.source(item, ""),
+                    style = MaterialTheme.typography.titleSmall,
+                    maxLines = 2,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
+                )
+                SettingRow(
+                    if (list in listOf("Saved", "Liked", "History")) "Remove from $list" else "Remove from \"$list\"",
+                    icon = Icons.Filled.DeleteOutline,
+                    iconTint = dev.pfeed.ui.theme.Bad,
+                    onClick = { vm.removeFrom(list, item); holding = null },
+                )
+                if (item.pageUrl.isNotBlank()) SettingRow(
+                    "Open on the site",
+                    icon = Icons.AutoMirrored.Filled.OpenInNew,
+                    iconTint = dev.pfeed.ui.theme.TextLow,
+                    onClick = { dev.pfeed.ui.common.openExternal(context, item.pageUrl); holding = null },
+                )
+                if (item.pageUrl.isNotBlank()) SettingRow(
+                    "Copy link",
+                    icon = Icons.Filled.Link,
+                    iconTint = dev.pfeed.ui.theme.TextLow,
+                    onClick = { dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl); holding = null },
+                )
             }
         }
     }
@@ -365,7 +416,7 @@ private fun whenWatched(at: Long?): String {
 }
 
 @Composable
-private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null) {
+private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null, onLongPress: ((MediaItem) -> Unit)? = null) {
     if (items.isEmpty()) {
         EmptyState(icon, title, hint, action = onBrowse?.let { go ->
             {
@@ -386,7 +437,7 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
             }
             dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
         }
-        MediaGrid(items, onOpen, sectionOf = sectionOf)
+        MediaGrid(items, onOpen, sectionOf = sectionOf, onLongPress = onLongPress)
     }
 }
 

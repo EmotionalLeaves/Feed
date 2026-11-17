@@ -10,6 +10,7 @@ import android.widget.Toast
 import androidx.browser.customtabs.CustomTabsIntent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -85,6 +86,8 @@ fun MediaGrid(
     onNearEnd: (() -> Unit)? = null,
     /** Posts you've already watched: dimmed, with a small eye, so new ones stand out. */
     seen: ((MediaItem) -> Boolean)? = null,
+    /** Press and hold a tile: actions for that post (remove it from a list, and so on). */
+    onLongPress: ((MediaItem) -> Unit)? = null,
     contentTopPadding: androidx.compose.ui.unit.Dp = 2.dp,
 ) {
     LazyVerticalGrid(
@@ -110,7 +113,7 @@ fun MediaGrid(
                 }
             }
             item(key = post.key) {
-                GridTile(post, index, onOpen, label, seen = seen?.invoke(post) == true)
+                GridTile(post, index, onOpen, label, seen = seen?.invoke(post) == true, onLongPress = onLongPress)
                 if (onNearEnd != null && index >= items.size - NEAR_END_TILES) androidx.compose.runtime.LaunchedEffect(items.size) { onNearEnd() }
             }
         }
@@ -120,7 +123,9 @@ fun MediaGrid(
 private const val NEAR_END_TILES = 9
 
 @Composable
-private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?, seen: Boolean = false) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, label: ((MediaItem) -> String?)?, seen: Boolean = false, onLongPress: ((MediaItem) -> Unit)? = null) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val shape = RoundedCornerShape(6.dp)
     Box(
         Modifier
@@ -128,7 +133,10 @@ private fun GridTile(item: MediaItem, index: Int, onOpen: (index: Int) -> Unit, 
             .aspectRatio(3f / 4f)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .clickable { onOpen(index) },
+            .combinedClickable(
+                onClick = { onOpen(index) },
+                onLongClick = onLongPress?.let { act -> { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); act(item) } },
+            ),
     ) {
         // Placeholder glyph shows while the thumbnail loads (or if it never does).
         Icon(
