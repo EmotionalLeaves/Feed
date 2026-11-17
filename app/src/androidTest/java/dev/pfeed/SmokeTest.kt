@@ -359,6 +359,15 @@ class SmokeTest {
             runCatching { poll(90_000, "a post on screen") { shown.get() > before } }
             Thread.sleep(1_500)
             shot("01_feed")
+            // The post menu (press and hold).
+            runCatching {
+                rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("More"), useUnmergedTree = true)[0].performClick()
+                waitFor(what = "post menu") { exists("Not interested") }
+                Thread.sleep(700)
+                shot("01b_menu")
+                androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+                Thread.sleep(600)
+            }.onFailure { android.util.Log.i("PFHEALTH", "menu shot: ${it.message?.take(100)}") }
             tab("Search")
             waitFor(what = "search screen") { exists("Popular") }
             // Topic rows arrive once the video sites answer.
