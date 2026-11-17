@@ -22,37 +22,24 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val pages = listOf(
-            "https://beeg.com/",
-            "https://store.externulls.com/facts/tag?id=27173&limit=10&offset=0",
-            "https://txxx.com/latest-updates/",
-            "https://hqporner.com/hdporn/1",
-            "https://www.pornhat.com/",
-            "https://fapster.xxx/",
-            "https://www.porndig.com/",
-            "https://www.anyporn.com/",
-            "https://sxyprn.com/",
-            "https://www.4tube.com/videos",
-            "https://www.fux.com/videos",
-            "https://www.pornoxo.com/",
-            "https://www.vjav.com/",
-            "https://www.hclips.com/",
-            "https://www.porn300.com/",
-            "https://www.xxxbunker.com/",
-            "https://www.pornheed.com/",
-            "https://www.drtuber.com/",
-            "https://www.sunporno.com/",
-            "https://www.nuvid.com/",
-            "https://www.vporn.com/",
-            "https://www.hellporno.com/",
-            "https://www.alphaporno.com/",
-            "https://xcafe.com/",
-        )
-        for (u in pages) probe(u) {
-            val (code, body) = get(u, if (u.contains("externulls")) "application/json" else "text/html")
-            val title = Regex("<title>([^<]{0,80})").find(body)?.groupValues?.get(1)
-            "code=$code len=${body.length} title=$title cf=${body.contains("challenge-platform") || body.contains("cf-chl")} m3u8=${body.split(".m3u8").size - 1} mp4=${body.split(".mp4").size - 1} " +
-                "videoLinks=${Regex("href=\"[^\"]*/(?:video|videos|watch|v)/[^\"]+").findAll(body).count()} json=${body.take(160)}"
+        probe("beeg main") { val (c, b) = get("https://store.externulls.com/facts/tag?id=27173&limit=3&offset=0", "application/json"); "code=$c " + b.take(3500) }
+        probe("beeg slug milf") { val (c, b) = get("https://store.externulls.com/facts/tag?slug=milf&limit=2&offset=0", "application/json"); "code=$c " + b.take(600) }
+        probe("beeg tag info") { val (c, b) = get("https://store.externulls.com/tag/facts/tags?get_original=true&slug=index", "application/json"); "code=$c " + b.take(600) }
+        probe("beeg js") {
+            val (_, home) = get("https://beeg.com/")
+            Regex("src=\"([^\"]+\\.js)\"").findAll(home).map { it.groupValues[1] }.joinToString(" ")
+        }
+        for (u in listOf("https://www.drtuber.com/", "https://www.nuvid.com/", "https://www.sunporno.com/", "https://www.pornhat.com/", "https://www.porndig.com/")) probe("list $u") {
+            val (_, b) = get(u)
+            val link = Regex("href=\"([^\"]*/(?:video|videos|watch|v)/[^\"]+)\"").find(b)?.groupValues?.get(1)
+            "link=$link " + around(b, link ?: "zzz", 600, 900)
+        }
+        for (u in listOf("https://www.drtuber.com/", "https://www.nuvid.com/", "https://www.pornhat.com/")) probe("page $u") {
+            val (_, b) = get(u)
+            var link = Regex("href=\"([^\"]*/(?:video|videos|watch|v)/[^\"]+)\"").find(b)?.groupValues?.get(1) ?: return@probe "no link"
+            if (link.startsWith("/")) link = u.trimEnd('/') + link
+            val (c, page) = get(link)
+            "url=$link code=$c len=${page.length} m3u8=${around(page, ".m3u8", 300, 100)} || mp4=${around(page, ".mp4", 300, 100)} || tags=${around(page, "tags", 100, 600)}"
         }
     }
 }
