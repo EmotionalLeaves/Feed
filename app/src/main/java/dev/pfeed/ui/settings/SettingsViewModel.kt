@@ -366,7 +366,7 @@ class SettingsViewModel @Inject constructor(
         runCatching {
             app.contentResolver.openOutputStream(uri, "wt")?.use { exporter.exportTo(it, password.toCharArray()) }
                 ?: error("Couldn't open file")
-        }.onSuccess { _messages.tryEmit("Settings exported") }
+        }.onSuccess { _messages.tryEmit("Backup exported") }
             .onFailure { _messages.tryEmit("Export failed: ${it.message}") }
     }
 
@@ -376,7 +376,7 @@ class SettingsViewModel @Inject constructor(
                 ?: error("Couldn't open file")
         }.onSuccess {
             LauncherDisguise.apply(app, settingsRepo.get().disguise)
-            _messages.tryEmit("Settings imported")
+            _messages.tryEmit("Backup imported")
         }.onFailure { e ->
             _messages.tryEmit(if (e is WrongPasswordException) "Wrong password" else "Import failed: ${e.message}")
         }

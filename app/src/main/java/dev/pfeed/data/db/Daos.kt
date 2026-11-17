@@ -62,6 +62,13 @@ interface LibraryDao {
     @Query("DELETE FROM library WHERE itemKey = :itemKey AND kind LIKE 'C:%'")
     suspend fun removeFromAllCollections(itemKey: String)
 
+    /** Everything but history, with each post's stored copy: for the backup file. */
+    @Query(
+        "SELECT l.itemKey AS itemKey, l.kind AS kind, l.at AS at, i.json AS json FROM library l " +
+            "INNER JOIN items i ON i.itemKey = l.itemKey WHERE l.kind != 'HISTORY'",
+    )
+    suspend fun exportRows(): List<LibraryRow>
+
     @Query("UPDATE OR REPLACE library SET kind = :to WHERE kind = :from")
     suspend fun renameKind(from: String, to: String)
 
@@ -161,6 +168,9 @@ interface CredentialDao {
 
 /** When a post went into a library list. */
 data class KeyAt(val itemKey: String, val at: Long)
+
+/** A library entry with its post, for backups. */
+data class LibraryRow(val itemKey: String, val kind: String, val at: Long, val json: String)
 
 /** A library list (a collection) with how many posts it has and when one was last added. */
 data class KindCount(val kind: String, val count: Int, val at: Long)

@@ -328,10 +328,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 )
             }
 
-            Section("Backup", footer = "Saved as a file encrypted with a password you choose. Your PIN, sign-ins and history aren't included.") {
-                SettingRow("Export settings", icon = Icons.Filled.Upload, iconTint = TextLow, onClick = { exportLauncher.launch("feed-settings.json") })
+            Section("Backup", footer = "Settings, hidden things, follows, saved and liked posts and collections, in one file encrypted with a password you choose. Your PIN, sign-ins and history aren't included; saved videos download again after an import.") {
+                SettingRow("Export backup", icon = Icons.Filled.Upload, iconTint = TextLow, onClick = { exportLauncher.launch("feed-backup.json") })
                 RowDivider()
-                SettingRow("Import settings", icon = Icons.Filled.Download, iconTint = TextLow, onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
+                SettingRow("Import backup", icon = Icons.Filled.Download, iconTint = TextLow, onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
             }
 
             val context = androidx.compose.ui.platform.LocalContext.current

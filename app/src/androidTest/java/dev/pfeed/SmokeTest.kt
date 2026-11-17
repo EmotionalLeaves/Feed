@@ -383,6 +383,14 @@ class SmokeTest {
                 val cols = lib.collections.first()
                 val first = savedForShot.firstOrNull()?.let { lib.collectionsOf(it) }
                 android.util.Log.i("PFHEALTH", "collections: ${cols.joinToString { "${it.name}=${it.count}" }}; first post in $first")
+                // Backup round trip: export, lose a collection, import, and it's back.
+                runCatching {
+                    val out = java.io.ByteArrayOutputStream()
+                    rule.activity.settingsExporter.exportTo(out, "test-pass".toCharArray())
+                    lib.deleteCollection("Cosplay")
+                    rule.activity.settingsExporter.importFrom(java.io.ByteArrayInputStream(out.toByteArray()), "test-pass".toCharArray())
+                    "${out.size()} bytes; after import: ${lib.collections.first().joinToString { "${it.name}=${it.count}" }}"
+                }.let { android.util.Log.i("PFHEALTH", "backup: ${it.getOrElse { e -> "FAILED ${e.javaClass.simpleName}: ${e.message?.take(100)}" }}") }
             }
             Thread.sleep(8_000) // time for them to be kept
             rule.onNode(hasText("Library") and androidx.compose.ui.test.isSelectable()).performClick()

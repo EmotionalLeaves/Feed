@@ -58,6 +58,30 @@ class LibraryRepository @Inject constructor(
         }
     }
 
+    // ── backup ──
+
+    /** Saved, liked and collections (not history), each with the post as stored. */
+    suspend fun exportRows(): List<dev.pfeed.data.db.LibraryRow> = libraryDao.exportRows()
+
+    /** Puts backed-up entries back; ones already here are kept as they are. Returns how many were new. */
+    suspend fun importRows(rows: List<dev.pfeed.data.db.LibraryRow>): Int {
+        val allowed = rows.filter { it.kind != LibraryKind.HISTORY.name && it.itemKey.isNotBlank() }
+        var added = 0
+        db.withTransaction {
+            val have = HashMap<String, Set<String>>()
+            allowed.forEach { r ->
+                val kinds = have.getOrPut(r.kind) { libraryDao.keysOnce(r.kind).toHashSet() }
+                if (r.itemKey in kinds) return@forEach
+                // Only a post that still reads as one: an unreadable copy would be an empty tile.
+                if (runCatching { json.decodeFromString(MediaItem.serializer(), r.json) }.isFailure) return@forEach
+                itemDao.upsert(ItemEntity(r.itemKey, r.json, r.at))
+                libraryDao.upsert(LibraryEntity(r.itemKey, r.kind, r.at))
+                added++
+            }
+        }
+        return added
+    }
+
     // ── collections: named folders of saved posts ──
 
     data class Collection(val name: String, val count: Int)

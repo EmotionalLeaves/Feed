@@ -26,7 +26,12 @@ data class ExportBundle(
     val settings: AppSettings,
     val blocks: List<ExportEntry>,
     val follows: List<ExportEntry>,
+    /** Saved and liked posts and collections (since version 2). */
+    val library: List<ExportLibraryEntry> = emptyList(),
 )
+
+@Serializable
+data class ExportLibraryEntry(val key: String, val kind: String, val at: Long, val item: String)
 
 /** On-disk format: JSON envelope, AES-256-GCM payload, key from PBKDF2-SHA256(password). */
 @Serializable
@@ -42,7 +47,7 @@ data class EncryptedEnvelope(
 
 class WrongPasswordException : Exception("Wrong password or corrupted file")
 
-/** Exports settings, blocklist and follows. Never exports the PIN, DB key, OAuth tokens, history or signals. */
+/** Exports settings, blocklist, follows, and saved/liked posts with collections. Never exports the PIN, DB key, OAuth tokens, history or signals. */
 @Singleton
 class SettingsExporter @Inject constructor(
     private val settings: SettingsRepository,
@@ -52,9 +57,11 @@ class SettingsExporter @Inject constructor(
 ) {
     suspend fun exportTo(out: OutputStream, password: CharArray) = withContext(Dispatchers.IO) {
         val bundle = ExportBundle(
+            version = 2,
             settings = settings.get().copy(localFolders = emptyList()),
             blocks = blocks.allOnce().map { ExportEntry(it.kind, it.value) },
             follows = library.allFollowRows().map { ExportEntry(it.kind, it.value) },
+            library = library.exportRows().map { ExportLibraryEntry(it.itemKey, it.kind, it.at, it.json) },
         )
         val plain = json.encodeToString(ExportBundle.serializer(), bundle).toByteArray()
         val salt = ByteArray(16).also(SecureRandom()::nextBytes)
@@ -85,6 +92,7 @@ class SettingsExporter @Inject constructor(
         settings.update { current -> bundle.settings.copy(localFolders = current.localFolders) }
         bundle.blocks.forEach { e -> runCatching { blocks.block(BlockKind.valueOf(e.kind), e.value) } }
         bundle.follows.forEach { e -> runCatching { library.follow(FollowKind.valueOf(e.kind), e.value) } }
+        library.importRows(bundle.library.map { dev.pfeed.data.db.LibraryRow(it.key, it.kind, it.at, it.item) })
     }
 
     companion object {
