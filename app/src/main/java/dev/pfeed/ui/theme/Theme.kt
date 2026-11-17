@@ -55,7 +55,29 @@ private val Scheme = darkColorScheme(
     error = Bad,
 )
 
-private val base = Typography()
+/**
+ * Plus Jakarta Sans (SIL Open Font License, see assets/OFL-PlusJakartaSans.txt): a rounder, more
+ * characterful face than the system font, bundled so it looks the same on every phone.
+ */
+val Jakarta = androidx.compose.ui.text.font.FontFamily(
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_regular, FontWeight.Normal),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_medium, FontWeight.Medium),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_semibold, FontWeight.SemiBold),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_bold, FontWeight.Bold),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_extrabold, FontWeight.ExtraBold),
+    androidx.compose.ui.text.font.Font(dev.pfeed.R.font.jakarta_extrabold, FontWeight.Black),
+)
+
+private val base = Typography().let { t ->
+    fun TextStyle.j() = copy(fontFamily = Jakarta)
+    Typography(
+        displayLarge = t.displayLarge.j(), displayMedium = t.displayMedium.j(), displaySmall = t.displaySmall.j(),
+        headlineLarge = t.headlineLarge.j(), headlineMedium = t.headlineMedium.j(), headlineSmall = t.headlineSmall.j(),
+        titleLarge = t.titleLarge.j(), titleMedium = t.titleMedium.j(), titleSmall = t.titleSmall.j(),
+        bodyLarge = t.bodyLarge.j(), bodyMedium = t.bodyMedium.j(), bodySmall = t.bodySmall.j(),
+        labelLarge = t.labelLarge.j(), labelMedium = t.labelMedium.j(), labelSmall = t.labelSmall.j(),
+    )
+}
 
 /** Heavier, tighter type than the Material defaults: headings read as headings. */
 private val Type = Typography(
@@ -76,7 +98,7 @@ private val Type = Typography(
 )
 
 /** Small caps-style label above a group of settings. */
-val SectionLabel = TextStyle(fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+val SectionLabel = TextStyle(fontFamily = Jakarta, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
 
 private val AppShapes = Shapes(
     extraSmall = RoundedCornerShape(6.dp),
