@@ -344,7 +344,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
             onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
-            onWall = if (vm.isMainFeed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({ wallMode = true }) else null,
+            onWall = if (vm.isMainFeed) ({ wallMode = true }) else null,
             // Only where there's room beside the three feed tabs.
             onSearch = if (vm.isMainFeed && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({
                 nav.navigate(Routes.SEARCH) {

@@ -361,6 +361,15 @@ class SmokeTest {
             runCatching { poll(90_000, "a post on screen") { shown.get() > before } }
             Thread.sleep(1_500)
             shot("01_feed")
+            // Wall: four clips at once.
+            runCatching {
+                rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Wall: four clips at once"), useUnmergedTree = true)[0].performClick()
+                waitFor(what = "wall") { exists("Tap one to watch it") }
+                Thread.sleep(6_000)
+                shot("01c_wall")
+                rule.onAllNodes(androidx.compose.ui.test.hasContentDescription("Back to the feed"), useUnmergedTree = true)[0].performClick()
+                waitFor(what = "back from the wall") { !exists("Tap one to watch it") }
+            }.onFailure { android.util.Log.i("PFHEALTH", "wall: ${it.message?.take(120)}") }
             tab("Search")
             waitFor(what = "search screen") { exists("Popular") }
             // Topic rows arrive once the video sites answer.
