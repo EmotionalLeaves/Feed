@@ -19,6 +19,9 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -149,6 +152,18 @@ private fun MainNav(locked: Boolean) {
     val immersive = route == Routes.FEED || route == Routes.TAG || route == Routes.VIEWER
 
     val barVisible = currentTab != null && !BottomBar.hidden
+    // Reading down a list tucks the bar away; any scroll back up (or a new screen) brings it back.
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val barScroll = androidx.compose.runtime.remember(density) {
+        object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+            override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                val full = with(density) { BAR_HEIGHT.toPx() * 1.6f }
+                BottomBar.collapse = (BottomBar.collapse - available.y / full).coerceIn(0f, 1f)
+                return androidx.compose.ui.geometry.Offset.Zero
+            }
+        }
+    }
+    androidx.compose.runtime.LaunchedEffect(route, immersive) { BottomBar.collapse = 0f }
     Scaffold(
         // Insets are handled per screen and by the bar itself.
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
@@ -169,7 +184,8 @@ private fun MainNav(locked: Boolean) {
             // The feed runs full-bleed under the bar (its captions and buttons sit above it, see
             // LocalBottomBarInset); other screens stop at the bar and below the status bar.
             modifier = if (immersive) Modifier
-            else Modifier.padding(bottom = padding.calculateBottomPadding()).then(if (barVisible) Modifier else Modifier.navigationBarsPadding()).statusBarsPadding(),
+            else Modifier.padding(bottom = padding.calculateBottomPadding()).then(if (barVisible) Modifier else Modifier.navigationBarsPadding()).statusBarsPadding()
+                .nestedScroll(barScroll),
             // Quick fades between screens: snappy, and no sliding panels over full-screen video.
             enterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) },
             exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) },
@@ -203,6 +219,8 @@ object BottomBar {
     var hidden by androidx.compose.runtime.mutableStateOf(false)
     /** Last touch anywhere: over the feed the bar dims while you just watch, and comes back on touch. */
     var lastTouch by androidx.compose.runtime.mutableLongStateOf(0L)
+    /** 0 = shown, 1 = tucked away: lists scrolled down push the bar off the bottom; scrolling back up brings it back. */
+    var collapse by androidx.compose.runtime.mutableFloatStateOf(0f)
     /** The current tab tapped again (its route): the feed jumps back to the top, or refreshes if it's there. */
     val reselected = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
 }
@@ -227,8 +245,16 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
     }
     val fade by androidx.compose.animation.core.animateFloatAsState(if (idle) 0.4f else 1f, androidx.compose.animation.core.tween(if (idle) 900 else 150), label = "barFade")
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val collapse = if (immersive) 0f else BottomBar.collapse
     androidx.compose.foundation.layout.Row(
         Modifier
+            // Tucked away: the bar reports less height (so the page gets the room) and slides down.
+            .clipToBounds()
+            .layout { measurable, constraints ->
+                val p = measurable.measure(constraints)
+                val shown = (p.height * (1f - collapse)).toInt()
+                layout(p.width, shown) { p.place(0, 0) }
+            }
             .fillMaxWidth()
             .graphicsLayer { alpha = fade }
             .background(background)
