@@ -1,3 +1,9 @@
+## 4.79.0 — 2026-11-16
+Picture-in-picture, swipe right to save
+
+- New: Picture-in-picture (Settings → Playback, off by default). Leave the app while a video plays and it keeps going in a small window.
+- New: Swipe right on a post to save it. A 'Save' hint grows at the edge as you pull, and a big bookmark pops when it lands. Swipe left still opens the creator's page.
+
 ## 4.78.0 — 2026-11-16
 Your mixes, Clean screen
 
@@ -12,10 +18,3 @@ More like this, Wall, no XNXX
 - New: Wall. Tap the grid button at the top left of the feed for four clips playing at once, muted, a screen at a time. Swipe up for the next four, or tap one to watch it full screen from there.
 - XNXX is gone: it's no longer listed, searched or shown. Posts you'd already saved from it still play.
 - If you pick a speed other than 1×, a small badge on videos reminds you, and the hold-for-speed badge shows the real speed.
-
-## 4.76.0 — 2026-11-16
-Playback speed
-
-- New: a Speed button in the hold menu on videos. Tap it to step through 1×, 1.25×, 1.5×, 2× and 0.75×; the speed you pick stays for every video until the app restarts.
-- Holding the right side of a video still speeds it up, now to double whatever speed you've picked (up to 3×).
-- The menu's round buttons now share the row evenly, so they fit on smaller phones.

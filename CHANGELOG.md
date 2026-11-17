@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.79.0 — 2026-11-16
+
+Picture-in-picture, swipe right to save
+
+- New: Picture-in-picture (Settings → Playback, off by default). Leave the app while a video plays and it keeps going in a small window.
+- New: Swipe right on a post to save it. A 'Save' hint grows at the edge as you pull, and a big bookmark pops when it lands. Swipe left still opens the creator's page.
+
 ## 4.78.0 — 2026-11-16
 
 Your mixes, Clean screen
