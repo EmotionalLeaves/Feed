@@ -19,6 +19,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -867,7 +868,20 @@ private fun Overlay(
                 }
             }
             item.title?.takeIf { it.isNotBlank() }?.let {
-                Text(it, color = Color.White, maxLines = 3, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium.shadowed())
+                // Two lines; tap for the rest (and again to fold it away).
+                var expanded by remember(item.key) { mutableStateOf(false) }
+                var cut by remember(item.key) { mutableStateOf(false) }
+                Text(
+                    it,
+                    color = Color.White,
+                    maxLines = if (expanded) 10 else 2,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.bodyMedium.shadowed(),
+                    onTextLayout = { r -> if (!expanded) cut = r.hasVisualOverflow },
+                    modifier = Modifier
+                        .animateContentSize()
+                        .then(if (cut || expanded) Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { expanded = !expanded } else Modifier),
+                )
             }
             if (tags.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
