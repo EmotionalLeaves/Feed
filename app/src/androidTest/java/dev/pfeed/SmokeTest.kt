@@ -365,6 +365,12 @@ class SmokeTest {
             runCatching { waitFor(timeoutMs = 25_000, what = "topic rows") { exists("See all") } }
             android.util.Log.i("PFHEALTH", "search landing: topic rows ${if (exists("See all")) "shown" else "not shown"}")
             shot("02_search")
+            runCatching {
+                rule.onAllNodes(hasText("Popular"), useUnmergedTree = true)[0].performScrollTo()
+                Thread.sleep(600)
+                shot("02b_browse")
+                rule.onAllNodes(hasText("Search every site"), useUnmergedTree = true)[0].performScrollTo()
+            }
             tap("anal")
             waitFor(timeoutMs = 60_000, what = "results") { exists("Play all") || !exists("still searching", substring = true) }
             Thread.sleep(2_000)
@@ -422,6 +428,14 @@ class SmokeTest {
             shot("05_settings")
             waitFor(what = "scroll settings") { rule.onAllNodes(hasText("Encrypted DNS"), useUnmergedTree = true)[0].performScrollTo(); true }
             shot("06_settings_more")
+            runCatching {
+                rule.onAllNodes(hasText("Blocked where you are"), useUnmergedTree = true)[0].performScrollTo().performClick()
+                waitFor(what = "network screen") { exists("Proxy") }
+                Thread.sleep(600)
+                shot("06b_network")
+                androidx.test.platform.app.InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(android.view.KeyEvent.KEYCODE_BACK)
+                waitFor(what = "back to settings") { exists("App lock") }
+            }.onFailure { android.util.Log.i("PFHEALTH", "network shot: ${it.message?.take(100)}") }
             waitFor(what = "scroll to top") { rule.onAllNodes(hasText("Sources"), useUnmergedTree = true)[0].performScrollTo(); true }
             rule.onNodeWithText("Your taste").performClick()
             Thread.sleep(1_000)
