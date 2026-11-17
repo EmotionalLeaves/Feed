@@ -32,3 +32,12 @@ class AiArtTest {
         assertFalse(Blocklist(hideAi = true).allows(ai))
     }
 }
+
+class GeoBlockTest {
+    @Test fun `block pages are recognised and real pages are not`() {
+        assertTrue(dev.pfeed.source.net.GeoBlock.looksBlocked("<title>Blocked due to legislation in the state of Virginia</title>"))
+        assertTrue(dev.pfeed.source.net.GeoBlock.looksBlocked("Sorry, the site is not available in your region"))
+        assertFalse(dev.pfeed.source.net.GeoBlock.looksBlocked("<title>Free Porn Videos</title><div class=\"thumbs\">"))
+        org.junit.Assert.assertEquals("redgifs.com", dev.pfeed.source.net.GeoBlock.siteOf("api.redgifs.com"))
+    }
+}

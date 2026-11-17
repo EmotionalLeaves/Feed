@@ -56,6 +56,13 @@ object AppModule {
         .connectionPool(okhttp3.ConnectionPool(16, 5, TimeUnit.MINUTES))
         // Looks names up again over encrypted DNS when the network blocks or sinkholes them.
         .dns(dev.pfeed.source.net.EncryptedDns)
+        // Your proxy, for sites that block your state or country (direct when none is set).
+        .proxySelector(dev.pfeed.source.net.AppProxy)
+        .proxyAuthenticator { _, response ->
+            val c = dev.pfeed.source.net.AppProxy.config
+            if (c.user.isBlank() || response.request.header("Proxy-Authorization") != null) null
+            else response.request.newBuilder().header("Proxy-Authorization", okhttp3.Credentials.basic(c.user, c.password)).build()
+        }
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .callTimeout(45, TimeUnit.SECONDS)
@@ -95,6 +102,14 @@ object AppModule {
             if (site == null || request.header("Referer") != null) chain.proceed(request)
             else chain.proceed(request.newBuilder().header("Referer", "https://$site/").build())
         }
+        // Notice sites that refuse this connection because of where it is (state age-verification
+        // laws, country blocks): they're routed through your proxy, if you've set one, and named in Settings.
+        .addInterceptor { chain ->
+            val request = chain.request()
+            val response = chain.proceed(request)
+            dev.pfeed.source.net.GeoBlock.inspect(request.url.host, response, dev.pfeed.source.net.AppProxy.routes(request.url.host))
+            response
+        }
         // 429 / 503: one quick retry, and only when the server asks for a short wait. Longer
         // back-off is handled per site by the sources themselves; sleeping here for up to 20 s held
         // a network thread (and whatever was waiting on it, including video) for nothing.
@@ -110,6 +125,11 @@ object AppModule {
             }
         }
         .build()
+        .also { client ->
+            val evict = { client.connectionPool.evictAll() }
+            dev.pfeed.source.net.AppProxy.onChange = evict
+            dev.pfeed.source.net.GeoBlock.onNewBlock = { if (dev.pfeed.source.net.AppProxy.config.active) evict() }
+        }
 
     @Provides
     @Singleton

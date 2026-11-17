@@ -32,11 +32,13 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         super.onCreate()
         dev.pfeed.player.ResumePoints.init(this)
         dev.pfeed.player.ComicPages.init(this)
+        dev.pfeed.source.net.GeoBlock.init(this)
         CrashLog.install(this)
         lockManager.attach()
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {
             settings.flow.collect {
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
+                dev.pfeed.source.net.AppProxy.configure(proxyConfig(it))
                 val height = if (it.dataSaver) 480 else 1080
                 dev.pfeed.source.tube.TubeSite.maxHeight = height
                 dev.pfeed.player.PlayerPool.maxHeight = height
@@ -55,6 +57,14 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         }
         .crossfade(true)
         .build()
+}
+
+/** Settings → Blocked where you are, as the network layer wants it. */
+internal fun proxyConfig(s: dev.pfeed.data.settings.AppSettings): dev.pfeed.source.net.AppProxy.Config = when (s.proxyType) {
+    "http" -> dev.pfeed.source.net.AppProxy.Config(java.net.Proxy.Type.HTTP, s.proxyHost.trim(), s.proxyPort, s.proxyUser, s.proxyPassword, s.proxyEverything)
+    "socks" -> dev.pfeed.source.net.AppProxy.Config(java.net.Proxy.Type.SOCKS, s.proxyHost.trim(), s.proxyPort, s.proxyUser, s.proxyPassword, s.proxyEverything)
+    "orbot" -> dev.pfeed.source.net.AppProxy.Config(java.net.Proxy.Type.SOCKS, "127.0.0.1", 9050, everything = s.proxyEverything)
+    else -> dev.pfeed.source.net.AppProxy.Config()
 }
 
 /**

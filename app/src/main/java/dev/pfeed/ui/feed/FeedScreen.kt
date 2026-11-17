@@ -175,6 +175,18 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) vm.toggleFollowCreator(item)
         }
     }
+    // A site turned out to be blocked where you are: say so once, with the way around it.
+    if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
+        var known = dev.pfeed.source.net.GeoBlock.sites.value
+        dev.pfeed.source.net.GeoBlock.sites.collect { now ->
+            val fresh = now - known
+            known = now
+            if (fresh.isNotEmpty() && !dev.pfeed.source.net.AppProxy.config.active) {
+                val names = fresh.map(dev.pfeed.ui.settings::siteLabel).joinToString(", ")
+                vm.offer("$names ${if (fresh.size == 1) "is" else "are"} blocked where you are", "Get it back") { nav.navigate(dev.pfeed.ui.Routes.NETWORK) }
+            }
+        }
+    }
     LandscapeMode(enabled = landscape)
     BackHandler(enabled = landscape) { vm.setLandscape(false) }
 

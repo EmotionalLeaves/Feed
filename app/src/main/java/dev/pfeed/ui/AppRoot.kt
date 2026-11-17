@@ -62,6 +62,7 @@ object Routes {
     const val SOURCES = "settings/sources"
     const val BLOCKLIST = "settings/blocklist"
     const val TASTE = "settings/taste"
+    const val NETWORK = "settings/network"
 
     fun tag(tag: String) = "tag/" + Uri.encode(tag)
     fun viewer(token: String) = "viewer/$token"
@@ -178,6 +179,7 @@ private fun MainNav(locked: Boolean) {
             composable(Routes.SOURCES) { SourcesScreen(nav) }
             composable(Routes.BLOCKLIST) { BlocklistScreen(nav) }
             composable(Routes.TASTE) { TasteScreen(nav) }
+            composable(Routes.NETWORK) { dev.pfeed.ui.settings.NetworkScreen(nav) }
         }
     }
 }

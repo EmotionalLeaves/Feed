@@ -77,6 +77,14 @@ data class AppSettings(
     val videoLength: String = "any",
     /** Leave out AI-generated art (Stable Diffusion, NovelAI…) everywhere: feeds, search, tag pages. */
     val hideAiArt: Boolean = true,
+    /** Your proxy for sites blocked where you are: "off", "http", "socks" or "orbot" (Tor via Orbot, 127.0.0.1:9050). */
+    val proxyType: String = "off",
+    val proxyHost: String = "",
+    val proxyPort: Int = 0,
+    val proxyUser: String = "",
+    val proxyPassword: String = "",
+    /** Send everything through the proxy, not just blocked sites. */
+    val proxyEverything: Boolean = false,
     val lockTimeoutSec: Int = 30,
     val halfLifeDays: Double = 14.0,
     val weights: RankWeights = RankWeights(),

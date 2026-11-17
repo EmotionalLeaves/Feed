@@ -58,7 +58,7 @@ class SettingsExporter @Inject constructor(
     suspend fun exportTo(out: OutputStream, password: CharArray) = withContext(Dispatchers.IO) {
         val bundle = ExportBundle(
             version = 2,
-            settings = settings.get().copy(localFolders = emptyList()),
+            settings = settings.get().copy(localFolders = emptyList(), proxyPassword = ""),
             blocks = blocks.allOnce().map { ExportEntry(it.kind, it.value) },
             follows = library.allFollowRows().map { ExportEntry(it.kind, it.value) },
             library = library.exportRows().map { ExportLibraryEntry(it.itemKey, it.kind, it.at, it.json) },
@@ -89,7 +89,7 @@ class SettingsExporter @Inject constructor(
             throw WrongPasswordException()
         }
         val bundle = json.decodeFromString(ExportBundle.serializer(), plain.decodeToString())
-        settings.update { current -> bundle.settings.copy(localFolders = current.localFolders) }
+        settings.update { current -> bundle.settings.copy(localFolders = current.localFolders, proxyPassword = current.proxyPassword) }
         bundle.blocks.forEach { e -> runCatching { blocks.block(BlockKind.valueOf(e.kind), e.value) } }
         bundle.follows.forEach { e -> runCatching { library.follow(FollowKind.valueOf(e.kind), e.value) } }
         library.importRows(bundle.library.map { dev.pfeed.data.db.LibraryRow(it.key, it.kind, it.at, it.item) })

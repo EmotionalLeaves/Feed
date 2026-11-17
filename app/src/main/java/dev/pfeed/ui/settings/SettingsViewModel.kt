@@ -219,6 +219,16 @@ class SettingsViewModel @Inject constructor(
 
     fun setVideoLength(length: String) = update { it.copy(videoLength = length) }
     fun setHideAiArt(hide: Boolean) = update { it.copy(hideAiArt = hide) }
+    fun setProxy(type: String? = null, host: String? = null, port: Int? = null, user: String? = null, password: String? = null, everything: Boolean? = null) = update {
+        it.copy(
+            proxyType = type ?: it.proxyType,
+            proxyHost = host ?: it.proxyHost,
+            proxyPort = port ?: it.proxyPort,
+            proxyUser = user ?: it.proxyUser,
+            proxyPassword = password ?: it.proxyPassword,
+            proxyEverything = everything ?: it.proxyEverything,
+        )
+    }
 
     /** Space taken by offline copies of saved posts. */
     val offlineBytes = offline.bytes

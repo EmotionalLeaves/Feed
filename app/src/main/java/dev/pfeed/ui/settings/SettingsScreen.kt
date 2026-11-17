@@ -22,6 +22,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.VpnLock
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.filled.Apps
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -316,6 +317,20 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     icon = Icons.Filled.Shield,
                     iconTint = Good,
                     onChange = vm::setEncryptedDns,
+                )
+                RowDivider()
+                val geoBlocked by dev.pfeed.source.net.GeoBlock.sites.collectAsStateWithLifecycle()
+                SettingRow(
+                    "Blocked where you are",
+                    subtitle = when {
+                        s.proxyType != "off" -> "Proxy on (${if (s.proxyType == "orbot") "Orbot" else s.proxyType.uppercase()})" + if (geoBlocked.isNotEmpty()) " · ${geoBlocked.size} site${if (geoBlocked.size == 1) "" else "s"} routed through it" else ""
+                        geoBlocked.isNotEmpty() -> "${geoBlocked.size} site${if (geoBlocked.size == 1) "" else "s"} blocked in your state or country. Get them back with a proxy"
+                        else -> "Sites that block your state or country, and a proxy to get around it"
+                    },
+                    icon = Icons.Filled.VpnLock,
+                    iconTint = if (geoBlocked.isNotEmpty() && s.proxyType == "off") dev.pfeed.ui.theme.Bad else Good,
+                    chevron = true,
+                    onClick = { nav.navigate(dev.pfeed.ui.Routes.NETWORK) },
                 )
                 RowDivider()
                 SettingRow(
