@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.57.0 — 2026-11-16
+
+Tab bar, finished
+
+- Over the feed, the tab bar now goes fully out of sight after a while of just watching. Touch the screen and it's back; a tap on the hidden bar only brings it back, it never switches tabs by surprise.
+- One accent mark slides to the tab you pick.
+- Tap Search again to go straight into the search box. Tap Library again to leave a collection and see everything saved.
+- On tablets and wide screens, the tabs stay together in the middle.
+
 ## 4.56.0 — 2026-11-16
 
 Tab bar steps back
