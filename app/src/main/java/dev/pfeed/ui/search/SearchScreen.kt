@@ -513,10 +513,44 @@ private fun SuggestionsPane(
             Spacer(Modifier.height(16.dp))
         }
         SectionTitle("Popular")
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            POPULAR.forEach { q -> TopicChip(q) { onPick(q) } }
+        // Browse cards, two by two, each in a colour of its own (the same colour every time).
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            POPULAR.chunked(2).forEach { pair ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    pair.forEach { q -> BrowseCard(q, Modifier.weight(1f)) { onPick(q) } }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** A topic to browse, as a colour card with its name. */
+@Composable
+private fun BrowseCard(topic: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val hue = remember(topic) { ((topic.hashCode() and 0x7fffffff) % 360).toFloat() }
+    Box(
+        modifier
+            .height(62.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color.hsl(hue, 0.55f, 0.36f), Color.hsl((hue + 35f) % 360f, 0.6f, 0.2f)),
+                ),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.BottomStart,
+    ) {
+        Text(
+            topic,
+            color = Color.White,
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+            maxLines = 1,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
     }
 }
 
