@@ -46,6 +46,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.SwipeLeft
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.GridView
@@ -112,6 +114,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import dev.pfeed.domain.model.FeedMode
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.MediaType
@@ -313,6 +316,14 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
             onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
+            // Only where there's room beside the three feed tabs.
+            onSearch = if (vm.tag == null && !vm.isViewer && androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 360) ({
+                nav.navigate(Routes.SEARCH) {
+                    popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                    launchSingleTop = true
+                    restoreState = true
+                }
+            }) else null,
         )
 
         // The page as a grid: everything loaded so far (and more as you scroll); tap one to watch from there.
@@ -528,6 +539,8 @@ private fun TopBar(
     onFollowTag: () -> Unit,
     /** Tag and creator pages: see everything loaded as a grid. */
     onGrid: (() -> Unit)? = null,
+    /** Main feed: a search button at the top right, as in other short-video apps. */
+    onSearch: (() -> Unit)? = null,
 ) {
     Box(Modifier.fillMaxWidth().statusBarsPadding().height(52.dp)) {
         if (onBack != null) {
@@ -552,7 +565,10 @@ private fun TopBar(
                 modifier = Modifier.align(Alignment.Center).padding(horizontal = if (onGrid != null) 120.dp else 64.dp),
             )
         }
-        Row(Modifier.align(Alignment.CenterEnd).padding(end = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.align(Alignment.CenterEnd).padding(end = if (onSearch != null) 4.dp else 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (onSearch != null) {
+                IconButton(onClick = onSearch) { Icon(Icons.Filled.Search, "Search", tint = Color.White) }
+            }
             if (onGrid != null) {
                 IconButton(onClick = onGrid) { Icon(Icons.Filled.GridView, "Show as a grid", tint = Color.White) }
             }
@@ -1033,6 +1049,7 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
             Text("Quick gestures", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
             listOf(
                 Triple(Icons.Filled.SwipeUp, "Swipe up", "Next post"),
+                Triple(Icons.Filled.SwipeLeft, "Swipe left", "Everything by them"),
                 Triple(Icons.Filled.Favorite, "Double-tap", "Like"),
                 Triple(Icons.Filled.FastForward, "Hold the right side", "Play at 2×"),
                 Triple(Icons.Filled.TouchApp, "Press and hold", "More options"),
