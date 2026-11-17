@@ -242,17 +242,33 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
     } else {
         androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.background)
     }
-    // Over the feed, the bar fades back while you watch and returns the moment you touch the screen.
-    var idle by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    // Over the feed the bar fades back while you watch (0 = awake, 1 = dimmed, 2 = out of sight)
+    // and returns the moment you touch the screen.
+    var stage by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(0) }
     androidx.compose.runtime.LaunchedEffect(BottomBar.lastTouch, immersive) {
-        idle = false
+        stage = 0
+        if (!immersive) return@LaunchedEffect
         // Hands-free: nobody's touching the screen on purpose, so the bar settles back sooner.
-        if (immersive) { kotlinx.coroutines.delay(if (dev.pfeed.ui.feed.HandsFree.on.value) IDLE_DIM_MS / 2 else IDLE_DIM_MS); idle = true }
+        val quick = dev.pfeed.ui.feed.HandsFree.on.value
+        kotlinx.coroutines.delay(if (quick) IDLE_DIM_MS / 2 else IDLE_DIM_MS)
+        stage = 1
+        kotlinx.coroutines.delay(if (quick) IDLE_HIDE_MS / 2 else IDLE_HIDE_MS)
+        stage = 2
     }
-    val fade by androidx.compose.animation.core.animateFloatAsState(if (idle) 0.35f else 1f, androidx.compose.animation.core.tween(if (idle) 900 else 150), label = "barFade")
+    val fade by androidx.compose.animation.core.animateFloatAsState(
+        when (stage) { 0 -> 1f; 1 -> 0.35f; else -> 0f },
+        androidx.compose.animation.core.tween(if (stage == 0) 150 else 900),
+        label = "barFade",
+    )
+    // A touch on a bar that's out of sight only brings it back; it doesn't switch tabs by surprise.
+    var asleepAtTouch by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val collapse = if (immersive) 0f else BottomBar.collapse
-    androidx.compose.foundation.layout.Row(
+    val selectedIndex = tabs.indexOf(current).coerceAtLeast(0)
+    val indicatorX by androidx.compose.animation.core.animateFloatAsState(
+        selectedIndex.toFloat(), androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 500f), label = "tabIndicator",
+    )
+    Box(
         Modifier
             // Tucked away: the bar reports less height (so the page gets the room) and slides down.
             .clipToBounds()
@@ -265,47 +281,71 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
             .graphicsLayer { alpha = fade }
             .background(background)
             .navigationBarsPadding()
-            .height(BAR_HEIGHT),
-        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-    ) {
-        tabs.forEach { tab ->
-            val selected = tab == current
-            val tint by androidx.compose.animation.animateColorAsState(
-                if (selected) Color.White else Color.White.copy(alpha = if (immersive) 0.62f else 0.5f), label = "tabTint",
-            )
-            val barWidth by androidx.compose.animation.core.animateDpAsState(if (selected) 14.dp else 0.dp, label = "tabBar")
-            Column(
-                Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-                    .clickable(
-                        interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null,
-                        role = androidx.compose.ui.semantics.Role.Tab,
-                        onClickLabel = tab.label,
-                    ) {
-                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
-                        if (selected) BottomBar.reselected.tryEmit(tab.route) else onSelect(tab)
+            .height(BAR_HEIGHT)
+            .pointerInput(Unit) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        if (e.changes.any { it.pressed && it.previousPressed.not() }) asleepAtTouch = stage == 2
                     }
-                    .androidx_semantics(tab.label, selected),
-                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
-                verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-            ) {
-                Icon(if (selected) tab.icon else tab.outline, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
-                androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
-                // Over the feed only the current tab is named: fewer words on top of the video.
-                val labelAlpha by androidx.compose.animation.core.animateFloatAsState(if (selected || !immersive) 1f else 0f, label = "tabLabel")
-                Text(
-                    tab.label,
-                    color = tint,
-                    modifier = Modifier.graphicsLayer { alpha = labelAlpha },
-                    fontSize = 10.5.sp,
-                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
-                    maxLines = 1,
+                }
+            },
+    ) {
+        androidx.compose.foundation.layout.Row(Modifier.fillMaxSize(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            tabs.forEach { tab ->
+                val selected = tab == current
+                val tint by androidx.compose.animation.animateColorAsState(
+                    if (selected) Color.White else Color.White.copy(alpha = if (immersive) 0.62f else 0.5f), label = "tabTint",
                 )
-                androidx.compose.foundation.layout.Spacer(Modifier.height(3.dp))
-                Box(Modifier.width(barWidth).height(2.dp).background(Accent, RoundedCornerShape(1.dp)))
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(
+                            interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            role = androidx.compose.ui.semantics.Role.Tab,
+                            onClickLabel = tab.label,
+                        ) {
+                            if (asleepAtTouch) { asleepAtTouch = false; return@clickable }
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                            if (selected) BottomBar.reselected.tryEmit(tab.route) else onSelect(tab)
+                        }
+                        .androidx_semantics(tab.label, selected),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                    verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                ) {
+                    Icon(if (selected) tab.icon else tab.outline, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
+                    // Over the feed only the current tab is named: fewer words on top of the video.
+                    val labelAlpha by androidx.compose.animation.core.animateFloatAsState(if (selected || !immersive) 1f else 0f, label = "tabLabel")
+                    Text(
+                        tab.label,
+                        color = tint,
+                        modifier = Modifier.graphicsLayer { alpha = labelAlpha },
+                        fontSize = 10.5.sp,
+                        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                    )
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(5.dp))
+                }
             }
+        }
+        // One accent mark that slides to the tab you pick.
+        if (current != null) {
+            Box(
+                Modifier
+                    .align(androidx.compose.ui.Alignment.BottomStart)
+                    .padding(bottom = 4.dp)
+                    .layout { measurable, constraints ->
+                        val p = measurable.measure(constraints)
+                        val slot = constraints.maxWidth / tabs.size.toFloat()
+                        layout(constraints.maxWidth, p.height) { p.place((slot * (indicatorX + 0.5f) - p.width / 2f).toInt(), 0) }
+                    }
+                    .width(14.dp)
+                    .height(2.dp)
+                    .background(Accent, RoundedCornerShape(1.dp)),
+            )
         }
     }
 }
@@ -316,6 +356,8 @@ private fun Modifier.androidx_semantics(label: String, selected: Boolean): Modif
 
 private val BAR_HEIGHT = 52.dp
 private const val IDLE_DIM_MS = 3_500L
+/** After dimming, how much longer before the bar is out of sight entirely. */
+private const val IDLE_HIDE_MS = 8_000L
 
 private fun NavController.navigateTab(route: String) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
