@@ -233,7 +233,21 @@ private fun InterestRow(feature: String, score: Double, positive: Boolean, onFor
     ) {
         // The label gets the full width (it was cut off beside the bar); the strength sits under it.
         androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
-            Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f, fill = false))
+                Spacer(Modifier.width(8.dp))
+                // The bar in a word, for a glance down the list.
+                Text(
+                    when {
+                        !positive -> if (strength > 0.5f) "Avoiding" else "Less"
+                        strength > 0.66f -> "Strong"
+                        strength > 0.33f -> "Steady"
+                        else -> "Light"
+                    },
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (positive && strength > 0.66f) Accent else TextLow,
+                )
+            }
             Spacer(Modifier.height(6.dp))
             Box(
                 Modifier.fillMaxWidth(0.85f).height(4.dp).clip(RoundedCornerShape(2.dp))

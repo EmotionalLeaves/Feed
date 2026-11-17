@@ -524,9 +524,10 @@ private fun TopicTile(item: MediaItem, onClick: () -> Unit) {
         )
         dev.pfeed.ui.common.MediaMask()
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.4f).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
-        Column(Modifier.align(Alignment.BottomStart).padding(6.dp)) {
-            item.durationSec?.let { Text(dev.pfeed.ui.common.formatDuration(it), color = Color.White, style = MaterialTheme.typography.labelSmall, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
-            Text(Display.source(item, ""), color = Color.White.copy(alpha = 0.75f), style = MaterialTheme.typography.labelSmall, maxLines = 1)
+        // Same quiet line as the result grid: where it's from, then how long.
+        Row(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(horizontal = 7.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(Display.source(item, ""), color = Color.White.copy(alpha = 0.78f), style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            item.durationSec?.let { Text(dev.pfeed.ui.common.formatDuration(it), color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
         }
     }
 }
