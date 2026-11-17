@@ -331,7 +331,15 @@ fun SearchScreen(nav: NavController, vm: SearchViewModel = hiltViewModel()) {
     }
 
     Column(Modifier.fillMaxSize()) {
-        dev.pfeed.ui.common.ScreenHeader("Search")
+        // The big title steps aside once you're searching, so results get the room.
+        androidx.compose.animation.AnimatedVisibility(
+            visible = ui.query.isBlank(),
+            enter = androidx.compose.animation.expandVertically() + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkVertically() + androidx.compose.animation.fadeOut(),
+        ) {
+            dev.pfeed.ui.common.ScreenHeader("Search")
+        }
+        if (ui.query.isNotBlank()) Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextField(
                 value = ui.query,
