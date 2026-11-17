@@ -3,6 +3,8 @@ package dev.pfeed.ui.feed
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -135,29 +137,30 @@ fun ItemMenuSheet(
             }
             HorizontalDivider()
 
-            // Save, like and follow live on the post itself; this menu is for the rest.
-            MenuRow("Add to collection…", Icons.Filled.CreateNewFolder, "Sort saved posts into your own folders") { pickTag = "collect" }
+            // The everyday actions as one row of round buttons; the "less of this" ones as a list below.
             val handsFree by HandsFree.on.collectAsState()
-            MenuRow(
-                if (handsFree) "Stop hands-free" else "Hands-free",
-                Icons.Filled.Autorenew,
-                if (handsFree) "Back to swiping yourself" else "Moves on by itself: pictures after a few seconds, videos when they end",
-            ) { HandsFree.set(!handsFree); onDismiss() }
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 14.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                QuickAction(Icons.Filled.CreateNewFolder, "Collection") { pickTag = "collect" }
+                QuickAction(Icons.Filled.Autorenew, if (handsFree) "Stop hands-free" else "Hands-free", lit = handsFree) { HandsFree.set(!handsFree); onDismiss() }
+                if (item.pageUrl.isNotBlank()) QuickAction(Icons.Filled.Link, "Copy link") {
+                    dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
+                    onDismiss()
+                }
+                QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open on site") { openExternal(context, item.pageUrl); onDismiss() }
+            }
+            HorizontalDivider()
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
             if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
             if (creator != null) {
                 MenuRow("Block @$creator", Icons.Filled.PersonOff, "Never show their posts") { vm.blockCreator(item); onDismiss() }
             }
             MenuRow("Hide $source", Icons.Filled.VisibilityOff, "Never show posts from it") { vm.hideOrigin(item, source); onDismiss() }
-            HorizontalDivider(Modifier.padding(vertical = 4.dp))
-            MenuRow("Open on $source", Icons.AutoMirrored.Filled.OpenInNew) { openExternal(context, item.pageUrl); onDismiss() }
             // Kept on the phone already: copy it out to Downloads (visible to the gallery and other apps).
             if (vm.canExport(item)) MenuRow("Export to Downloads", Icons.Filled.Download, "Outside this app: other apps can see it") {
                 vm.exportToDownloads(item)
-                onDismiss()
-            }
-            if (item.pageUrl.isNotBlank()) MenuRow("Copy link", Icons.Filled.Link) {
-                dev.pfeed.ui.common.copySensitive(context, "Link", item.pageUrl)
                 onDismiss()
             }
             val report = vm.reportUrl(item)
@@ -165,6 +168,26 @@ fun ItemMenuSheet(
                 MenuRow("Report to $source", Icons.Filled.Flag) { openExternal(context, report); onDismiss() }
             }
         }
+    }
+}
+
+/** A round button with its name under it, for the menu's top row. */
+@Composable
+private fun QuickAction(icon: ImageVector, label: String, lit: Boolean = false, onClick: () -> Unit) {
+    androidx.compose.foundation.layout.Column(
+        Modifier.width(78.dp).clip(RoundedCornerShape(14.dp)).clickable(onClick = onClick).padding(vertical = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier.size(52.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                .then(
+                    if (lit) Modifier.background(dev.pfeed.ui.theme.BrandGradient)
+                    else Modifier.background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                ),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, contentDescription = null, modifier = Modifier.size(24.dp)) }
+        Spacer(Modifier.size(6.dp))
+        Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }
 }
 
