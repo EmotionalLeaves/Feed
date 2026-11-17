@@ -1,3 +1,10 @@
+## 4.59.0 — 2026-11-16
+Quicker post menu
+
+- The hold menu now opens with a row of round buttons: Collection, Hands-free, Copy link and Open on site. The 'less of this' options (Not interested, hide a tag, block, hide a site, report) follow as a list.
+- Long captions fold to two lines; tap them to read the rest.
+- Empty screens (an empty Following feed, an empty library list, no connection) show their icon in a soft brand-coloured halo.
+
 ## 4.58.0 — 2026-11-16
 Design pass
 
@@ -15,10 +22,3 @@ Tab bar, finished
 - One accent mark slides to the tab you pick.
 - Tap Search again to go straight into the search box. Tap Library again to leave a collection and see everything saved.
 - On tablets and wide screens, the tabs stay together in the middle.
-
-## 4.56.0 — 2026-11-16
-Tab bar steps back
-
-- The tab bar tucks away as you scroll down Search, Library or Settings, and comes back when you scroll up. It also steps aside while the keyboard is open.
-- Over the feed, only the current tab shows its name, the fade is lighter, and in hands-free mode the bar settles back sooner.
-- Settings: the jump chips light up the section you're in. Sources rows now say when a site is blocked where you are; for tube sites they name which ones, since the rest still work.

@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.59.0 — 2026-11-16
+
+Quicker post menu
+
+- The hold menu now opens with a row of round buttons: Collection, Hands-free, Copy link and Open on site. The 'less of this' options (Not interested, hide a tag, block, hide a site, report) follow as a list.
+- Long captions fold to two lines; tap them to read the rest.
+- Empty screens (an empty Following feed, an empty library list, no connection) show their icon in a soft brand-coloured halo.
+
 ## 4.58.0 — 2026-11-16
 
 Design pass
