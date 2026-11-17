@@ -6,6 +6,23 @@ import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Home
 import android.net.Uri
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.HorizontalDivider
@@ -126,40 +143,28 @@ private fun MainNav(locked: Boolean) {
     // Feed screens are full-bleed: media runs behind the status bar, the bottom bar turns black.
     val immersive = route == Routes.FEED || route == Routes.TAG || route == Routes.VIEWER
 
+    val barVisible = currentTab != null && !BottomBar.hidden
     Scaffold(
+        // Insets are handled per screen and by the bar itself.
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         bottomBar = {
-            if (currentTab != null) Column {
-                // Flat bar on the app background with a hairline on top: reads as part of the app,
-                // not a separate slab, and turns pure black over the feed.
-                if (!immersive) HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
-                NavigationBar(
-                    containerColor = if (immersive) Color.Black else MaterialTheme.colorScheme.background,
-                    tonalElevation = 0.dp,
-                ) {
-                    tabs.forEach { tab ->
-                        NavigationBarItem(
-                            selected = tab == currentTab,
-                            onClick = { nav.navigateTab(tab.route) },
-                            icon = { Icon(if (tab == currentTab) tab.icon else tab.outline, contentDescription = tab.label) },
-                            label = { Text(tab.label) },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = Color.White,
-                                selectedTextColor = Color.White,
-                                indicatorColor = Accent.copy(alpha = 0.22f),
-                                unselectedIconColor = Color.White.copy(alpha = 0.55f),
-                                unselectedTextColor = Color.White.copy(alpha = 0.55f),
-                            ),
-                        )
-                    }
-                }
-            }
+            if (barVisible) SlimNavBar(current = currentTab, immersive = immersive, onSelect = { nav.navigateTab(it.route) })
         },
     ) { padding ->
+        androidx.compose.runtime.CompositionLocalProvider(
+            LocalBottomBarInset provides when {
+                !immersive -> 0.dp
+                barVisible -> padding.calculateBottomPadding()
+                else -> androidx.compose.foundation.layout.WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            },
+        ) {
         NavHost(
             nav,
             startDestination = Routes.FEED,
-            // Immersive screens handle the status bar themselves; the others get the normal insets.
-            modifier = if (immersive) Modifier.padding(bottom = padding.calculateBottomPadding()) else Modifier.padding(padding),
+            // The feed runs full-bleed under the bar (its captions and buttons sit above it, see
+            // LocalBottomBarInset); other screens stop at the bar and below the status bar.
+            modifier = if (immersive) Modifier
+            else Modifier.padding(bottom = padding.calculateBottomPadding()).then(if (barVisible) Modifier else Modifier.navigationBarsPadding()).statusBarsPadding(),
             // Quick fades between screens: snappy, and no sliding panels over full-screen video.
             enterTransition = { androidx.compose.animation.fadeIn(androidx.compose.animation.core.tween(180)) },
             exitTransition = { androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(120)) },
@@ -181,8 +186,79 @@ private fun MainNav(locked: Boolean) {
             composable(Routes.TASTE) { TasteScreen(nav) }
             composable(Routes.NETWORK) { dev.pfeed.ui.settings.NetworkScreen(nav) }
         }
+        }
     }
 }
+
+/** How much of the bottom of a full-bleed screen the tab bar covers (0 elsewhere): feed overlays sit above it. */
+val LocalBottomBarInset = androidx.compose.runtime.staticCompositionLocalOf { 0.dp }
+
+/** Screens can hide the tab bar (the feed does, sideways). */
+object BottomBar {
+    var hidden by androidx.compose.runtime.mutableStateOf(false)
+}
+
+/**
+ * The tab bar: slim, no pill, no slab. Over the feed it's see-through on a soft fade, so videos run
+ * to the bottom edge; elsewhere it sits on the page colour. The current tab is bright with a small
+ * accent bar; the others are dimmed.
+ */
+@Composable
+private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Unit) {
+    val background = if (immersive) {
+        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.55f)))
+    } else {
+        androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.background)
+    }
+    androidx.compose.foundation.layout.Row(
+        Modifier
+            .fillMaxWidth()
+            .background(background)
+            .navigationBarsPadding()
+            .height(BAR_HEIGHT),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        tabs.forEach { tab ->
+            val selected = tab == current
+            val tint by androidx.compose.animation.animateColorAsState(
+                if (selected) Color.White else Color.White.copy(alpha = if (immersive) 0.62f else 0.5f), label = "tabTint",
+            )
+            val barWidth by androidx.compose.animation.core.animateDpAsState(if (selected) 14.dp else 0.dp, label = "tabBar")
+            Column(
+                Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .clickable(
+                        interactionSource = androidx.compose.runtime.remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        role = androidx.compose.ui.semantics.Role.Tab,
+                        onClickLabel = tab.label,
+                    ) { onSelect(tab) }
+                    .androidx_semantics(tab.label, selected),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+            ) {
+                Icon(if (selected) tab.icon else tab.outline, contentDescription = null, tint = tint, modifier = Modifier.size(23.dp))
+                androidx.compose.foundation.layout.Spacer(Modifier.height(2.dp))
+                Text(
+                    tab.label,
+                    color = tint,
+                    fontSize = 10.5.sp,
+                    fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium,
+                    maxLines = 1,
+                )
+                androidx.compose.foundation.layout.Spacer(Modifier.height(3.dp))
+                Box(Modifier.width(barWidth).height(2.dp).background(Accent, RoundedCornerShape(1.dp)))
+            }
+        }
+    }
+}
+
+/** Tabs read as tabs to TalkBack (and to tests): selectable, with the label as their text. */
+private fun Modifier.androidx_semantics(label: String, selected: Boolean): Modifier =
+    this.then(Modifier.semantics(mergeDescendants = true) { this.selected = selected; this.contentDescription = label })
+
+private val BAR_HEIGHT = 52.dp
 
 private fun NavController.navigateTab(route: String) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }

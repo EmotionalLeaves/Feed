@@ -188,6 +188,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
     }
     LandscapeMode(enabled = landscape)
+    // Sideways, the tab bar steps aside for the video.
+    DisposableEffect(landscape) {
+        dev.pfeed.ui.BottomBar.hidden = landscape
+        onDispose { if (landscape) dev.pfeed.ui.BottomBar.hidden = false }
+    }
     BackHandler(enabled = landscape) { vm.setLandscape(false) }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -254,7 +259,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 }
             }
         } else if (loading || hint == null) {
-            LoadingPost(Modifier.fillMaxSize())
+            LoadingPost(Modifier.fillMaxSize().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current))
         } else {
             FeedEmptyState(
                 loading = loading,
@@ -273,7 +278,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         val isPrivate by vm.privateMode.collectAsStateWithLifecycle()
         if (isPrivate && !landscape) {
             Row(
-                Modifier.align(Alignment.BottomStart).navigationBarsPadding().padding(start = 12.dp, bottom = 6.dp)
+                Modifier.align(Alignment.BottomStart).padding(start = 12.dp, bottom = 6.dp + dev.pfeed.ui.LocalBottomBarInset.current)
                     .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50)).padding(horizontal = 8.dp, vertical = 3.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -302,7 +307,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         // The page as a grid: everything loaded so far (and more as you scroll); tap one to watch from there.
         if (gridView && !landscape) {
             BackHandler { gridView = false }
-            Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding()) {
+            Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { gridView = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the feed") }
                     Text(
@@ -386,7 +391,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // Very first run: what are you into? (skippable; shapes For You from the first screen). On top of everything.
         val newUser by vm.isNewUser.collectAsStateWithLifecycle()
-        if (!vm.isViewer && vm.tag == null && !landscape && (newUser == true || FirstRun.forceInterests)) InterestPicker(onDone = vm::pickInterests)
+        if (!vm.isViewer && vm.tag == null && !landscape && (newUser == true || FirstRun.forceInterests)) Box(Modifier.fillMaxSize().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) { InterestPicker(onDone = vm::pickInterests) }
     }
 
     menuFor?.let { item ->
@@ -678,22 +683,26 @@ private fun FeedPage(
             MediaType.IMAGE, MediaType.GIF ->
                 if (item.isGallery) GalleryPage(item, vm, active = playing, autoFlip = handsFree && playing && !paused, onEnded = onEnded)
                 else ImagePage(item, vm)
-            MediaType.EMBED -> EmbedPage(item, active = playing, vm = vm)
+            // A site's own player keeps its controls clear of the tab bar.
+            MediaType.EMBED -> Box(Modifier.fillMaxSize().padding(bottom = if (landscape) 0.dp else dev.pfeed.ui.LocalBottomBarInset.current)) { EmbedPage(item, active = playing, vm = vm) }
         }
         dev.pfeed.ui.common.MediaMask()
-        if (imageCountdown) Box(
-            Modifier.align(Alignment.BottomStart).fillMaxWidth(countdown.value).height(2.dp)
-                .background(Color.White.copy(alpha = 0.7f)),
-        )
 
         // Scrims: darken just the edges so the top bar, caption and buttons read on any image.
+        val barInset = if (landscape) 0.dp else dev.pfeed.ui.LocalBottomBarInset.current
         if (!landscape) Box(
             Modifier.align(Alignment.TopCenter).fillMaxWidth().height(140.dp)
                 .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent))),
         )
         if (!landscape) Box(
-            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(320.dp)
+            Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(320.dp + barInset)
                 .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))),
+        )
+        // Everything drawn on the post sits above the tab bar, which the post itself runs under.
+        Box(Modifier.fillMaxSize().padding(bottom = barInset)) {
+        if (imageCountdown) Box(
+            Modifier.align(Alignment.BottomStart).fillMaxWidth(countdown.value).height(2.dp)
+                .background(Color.White.copy(alpha = 0.7f)),
         )
 
         if (paused && isVideo && !speeding) {
@@ -758,6 +767,7 @@ private fun FeedPage(
                 // Scrubbing back to see something again is a rewatch: a strong signal for For You.
                 onScrubbedBack = { vm.statsFor(item.key).replays++ },
             )
+        }
         }
     }
 }
