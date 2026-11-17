@@ -182,7 +182,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             val fresh = now - known
             known = now
             if (fresh.isNotEmpty() && !dev.pfeed.source.net.AppProxy.config.active) {
-                val names = fresh.map(dev.pfeed.ui.settings::siteLabel).joinToString(", ")
+                val names = fresh.map { dev.pfeed.ui.settings.siteLabel(it) }.joinToString(", ")
                 vm.offer("$names ${if (fresh.size == 1) "is" else "are"} blocked where you are", "Get it back") { nav.navigate(dev.pfeed.ui.Routes.NETWORK) }
             }
         }
