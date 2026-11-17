@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -124,6 +125,10 @@ private fun Modifier.panicGesture(onPanic: () -> Unit): Modifier = this.then(
             while (true) {
                 val event = awaitPointerEvent(PointerEventPass.Initial)
                 val down = event.changes.count { it.pressed }
+                if (down > 0) {
+                    val now = System.currentTimeMillis()
+                    if (now - BottomBar.lastTouch > 500) BottomBar.lastTouch = now // a few updates a second at most
+                }
                 if (down >= 3 && !fired) {
                     fired = true
                     onPanic()
@@ -196,6 +201,10 @@ val LocalBottomBarInset = androidx.compose.runtime.staticCompositionLocalOf { 0.
 /** Screens can hide the tab bar (the feed does, sideways). */
 object BottomBar {
     var hidden by androidx.compose.runtime.mutableStateOf(false)
+    /** Last touch anywhere: over the feed the bar dims while you just watch, and comes back on touch. */
+    var lastTouch by androidx.compose.runtime.mutableLongStateOf(0L)
+    /** The current tab tapped again (its route): the feed jumps back to the top, or refreshes if it's there. */
+    val reselected = kotlinx.coroutines.flow.MutableSharedFlow<String>(extraBufferCapacity = 1)
 }
 
 /**
@@ -210,9 +219,18 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
     } else {
         androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.background)
     }
+    // Over the feed, the bar fades back while you watch and returns the moment you touch the screen.
+    var idle by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(BottomBar.lastTouch, immersive) {
+        idle = false
+        if (immersive) { kotlinx.coroutines.delay(IDLE_DIM_MS); idle = true }
+    }
+    val fade by androidx.compose.animation.core.animateFloatAsState(if (idle) 0.4f else 1f, androidx.compose.animation.core.tween(if (idle) 900 else 150), label = "barFade")
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     androidx.compose.foundation.layout.Row(
         Modifier
             .fillMaxWidth()
+            .graphicsLayer { alpha = fade }
             .background(background)
             .navigationBarsPadding()
             .height(BAR_HEIGHT),
@@ -233,7 +251,10 @@ private fun SlimNavBar(current: Tab?, immersive: Boolean, onSelect: (Tab) -> Uni
                         indication = null,
                         role = androidx.compose.ui.semantics.Role.Tab,
                         onClickLabel = tab.label,
-                    ) { onSelect(tab) }
+                    ) {
+                        haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        if (selected) BottomBar.reselected.tryEmit(tab.route) else onSelect(tab)
+                    }
                     .androidx_semantics(tab.label, selected),
                 horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally,
                 verticalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
@@ -259,6 +280,7 @@ private fun Modifier.androidx_semantics(label: String, selected: Boolean): Modif
     this.then(Modifier.semantics(mergeDescendants = true) { this.selected = selected; this.contentDescription = label })
 
 private val BAR_HEIGHT = 52.dp
+private const val IDLE_DIM_MS = 3_500L
 
 private fun NavController.navigateTab(route: String) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }

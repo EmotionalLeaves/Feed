@@ -175,6 +175,13 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             if (r == androidx.compose.material3.SnackbarResult.ActionPerformed) vm.toggleFollowCreator(item)
         }
     }
+    // Feed tapped again in the tab bar: back to the top, or a fresh batch if you're already there.
+    if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
+        dev.pfeed.ui.BottomBar.reselected.collect { route ->
+            if (route != dev.pfeed.ui.Routes.FEED) return@collect
+            if (pagerState.currentPage > 0) pagerState.animateScrollToPage(0) else vm.refresh()
+        }
+    }
     // A site turned out to be blocked where you are: say so once, with the way around it.
     if (vm.tag == null && !vm.isViewer) LaunchedEffect(Unit) {
         var known = dev.pfeed.source.net.GeoBlock.sites.value
