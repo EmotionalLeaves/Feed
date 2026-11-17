@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.52.0 — 2026-11-16
+
+Grid view for tags and creators
+
+- New: tag and creator pages have a grid button at the top. You see everything loaded as tiles, and more loads as you scroll; tap one to watch from there. Back returns to the feed where you were.
+
 ## 4.51.0 — 2026-11-16
 
 Backups keep your library
