@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.78.0 — 2026-11-16
+
+Your mixes, Clean screen
+
+- New: Your mixes on Search. Playlists that weave two of your interests together, shown as big cards with three covers fanned out. Tap one to play the whole mix.
+- New: Clean screen. In the hold menu, it hides everything over the post: caption, buttons, top bar and tab bar. Touch the screen and a 'Show everything' button appears for a moment.
+- Copy link moved from the round buttons into the menu list to make room.
+
 ## 4.77.0 — 2026-11-16
 
 More like this, Wall, no XNXX
