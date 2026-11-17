@@ -72,7 +72,7 @@ fun BlocklistScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel())
         AddBlock { kind, value -> vm.block(kind, value) }
 
         if (tags.isEmpty() && creators.isEmpty() && origins.isEmpty() && hiddenCount == 0) {
-            EmptyState(Icons.Filled.Block, "Nothing hidden", "Use ⋯ on any post to hide a tag, a creator or a whole source.")
+            EmptyState(Icons.Filled.Block, "Nothing hidden", "Tap More (or press and hold) on any post to hide a tag, a creator or a whole source.")
         }
         if (tags.isNotEmpty()) BlockSection("Tags", tags, Icons.Filled.Tag, vm) { "#" + it.value.replace('_', ' ') }
         if (creators.isNotEmpty()) BlockSection("Creators", creators, Icons.Filled.Person, vm) { "@" + it.value }
@@ -130,7 +130,7 @@ private fun AddBlock(onAdd: (BlockKind, String) -> Unit) {
             OutlinedTextField(
                 value = text,
                 onValueChange = { text = it },
-                placeholder = { Text(if (kind == BlockKind.TAG) "Tag to block, e.g. feet" else "Creator name") },
+                placeholder = { Text(if (kind == BlockKind.TAG) "e.g. feet" else "Creator name", maxLines = 1) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
                 keyboardActions = KeyboardActions(onDone = { submit() }),

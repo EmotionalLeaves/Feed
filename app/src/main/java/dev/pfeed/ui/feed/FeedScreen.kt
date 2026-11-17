@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import dev.pfeed.ui.openTag
 import kotlinx.coroutines.launch
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.foundation.verticalScroll
@@ -246,7 +247,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     saved = item.key in saved,
                     followingCreator = vm.isFollowingCreator(item, follows),
                     vm = vm,
-                    onOpenTag = { tag -> nav.navigate(Routes.tag(tag)) },
+                    onOpenTag = { tag -> nav.openTag(tag) },
                     onMenu = { menuFor = item },
                     landscape = landscape,
                     onLandscape = vm::setLandscape,
@@ -401,7 +402,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         style = MaterialTheme.typography.labelMedium,
                         maxLines = 1,
                         modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
-                            .clickable { nav.navigate(Routes.tag(raw)) }.padding(horizontal = 12.dp, vertical = 6.dp),
+                            .clickable { nav.openTag(raw) }.padding(horizontal = 12.dp, vertical = 6.dp),
                     )
                 }
             }

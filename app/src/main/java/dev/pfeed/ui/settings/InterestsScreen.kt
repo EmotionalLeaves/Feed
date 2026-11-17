@@ -1,5 +1,6 @@
 package dev.pfeed.ui.settings
 
+import dev.pfeed.ui.openTag
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
@@ -80,7 +81,7 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
     Column(Modifier.fillMaxSize()) {
         ScreenHeader(
             "Your taste",
-            subtitle = "Learned from what you watch to the end, replay, like, save and follow, and from what you skip. Interests fade when you stop engaging.",
+            subtitle = "Learned from what you finish, replay, like, save and follow, and what you skip. Interests fade as you move on.",
             onBack = { nav.popBackStack() },
         )
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
@@ -188,7 +189,7 @@ private fun InterestSection(title: String, rows: List<Triple<String, Double, Boo
 
 private fun openTag(nav: NavController, feature: String) {
     if (feature.startsWith("@") || dev.pfeed.domain.reco.Features.isMeta(feature)) return
-    nav.navigate(Routes.tag(feature.removePrefix("w:")))
+    nav.openTag(feature.removePrefix("w:"))
 }
 
 @Composable

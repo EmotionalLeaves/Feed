@@ -1,5 +1,6 @@
 package dev.pfeed.ui.library
 
+import dev.pfeed.ui.openTag
 import kotlinx.coroutines.flow.flowOn
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Close
@@ -228,7 +229,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
                         name = if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}",
                         kind = if (isTag) "Tag" else "Creator",
                         isTag = isTag,
-                        onOpen = { nav.navigate(Routes.tag(if (isTag) row.value else "@" + row.value)) },
+                        onOpen = { nav.openTag(if (isTag) row.value else "@" + row.value) },
                         onUnfollow = { vm.unfollow(row) },
                     )
                 }

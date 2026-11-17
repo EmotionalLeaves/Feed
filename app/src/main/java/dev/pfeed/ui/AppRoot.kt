@@ -367,6 +367,23 @@ private const val IDLE_DIM_MS = 3_500L
 /** After dimming, how much longer before the bar is out of sight entirely. */
 private const val IDLE_HIDE_MS = 8_000L
 
+/**
+ * Opens a tag or creator page. Pages opened from pages (a creator, then one of their tags, then
+ * another creator…) can stack without end, each holding its own feed in memory; past a few deep,
+ * the new page takes the current one's place, so Back still steps through the last few.
+ */
+fun NavController.openTag(tag: String) {
+    val depth = currentBackStack.value.count { it.destination.route == Routes.TAG || it.destination.route == Routes.VIEWER }
+    val top = currentBackStackEntry?.destination
+    navigate(Routes.tag(tag)) {
+        if (depth >= MAX_PAGE_DEPTH && top != null && (top.route == Routes.TAG || top.route == Routes.VIEWER)) {
+            popUpTo(top.id) { inclusive = true }
+        }
+    }
+}
+
+private const val MAX_PAGE_DEPTH = 4
+
 private fun NavController.navigateTab(route: String) = navigate(route) {
     popUpTo(graph.findStartDestination().id) { saveState = true }
     launchSingleTop = true
