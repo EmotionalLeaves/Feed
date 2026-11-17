@@ -168,8 +168,14 @@ fun LockScreen(lock: AppLockManager) {
             Spacer(Modifier.height(20.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.graphicsLayer { translationX = shake.value * density }) {
                 repeat(maxOf(MIN_PIN, pin.length)) { i ->
+                    // Each dot swells a little as it fills.
+                    val filled = i < pin.length
+                    val dot by androidx.compose.animation.core.animateFloatAsState(
+                        if (filled) 1f else 0.85f, androidx.compose.animation.core.spring(dampingRatio = 0.4f, stiffness = 800f), label = "pinDot",
+                    )
                     Box(
                         Modifier
+                            .graphicsLayer { scaleX = dot; scaleY = dot }
                             .size(14.dp)
                             .border(1.5.dp, if (i < pin.length) dev.pfeed.ui.theme.Accent else dev.pfeed.ui.theme.TextLow, CircleShape)
                             .background(if (i < pin.length) dev.pfeed.ui.theme.Accent else Color.Transparent, CircleShape),
@@ -192,7 +198,12 @@ fun LockScreen(lock: AppLockManager) {
                                     Icon(Icons.AutoMirrored.Filled.Backspace, "Delete")
                                 }
                                 else -> TextButton(
-                                    onClick = { if (pin.length < MAX_PIN) pin += k },
+                                    onClick = {
+                                        if (pin.length < MAX_PIN) {
+                                            pin += k
+                                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                                        }
+                                    },
                                     modifier = Modifier.size(key).background(MaterialTheme.colorScheme.surfaceContainerHigh, CircleShape),
                                     shape = CircleShape,
                                 ) { Text(k, fontSize = (key.value * 0.38f).sp, fontWeight = FontWeight.Normal, color = MaterialTheme.colorScheme.onBackground) }
