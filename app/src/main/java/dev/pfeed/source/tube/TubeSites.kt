@@ -592,8 +592,10 @@ sealed class TubeSite(val host: String, val label: String) {
             }.distinctBy { it.id }
         }
 
+        // The ".mp4" links redirect to an HLS playlist on the CDN: play them as HLS.
         override fun stream(pageHtml: String): TubeStream? =
             best(SOURCE.findAll(pageHtml).map { it.groupValues[2].toInt() to unescape(it.groupValues[1]) }.toList())
+                ?.copy(mime = MediaTypes.HLS_MIME)
         override fun pageTags(pageHtml: String): List<String> =
             TAG.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') }.filter { it != "hd" }.distinct().take(30).toList()
         override fun embedUrl(id: String) = "https://www.pornhat.com/embed/$id"

@@ -24,19 +24,16 @@ class LiveProbeTest {
 
     @Test
     fun probe() {
-        val site = dev.pfeed.source.tube.TubeSite.PornHat
-        for ((sec, page) in listOf("new" to 0, "new" to 1, "top" to 0, "top" to 1, "milf" to 0, "milf" to 1, "big tits" to 0)) probe("list $sec $page") {
-            val u = site.listUrl(sec, page)
-            val (code, body) = get(u)
-            val l = site.parseList(body)
-            "$u code=$code n=${l.size} durs=${l.count { it.durationSec != null }} creators=${l.count { it.creator != null }} thumbs=${l.count { it.thumb != null }} first=${l.firstOrNull()}"
-        }
-        probe("stream") {
-            val v = site.parseList(get(site.listUrl("new", 0)).second).first()
-            val (c, page) = get(v.pageUrl)
-            val st = site.stream(page)
-            val h = st?.let { s -> client.newCall(Request.Builder().url(s.url).header("Range", "bytes=0-0").header("Referer", v.pageUrl).build()).execute().use { "${it.code} ${it.header("Content-Type")} ${it.request.url.host}" } }
-            "page=$c stream=$st head=$h tags=${site.pageTags(page)}"
+        val (_, home) = get("https://www.pornhat.com/")
+        val i = home.indexOf("class=\"item thumb-bl thumb-bl-video")
+        val c = home.substring(i, minOf(home.length, i + 6000))
+        probe("times") { Regex("\\d{1,2}:\\d{2}").findAll(c).take(3).joinToString(" || ") { m -> c.substring((m.range.first - 200).coerceAtLeast(0), m.range.last + 20) } }
+        probe("chunk tail") { c.substring(2300, minOf(c.length, 4300)) }
+        probe("hls") {
+            val site = dev.pfeed.source.tube.TubeSite.PornHat
+            val v = site.parseList(home).first()
+            val st = site.stream(get(v.pageUrl).second) ?: return@probe "no stream"
+            client.newCall(Request.Builder().url(st.url).header("Referer", v.pageUrl).build()).execute().use { "${it.code} ${it.request.url} ${it.body?.string()?.take(400)}" }
         }
     }
 }
