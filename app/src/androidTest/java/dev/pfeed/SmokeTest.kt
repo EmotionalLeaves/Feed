@@ -84,7 +84,10 @@ class SmokeTest {
     private fun tab(name: String) {
         dev.pfeed.ui.BottomBar.collapse = 0f
         rule.waitForIdle()
-        rule.onNode(hasText(name) and androidx.compose.ui.test.isSelectable()).performClick()
+        rule.onNode(
+            hasText(name) and androidx.compose.ui.test.isSelectable() and
+                androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role, androidx.compose.ui.semantics.Role.Tab),
+        ).performClick()
     }
 
     private fun tap(text: String) = waitFor(timeoutMs = 30_000, what = "tap '$text'") {
