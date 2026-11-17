@@ -478,7 +478,7 @@ private fun FeedEmptyState(
 ) {
     Column(modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         if (loading || hint == null) {
-            CircularProgressIndicator(Modifier.size(44.dp), color = Accent, strokeWidth = 4.dp, trackColor = Color.White.copy(alpha = 0.08f))
+            dev.pfeed.ui.common.BrandSpinner(size = 44.dp, stroke = 4.dp)
             Spacer(Modifier.height(24.dp))
             Text("Loading your feed", color = Color.White, style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(6.dp))
@@ -962,7 +962,7 @@ private fun Overlay(
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             LikeButton(liked = liked, onLike = onLike)
-            RailButton(if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (saved) "Saved" else "Save", onSave, branded = saved)
+            SaveButton(saved = saved, onSave = onSave)
             if (isVideo) {
                 RailButton(if (muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, if (muted) "Muted" else "Sound", onMute)
             }
@@ -1019,6 +1019,21 @@ private fun RailButton(
         Spacer(Modifier.height(3.dp))
         Text(label, color = Color.White.copy(alpha = 0.9f), style = MaterialTheme.typography.labelSmall.shadowed())
     }
+}
+
+/** Save with the same little pop as Like when it turns on. */
+@Composable
+private fun SaveButton(saved: Boolean, onSave: () -> Unit) {
+    val pop = remember { Animatable(1f) }
+    var previous by remember { mutableStateOf(saved) }
+    LaunchedEffect(saved) {
+        if (saved && !previous) {
+            pop.animateTo(1.3f, tween(110))
+            pop.animateTo(1f, spring(dampingRatio = 0.45f))
+        }
+        previous = saved
+    }
+    RailButton(if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder, if (saved) "Saved" else "Save", onSave, iconScale = pop.value, branded = saved)
 }
 
 /** Like with a little pop when it turns on (not when the page appears already liked). */

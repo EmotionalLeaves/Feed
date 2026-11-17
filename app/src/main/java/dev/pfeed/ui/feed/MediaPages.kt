@@ -262,7 +262,7 @@ fun VideoPage(
         when {
             error != null -> Unit // already being skipped
             stream is StreamInfo.Embed -> EmbedPage(item, active = play, vm = vm)
-            !firstFrame && play -> CircularProgressIndicator(Modifier.size(36.dp), color = Color.White.copy(alpha = 0.85f), strokeWidth = 3.dp)
+            !firstFrame && play -> dev.pfeed.ui.common.BrandSpinner()
         }
     }
 }

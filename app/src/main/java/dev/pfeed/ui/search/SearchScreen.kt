@@ -643,7 +643,7 @@ private fun ResultsPane(
                 // Results come from every site at once: each tile says which.
                 visible.isNotEmpty() -> MediaGrid(visible, onOpen = onOpen, label = { Display.source(it, it.sourceId) })
                 ui.loading -> Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Accent)
+                    dev.pfeed.ui.common.BrandSpinner(size = 40.dp)
                     Spacer(Modifier.height(12.dp))
                     Text("Searching every source…", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
                 }

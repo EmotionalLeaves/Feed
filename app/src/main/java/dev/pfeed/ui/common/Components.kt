@@ -358,3 +358,34 @@ fun AppSnackbarHost(state: androidx.compose.material3.SnackbarHostState, modifie
         }
     }
 }
+
+/**
+ * The app's loading spinner: a rounded arc in the brand gradient, turning, over a faint track.
+ * Used wherever something is on its way (a video starting, the feed filling, a search).
+ */
+@Composable
+fun BrandSpinner(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.Dp = 36.dp, stroke: androidx.compose.ui.unit.Dp = 3.5.dp) {
+    val spin = androidx.compose.animation.core.rememberInfiniteTransition(label = "spinner")
+    val angle by spin.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(900, easing = androidx.compose.animation.core.LinearEasing)),
+        label = "spinnerAngle",
+    )
+    val sweep by spin.animateFloat(
+        initialValue = 60f, targetValue = 260f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1100), androidx.compose.animation.core.RepeatMode.Reverse),
+        label = "spinnerSweep",
+    )
+    androidx.compose.foundation.Canvas(modifier.size(size)) {
+        val w = stroke.toPx()
+        val inset = w / 2
+        val arcSize = androidx.compose.ui.geometry.Size(this.size.width - w, this.size.height - w)
+        val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+        drawArc(Color.White.copy(alpha = 0.12f), 0f, 360f, false, topLeft, arcSize, style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+        drawArc(
+            brush = androidx.compose.ui.graphics.Brush.sweepGradient(listOf(dev.pfeed.ui.theme.AccentWarm, dev.pfeed.ui.theme.Accent, dev.pfeed.ui.theme.AccentWarm)),
+            startAngle = angle, sweepAngle = sweep, useCenter = false, topLeft = topLeft, size = arcSize,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+        )
+    }
+}
