@@ -42,6 +42,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import dev.pfeed.ui.theme.Accent
 import dev.pfeed.ui.theme.SectionLabel
 import dev.pfeed.ui.theme.TextLow
@@ -387,6 +388,28 @@ fun BrandSpinner(modifier: Modifier = Modifier, size: androidx.compose.ui.unit.D
             brush = androidx.compose.ui.graphics.Brush.sweepGradient(listOf(dev.pfeed.ui.theme.AccentWarm, dev.pfeed.ui.theme.Accent, dev.pfeed.ui.theme.AccentWarm)),
             startAngle = angle, sweepAngle = sweep, useCenter = false, topLeft = topLeft, size = arcSize,
             style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round),
+        )
+    }
+}
+
+/**
+ * A creator's round initial in a colour of their own (the same colour everywhere for the same
+ * name): the feed's caption and Library → Following use it, so a creator looks the same in both.
+ */
+@Composable
+fun InitialAvatar(name: String, size: androidx.compose.ui.unit.Dp = 32.dp, modifier: Modifier = Modifier) {
+    val clean = name.removePrefix("@").trim()
+    val hue = androidx.compose.runtime.remember(clean) { ((clean.lowercase().hashCode() and 0x7fffffff) % 360).toFloat() }
+    Box(
+        modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape)
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.hsl(hue, 0.6f, 0.5f), Color.hsl((hue + 40f) % 360f, 0.6f, 0.4f)))),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            clean.take(1).uppercase().ifEmpty { "?" },
+            color = Color.White,
+            fontSize = (size.value * 0.42f).sp,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
         )
     }
 }

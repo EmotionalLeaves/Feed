@@ -331,21 +331,12 @@ private fun FollowRow(name: String, kind: String, isTag: Boolean, onOpen: () -> 
         Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Box(
-            Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape)
-                .background(
-                    if (isTag) androidx.compose.ui.graphics.SolidColor(Color.hsl(hue, 0.45f, 0.28f))
-                    else androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color.hsl(hue, 0.6f, 0.5f), Color.hsl((hue + 40f) % 360f, 0.6f, 0.4f))),
-                ),
+        if (isTag) Box(
+            Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color.hsl(hue, 0.45f, 0.28f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(
-                if (isTag) "#" else name.removePrefix("@").take(1).uppercase(),
-                color = Color.White,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
-            )
-        }
+            Text("#", color = Color.White, style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+        } else dev.pfeed.ui.common.InitialAvatar(name, size = 44.dp)
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

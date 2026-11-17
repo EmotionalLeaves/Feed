@@ -916,6 +916,8 @@ private fun Overlay(
             }
             if (creator != null) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    dev.pfeed.ui.common.InitialAvatar(creator, size = 30.dp, modifier = Modifier.clickable { onTag("@" + (item.creator ?: creator)) })
+                    Spacer(Modifier.width(8.dp))
                     Text(
                         "@$creator",
                         color = Color.White,
