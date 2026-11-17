@@ -41,6 +41,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.layout.layout
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Edit
@@ -386,27 +387,44 @@ private fun NoMatch() = EmptyState(Icons.Filled.Search, "No matches", "Nothing i
 
 @Composable
 private fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
+    // One accent bar that slides to the picked tab (as in the tab bar), instead of one per tab.
+    val at by androidx.compose.animation.core.animateFloatAsState(
+        selected.toFloat(), androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 500f), label = "libraryTab",
+    )
     Column {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
-            tabs.forEachIndexed { i, label ->
-                val on = i == selected
-                val underline by androidx.compose.animation.core.animateDpAsState(if (on) 28.dp else 0.dp, label = "tab")
-                Column(
-                    Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { onSelect(i) }.padding(top = 12.dp, bottom = 8.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    Text(
-                        label,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
-                        color = if (on) Color.White else Color.White.copy(alpha = 0.5f),
-                        maxLines = 1,
-                        softWrap = false,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Box(Modifier.width(underline).height(3.dp).background(Accent, RoundedCornerShape(2.dp)))
+        Box(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
+            Row(Modifier.fillMaxWidth()) {
+                tabs.forEachIndexed { i, label ->
+                    val on = i == selected
+                    val tint by androidx.compose.animation.animateColorAsState(if (on) Color.White else Color.White.copy(alpha = 0.5f), label = "libraryTabTint")
+                    Column(
+                        Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { onSelect(i) }.padding(top = 12.dp, bottom = 19.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Text(
+                            label,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = if (on) FontWeight.Bold else FontWeight.Medium,
+                            color = tint,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+                    }
                 }
             }
+            Box(
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(bottom = 8.dp)
+                    .layout { measurable, constraints ->
+                        val p = measurable.measure(constraints)
+                        val slot = constraints.maxWidth / tabs.size.toFloat()
+                        layout(constraints.maxWidth, p.height) { p.place((slot * (at + 0.5f) - p.width / 2f).toInt(), 0) }
+                    }
+                    .width(28.dp)
+                    .height(3.dp)
+                    .background(Accent, RoundedCornerShape(2.dp)),
+            )
         }
         Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
     }
