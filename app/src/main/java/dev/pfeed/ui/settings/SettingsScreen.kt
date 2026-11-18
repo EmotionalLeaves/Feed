@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Headphones
@@ -444,6 +445,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     )
                     RowDivider()
                 }
+                SwitchSetting(
+                    "Hide from recent apps",
+                    s.hideFromRecents,
+                    subtitle = "The app doesn't appear in the recent-apps list at all, not even as a blank card",
+                    icon = Icons.Filled.Layers,
+                    onChange = vm::setHideFromRecents,
+                )
+                RowDivider()
                 SwitchSetting(
                     "Flip or shake to hide",
                     s.flipToHide,

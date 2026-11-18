@@ -66,6 +66,7 @@ class MainActivity : FragmentActivity() {
         if (intent?.getBooleanExtra(dev.pfeed.ui.AgeGate.EXTRA_CONFIRMED, false) == true) dev.pfeed.ui.AgeGate.confirm(this)
         if (savedInstanceState == null) takeSharedLink(intent)
         watchFlipToHide()
+        watchHideFromRecents()
         setContent {
             PFeedTheme {
                 val blurFlow = androidx.compose.runtime.remember { settingsRepository.flow.map { it.blurPreviews } }
@@ -136,6 +137,17 @@ class MainActivity : FragmentActivity() {
 
     /** Panic: lock immediately and jump to the home screen. Debounced: both detectors may fire for one gesture. */
     private val flip by lazy { dev.pfeed.security.FlipToHide(this) { runOnUiThread { panic() } } }
+
+    /** "Hide from recent apps": the app's task stays out of the recents list (follows the setting). */
+    private fun watchHideFromRecents() {
+        lifecycleScope.launch {
+            settingsRepository.flow.map { it.hideFromRecents }.distinctUntilChanged().collect { hide ->
+                runCatching {
+                    (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).appTasks.forEach { it.setExcludeFromRecents(hide) }
+                }
+            }
+        }
+    }
 
     /** Listens for flip/shake only while on screen and switched on (follows the setting live). */
     private fun watchFlipToHide() {
