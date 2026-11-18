@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.BatterySaver
@@ -291,6 +292,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.autoplayOnMobileData) null else "Videos wait for a tap when you're off Wi-Fi",
                     icon = Icons.Filled.SignalCellularAlt,
                     onChange = vm::setAutoplayOnMobile,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Sound only with headphones",
+                    s.headphonesOnly,
+                    subtitle = "Without headphones the feed stays silent, so nothing ever comes out of the speaker",
+                    icon = Icons.Filled.Headphones,
+                    onChange = vm::setHeadphonesOnly,
                 )
                 RowDivider()
                 SwitchSetting(

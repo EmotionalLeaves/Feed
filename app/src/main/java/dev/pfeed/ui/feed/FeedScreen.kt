@@ -206,6 +206,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(profilePage) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val pinchHaptic = LocalHapticFeedback.current
+    LaunchedEffect(Unit) { HeadphonesOnly.openSettings.collect { nav.navigate(dev.pfeed.ui.Routes.SETTINGS) } }
     // Volume keys turn pages here while this feed is on screen (if that's switched on).
     val turnable = active && !gridView && !wallMode && items.isNotEmpty()
     DisposableEffect(turnable, pagerState) {

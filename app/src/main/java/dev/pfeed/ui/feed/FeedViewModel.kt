@@ -63,6 +63,7 @@ class PlaybackStats {
 
 @HiltViewModel
 class FeedViewModel @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val app: android.content.Context,
     savedState: SavedStateHandle,
     private val sessions: FeedSessionFactory,
     private val signals: SignalRepository,
@@ -183,7 +184,10 @@ class FeedViewModel @Inject constructor(
     private var visible = false
 
     init {
-        viewModelScope.launch { _muted.value = settingsRepo.get().defaultMute }
+        viewModelScope.launch {
+            val st = settingsRepo.get()
+            _muted.value = st.defaultMute || (st.headphonesOnly && !HeadphonesOnly.connected(app))
+        }
         if (viewerToken != null) {
             val (list, start) = holder.get(viewerToken) ?: (emptyList<MediaItem>() to 0)
             raw.value = list
@@ -326,10 +330,19 @@ class FeedViewModel @Inject constructor(
 
     fun autoplayAllowed(): Boolean = settings.value.autoplayOnMobileData || !network.isMetered
 
-    fun toggleMute() { _muted.value = !_muted.value }
+    fun toggleMute() {
+        if (_muted.value && !soundAllowedHere()) {
+            offer("Sound is set to play only through headphones", "Settings") { HeadphonesOnly.openSettings.tryEmit(Unit) }
+            return
+        }
+        _muted.value = !_muted.value
+    }
+
+    /** "Sound only with headphones": false while it's on and nothing but the speaker is connected. */
+    private fun soundAllowedHere(): Boolean = !settings.value.headphonesOnly || HeadphonesOnly.connected(app)
 
     init {
-        viewModelScope.launch { VolumeKeys.up.collect { if (_muted.value) _muted.value = false } }
+        viewModelScope.launch { VolumeKeys.up.collect { if (_muted.value && soundAllowedHere()) _muted.value = false } }
     }
 
     /** Audio route went away (headphones unplugged): silence the feed rather than use the speaker. */
@@ -717,6 +730,25 @@ class FeedViewModel @Inject constructor(
 }
 
 /** Volume-key presses from the activity, for the feed's mute state. */
+/** "Sound only with headphones": whether any headphones (wired, Bluetooth, USB) are connected. */
+object HeadphonesOnly {
+    val openSettings = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    fun connected(context: android.content.Context): Boolean {
+        val am = context.getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager ?: return false
+        return am.getDevices(android.media.AudioManager.GET_DEVICES_OUTPUTS).any {
+            it.type in setOf(
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADPHONES,
+                android.media.AudioDeviceInfo.TYPE_WIRED_HEADSET,
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_A2DP,
+                android.media.AudioDeviceInfo.TYPE_BLUETOOTH_SCO,
+                android.media.AudioDeviceInfo.TYPE_USB_HEADSET,
+                android.media.AudioDeviceInfo.TYPE_BLE_HEADSET,
+            )
+        }
+    }
+}
+
 object VolumeKeys {
     val up = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
