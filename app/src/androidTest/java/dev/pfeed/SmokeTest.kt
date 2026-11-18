@@ -586,6 +586,23 @@ class SmokeTest {
         }
     }
 
+    /** The updater reaches GitHub's releases and makes sense of the answer. */
+    @Test
+    fun updaterChecksGitHub() {
+        val updater = dagger.hilt.android.EntryPointAccessors.fromApplication(
+            rule.activity.applicationContext, dev.pfeed.update.UpdaterEntryPoint::class.java,
+        ).updater()
+        updater.checkAndDownload()
+        val deadline = System.currentTimeMillis() + 90_000
+        var s = updater.state.value
+        while (System.currentTimeMillis() < deadline) {
+            s = updater.state.value
+            if (s !is dev.pfeed.update.Updater.State.Checking && s !is dev.pfeed.update.Updater.State.Downloading && s !is dev.pfeed.update.Updater.State.Idle) break
+            Thread.sleep(500)
+        }
+        android.util.Log.i("PFHEALTH", "updater: this is ${updater.currentVersion}; GitHub says ${s.toString().take(160)}")
+    }
+
     /** What For You actually serves (not what had time to draw): its first 60 posts by source and type. */
     @Test
     fun forYouMix() {

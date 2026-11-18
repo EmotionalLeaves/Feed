@@ -238,7 +238,6 @@ class Updater @Inject constructor(
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {
                     setAppPackageName(context.packageName)
                     if (Build.VERSION.SDK_INT >= 31) setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED)
-                    if (Build.VERSION.SDK_INT >= 34) setRequestUpdateOwnership(true)
                 }
                 val id = installer.createSession(params)
                 installer.openSession(id).use { session ->
