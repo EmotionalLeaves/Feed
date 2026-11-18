@@ -17,7 +17,9 @@ import androidx.compose.ui.unit.sp
  * (or cooler) second stop of the brand gradient. Held in snapshot state, so everything that reads
  * [Accent] or [BrandGradient] repaints the moment you pick another.
  */
-enum class Palette(val label: String, val main: Color, val second: Color) {
+enum class Palette(val label: String, private val fixedMain: Color, private val fixedSecond: Color) {
+    /** Chameleon: takes its colour from the post on screen (see [Palette.follow]). */
+    CHAMELEON("Chameleon", Color(0xFFFF3D68), Color(0xFFFF7A45)),
     ROSE("Rose", Color(0xFFFF3D68), Color(0xFFFF7A45)),
     VIOLET("Violet", Color(0xFF8B5CF6), Color(0xFFEC4899)),
     OCEAN("Ocean", Color(0xFF3B82F6), Color(0xFF22D3EE)),
@@ -25,12 +27,23 @@ enum class Palette(val label: String, val main: Color, val second: Color) {
     AMBER("Amber", Color(0xFFF97316), Color(0xFFEF4444)),
     CRIMSON("Crimson", Color(0xFFDC2626), Color(0xFF9333EA));
 
+    val main: Color get() = if (this == CHAMELEON) liveMain.value else fixedMain
+    val second: Color get() = if (this == CHAMELEON) liveSecond.value else fixedSecond
     val gradient: androidx.compose.ui.graphics.Brush get() = androidx.compose.ui.graphics.Brush.linearGradient(listOf(main, second))
 
     companion object {
         private val chosen = androidx.compose.runtime.mutableStateOf(ROSE)
+        private val liveMain = androidx.compose.runtime.mutableStateOf(Color(0xFFFF3D68))
+        private val liveSecond = androidx.compose.runtime.mutableStateOf(Color(0xFFFF7A45))
         val current: Palette get() = chosen.value
         fun set(name: String?) { chosen.value = entries.firstOrNull { it.name.equals(name, true) } ?: ROSE }
+
+        /** Chameleon: the colour of what's on screen, made bright enough to read white text on. */
+        fun follow(hue: Float) {
+            val h = ((hue % 360f) + 360f) % 360f
+            liveMain.value = Color.hsv(h, 0.72f, 0.92f)
+            liveSecond.value = Color.hsv((h + 28f) % 360f, 0.68f, 0.95f)
+        }
     }
 }
 
@@ -134,6 +147,7 @@ private val AppShapes = Shapes(
 @Composable
 fun PFeedTheme(content: @Composable () -> Unit) {
     val p = Palette.current
-    val colors = androidx.compose.runtime.remember(p) { scheme(p) }
+    val main = p.main
+    val colors = androidx.compose.runtime.remember(p, main) { scheme(p) }
     MaterialTheme(colorScheme = colors, typography = Type, shapes = AppShapes, content = content)
 }

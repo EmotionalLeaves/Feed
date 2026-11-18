@@ -896,7 +896,7 @@ private fun AccentPicker(current: dev.pfeed.ui.theme.Palette, onPick: (dev.pfeed
     Column(Modifier.fillMaxWidth().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("Colour", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            Text(current.label, style = MaterialTheme.typography.labelLarge, color = dev.pfeed.ui.theme.Accent)
+            Text(if (current == dev.pfeed.ui.theme.Palette.CHAMELEON) "Chameleon: follows the post" else current.label, style = MaterialTheme.typography.labelLarge, color = dev.pfeed.ui.theme.Accent)
         }
         Spacer(Modifier.height(14.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -908,7 +908,7 @@ private fun AccentPicker(current: dev.pfeed.ui.theme.Palette, onPick: (dev.pfeed
                         .border(ring, Color.White, androidx.compose.foundation.shape.CircleShape)
                         .padding(if (on) 5.dp else 0.dp)
                         .clip(androidx.compose.foundation.shape.CircleShape)
-                        .background(p.gradient)
+                        .background(if (p == dev.pfeed.ui.theme.Palette.CHAMELEON) androidx.compose.ui.graphics.Brush.sweepGradient(listOf(Color(0xFFFF3D68), Color(0xFFF59E0B), Color(0xFF10B981), Color(0xFF3B82F6), Color(0xFF8B5CF6), Color(0xFFFF3D68))) else p.gradient)
                         .clickable {
                             haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
                             onPick(p)
@@ -917,6 +917,7 @@ private fun AccentPicker(current: dev.pfeed.ui.theme.Palette, onPick: (dev.pfeed
                     contentAlignment = Alignment.Center,
                 ) {
                     if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    else if (p == dev.pfeed.ui.theme.Palette.CHAMELEON) Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
             }
         }

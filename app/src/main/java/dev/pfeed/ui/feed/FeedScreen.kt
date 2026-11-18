@@ -270,6 +270,13 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
     }
     LaunchedEffect(pagerState.settledPage) { vm.refreshLikedTags() }
+    // Chameleon colour: the app takes the hue of the post you settle on.
+    val chameleonContext = LocalContext.current
+    LaunchedEffect(pagerState.settledPage, items.size) {
+        if (dev.pfeed.ui.theme.Palette.current != dev.pfeed.ui.theme.Palette.CHAMELEON) return@LaunchedEffect
+        val thumb = items.getOrNull(pagerState.settledPage)?.thumbnailUrl ?: return@LaunchedEffect
+        dominantHue(chameleonContext, thumb)?.let { dev.pfeed.ui.theme.Palette.follow(it) }
+    }
     // Just updated: say so once, with the notes a tap away.
     if (vm.isMainFeed) {
         val ctx = LocalContext.current
@@ -1848,4 +1855,26 @@ private fun InterestPicker(onDone: (List<String>) -> Unit) {
         onDone = ::finish,
         onSkip = { finish(emptyList()) },
     )
+}
+
+/**
+ * The main hue of a picture (for the Chameleon colour): a tiny copy, each pixel's hue weighted by
+ * how colourful and bright it is, so skin and backgrounds pull more than grey. Null if it's all grey.
+ */
+private suspend fun dominantHue(context: android.content.Context, url: String): Float? {
+    val result = coil.Coil.imageLoader(context).execute(
+        coil.request.ImageRequest.Builder(context).data(url).size(24, 24).allowHardware(false).build(),
+    )
+    val bmp = (result.drawable as? android.graphics.drawable.BitmapDrawable)?.bitmap ?: return null
+    var x = 0.0; var y = 0.0; var weight = 0.0
+    val hsv = FloatArray(3)
+    for (i in 0 until bmp.width) for (j in 0 until bmp.height) {
+        android.graphics.Color.colorToHSV(bmp.getPixel(i, j), hsv)
+        val w = (hsv[1] * hsv[2]).toDouble()
+        if (w < 0.08) continue
+        val rad = Math.toRadians(hsv[0].toDouble())
+        x += kotlin.math.cos(rad) * w; y += kotlin.math.sin(rad) * w; weight += w
+    }
+    if (weight < 1.0) return null
+    return ((Math.toDegrees(kotlin.math.atan2(y, x)) + 360) % 360).toFloat()
 }
