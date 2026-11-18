@@ -1,5 +1,8 @@
 package dev.pfeed.ui.common
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.foundation.border
 import android.app.Activity
@@ -107,6 +110,9 @@ fun MediaGrid(
     header: (@Composable () -> Unit)? = null,
 ) {
     val gridState = androidx.compose.foundation.lazy.grid.rememberLazyGridState()
+    // Peek: in grids without a hold menu, holding a tile shows it big, playing, until you let go.
+    var peeking by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<MediaItem?>(null) }
+    val canPeek = onLongPress == null && picked == null
     var spot by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<Any?>(null) }
     val byKey = androidx.compose.runtime.remember(items) { items.associateBy { it.key } }
     if (livePreview != null) {
@@ -134,6 +140,7 @@ fun MediaGrid(
             }
         }
     }
+    peeking?.let { PeekOverlay(it, livePreview) }
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         state = gridState,
@@ -163,10 +170,40 @@ fun MediaGrid(
                     post, index, if (picked != null && onPick != null) ({ _: Int -> onPick(post) }) else onOpen, label,
                     seen = seen?.invoke(post) == true,
                     onLongPress = if (picked != null && onPick != null) ({ onPick(it) }) else onLongPress,
+                    onPeek = if (canPeek) ({ p -> peeking = p }) else null,
                     live = if (livePreview != null && spot == post.key && picked == null) ({ livePreview(post) }) else null,
                     picked = picked?.contains(post.key),
                 )
                 if (onNearEnd != null && index >= items.size - NEAR_END_TILES) androidx.compose.runtime.LaunchedEffect(items.size) { onNearEnd() }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PeekOverlay(item: MediaItem, live: (@Composable (MediaItem) -> Unit)?) {
+    androidx.compose.ui.window.Popup(alignment = Alignment.Center, properties = androidx.compose.ui.window.PopupProperties(focusable = false, securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn)) {
+        val pop = androidx.compose.runtime.remember { androidx.compose.animation.core.Animatable(0.85f) }
+        androidx.compose.runtime.LaunchedEffect(Unit) { pop.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = 0.6f, stiffness = 500f)) }
+        Box(
+            Modifier.fillMaxWidth(0.86f).aspectRatio(3f / 4f)
+                .graphicsLayer { scaleX = pop.value; scaleY = pop.value }
+                .clip(RoundedCornerShape(22.dp))
+                .background(Color.Black),
+        ) {
+            AsyncImage(model = item.thumbnailUrl, contentDescription = item.title, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            if (live != null && !LocalBlurPreviews.current) live(item)
+            MediaMask()
+            item.title?.takeIf { it.isNotBlank() }?.let { t ->
+                Text(
+                    t,
+                    color = Color.White,
+                    maxLines = 2,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth()
+                        .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))))
+                        .padding(14.dp),
+                )
             }
         }
     }
@@ -188,6 +225,8 @@ private fun GridTile(
     live: (@Composable () -> Unit)? = null,
     /** Null when not picking; else whether this one is picked. */
     picked: Boolean? = null,
+    /** Hold to peek: called with the post while held, null when let go. */
+    onPeek: ((MediaItem?) -> Unit)? = null,
 ) {
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val shape = RoundedCornerShape(6.dp)
@@ -197,9 +236,20 @@ private fun GridTile(
             .aspectRatio(3f / 4f)
             .clip(shape)
             .background(MaterialTheme.colorScheme.surfaceVariant)
-            .combinedClickable(
-                onClick = { onOpen(index) },
-                onLongClick = onLongPress?.let { act -> { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); act(item) } },
+            .then(
+                if (onPeek != null) Modifier.pointerInput(item.key) {
+                    detectTapGestures(
+                        onTap = { onOpen(index) },
+                        onLongPress = {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                            onPeek(item)
+                        },
+                        onPress = { tryAwaitRelease(); onPeek(null) },
+                    )
+                } else Modifier.combinedClickable(
+                    onClick = { onOpen(index) },
+                    onLongClick = onLongPress?.let { act -> { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); act(item) } },
+                ),
             ),
     ) {
         // Placeholder glyph shows while the thumbnail loads (or if it never does).
