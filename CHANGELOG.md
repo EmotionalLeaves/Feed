@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.99.0 — 2026-11-18
+
+For You says when it finds a new taste
+
+- New: When For You becomes sure of a new taste (you keep enjoying what's near it), it says so once: "For You noticed a new taste: #… · #…", with Not really to turn it down.
+- Better: Ready when you are also loads the opening seconds of the first few videos, where their links don't expire.
+- Faster, lighter: what For You has learned is written half the size, at most once a minute while you watch and when you leave the app (it was every 15 seconds).
+
 ## 4.98.0 — 2026-11-18
 
 Mixes

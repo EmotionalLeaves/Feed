@@ -37,6 +37,7 @@ class ReadyWorker @AssistedInject constructor(
     @Assisted context: Context,
     @Assisted params: WorkerParameters,
     private val sessions: FeedSessionFactory,
+    private val preloader: dev.pfeed.player.Preloader,
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
@@ -55,6 +56,12 @@ class ReadyWorker @AssistedInject constructor(
                 val url = item.thumbnailUrl ?: continue
                 withTimeoutOrNull(15_000) { loader.execute(ImageRequest.Builder(applicationContext).data(url).build()) }
             }
+            // And the opening seconds of the first few videos whose file links don't expire.
+            val clips = first.filter { it.type == dev.pfeed.domain.model.MediaType.VIDEO && it.extras["resolve"] == null }
+                .mapNotNull { item -> item.extras["media"]?.takeIf { it.startsWith("http") }?.let { item.key to it } }
+                .take(FIRST_CLIPS)
+            clips.forEach { (key, url) -> preloader.video(key, url) }
+            if (clips.isNotEmpty()) kotlinx.coroutines.delay(CLIP_WAIT_MS)
         } finally {
             scope.cancel()
         }
@@ -65,6 +72,8 @@ class ReadyWorker @AssistedInject constructor(
         private const val NAME = "ready-when-you-are"
         private const val TIME_LIMIT_MS = 90_000L
         private const val FIRST_SCREEN = 12
+        private const val FIRST_CLIPS = 4
+        private const val CLIP_WAIT_MS = 20_000L
 
         fun schedule(context: Context, on: Boolean) {
             val wm = WorkManager.getInstance(context)

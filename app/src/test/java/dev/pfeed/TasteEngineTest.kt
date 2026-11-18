@@ -77,7 +77,7 @@ class TasteEngineTest {
         val back = TasteEngine().apply { readFrom(DataInputStream(ByteArrayInputStream(bytes))) }
         assertEquals(engine.interests.size, back.interests.size)
         val probe = world.post(3).item
-        assertEquals(engine.interestScore(engine.vectorOf(probe)!!), back.interestScore(back.vectorOf(probe)!!), 1e-6)
+        assertEquals(engine.interestScore(engine.vectorOf(probe)!!), back.interestScore(back.vectorOf(probe)!!), 1e-3)
     }
 
     @Test

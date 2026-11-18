@@ -573,6 +573,23 @@ class FeedViewModel @Inject constructor(
                 Engagement.target(dwell, isVideo, durationMs, st?.replays ?: 0, typical)
             }
             signals.record(item, Signal(SignalType.VIEW, target))
+            noticeNewTastes()
+        }
+    }
+
+    private var lastNotice = 0L
+
+    /** A taste For You has just become sure of: say so, with a way to turn it down. */
+    private suspend fun noticeNewTastes() {
+        if (!isMainFeed || _mode.value != FeedMode.FOR_YOU) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastNotice < NOTICE_GAP_MS) return
+        val aff = runCatching { signals.affinities().tags }.getOrNull() ?: return
+        val found = runCatching { signals.engine.use { it.confirmations(aff) } }.getOrNull()?.firstOrNull() ?: return
+        lastNotice = now
+        val name = found.tags.take(2).joinToString(" · ") { "#" + it.replace('_', ' ') }
+        offer("For You noticed a new taste: $name", "Not really") {
+            viewModelScope.launch { signals.engine.use { it.quieten(found.index) } }
         }
     }
 
@@ -952,6 +969,7 @@ class FeedViewModel @Inject constructor(
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
+        private const val NOTICE_GAP_MS = 5 * 60_000L
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L
         private const val LOAD_AHEAD = 10

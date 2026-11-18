@@ -49,6 +49,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
          * taste you've gone off shouldn't keep its slots for a dozen more posts while the mean catches up).
          */
         val current: Double get() = if (lately.isNaN() || lately >= mean) mean else mean + LATELY_PULL * (lately - mean)
+        /** Whether you've been told about it (see [confirmations]). */
+        var announced = false
         /** Stride-scheduling position: the interest with the lowest pass serves the next slot. */
         var pass: Double = 0.0
         /** Reactions by time of day (4-hour stretches, faded): some tastes are for late at night. */
@@ -513,6 +515,20 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         i.sum = -i.count * 0.8
     }
 
+    /**
+     * Interests that have just proved themselves (you keep enjoying what's near them), each named,
+     * once: "For You noticed a new taste". Ones already known when the app started don't count.
+     */
+    fun confirmations(affinity: Map<String, Double>): List<View> {
+        val fresh = interests.withIndex().filter { (_, i) ->
+            !i.announced && i.mean > ANNOUNCE_MEAN && i.confidence >= ANNOUNCE_CONFIDENCE && i.hits >= ANNOUNCE_HITS
+        }
+        if (fresh.isEmpty()) return emptyList()
+        fresh.forEach { it.value.announced = true }
+        val views = describe(affinity)
+        return fresh.mapNotNull { (idx, _) -> views.firstOrNull { it.index == idx } }
+    }
+
     /** Forget one interest entirely. */
     fun forget(index: Int) {
         if (index in interests.indices) interests.removeAt(index)
@@ -547,13 +563,14 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
 
     fun readFrom(input: java.io.DataInputStream) {
         val format = input.readInt()
-        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators.
+        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators, 5 (4.95–4.98) a full-size map.
         if (format !in 2..FORMAT) return
-        space.readFrom(input)
+        space.readFrom(input, quantized = format >= 6)
         interests.clear()
         repeat(input.readInt()) {
             val c = readVec(input)
             interests += Interest(c, input.readDouble(), input.readDouble()).also { i ->
+                i.announced = true
                 i.sum = input.readDouble(); i.count = input.readDouble(); i.hits = input.readInt()
                 if (format >= 3) { for (b in i.hourSum.indices) i.hourSum[b] = input.readDouble(); for (b in i.hourCount.indices) i.hourCount[b] = input.readDouble() }
             }
@@ -573,7 +590,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     companion object {
-        private const val FORMAT = 5
+        private const val FORMAT = 6
 
         /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
         const val PARTS = 8
@@ -584,6 +601,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val LANDING_MIN = 5
         const val KEEP_DAYS = 60
         const val MAX_CREATORS = 1500
+        const val ANNOUNCE_MEAN = 0.4
+        const val ANNOUNCE_CONFIDENCE = 0.7
+        const val ANNOUNCE_HITS = 5
         const val NEIGHBOUR_MIN_COUNT = 4
         const val NEIGHBOUR_MIN = 0.45
         const val CREATOR_BLEND = 1.0
@@ -617,6 +637,15 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
 
         internal fun writeVec(out: java.io.DataOutputStream, v: FloatArray) { out.writeShort(v.size); v.forEach { out.writeFloat(it) } }
         internal fun readVec(input: java.io.DataInputStream): FloatArray = FloatArray(input.readShort().toInt()) { input.readFloat() }
+        internal fun writeVecQ(out: java.io.DataOutputStream, v: FloatArray) {
+            val m = v.maxOfOrNull { abs(it) }?.takeIf { it > 0f } ?: 1f
+            out.writeShort(v.size); out.writeFloat(m)
+            v.forEach { out.writeShort((it / m * 32767f).toInt()) }
+        }
+        internal fun readVecQ(input: java.io.DataInputStream): FloatArray {
+            val n = input.readShort().toInt(); val m = input.readFloat()
+            return FloatArray(n) { input.readShort() * m / 32767f }
+        }
 
         const val MAX_INTERESTS = 6
         const val MAX_DISLIKES = 8
@@ -763,13 +792,19 @@ class TagSpace(val dim: Int = DIM, private val maxTags: Int = MAX_TAGS) {
     fun writeTo(out: java.io.DataOutputStream) {
         out.writeInt(posts)
         out.writeInt(counts.size); counts.forEach { (k, v) -> out.writeUTF(k); out.writeInt(v) }
-        out.writeInt(context.size); context.forEach { (k, v) -> out.writeUTF(k); TasteEngine.writeVec(out, v) }
+        // Half the size of plain floats (the map is the bulk of the file): each direction as 16-bit
+        // steps of its own largest value.
+        out.writeInt(context.size); context.forEach { (k, v) -> out.writeUTF(k); TasteEngine.writeVecQ(out, v) }
     }
 
-    fun readFrom(input: java.io.DataInputStream) {
+    fun readFrom(input: java.io.DataInputStream, quantized: Boolean = true) {
         posts = input.readInt()
         counts.clear(); repeat(input.readInt()) { counts[input.readUTF()] = input.readInt() }
-        context.clear(); repeat(input.readInt()) { val k = input.readUTF(); val v = TasteEngine.readVec(input); if (v.size == dim) context[k] = v }
+        context.clear(); repeat(input.readInt()) {
+            val k = input.readUTF()
+            val v = if (quantized) TasteEngine.readVecQ(input) else TasteEngine.readVec(input)
+            if (v.size == dim) context[k] = v
+        }
     }
 
     private fun addIndex(into: FloatArray, tag: String, weight: Float) {

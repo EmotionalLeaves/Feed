@@ -64,10 +64,29 @@ class TasteEngineStore @Inject constructor(@ApplicationContext private val conte
         }
     }
 
+    /** Write now (the app is going to the background): nothing learned is lost if Android ends it. */
+    fun flush() {
+        if (!loaded || !dirty) return
+        saveJob?.cancel()
+        saveJob = scope.launch { save() }
+    }
+
+    @Volatile private var dirty = false
+
     private fun scheduleSave() {
+        dirty = true
         if (saveJob?.isActive == true) return
+        // The map is a couple of megabytes: written at most once a minute while you watch, and
+        // when you leave the app, rather than every few seconds.
         saveJob = scope.launch {
             delay(SAVE_AFTER_MS)
+            save()
+        }
+    }
+
+    private suspend fun save() {
+        run {
+            dirty = false
             val bytes = use { e -> java.io.ByteArrayOutputStream().also { b -> DataOutputStream(b).use { e.writeTo(it) } }.toByteArray() }
             withContext(Dispatchers.IO) {
                 runCatching {
@@ -80,6 +99,6 @@ class TasteEngineStore @Inject constructor(@ApplicationContext private val conte
     }
 
     private companion object {
-        const val SAVE_AFTER_MS = 15_000L
+        const val SAVE_AFTER_MS = 60_000L
     }
 }
