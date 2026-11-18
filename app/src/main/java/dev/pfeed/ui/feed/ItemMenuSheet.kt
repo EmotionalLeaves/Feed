@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
@@ -217,6 +218,7 @@ fun ItemMenuSheet(
                 )
             }
             if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
+                MenuRow("Loop a part", Icons.Filled.Repeat, "Starts here; tap when it reaches the end you want") { LoopPart.request.value = item.key; onDismiss() }
                 val feel by FeelTheSound.on.collectAsStateWithLifecycle()
                 MenuRow(
                     if (feel) "Stop feeling the sound" else "Feel the sound",

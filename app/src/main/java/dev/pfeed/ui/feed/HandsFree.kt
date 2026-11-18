@@ -78,6 +78,11 @@ object FeelTheSound {
     private const val CEIL = 0.3f
 }
 
+/** "Loop a part" from the hold menu: the post (by key) that should start marking a loop. */
+object LoopPart {
+    val request = MutableStateFlow<String?>(null)
+}
+
 /** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
 object Pip {
     private val _active = MutableStateFlow(false)

@@ -51,6 +51,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Add
@@ -901,6 +902,28 @@ private fun FeedPage(
     var heartAt by remember { mutableStateOf<Offset?>(null) }
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
+    // Loop a part: A is set from the hold menu (where you are), B with a tap on the pill; then it
+    // plays A→B over and over until you clear it.
+    var loopA by remember(item.key) { mutableStateOf<Long?>(null) }
+    var loopB by remember(item.key) { mutableStateOf<Long?>(null) }
+    val loopRequest by LoopPart.request.collectAsStateWithLifecycle()
+    LaunchedEffect(loopRequest, player) {
+        if (loopRequest == item.key && player != null) {
+            loopA = player?.currentPosition
+            loopB = null
+            LoopPart.request.value = null
+        }
+    }
+    LaunchedEffect(loopA, loopB, player) {
+        val a = loopA ?: return@LaunchedEffect
+        val b = loopB ?: return@LaunchedEffect
+        val p = player ?: return@LaunchedEffect
+        while (true) {
+            val at = p.currentPosition
+            if (at >= b || at < a - LOOP_SLACK_MS) p.seekTo(a)
+            kotlinx.coroutines.delay(LOOP_TICK_MS)
+        }
+    }
     var speeding by remember(item.key) { mutableStateOf(false) }
     var galleryTurn by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
     // Sideways swipe in progress (for the hints at the edges), and saves made by swiping right.
@@ -1130,6 +1153,39 @@ private fun FeedPage(
             )
         }
         HeartBurst(heartAt, heartTick)
+        // The loop being marked, or playing.
+        val a = loopA
+        if (a != null && !landscape) {
+            val b = loopB
+            fun t(ms: Long) = dev.pfeed.ui.common.formatDuration((ms / 1000).toInt())
+            Row(
+                Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 100.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(if (b == null) dev.pfeed.ui.theme.BrandGradient else androidx.compose.ui.graphics.SolidColor(Color.Black.copy(alpha = 0.55f)))
+                    .clickable {
+                        if (b == null) {
+                            val now = player?.currentPosition ?: return@clickable
+                            if (now > a + LOOP_MIN_MS) { loopB = now; haptic.performHapticFeedback(HapticFeedbackType.LongPress); player?.seekTo(a) }
+                            else vm.offer("Let it play a little further, then tap", "Cancel") { loopA = null }
+                        } else { loopA = null; loopB = null }
+                    }
+                    .padding(start = 12.dp, end = 10.dp, top = 7.dp, bottom = 7.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Repeat, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    if (b == null) "From ${t(a)} · tap to end the loop here" else "Looping ${t(a)}–${t(b)}",
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Bold,
+                )
+                if (b != null) {
+                    Spacer(Modifier.width(6.dp))
+                    Icon(Icons.Filled.Close, contentDescription = "Stop looping", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(16.dp))
+                }
+            }
+        }
         // While swiping sideways: what letting go will do, growing at the edge you're pulling toward.
         if (swipeDx != 0f && !landscape) {
             val far = with(androidx.compose.ui.platform.LocalDensity.current) { SWIPE_TO_CREATOR_DP.dp.toPx() }
@@ -1659,6 +1715,9 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 /** How far left a swipe must go to open the creator's page. */
 private const val FEEL_PULSE_MS = 45L
+private const val LOOP_SLACK_MS = 1_500L
+private const val LOOP_TICK_MS = 80L
+private const val LOOP_MIN_MS = 1_000L
 private const val LONG_VIDEO_MS = 90_000L
 private const val SEEK_RUN_MS = 800L
 private const val SWIPE_TO_CREATOR_DP = 90
