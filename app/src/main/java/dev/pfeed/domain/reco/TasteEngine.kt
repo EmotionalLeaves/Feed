@@ -162,7 +162,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     fun observe(items: Collection<MediaItem>) = items.forEach { item ->
         space.observe(Features.of(item))
         val c = item.creator?.takeIf { it.isNotBlank() } ?: return@forEach
-        val v = vectorOf(item) ?: return@forEach
+        val v = space.itemVector(Features.of(item)) ?: return@forEach
         val key = dev.pfeed.domain.filter.Blocklist.normalize(c)
         val at = creators.getOrPut(key) { Creator(c, FloatArray(v.size)) }
         for (k in v.indices) at.sum[k] += v[k]
@@ -196,7 +196,26 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             .take(limit).map { it.first }.toList()
     }
 
-    fun vectorOf(item: MediaItem): FloatArray? = space.itemVector(Features.of(item))
+    fun vectorOf(item: MediaItem): FloatArray? {
+        val own = space.itemVector(Features.of(item))
+        // A post that says little about itself (a Reddit post's one tag) is read partly by who
+        // posted it: what they usually make.
+        if (CREATOR_BLEND <= 0.0) return own
+        val c = item.creator?.let { creators[dev.pfeed.domain.filter.Blocklist.normalize(it)] }?.takeIf { it.posts >= CREATOR_MIN_POSTS } ?: return own
+        val tags = item.tags.size
+        // Only for someone who sticks to one kind of thing: their posts' directions agree (a
+        // creator who posts everything says nothing about this one).
+        var len = 0.0
+        for (x in c.sum) len += x * x
+        val coherence = sqrt(len) / c.posts
+        if (coherence < CREATOR_COHERENT) return own
+        val weight = (CREATOR_BLEND * (coherence - CREATOR_COHERENT) / (1 - CREATOR_COHERENT) * (if (tags <= 2) 1.0 else 2.0 / tags)).toFloat()
+        val cv = c.sum.copyOf().also(::normalize)
+        val v = own?.copyOf() ?: FloatArray(cv.size)
+        for (k in v.indices) v[k] += weight * cv[k]
+        normalize(v)
+        return v
+    }
 
     /** How you react to what posts look like (see [Visual]). */
     val visual = Visual.Taste()
@@ -548,6 +567,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val LANDING_MIN = 5
         const val KEEP_DAYS = 60
         const val MAX_CREATORS = 1500
+        const val CREATOR_BLEND = 1.0
+        const val CREATOR_MIN_POSTS = 3
+        const val CREATOR_COHERENT = 0.5
         const val SAVED_CREATORS = 600
         const val SIMILAR_MIN_POSTS = 2
         const val SIMILAR_MIN = 0.55

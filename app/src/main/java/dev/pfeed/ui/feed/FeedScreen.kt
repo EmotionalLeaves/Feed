@@ -1712,8 +1712,6 @@ private fun TagHeader(
     onOpenTag: (String) -> Unit,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
-    similar: List<String> = emptyList(),
-    onOpenCreator: (String) -> Unit = {},
 ) {
     val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.distinct().size }
     val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
@@ -1796,6 +1794,8 @@ private fun CreatorHeader(
     onFollow: () -> Unit,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
+    similar: List<String> = emptyList(),
+    onOpenCreator: (String) -> Unit = {},
 ) {
     val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
     val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
