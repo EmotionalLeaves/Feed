@@ -623,6 +623,22 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * For the road: the next [count] posts of this feed are saved into the "For the road" collection
+     * and downloaded, to watch with no connection (on a plane, underground). Pictures and comics
+     * download straight away; videos wait for Wi-Fi.
+     */
+    fun takeForTheRoad(fromIndex: Int, count: Int = ROAD_COUNT) {
+        viewModelScope.launch {
+            val picks = items.value.drop(fromIndex).filter { it.type != dev.pfeed.domain.model.MediaType.EMBED }.take(count)
+            picks.forEach { runCatching { library.add(dev.pfeed.data.repo.LibraryKind.SAVED, it); library.addToCollection(dev.pfeed.data.repo.OfflineStore.FOR_THE_ROAD, it) } }
+            offer(
+                "${picks.size} posts going into Saved → ${dev.pfeed.data.repo.OfflineStore.FOR_THE_ROAD}" + if (network.isMetered) "; videos download on Wi-Fi" else "; downloading now",
+                "OK",
+            ) {}
+        }
+    }
+
     /** One reason a post is in For You: what to say, and the page it leads to (a tag or "@creator"). */
     data class Why(val text: String, val page: String?, val strong: Boolean)
 
@@ -748,6 +764,7 @@ class FeedViewModel @Inject constructor(
 
     companion object {
         const val FRAMES = "Frames"
+        private const val ROAD_COUNT = 20
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L
         private const val LOAD_AHEAD = 10

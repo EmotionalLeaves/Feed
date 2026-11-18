@@ -147,9 +147,13 @@ class OfflineStore @Inject constructor(
             val tick = flow { while (true) { emit(Unit); delay(RETRY_MS) } }
             combine(
                 library.items(LibraryKind.SAVED),
+                library.collectionItems(FOR_THE_ROAD),
                 settings.flow.map { it.keepSavedOffline }.distinctUntilChanged(),
                 tick,
-            ) { saved, on, _ -> saved to on }.collect { (saved, on) -> sync(saved, on) }
+            ) { saved, road, on, _ ->
+                // "For the road" is always kept on the phone, whatever the Saved setting says.
+                if (on) (saved + road).distinctBy { it.key } to true else road to road.isNotEmpty()
+            }.collect { (keep, on) -> sync(keep, on) }
         }
     }
 
@@ -314,6 +318,9 @@ class OfflineStore @Inject constructor(
         /** Undoes [withLocalThumbnail]: the post as it should be stored. */
         /** Marks a post in Saved whose copy is complete (for the tile's badge). */
         const val KEPT = "kept"
+
+        /** The collection "Take some for the road" fills: always downloaded, to watch offline. */
+        const val FOR_THE_ROAD = "For the road"
 
         fun original(given: MediaItem): MediaItem {
             val item = if (KEPT in given.extras) given.copy(extras = given.extras - KEPT) else given

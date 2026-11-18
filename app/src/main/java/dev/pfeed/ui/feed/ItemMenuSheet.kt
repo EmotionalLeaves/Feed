@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Vibration
@@ -78,6 +79,8 @@ fun ItemMenuSheet(
     onMoreLikeThis: (() -> Unit)? = null,
     /** Opens a tag's or creator's page ("Why you're seeing this"). */
     onOpenPage: ((String) -> Unit)? = null,
+    /** Downloads this and the next posts of the feed to watch offline. */
+    onForTheRoad: (() -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var pickTag by remember { mutableStateOf<String?>(null) } // "block" while picking a tag to hide
@@ -228,6 +231,7 @@ fun ItemMenuSheet(
                     if (feel) "The phone stops vibrating with the audio" else "The phone vibrates with the audio, stronger as it gets louder, sound on or off",
                 ) { FeelTheSound.set(!feel); onDismiss() }
             }
+            if (onForTheRoad != null) MenuRow("Take 20 for the road", Icons.Filled.FlightTakeoff, "This and the next posts, downloaded to watch offline") { onForTheRoad(); onDismiss() }
             val sleepLeft = SleepTimer.endsAt.collectAsStateWithLifecycle().value?.let { SleepTimer.minutesLeft() }
             MenuRow("Sleep timer", Icons.Filled.Bedtime, if (sleepLeft != null) "Stops in $sleepLeft min" else "Stop playing after a while") { pickTag = "sleep" }
             val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
