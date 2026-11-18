@@ -152,15 +152,19 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val y = (target / 2.0).coerceIn(-1.0, 1.25)
         // An intercept soaks up the overall level (reactions are judged against your own pace, so
         // they average near zero whatever is shown); only the differences between posts tune weights.
+        // Each part measured from its own running average, so a part that's high on everything
+        // shown (votes on a board) isn't mistaken for one that predicts what you stay for.
+        for (i in x.indices) partMean[i] += TUNE_CENTER * (x[i] - partMean[i])
         var pred = tuneBias
-        for (i in x.indices) pred += DEFAULT_PART[i] * tune[i] * x[i]
+        for (i in x.indices) pred += DEFAULT_PART[i] * tune[i] * (x[i] - partMean[i])
         val err = y - pred
         tuneBias += TUNE_RATE * err
         for (i in x.indices) {
-            val grad = err * DEFAULT_PART[i] * x[i]
+            val grad = err * (x[i] - partMean[i]) * (if (TUNE_NORMALIZED) 1.0 else DEFAULT_PART[i])
             tune[i] = (tune[i] + TUNE_RATE * grad - TUNE_PULL * (tune[i] - 1.0)).coerceIn(TUNE_MIN, TUNE_MAX)
         }
     }
+    private val partMean = DoubleArray(PARTS)
 
     /** Learn the map from posts passing through the feed (whether or not they're shown). */
     fun observe(items: Collection<MediaItem>) = items.forEach { item ->
@@ -537,7 +541,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     /** Forget everything learned (Settings → reset what For You learned). The map of meaning stays. */
     fun resetTaste() {
         interests.clear(); dislikes.clear(); exploredKeys.clear(); exposure.clear(); session = null; sessionStrength = 0.0
-        tune.fill(1.0); tuneBias = 0.0; visual.reset(); shownParts.clear()
+        tune.fill(1.0); tuneBias = 0.0; partMean.fill(0.0); visual.reset(); shownParts.clear()
     }
 
     fun writeTo(out: java.io.DataOutputStream) {
@@ -596,7 +600,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val PARTS = 8
         /** Their default weights (aversion counts against). */
         val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8, Ranker.VISUAL)
-        const val TUNE_RATE = 0.05
+        const val TUNE_RATE = 0.1
+        const val TUNE_CENTER = 0.02
+        const val TUNE_NORMALIZED = true
         const val EXPLORE_SHARE = 0.4
         const val LANDING_MIN = 5
         const val KEEP_DAYS = 60
