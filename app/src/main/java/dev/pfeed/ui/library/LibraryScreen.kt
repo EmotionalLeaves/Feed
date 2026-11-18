@@ -101,7 +101,20 @@ class LibraryViewModel @Inject constructor(
     val livePreviews: dev.pfeed.ui.common.LivePreviews,
 ) : ViewModel() {
     /** Saved posts, with thumbnails from the kept copies once they're downloaded (so Saved works offline). */
-    val saved: StateFlow<List<MediaItem>> = kotlinx.coroutines.flow.combine(library.items(LibraryKind.SAVED), offline.bytes) { list, _ -> list.map(offline::withLocalThumbnail) }
+    /**
+     * Secret collections: a collection whose name starts with a dot (".mine") is hidden, chip and
+     * posts, from Saved and its list. Typing its full name in Find opens it.
+     */
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    private val secretKeys: kotlinx.coroutines.flow.Flow<Set<String>> = library.collections.flatMapLatest { all ->
+        val secret = all.filter { it.name.startsWith(".") }
+        if (secret.isEmpty()) kotlinx.coroutines.flow.flowOf(emptySet())
+        else kotlinx.coroutines.flow.combine(secret.map { library.collectionItems(it.name) }) { lists -> lists.flatMap { l -> l.map { it.key } }.toSet() }
+    }
+
+    val saved: StateFlow<List<MediaItem>> = kotlinx.coroutines.flow.combine(library.items(LibraryKind.SAVED), offline.bytes, secretKeys) { list, _, hidden ->
+        list.filter { it.key !in hidden }.map(offline::withLocalThumbnail)
+    }
         // Checks files on disk for every post: off the main thread.
         .flowOn(kotlinx.coroutines.Dispatchers.IO)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -249,7 +262,12 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                         .take(AUTO_TAG_MAX)
                         .map { it.key to it.value }
                 }
-                if (collections.isNotEmpty() || collection != null || autoTags.isNotEmpty()) CollectionChips(collections, collection, saved.size, autoTags) { vm.collection.value = it }
+                // Secret collections show only while Find holds their exact name.
+                val shown = collections.filter { !it.name.startsWith(".") || it.name.equals(query.trim(), ignoreCase = true) || it.name == collection }
+                LaunchedEffect(query, collections) {
+                    collections.firstOrNull { it.name.startsWith(".") && it.name.equals(query.trim(), ignoreCase = true) }?.let { vm.collection.value = it.name; query = "" }
+                }
+                if (shown.isNotEmpty() || collection != null || autoTags.isNotEmpty()) CollectionChips(shown, collection, saved.size, autoTags) { vm.collection.value = it }
                 val open = collection
                 if (open != null && open.startsWith("#")) {
                     val tag = open.removePrefix("#")

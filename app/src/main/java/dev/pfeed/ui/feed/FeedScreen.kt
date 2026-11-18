@@ -271,6 +271,15 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             }
         }
     }
+    // Back after leaving a long video partway: offer to carry on from there.
+    if (vm.isMainFeed) LaunchedEffect(Unit) {
+        val (item, at, route) = vm.carryOn() ?: return@LaunchedEffect
+        kotlinx.coroutines.delay(1_200)
+        val what = item.title?.take(32)?.let { "“$it”" } ?: "your last video"
+        vm.offer("Carry on with $what from ${dev.pfeed.ui.common.formatDuration((at / 1000).toInt())}?", "Carry on") {
+            nav.navigate(dev.pfeed.ui.Routes.viewer(route))
+        }
+    }
     // Feed tapped again in the tab bar: back to the top, or a fresh batch if you're already there.
     if (vm.isMainFeed) LaunchedEffect(Unit) {
         dev.pfeed.ui.BottomBar.reselected.collect { route ->

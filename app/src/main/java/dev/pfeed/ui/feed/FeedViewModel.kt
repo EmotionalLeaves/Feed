@@ -44,6 +44,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -215,6 +216,18 @@ class FeedViewModel @Inject constructor(
     }
 
     fun refresh() = restart()
+
+    /**
+     * Opening the app after leaving a long video partway: the last thing watched, where it stopped,
+     * and a route to carry on (once per launch; null if there's nothing to carry on).
+     */
+    suspend fun carryOn(): Triple<MediaItem, Long, String>? {
+        if (carryOnOffered) return null
+        carryOnOffered = true
+        val last = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY).first().firstOrNull() ?: return null
+        val at = dev.pfeed.player.ResumePoints.get(last.key)?.takeIf { it >= CARRY_ON_MIN_MS } ?: return null
+        return Triple(last, at, holder.put(listOf(last), 0, title = "Carrying on"))
+    }
 
     /** For You's mood: how much it sticks to what you like vs. tries new things. */
     enum class Mood(val label: String, val note: String, val exploration: Double, val novelty: Double) {
@@ -782,6 +795,9 @@ class FeedViewModel @Inject constructor(
     fun reportUrl(item: MediaItem): String? = registry.byId(item.sourceId)?.reportUrl(item)
 
     companion object {
+        /** Once per process: the main feed asks when it first appears. */
+        @Volatile private var carryOnOffered = false
+        private const val CARRY_ON_MIN_MS = 60_000L
         const val FRAMES = "Frames"
         private const val ROAD_COUNT = 20
         private const val INTRO_MIN_SEC = 300

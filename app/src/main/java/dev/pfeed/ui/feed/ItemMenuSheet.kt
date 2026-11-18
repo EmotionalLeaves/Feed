@@ -313,7 +313,9 @@ private fun CollectionPicker(item: MediaItem, vm: FeedViewModel, onBack: () -> U
     )
     HorizontalDivider()
     val current = inThem ?: return
-    collections.forEach { c ->
+    // Secret collections (".name") aren't listed, unless this post is already in one: type the
+    // full name below to add to one.
+    collections.filter { !it.name.startsWith(".") || it.name in current }.forEach { c ->
         val checked = c.name in current
         ListItem(
             headlineContent = { Text(c.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
@@ -331,7 +333,7 @@ private fun CollectionPicker(item: MediaItem, vm: FeedViewModel, onBack: () -> U
         androidx.compose.material3.OutlinedTextField(
             value = newName,
             onValueChange = { newName = it.take(dev.pfeed.data.repo.LibraryRepository.MAX_COLLECTION_NAME) },
-            placeholder = { Text(if (collections.isEmpty()) "Name your first collection" else "New collection") },
+            placeholder = { Text(if (collections.isEmpty()) "Name your first collection" else "New collection (start with . to hide it)") },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
             keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
