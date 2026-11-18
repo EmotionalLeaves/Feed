@@ -55,6 +55,37 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     private var sessionStrength = 0.0
     private var events = 0
 
+    /**
+     * Your own weighting of what makes a post good (learning to rank): one multiplier per part of the
+     * score (taste by tags, creator, votes, freshness, interest fit, mood, aversion), starting at 1
+     * and nudged after every reaction toward whatever predicts what you actually stay for. Gently
+     * pulled back toward 1 so a few odd reactions can't run away with it.
+     */
+    val tune = DoubleArray(PARTS) { 1.0 }
+    private val shownParts = LinkedHashMap<String, DoubleArray>()
+    private var tuneBias = 0.0
+
+    /** Ranked and shown: remember the parts of its score until you react to it. */
+    fun shown(key: String, parts: DoubleArray) {
+        shownParts[key] = parts
+        if (shownParts.size > MAX_REMEMBERED) shownParts.remove(shownParts.keys.first())
+    }
+
+    private fun tuneFrom(key: String, target: Double) {
+        val x = shownParts.remove(key) ?: return
+        val y = (target / 2.0).coerceIn(-1.0, 1.25)
+        // An intercept soaks up the overall level (reactions are judged against your own pace, so
+        // they average near zero whatever is shown); only the differences between posts tune weights.
+        var pred = tuneBias
+        for (i in x.indices) pred += DEFAULT_PART[i] * tune[i] * x[i]
+        val err = y - pred
+        tuneBias += TUNE_RATE * err
+        for (i in x.indices) {
+            val grad = err * DEFAULT_PART[i] * x[i]
+            tune[i] = (tune[i] + TUNE_RATE * grad - TUNE_PULL * (tune[i] - 1.0)).coerceIn(TUNE_MIN, TUNE_MAX)
+        }
+    }
+
     /** Learn the map from posts passing through the feed (whether or not they're shown). */
     fun observe(items: Collection<MediaItem>) = items.forEach { space.observe(Features.of(it)) }
 
@@ -65,6 +96,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
      * like … −8 for Not interested).
      */
     fun learn(item: MediaItem, target: Double) {
+        tuneFrom(item.key, target)
         val x = vectorOf(item) ?: return
         events++
         val near = interests.maxByOrNull { cos(it.centroid, x) }
@@ -214,6 +246,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     /** Forget everything learned (Settings → reset what For You learned). The map of meaning stays. */
     fun resetTaste() {
         interests.clear(); dislikes.clear(); session = null; sessionStrength = 0.0
+        tune.fill(1.0); tuneBias = 0.0; shownParts.clear()
     }
 
     fun writeTo(out: java.io.DataOutputStream) {
@@ -228,6 +261,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val s = session
         out.writeBoolean(s != null); if (s != null) writeVec(out, s)
         out.writeDouble(sessionStrength)
+        out.writeInt(tune.size); tune.forEach { out.writeDouble(it) }
     }
 
     fun readFrom(input: java.io.DataInputStream) {
@@ -243,10 +277,21 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         dislikes.clear(); repeat(input.readInt()) { dislikes += readVec(input) }
         session = if (input.readBoolean()) readVec(input) else null
         sessionStrength = input.readDouble()
+        repeat(input.readInt()) { i -> val v = input.readDouble(); if (i < tune.size) tune[i] = v }
     }
 
     companion object {
-        private const val FORMAT = 1
+        private const val FORMAT = 2
+
+        /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
+        const val PARTS = 7
+        /** Their default weights (aversion counts against). */
+        val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8)
+        const val TUNE_RATE = 0.05
+        const val TUNE_PULL = 0.002
+        const val TUNE_MIN = 0.25
+        const val TUNE_MAX = 3.0
+        private const val MAX_REMEMBERED = 400
 
         internal fun writeVec(out: java.io.DataOutputStream, v: FloatArray) { out.writeShort(v.size); v.forEach { out.writeFloat(it) } }
         internal fun readVec(input: java.io.DataInputStream): FloatArray = FloatArray(input.readShort().toInt()) { input.readFloat() }

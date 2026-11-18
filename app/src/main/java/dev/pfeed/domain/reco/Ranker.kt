@@ -53,6 +53,18 @@ class Ranker(
         now: Instant,
         qualityValue: Double = quality(item),
     ): Double {
+        val x = components(item, tagAffinity, creatorAffinity, now, qualityValue)
+        return weights.tag * x[0] + weights.creator * x[1] + weights.quality * x[2] + weights.freshness * x[3] + formatPrior(item)
+    }
+
+    /** The parts of an item's score, before weighting: taste by tags, the creator, community votes, freshness. */
+    fun components(
+        item: MediaItem,
+        tagAffinity: Map<String, Double>,
+        creatorAffinity: Map<String, Double>,
+        now: Instant,
+        qualityValue: Double = quality(item),
+    ): DoubleArray {
         val tagScore = TasteModel.score(Features.of(item), tagAffinity)
         val creatorScore = item.creator
             ?.let { squash(creatorAffinity[Blocklist.normalize(it)] ?: 0.0) } ?: 0.0
@@ -60,8 +72,7 @@ class Ranker(
             val ageDays = Duration.between(it, now).toMinutes().coerceAtLeast(0L) / 1440.0
             exp(-ageDays / FRESHNESS_TAU_DAYS)
         } ?: UNKNOWN_FRESHNESS
-        return weights.tag * tagScore + weights.creator * creatorScore +
-            weights.quality * qualityValue + weights.freshness * freshness + formatPrior(item)
+        return doubleArrayOf(tagScore, creatorScore, qualityValue, freshness)
     }
 
     /**
@@ -90,16 +101,22 @@ class Ranker(
     ): List<MediaItem> {
         val seenOrigins = HashSet(recentOrigins)
         val relative = relativeQuality(items)
+        // With the engine, every part's weight is also tuned to you (see [TasteEngine.tune]): someone
+        // who always stays for the top-voted posts gets votes counted more, someone who doesn't, less.
+        val base = doubleArrayOf(weights.tag, weights.creator, weights.quality, weights.freshness, SEMANTIC, MOOD, -AVOID)
+        val w = engine?.let { e -> DoubleArray(base.size) { i -> base[i] * e.tune[i] } } ?: base
         val pool = items.map {
             val q = relative[it.key] ?: UNKNOWN_QUALITY
-            var score = baseScore(it, tagAffinity, creatorAffinity, now, q)
+            val c = components(it, tagAffinity, creatorAffinity, now, q)
             val vec = engine?.vectorOf(it)
-            var fit = 0.0
+            val x = DoubleArray(TasteEngine.PARTS)
+            for (i in c.indices) x[i] = c[i]
             if (engine != null && vec != null) {
-                fit = engine.interestScore(vec)
-                score += SEMANTIC * fit + MOOD * engine.moodScore(vec) - AVOID * engine.aversion(vec)
+                x[4] = engine.interestScore(vec); x[5] = engine.moodScore(vec); x[6] = engine.aversion(vec)
             }
-            Candidate(it, score, signature(it), vec, fit, q, if (engine != null && vec != null) engine.aversion(vec) else 0.0)
+            var score = formatPrior(it)
+            for (i in x.indices) score += w[i] * x[i]
+            Candidate(it, score, signature(it), vec, x[4], q, x[6], x)
         }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
         val recentSigs = ArrayDeque(recent.takeLast(SIMILARITY_WINDOW).map(::signature))
@@ -150,6 +167,8 @@ class Ranker(
             slot++
             if (index < 0) break
             val picked = pool.removeAt(index)
+            // Remember what it was shown for, so the reaction to it can tune the weights.
+            if (engine != null && picked.parts != null) engine.shown(picked.item.key, picked.parts)
             seenOrigins += Spread.origin(picked.item)
             spread.add(picked.item)
             out += picked.item
@@ -182,6 +201,7 @@ class Ranker(
         val fit: Double = 0.0,
         val quality: Double = UNKNOWN_QUALITY,
         val aversion: Double = 0.0,
+        val parts: DoubleArray? = null,
     )
 
     /**
