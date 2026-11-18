@@ -137,6 +137,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import dev.pfeed.domain.model.FeedMode
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.ThumbsUpDown
 import dev.pfeed.domain.model.MediaItem
 import dev.pfeed.domain.model.MediaType
 import dev.pfeed.ui.Routes
@@ -227,6 +228,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val profilePage = vm.tag != null
     var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(profilePage) }
     var steerOpen by remember { mutableStateOf(false) }
+    var thisOrThat by remember { mutableStateOf(false) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val pinchHaptic = LocalHapticFeedback.current
     LaunchedEffect(Unit) { HeadphonesOnly.openSettings.collect { nav.navigate(dev.pfeed.ui.Routes.SETTINGS) } }
@@ -493,6 +495,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             showing = vm.showing.collectAsStateWithLifecycle().value,
             onShowing = if (vm.isMainFeed) vm::setShowing else null,
             onAskSteer = if (vm.isMainFeed) ({ steerOpen = true }) else null,
+            onThisOrThat = if (vm.isMainFeed) ({ thisOrThat = true }) else null,
             onBack = if (!vm.isMainFeed) ({ nav.popBackStack(); Unit }) else null,
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
@@ -515,6 +518,10 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 steering, onEdit = { steerOpen = true }, onClear = vm::clearSteer,
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp, start = 48.dp, end = 48.dp),
             )
+        }
+        if (thisOrThat) ThisOrThat(vm) { n ->
+            thisOrThat = false
+            if (n > 0) { vm.setMode(FeedMode.FOR_YOU); vm.refresh() }
         }
         if (steerOpen) SteerDialog(steering, onSteer = { vm.steer(it); vm.setMode(FeedMode.FOR_YOU) }, onClear = vm::clearSteer, onDismiss = { steerOpen = false })
 
@@ -564,7 +571,15 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         items = items,
                         loading = loading,
                         following = vm.isFollowingPage(tag, follows),
-                        related = remember(items.size, tag) { relatedTags(items, tag) },
+                        related = run {
+                            // On the map first (what means the same), then what turns up alongside it here.
+                            val near = androidx.compose.runtime.produceState(emptyList<String>(), tag) { value = vm.neighbours(tag) }.value
+                            val seen = remember(items.size, tag) { relatedTags(items, tag) }
+                            remember(near, seen) {
+                                (near.map { it.replace('_', ' ') to it } + seen)
+                                    .distinctBy { dev.pfeed.domain.reco.Features.normalizeTag(it.second) }.take(10)
+                            }
+                        },
                         onFollow = { vm.toggleFollowTag(tag) },
                         onOpenTag = { nav.openTag(it) },
                         onPlay = { gridView = false; pagerScope.launch { pagerState.scrollToPage(0) } },
@@ -874,6 +889,8 @@ private fun TopBar(
     onShowing: ((FeedViewModel.Showing) -> Unit)? = null,
     /** Main feed: tell For You what you want in words. */
     onAskSteer: (() -> Unit)? = null,
+    /** Main feed: quick this-or-that choices that teach For You. */
+    onThisOrThat: (() -> Unit)? = null,
     onBack: (() -> Unit)?,
     followTag: Pair<String, Boolean>?,
     onFollowTag: () -> Unit,
@@ -935,6 +952,18 @@ private fun TopBar(
                                             },
                                             leadingIcon = { Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Accent) },
                                             onClick = { moodOpen = false; onAskSteer() },
+                                        )
+                                    }
+                                    if (onThisOrThat != null) {
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text("This or that", fontWeight = FontWeight.Bold)
+                                                    Text("Ten quick picks that teach it a lot", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                                                }
+                                            },
+                                            leadingIcon = { Icon(Icons.Filled.ThumbsUpDown, contentDescription = null, tint = Accent) },
+                                            onClick = { moodOpen = false; onThisOrThat() },
                                         )
                                     }
                                     FeedViewModel.Mood.entries.forEach { md ->

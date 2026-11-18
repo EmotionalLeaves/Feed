@@ -170,6 +170,21 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         if (creators.size > MAX_CREATORS) creators.remove(creators.keys.first())
     }
 
+    /**
+     * Tags that mean nearly the same as [tag] on the map (they keep the same company), leaning
+     * toward what you like: "redhead" → ginger, freckles, pale…
+     */
+    fun neighbours(tag: String, limit: Int = 8): List<String> {
+        val self = Features.normalizeTag(tag)
+        val v = space.tagVector(self) ?: return emptyList()
+        return space.tags(NEIGHBOUR_MIN_COUNT).asSequence()
+            .filter { it != self && !Features.isMeta(it) && !it.startsWith("w:") }
+            .mapNotNull { t -> space.tagVector(t)?.let { tv -> t to (cos(v, tv) + 0.15 * interestScore(tv) - 0.5 * aversion(tv)) } }
+            .filter { it.second >= NEIGHBOUR_MIN }
+            .sortedByDescending { it.second }
+            .take(limit).map { it.first }.toList()
+    }
+
     /** A creator on the map: the sum of their posts' directions (so, what they make). */
     class Creator(val name: String, val sum: FloatArray, var posts: Int = 0)
     private val creators = LinkedHashMap<String, Creator>(256, 0.75f, true)
@@ -567,6 +582,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val LANDING_MIN = 5
         const val KEEP_DAYS = 60
         const val MAX_CREATORS = 1500
+        const val NEIGHBOUR_MIN_COUNT = 4
+        const val NEIGHBOUR_MIN = 0.45
         const val CREATOR_BLEND = 1.0
         const val CREATOR_MIN_POSTS = 3
         const val CREATOR_COHERENT = 0.5

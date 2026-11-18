@@ -161,6 +161,8 @@ data class SearchUi(
     val errors: List<String> = emptyList(),
     val elapsedMs: Long? = null,
     val sourcesWithResults: Int = 0,
+    /** Tags that mean nearly the same as the search, on your map (see TasteEngine.neighbours). */
+    val alsoTry: List<String> = emptyList(),
 )
 
 @HiltViewModel
@@ -269,7 +271,12 @@ class SearchViewModel @Inject constructor(
         if (query.isEmpty()) return
         job?.cancel()
         _ui.update {
-            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0)
+            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0, alsoTry = emptyList())
+        }
+        // Simple searches get "also try": what means nearly the same on your map.
+        if (query.split(' ').size <= 3 && '+' !in query && '-' !in query) viewModelScope.launch {
+            val near = runCatching { signals.engine.use { it.neighbours(query, 6) } }.getOrDefault(emptyList())
+            _ui.update { if (it.searched == query) it.copy(alsoTry = near.map { t -> t.replace('_', ' ') }) else it }
         }
         // What you search for is what you want more of: For You learns it too (not in private mode).
         viewModelScope.launch {
@@ -513,6 +520,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 filtered = visible.size < ui.results.size,
                 onOpen = { index -> nav.navigate(Routes.viewer(vm.open(index))) },
                 onResetFilters = { vm.setType(TypeFilter.ALL); vm.resetSheetFilters() },
+                onSearch = { vm.setQuery(it); vm.search(it) },
             )
         }
     }
@@ -977,8 +985,27 @@ private fun ResultsPane(
     onLongPress: ((MediaItem) -> Unit)? = null,
     onOpen: (Int) -> Unit,
     onResetFilters: () -> Unit,
+    onSearch: (String) -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize()) {
+        if (ui.alsoTry.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(
+                Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                item { Text("Also try", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), modifier = Modifier.padding(end = 4.dp)) }
+                for (t in ui.alsoTry) item(key = t) {
+                    Text(
+                        t,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            .clickable { onSearch(t) }.padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
+        }
         // How many sites have answered, filling in the brand gradient as they do.
         if (ui.loading) {
             val answered by androidx.compose.animation.core.animateFloatAsState(

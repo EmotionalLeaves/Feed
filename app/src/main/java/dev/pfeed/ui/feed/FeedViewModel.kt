@@ -267,6 +267,39 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * This or that: pairs of upcoming posts that are as unlike each other as possible (far apart on
+     * your map), so each choice teaches For You something.
+     */
+    suspend fun thisOrThatPairs(n: Int = 10): List<Pair<MediaItem, MediaItem>> {
+        val ahead = items.value.drop(lastSettled + 1).filter { it.thumbnailUrl != null }.take(n * 4)
+        if (ahead.size < 2) return emptyList()
+        val vecs = runCatching { signals.engine.use { e -> ahead.map { e.vectorOf(it) } } }.getOrNull() ?: List(ahead.size) { null }
+        val left = ahead.indices.toMutableList()
+        val out = ArrayList<Pair<MediaItem, MediaItem>>()
+        while (left.size >= 2 && out.size < n) {
+            val a = left.removeAt(0)
+            val b = left.minBy { j -> val va = vecs[a]; val vb = vecs[j]; if (va != null && vb != null) dev.pfeed.domain.reco.TasteEngine.cos(va, vb) else 0.5 }
+            left.remove(b)
+            out += ahead[a] to ahead[b]
+        }
+        return out
+    }
+
+    /** A this-or-that answer: [chosen] over [other], or neither (both null-ish: pass [chosen] = null). */
+    fun preferred(chosen: MediaItem?, other: List<MediaItem>) {
+        viewModelScope.launch {
+            runCatching {
+                if (chosen != null) signals.record(chosen, Signal(SignalType.REPLAY, 1.0))
+                other.forEach { signals.record(it, if (chosen != null) Signal(SignalType.FAST_SKIP) else Signal(SignalType.WATCH, 0.0)) }
+            }
+        }
+    }
+
+    /** Tags that mean nearly the same as [tag] (see [dev.pfeed.domain.reco.TasteEngine.neighbours]). */
+    suspend fun neighbours(tag: String): List<String> =
+        runCatching { signals.engine.use { it.neighbours(tag) } }.getOrDefault(emptyList())
+
     /** Creators who make the same kind of thing as [name] (see [dev.pfeed.domain.reco.TasteEngine.similarCreators]). */
     suspend fun similarCreators(name: String, items: List<MediaItem>): List<String> {
         val found = runCatching { signals.engine.use { it.similarCreators(name, items.take(40)) } }.getOrDefault(emptyList())

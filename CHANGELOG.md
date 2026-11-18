@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.96.0 — 2026-11-18
+
+This or that, and words that mean the same
+
+- New: This or that (hold the For You tab). Two upcoming posts, as different as can be: tap the one you'd rather watch, or Neither. Ten quick picks teach For You more than ten minutes of scrolling, and the feed starts over with them.
+- New: Also try, under search results: tags that mean nearly the same as what you searched, on your own map (redhead → ginger, freckles…), leaning toward what you like.
+- Better: Tag pages suggest related tags by meaning first (from your map), then by what turns up alongside them.
+
 ## 4.95.0 — 2026-11-18
 
 Similar creators, plays from elsewhere, how well For You knows you
