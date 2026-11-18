@@ -216,6 +216,25 @@ class FeedViewModel @Inject constructor(
 
     fun refresh() = restart()
 
+    /** For You's mood: how much it sticks to what you like vs. tries new things. */
+    enum class Mood(val label: String, val note: String, val exploration: Double, val novelty: Double) {
+        FAMILIAR("Familiar", "More of what you already like", 0.03, 0.1),
+        BALANCED("Balanced", "Mostly your taste, now and then something new", 0.10, 0.2),
+        ADVENTUROUS("Adventurous", "Lots of things you haven't seen", 0.30, 0.45),
+    }
+
+    val mood: StateFlow<Mood> = settingsRepo.flow.map { s ->
+        Mood.entries.minByOrNull { kotlin.math.abs(it.exploration - s.weights.exploration) } ?: Mood.BALANCED
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, Mood.BALANCED)
+
+    fun setMood(m: Mood) {
+        viewModelScope.launch {
+            settingsRepo.update { it.copy(weights = it.weights.copy(exploration = m.exploration, novelty = m.novelty)) }
+            restart()
+            offer("For You: ${m.label.lowercase()}. ${m.note}", "OK") {}
+        }
+    }
+
     private fun restart() {
         if (isViewer) return
         finishCurrent()

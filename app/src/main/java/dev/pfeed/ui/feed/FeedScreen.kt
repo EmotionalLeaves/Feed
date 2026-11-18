@@ -20,6 +20,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.layout.positionInParent
@@ -430,6 +431,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             showModes = vm.isMainFeed,
             mode = mode,
             onMode = vm::setMode,
+            mood = vm.mood.collectAsStateWithLifecycle().value,
+            onMood = if (vm.isMainFeed) vm::setMood else null,
             onBack = if (!vm.isMainFeed) ({ nav.popBackStack(); Unit }) else null,
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
@@ -791,6 +794,8 @@ private fun TopBar(
     showModes: Boolean,
     mode: FeedMode,
     onMode: (FeedMode) -> Unit,
+    mood: FeedViewModel.Mood = FeedViewModel.Mood.BALANCED,
+    onMood: ((FeedViewModel.Mood) -> Unit)? = null,
     onBack: (() -> Unit)?,
     followTag: Pair<String, Boolean>?,
     onFollowTag: () -> Unit,
@@ -814,6 +819,7 @@ private fun TopBar(
         if (showModes) {
             // One white bar under the feed you're on, sliding (and resizing) to the next one you pick.
             val centers = remember { androidx.compose.runtime.mutableStateMapOf<FeedMode, Float>() }
+            var moodOpen by remember { mutableStateOf(false) }
             val target = centers[mode]
             val bar = remember { androidx.compose.animation.core.Animatable(Float.NaN) }
             LaunchedEffect(target) {
@@ -825,11 +831,37 @@ private fun TopBar(
             Box(Modifier.align(Alignment.Center)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                     listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
-                        ModeTab(
-                            label,
-                            selected = m == mode,
-                            modifier = Modifier.onGloballyPositioned { c -> centers[m] = c.positionInParent().x + c.size.width / 2f },
-                        ) { onMode(m) }
+                        Box {
+                            ModeTab(
+                                label,
+                                selected = m == mode,
+                                modifier = Modifier.onGloballyPositioned { c -> centers[m] = c.positionInParent().x + c.size.width / 2f },
+                                // Hold For You: choose its mood.
+                                onLongClick = if (m == FeedMode.FOR_YOU && onMood != null) ({ moodOpen = true }) else null,
+                            ) { onMode(m) }
+                            if (m == FeedMode.FOR_YOU && onMood != null) {
+                                androidx.compose.material3.DropdownMenu(expanded = moodOpen, onDismissRequest = { moodOpen = false }) {
+                                    Text(
+                                        "FOR YOU FEELS…",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = Color.White.copy(alpha = 0.5f),
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                    )
+                                    FeedViewModel.Mood.entries.forEach { md ->
+                                        androidx.compose.material3.DropdownMenuItem(
+                                            text = {
+                                                Column {
+                                                    Text(md.label, fontWeight = if (md == mood) FontWeight.Bold else FontWeight.Normal)
+                                                    Text(md.note, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                                                }
+                                            },
+                                            leadingIcon = { if (md == mood) Icon(Icons.Filled.Check, contentDescription = null, tint = Accent) else Spacer(Modifier.size(24.dp)) },
+                                            onClick = { moodOpen = false; onMood(md) },
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
                 if (!barX.isNaN()) Box(
@@ -866,10 +898,11 @@ private fun TopBar(
 }
 
 @Composable
-private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val tint by androidx.compose.animation.animateColorAsState(if (selected) Color.White else Color.White.copy(alpha = 0.6f), label = "modeTint")
     Column(
-        modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 17.dp),
+        modifier.clip(RoundedCornerShape(8.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 17.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(
