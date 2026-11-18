@@ -39,6 +39,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PictureInPictureAlt
 import androidx.compose.material.icons.filled.VpnLock
@@ -280,6 +282,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 )
                 RowDivider()
                 SwitchSetting(
+                    "Skip intros",
+                    s.skipIntros,
+                    subtitle = "Videos of 5 minutes and more start 25 s in the first time, past the studio intro",
+                    icon = Icons.Filled.FastForward,
+                    onChange = vm::setSkipIntros,
+                )
+                RowDivider()
+                SwitchSetting(
                     "Live grids",
                     s.livePreviews,
                     subtitle = "In grids, the video nearest the middle plays silently in its tile, then the next",
@@ -337,6 +347,23 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 footer = "Touch the screen with three fingers at any time to leave the app instantly" +
                     if (lockOn) " and lock it." else ".",
             ) {
+                val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
+                SwitchSetting(
+                    "Incognito",
+                    incognito,
+                    subtitle = "Until you turn it off or close the app: no History, no seen marks, nothing learned. Saves and follows still work",
+                    icon = Icons.Filled.VisibilityOff,
+                    onChange = { dev.pfeed.domain.privacy.Incognito.set(it) },
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Flip or shake to hide",
+                    s.flipToHide,
+                    subtitle = "Turn the phone face down or shake it and the app leaves at once" + if (lockOn) ", locked" else "",
+                    icon = Icons.Filled.ScreenRotation,
+                    onChange = vm::setFlipToHide,
+                )
+                RowDivider()
                 SwitchSetting(
                     "App lock",
                     lockOn,

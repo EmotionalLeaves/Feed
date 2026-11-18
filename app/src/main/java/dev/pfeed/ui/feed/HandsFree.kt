@@ -37,6 +37,28 @@ object CleanScreen {
     fun set(value: Boolean) { _on.value = value }
 }
 
+/**
+ * Sleep timer: playback stops when it runs out, and a dim "time's up" screen waits for a tap.
+ * Lasts for this session only.
+ */
+object SleepTimer {
+    private val _endsAt = MutableStateFlow<Long?>(null)
+    /** When it runs out (wall clock), or null when there's no timer. */
+    val endsAt: StateFlow<Long?> = _endsAt
+    private val _upNow = MutableStateFlow(false)
+    /** It ran out: everything is paused until you choose to keep watching. */
+    val upNow: StateFlow<Boolean> = _upNow
+
+    val choices = listOf(15, 30, 45, 60, 90)
+
+    fun start(minutes: Int) { _upNow.value = false; _endsAt.value = System.currentTimeMillis() + minutes * 60_000L }
+    fun cancel() { _endsAt.value = null }
+    fun runOut() { _endsAt.value = null; _upNow.value = true }
+    fun keepWatching() { _upNow.value = false }
+
+    fun minutesLeft(now: Long = System.currentTimeMillis()): Int? = _endsAt.value?.let { ((it - now + 59_999) / 60_000).toInt().coerceAtLeast(0) }
+}
+
 /** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
 object Pip {
     private val _active = MutableStateFlow(false)

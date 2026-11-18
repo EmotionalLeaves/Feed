@@ -65,6 +65,10 @@ data class AppSettings(
     val accent: String = "ROSE",
     /** Check GitHub for new versions and download them on Wi-Fi. */
     val autoUpdate: Boolean = true,
+    /** Face the phone down or shake it to hide the app (like the three-finger touch). */
+    val flipToHide: Boolean = false,
+    /** Long videos (5 min+) you've not watched before start 25 s in, past the studio intro. */
+    val skipIntros: Boolean = false,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

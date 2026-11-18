@@ -2,6 +2,10 @@ package dev.pfeed
 
 import android.content.Intent
 import android.os.Bundle
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.lifecycleScope
 import android.os.SystemClock
 import android.view.MotionEvent
 import android.view.WindowManager
@@ -61,6 +65,7 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         if (intent?.getBooleanExtra(dev.pfeed.ui.AgeGate.EXTRA_CONFIRMED, false) == true) dev.pfeed.ui.AgeGate.confirm(this)
         if (savedInstanceState == null) takeSharedLink(intent)
+        watchFlipToHide()
         setContent {
             PFeedTheme {
                 val blurFlow = androidx.compose.runtime.remember { settingsRepository.flow.map { it.blurPreviews } }
@@ -117,6 +122,21 @@ class MainActivity : FragmentActivity() {
     }
 
     /** Panic: lock immediately and jump to the home screen. Debounced: both detectors may fire for one gesture. */
+    private val flip by lazy { dev.pfeed.security.FlipToHide(this) { runOnUiThread { panic() } } }
+
+    /** Listens for flip/shake only while on screen and switched on (follows the setting live). */
+    private fun watchFlipToHide() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.RESUMED) {
+                try {
+                    settingsRepository.flow.map { it.flipToHide }.distinctUntilChanged().collect { on -> if (on) flip.start() else flip.stop() }
+                } finally {
+                    flip.stop()
+                }
+            }
+        }
+    }
+
     private fun panic() {
         val now = SystemClock.elapsedRealtime()
         if (lastPanicAt != 0L && now - lastPanicAt < 1_000L) return

@@ -586,6 +586,17 @@ class SmokeTest {
         }
     }
 
+    /** A link shared into the app opens in the viewer. */
+    @Test
+    fun sharedLinkOpensInViewer() {
+        rule.waitForIdle()
+        dev.pfeed.ui.SharedLink.pending.value = "Look at this: https://example.com/media/some-clip.mp4"
+        val shown = runCatching { waitFor(timeoutMs = 15_000, what = "shared link viewer") { exists("Shared link") } }.isSuccess
+        android.util.Log.i("PFHEALTH", "shared link: " + if (shown) "opened in the viewer" else "did not open")
+        if (shown) shot("09_shared_link")
+        assert(shown) { "a shared link should open in the viewer" }
+    }
+
     /** The updater reaches GitHub's releases and makes sense of the answer. */
     @Test
     fun updaterChecksGitHub() {

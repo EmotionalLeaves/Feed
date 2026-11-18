@@ -51,6 +51,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Shuffle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ViewDay
@@ -157,7 +158,15 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val lifecycleState by LocalLifecycleOwner.current.lifecycle.currentStateFlow.collectAsStateWithLifecycle()
     // In picture-in-picture the app is paused but still on screen: keep playing there.
     val inPip by Pip.active.collectAsStateWithLifecycle()
-    val active = (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) || (inPip && lifecycleState.isAtLeast(Lifecycle.State.STARTED))) && !locked
+    val sleepUp by SleepTimer.upNow.collectAsStateWithLifecycle()
+    val sleepEnds by SleepTimer.endsAt.collectAsStateWithLifecycle()
+    // The sleep timer runs out: stop, wherever you are in the app's feeds.
+    LaunchedEffect(sleepEnds) {
+        val end = sleepEnds ?: return@LaunchedEffect
+        kotlinx.coroutines.delay((end - System.currentTimeMillis()).coerceAtLeast(0))
+        if (SleepTimer.endsAt.value == end) SleepTimer.runOut()
+    }
+    val active = (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) || (inPip && lifecycleState.isAtLeast(Lifecycle.State.STARTED))) && !locked && !sleepUp
 
     val pagerState = rememberPagerState(initialPage = vm.startIndex) { items.size }
     val pagerScope = rememberCoroutineScope()
@@ -433,6 +442,24 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             }
         }
 
+        // Time's up: a dim screen over everything, nothing playing, until you choose.
+        if (sleepUp) {
+            BackHandler { SleepTimer.keepWatching() }
+            Column(
+                Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.92f)).clickable(enabled = false) {},
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(Icons.Filled.Bedtime, contentDescription = null, tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(56.dp))
+                Spacer(Modifier.height(16.dp))
+                Text("Time's up", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold, color = Color.White)
+                Spacer(Modifier.height(6.dp))
+                Text("Your sleep timer stopped playback", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
+                Spacer(Modifier.height(24.dp))
+                dev.pfeed.ui.common.BrandButton("Keep watching", onClick = { SleepTimer.keepWatching() })
+            }
+        }
+
         if (wallMode && !landscape && items.isNotEmpty()) {
             BackHandler { wallMode = false }
             Box(Modifier.fillMaxSize().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) {
@@ -504,6 +531,47 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 Text("Hands-free", color = Color.White, style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.width(6.dp))
                 Icon(Icons.Filled.Close, contentDescription = "Stop hands-free", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+            }
+        }
+
+        // Incognito: say so for as long as it's on (below the hands-free pill if that's showing too).
+        val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
+        if (incognito && !landscape && !gridView && !wallMode && !CleanScreen.on.collectAsStateWithLifecycle().value) {
+            Row(
+                Modifier.align(Alignment.TopStart).statusBarsPadding()
+                    .padding(start = 12.dp, top = (if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp) + if (handsFreeOn) 32.dp else 0.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFF2A2A35).copy(alpha = 0.85f))
+                    .clickable { dev.pfeed.domain.privacy.Incognito.set(false); vm.offer("Incognito off: watching is remembered again", "Undo") { dev.pfeed.domain.privacy.Incognito.set(true) } }
+                    .padding(start = 10.dp, end = 8.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.VisibilityOff, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Incognito", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Turn incognito off", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+            }
+        }
+
+        // The sleep timer, counting down (minutes), under the other pills.
+        if (sleepEnds != null && !landscape && !gridView && !wallMode && !CleanScreen.on.collectAsStateWithLifecycle().value) {
+            var left by remember { mutableIntStateOf(SleepTimer.minutesLeft() ?: 0) }
+            LaunchedEffect(sleepEnds) { while (true) { left = SleepTimer.minutesLeft() ?: 0; kotlinx.coroutines.delay(15_000) } }
+            Row(
+                Modifier.align(Alignment.TopStart).statusBarsPadding()
+                    .padding(start = 12.dp, top = (if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp) + (if (handsFreeOn) 32.dp else 0.dp) + (if (incognito) 32.dp else 0.dp))
+                    .clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable { val was = left; SleepTimer.cancel(); vm.offer("Sleep timer off", "Undo") { SleepTimer.start(was.coerceAtLeast(1)) } }
+                    .padding(start = 10.dp, end = 8.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.Bedtime, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Stops in $left min", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Turn the sleep timer off", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
             }
         }
 

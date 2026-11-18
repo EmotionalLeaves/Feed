@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Speed
@@ -51,6 +52,7 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.ModalBottomSheetProperties
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -87,6 +89,28 @@ fun ItemMenuSheet(
             val mode = pickTag
             if (mode == "collect") {
                 CollectionPicker(item, vm, onBack = { pickTag = null }, onDone = onDismiss)
+                return@Column
+            }
+            if (mode == "sleep") {
+                ListItem(
+                    headlineContent = { Text("Stop playing after…", fontWeight = FontWeight.Bold) },
+                    leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
+                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                    modifier = Modifier.clickable { pickTag = null },
+                )
+                HorizontalDivider()
+                FlowRow(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SleepTimer.choices.forEach { m ->
+                        androidx.compose.material3.FilterChip(
+                            selected = false,
+                            onClick = { SleepTimer.start(m); onDismiss() },
+                            label = { Text(if (m < 60) "$m min" else if (m % 60 == 0) "${m / 60} h" else "${m / 60} h ${m % 60} min") },
+                        )
+                    }
+                    if (SleepTimer.endsAt.collectAsStateWithLifecycle().value != null) {
+                        androidx.compose.material3.FilterChip(selected = true, onClick = { SleepTimer.cancel(); onDismiss() }, label = { Text("Turn off") })
+                    }
+                }
                 return@Column
             }
             if (mode != null) {
@@ -170,6 +194,18 @@ fun ItemMenuSheet(
                     colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     modifier = Modifier.clickable { onDismiss(); onMoreLikeThis() },
                 )
+            }
+            val sleepLeft = SleepTimer.endsAt.collectAsStateWithLifecycle().value?.let { SleepTimer.minutesLeft() }
+            MenuRow("Sleep timer", Icons.Filled.Bedtime, if (sleepLeft != null) "Stops in $sleepLeft min" else "Stop playing after a while") { pickTag = "sleep" }
+            val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
+            MenuRow(
+                if (incognito) "Leave incognito" else "Go incognito",
+                Icons.Filled.VisibilityOff,
+                if (incognito) "Watching is remembered again" else "Until you turn it off: no History, nothing learned, no seen marks",
+            ) {
+                dev.pfeed.domain.privacy.Incognito.set(!incognito)
+                android.widget.Toast.makeText(context, if (incognito) "Incognito off" else "Incognito: nothing you watch is remembered", android.widget.Toast.LENGTH_SHORT).show()
+                onDismiss()
             }
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
             if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }

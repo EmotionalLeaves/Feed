@@ -43,6 +43,7 @@ class SeenItems @Inject constructor(
     override fun isSeen(key: String): Boolean = key in recent || key in persisted
 
     fun mark(key: String) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
         recent += key
     }
 }

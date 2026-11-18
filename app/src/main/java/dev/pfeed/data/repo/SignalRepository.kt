@@ -60,6 +60,7 @@ class SignalRepository @Inject constructor(
     }
 
     suspend fun record(item: MediaItem, signal: Signal) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
         ensureModel()
         val now = System.currentTimeMillis()
         val model = AffinityModel(settings.get().halfLifeDays)
@@ -92,6 +93,7 @@ class SignalRepository @Inject constructor(
     suspend fun recordInterest(topic: String) = nudge(topic, PICK_NUDGE)
 
     private suspend fun nudge(query: String, target: Double) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
         val q = query.trim().takeIf { it.length >= 2 } ?: return
         val words = q.split(Regex("\\s+")).filter { it.length >= 2 }
         val probe = MediaItem(

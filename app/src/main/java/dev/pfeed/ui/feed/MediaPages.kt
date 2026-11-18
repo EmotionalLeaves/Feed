@@ -195,8 +195,8 @@ fun VideoPage(
                     .setUri(s.url)
                     .apply { s.mimeType?.let { setMimeType(it) } }
                     .build(),
-                // Carry on where you left a long video, if you did.
-                dev.pfeed.player.ResumePoints.get(item.key) ?: 0L,
+                // Carry on where you left a long video, if you did; else past the intro, if asked.
+                dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
             )
             p.prepare()
         }
@@ -261,7 +261,15 @@ fun VideoPage(
     var offeredResume by remember(item.key) { mutableStateOf(false) }
     LaunchedEffect(player, play) {
         val p = player ?: return@LaunchedEffect
-        val at = dev.pfeed.player.ResumePoints.get(item.key) ?: return@LaunchedEffect
+        val at = dev.pfeed.player.ResumePoints.get(item.key) ?: run {
+            // Started past the intro: say so, with the way back.
+            val skip = vm.introSkipMs(item)
+            if (skip > 0 && play && !offeredResume) {
+                offeredResume = true
+                vm.offer("Skipped the intro", "From the start") { p.seekTo(0) }
+            }
+            return@LaunchedEffect
+        }
         if (play && !offeredResume) {
             offeredResume = true
             vm.offer("Carrying on from ${dev.pfeed.ui.common.formatDuration((at / 1000).toInt())}", "Start over") { p.seekTo(0) }

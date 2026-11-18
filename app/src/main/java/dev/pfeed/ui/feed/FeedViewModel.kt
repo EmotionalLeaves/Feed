@@ -314,6 +314,16 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Where a long video starts when you've not watched it before: past the studio intro, if
+     * "Skip intros" is on (videos of 5 minutes and more; 0 otherwise).
+     */
+    fun introSkipMs(item: MediaItem): Long {
+        val d = item.durationSec ?: return 0L
+        if (!settings.value.skipIntros || d < INTRO_MIN_SEC) return 0L
+        return minOf(INTRO_SKIP_MS, d * 1000L / 20)
+    }
+
     fun autoplayAllowed(): Boolean = settings.value.autoplayOnMobileData || !network.isMetered
 
     fun toggleMute() { _muted.value = !_muted.value }
@@ -657,6 +667,8 @@ class FeedViewModel @Inject constructor(
     fun reportUrl(item: MediaItem): String? = registry.byId(item.sourceId)?.reportUrl(item)
 
     companion object {
+        private const val INTRO_MIN_SEC = 300
+        private const val INTRO_SKIP_MS = 25_000L
         private const val LOAD_AHEAD = 10
         const val SIMILAR_PREFIX = "~like:"
         private const val LIKED_TAGS_REFRESH_MS = 60_000L

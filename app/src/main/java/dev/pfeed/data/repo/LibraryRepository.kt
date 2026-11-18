@@ -44,6 +44,7 @@ class LibraryRepository @Inject constructor(
     suspend fun add(kind: LibraryKind, given: MediaItem) = addTo(kind.name, given)
 
     private suspend fun addTo(kind: String, given: MediaItem) {
+        if (kind == LibraryKind.HISTORY.name && dev.pfeed.domain.privacy.Incognito.active) return
         val item = OfflineStore.original(given)
         val now = System.currentTimeMillis()
         db.withTransaction {

@@ -21,6 +21,7 @@ object ResumePoints {
     fun get(key: String): Long? = prefs?.getLong(key, -1L)?.takeIf { it > 0 }
 
     fun save(key: String, positionMs: Long, durationMs: Long) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
         val p = prefs ?: return
         if (durationMs < MIN_DURATION_MS || positionMs < MARGIN_MS || positionMs > durationMs - MARGIN_MS) {
             if (p.contains(key)) p.edit().remove(key).apply()
@@ -50,6 +51,7 @@ object ComicPages {
     fun get(key: String): Int? = prefs?.getInt(key, -1)?.takeIf { it > 0 }
 
     fun save(key: String, page: Int, pageCount: Int) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
         val p = prefs ?: return
         if (page <= 0 || page >= pageCount - 1) {
             if (p.contains(key)) p.edit().remove(key).apply()

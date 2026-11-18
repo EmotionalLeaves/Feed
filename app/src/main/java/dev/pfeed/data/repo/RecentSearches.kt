@@ -35,6 +35,7 @@ class RecentSearches @Inject constructor(
     }
 
     suspend fun add(query: String) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
         val q = query.trim()
         if (q.isEmpty()) return
         load()
