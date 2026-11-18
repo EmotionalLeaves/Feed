@@ -163,9 +163,10 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val pagerScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
-    // A creator's page opens as their profile: a header and a grid of everything by them.
+    // A creator's or a tag's page opens as a profile: a header and a grid of everything in it.
     val creatorPage = vm.tag?.startsWith("@") == true
-    var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(creatorPage) }
+    val profilePage = vm.tag != null
+    var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(profilePage) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
@@ -376,20 +377,20 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         // The page as a grid: everything loaded so far (and more as you scroll); tap one to watch from there.
         if (gridView && !landscape) {
             // On a creator's profile the grid is the page itself, so back leaves it.
-            BackHandler(enabled = !creatorPage) { gridView = false }
+            BackHandler(enabled = !profilePage) { gridView = false }
             Column(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background).statusBarsPadding().padding(bottom = dev.pfeed.ui.LocalBottomBarInset.current)) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                    if (creatorPage) IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
+                    if (profilePage) IconButton(onClick = { nav.popBackStack() }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back") }
                     else IconButton(onClick = { gridView = false }) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Back to the feed") }
                     Text(
-                        if (creatorPage) "" else vm.tag?.let { "#" + it.replace('_', ' ') }.orEmpty(),
+                        "",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    if (creatorPage) {
+                    if (profilePage) {
                         if (items.isNotEmpty()) IconButton(onClick = { gridView = false }) { Icon(Icons.Filled.ViewDay, "Watch as a feed") }
                     } else Text(
                         "${items.size} posts",
@@ -406,6 +407,18 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         loading = loading,
                         following = vm.isFollowingPage(tag, follows),
                         onFollow = { vm.toggleFollowTag(tag) },
+                        onPlay = { gridView = false; pagerScope.launch { pagerState.scrollToPage(0) } },
+                        onShuffle = { gridView = false; pagerScope.launch { pagerState.scrollToPage(items.indices.random()) } },
+                    )
+                }) else if (profilePage) ({
+                    TagHeader(
+                        tag = tag,
+                        items = items,
+                        loading = loading,
+                        following = vm.isFollowingPage(tag, follows),
+                        related = remember(items.size, tag) { relatedTags(items, tag) },
+                        onFollow = { vm.toggleFollowTag(tag) },
+                        onOpenTag = { nav.openTag(it) },
                         onPlay = { gridView = false; pagerScope.launch { pagerState.scrollToPage(0) } },
                         onShuffle = { gridView = false; pagerScope.launch { pagerState.scrollToPage(items.indices.random()) } },
                     )
@@ -497,15 +510,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         // A tag page: the tags that show up most alongside it, to hop sideways to.
         val pageTag = vm.tag
         if (pageTag != null && !pageTag.startsWith("@") && !landscape && !gridView && items.size >= 6) {
-            val related = remember(items.size, pageTag) {
-                val self = dev.pfeed.domain.reco.Features.normalizeTag(pageTag)
-                items.take(60).flatMap { Display.tags(it, max = 12) }
-                    .groupBy { dev.pfeed.domain.reco.Features.normalizeTag(it.second) }
-                    .filterKeys { it != self }
-                    .entries.sortedByDescending { it.value.size }
-                    .take(8)
-                    .map { it.value.first() }
-            }
+            val related = remember(items.size, pageTag) { relatedTags(items, pageTag) }
             if (related.isNotEmpty()) Row(
                 Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 54.dp)
                     .horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp),
@@ -1297,6 +1302,101 @@ private fun RailButton(
 }
 
 /** Save with the same little pop as Like when it turns on. */
+/** The tags that show up most alongside [pageTag] in [items], to hop sideways to. */
+private fun relatedTags(items: List<MediaItem>, pageTag: String): List<Pair<String, String>> {
+    val self = dev.pfeed.domain.reco.Features.normalizeTag(pageTag)
+    return items.take(60).flatMap { Display.tags(it, max = 12) }
+        .groupBy { dev.pfeed.domain.reco.Features.normalizeTag(it.second) }
+        .filterKeys { it != self }
+        .entries.sortedByDescending { it.value.size }
+        .take(8)
+        .map { it.value.first() }
+}
+
+/** The top of a tag's page: the tag big, how much there is, follow it, and where to go next. */
+@Composable
+private fun TagHeader(
+    tag: String,
+    items: List<MediaItem>,
+    loading: Boolean,
+    following: Boolean,
+    related: List<Pair<String, String>>,
+    onFollow: () -> Unit,
+    onOpenTag: (String) -> Unit,
+    onPlay: () -> Unit,
+    onShuffle: () -> Unit,
+) {
+    val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.distinct().size }
+    val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
+    Column(Modifier.fillMaxWidth().padding(bottom = 14.dp)) {
+        Row(Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+            // A big gradient tile with the hash in it, where a creator has their avatar.
+            Box(
+                Modifier.size(84.dp).clip(RoundedCornerShape(22.dp)).background(dev.pfeed.ui.theme.BrandGradient),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text("#", style = MaterialTheme.typography.displayMedium, fontWeight = FontWeight.ExtraBold, color = Color.White)
+            }
+            Spacer(Modifier.width(16.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    tag.replace('_', ' '),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color.White,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    if (items.isEmpty()) (if (loading) "Looking on every site…" else "Nothing here right now")
+                    else "${items.size}${if (loading) "+" else ""} posts · $videos videos · $sites ${if (sites == 1) "site" else "sites"}",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.White.copy(alpha = 0.6f),
+                    maxLines = 1,
+                )
+            }
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (following) {
+                androidx.compose.material3.OutlinedButton(onClick = onFollow, shape = RoundedCornerShape(50)) {
+                    Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Following")
+                }
+            } else dev.pfeed.ui.common.BrandButton("Follow", onClick = onFollow, icon = Icons.Filled.Add, compact = true)
+            if (items.isNotEmpty()) {
+                androidx.compose.material3.FilledTonalButton(onClick = onPlay, shape = RoundedCornerShape(50)) {
+                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Play all")
+                }
+                IconButton(onClick = onShuffle) { Icon(Icons.Filled.Shuffle, "Shuffle", tint = Color.White.copy(alpha = 0.8f)) }
+            }
+        }
+        if (related.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                related.forEach { (label, raw) ->
+                    Text(
+                        "#$label",
+                        color = Color.White.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.08f))
+                            .clickable { onOpenTag(raw) }.padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
+        }
+        if (items.isEmpty() && loading) {
+            Spacer(Modifier.height(48.dp))
+            Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { dev.pfeed.ui.common.BrandSpinner() }
+        }
+    }
+}
+
 /** The top of a creator's profile: who, how much, from where, and the two things to do. */
 @Composable
 private fun CreatorHeader(

@@ -385,6 +385,8 @@ class SmokeTest {
                 shot("02b_browse")
                 rule.onAllNodes(hasText("Search every site"), useUnmergedTree = true)[0].performScrollTo()
             }
+            // The browse card may be below the fold (the Spotlight sits on top): scroll to it first.
+            runCatching { rule.onAllNodes(hasText("anal"), useUnmergedTree = true)[0].performScrollTo(); Thread.sleep(400) }
             tap("anal")
             waitFor(timeoutMs = 60_000, what = "results") { exists("Play all") || !exists("still searching", substring = true) }
             Thread.sleep(2_000)
