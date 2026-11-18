@@ -69,6 +69,8 @@ data class AppSettings(
     val flipToHide: Boolean = false,
     /** Long videos (5 min+) you've not watched before start 25 s in, past the studio intro. */
     val skipIntros: Boolean = false,
+    /** Even out loudness between videos (and within them). */
+    val smartVolume: Boolean = true,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

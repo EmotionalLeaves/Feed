@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.GridView
@@ -279,6 +280,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.autoplayOnMobileData) null else "Videos wait for a tap when you're off Wi-Fi",
                     icon = Icons.Filled.SignalCellularAlt,
                     onChange = vm::setAutoplayOnMobile,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Smart volume",
+                    s.smartVolume,
+                    subtitle = "Evens out loudness: quiet clips come up, loud ones don't blast. Applies from the next video",
+                    icon = Icons.Filled.GraphicEq,
+                    onChange = vm::setSmartVolume,
                 )
                 RowDivider()
                 SwitchSetting(

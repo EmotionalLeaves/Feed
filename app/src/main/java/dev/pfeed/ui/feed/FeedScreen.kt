@@ -167,6 +167,33 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         if (SleepTimer.endsAt.value == end) SleepTimer.runOut()
     }
     val active = (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) || (inPip && lifecycleState.isAtLeast(Lifecycle.State.STARTED))) && !locked && !sleepUp
+    // Feel the sound: pulse the vibrator with the loudness of whatever is playing.
+    val feel by FeelTheSound.on.collectAsStateWithLifecycle()
+    val feelContext = LocalContext.current
+    LaunchedEffect(feel, active) {
+        if (!feel || !active) return@LaunchedEffect
+        val vibrator = if (android.os.Build.VERSION.SDK_INT >= 31) {
+            (feelContext.getSystemService(android.content.Context.VIBRATOR_MANAGER_SERVICE) as? android.os.VibratorManager)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION") feelContext.getSystemService(android.content.Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+        } ?: return@LaunchedEffect
+        if (!vibrator.hasVibrator()) return@LaunchedEffect
+        try {
+            while (true) {
+                val fresh = android.os.SystemClock.elapsedRealtime() - dev.pfeed.player.SmartVolume.envelopeAt < 200
+                val amp = if (fresh) FeelTheSound.amplitude(dev.pfeed.player.SmartVolume.envelope) else 0
+                if (amp > 0) {
+                    vibrator.vibrate(
+                        if (vibrator.hasAmplitudeControl()) android.os.VibrationEffect.createOneShot(FEEL_PULSE_MS, amp)
+                        else android.os.VibrationEffect.createOneShot(if (amp > 120) FEEL_PULSE_MS else 1, android.os.VibrationEffect.DEFAULT_AMPLITUDE),
+                    )
+                }
+                kotlinx.coroutines.delay(FEEL_PULSE_MS)
+            }
+        } finally {
+            vibrator.cancel()
+        }
+    }
 
     val pagerState = rememberPagerState(initialPage = vm.startIndex) { items.size }
     val pagerScope = rememberCoroutineScope()
@@ -1631,6 +1658,7 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 
 /** How far left a swipe must go to open the creator's page. */
+private const val FEEL_PULSE_MS = 45L
 private const val LONG_VIDEO_MS = 90_000L
 private const val SEEK_RUN_MS = 800L
 private const val SWIPE_TO_CREATOR_DP = 90

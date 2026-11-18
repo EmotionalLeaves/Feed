@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.AutoAwesome
@@ -214,6 +215,14 @@ fun ItemMenuSheet(
                     colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     modifier = Modifier.clickable { onDismiss(); onMoreLikeThis() },
                 )
+            }
+            if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
+                val feel by FeelTheSound.on.collectAsStateWithLifecycle()
+                MenuRow(
+                    if (feel) "Stop feeling the sound" else "Feel the sound",
+                    Icons.Filled.Vibration,
+                    if (feel) "The phone stops vibrating with the audio" else "The phone vibrates with the audio, stronger as it gets louder, sound on or off",
+                ) { FeelTheSound.set(!feel); onDismiss() }
             }
             val sleepLeft = SleepTimer.endsAt.collectAsStateWithLifecycle().value?.let { SleepTimer.minutesLeft() }
             MenuRow("Sleep timer", Icons.Filled.Bedtime, if (sleepLeft != null) "Stops in $sleepLeft min" else "Stop playing after a while") { pickTag = "sleep" }

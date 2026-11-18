@@ -215,6 +215,7 @@ class SettingsViewModel @Inject constructor(
     fun setAutoUpdate(v: Boolean) = update { it.copy(autoUpdate = v) }
     fun setFlipToHide(v: Boolean) = update { it.copy(flipToHide = v) }
     fun setSkipIntros(v: Boolean) = update { it.copy(skipIntros = v) }
+    fun setSmartVolume(v: Boolean) = update { it.copy(smartVolume = v) }
     fun setAccent(p: dev.pfeed.ui.theme.Palette) {
         dev.pfeed.ui.theme.Palette.set(p.name) // repaint now, not after the write
         update { it.copy(accent = p.name) }

@@ -72,7 +72,8 @@ class PlayerPool @Inject constructor(
         _changes.value = _changes.value + 1
     }
 
-    private fun playerAt(i: Int): ExoPlayer = players[i] ?: ExoPlayer.Builder(context)
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun playerAt(i: Int): ExoPlayer = players[i] ?: ExoPlayer.Builder(context, smartVolumeRenderers())
         .setMediaSourceFactory(DefaultMediaSourceFactory(mediaCache.dataSourceFactory))
         .setLoadControl(
             DefaultLoadControl.Builder()
@@ -88,6 +89,17 @@ class PlayerPool @Inject constructor(
             setAudioAttributes(MOVIE, /* handleAudioFocus = */ false)
         }
         .also { players[i] = it }
+
+    /** Audio goes through [SmartVolume] (a pass-through when it's off). */
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+    private fun smartVolumeRenderers() = object : androidx.media3.exoplayer.DefaultRenderersFactory(context) {
+        override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): androidx.media3.exoplayer.audio.AudioSink =
+            androidx.media3.exoplayer.audio.DefaultAudioSink.Builder(context)
+                .setEnableFloatOutput(false)
+                .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                .setAudioProcessors(arrayOf(SmartVolume()))
+                .build()
+    }
 
     companion object {
         const val SIZE = 4

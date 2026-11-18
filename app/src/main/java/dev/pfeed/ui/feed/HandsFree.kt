@@ -59,6 +59,25 @@ object SleepTimer {
     fun minutesLeft(now: Long = System.currentTimeMillis()): Int? = _endsAt.value?.let { ((it - now + 59_999) / 60_000).toInt().coerceAtLeast(0) }
 }
 
+/**
+ * Feel the sound: the phone vibrates with what's playing, stronger as it gets louder. Muted or not.
+ * For this session; started from the hold menu.
+ */
+object FeelTheSound {
+    private val _on = MutableStateFlow(false)
+    val on: StateFlow<Boolean> = _on
+    fun set(value: Boolean) { _on.value = value }
+
+    /** Vibration strength (1..255) for a loudness [envelope], or 0 for nothing. */
+    fun amplitude(envelope: Float): Int {
+        val x = ((envelope - FLOOR) / (CEIL - FLOOR)).coerceIn(0f, 1f)
+        return if (x <= 0f) 0 else (40 + 215 * x * x).toInt().coerceIn(1, 255)
+    }
+
+    private const val FLOOR = 0.02f
+    private const val CEIL = 0.3f
+}
+
 /** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
 object Pip {
     private val _active = MutableStateFlow(false)
