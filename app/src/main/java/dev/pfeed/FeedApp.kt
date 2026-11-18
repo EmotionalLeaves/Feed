@@ -50,6 +50,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
             settings.flow.collect {
                 dev.pfeed.ui.theme.Palette.set(it.accent)
                 dev.pfeed.player.SmartVolume.enabled = it.smartVolume
+                dev.pfeed.domain.privacy.Incognito.always = it.privateMode
                 dev.pfeed.ui.lock.LockLook.calculator.value = it.calculatorLock
                 dev.pfeed.ui.feed.VolumeKeys.turnPages = it.volumeKeysTurnPages
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns

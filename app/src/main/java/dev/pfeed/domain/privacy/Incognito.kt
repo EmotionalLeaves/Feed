@@ -11,7 +11,10 @@ import kotlinx.coroutines.flow.StateFlow
 object Incognito {
     private val _on = MutableStateFlow(false)
     val on: StateFlow<Boolean> = _on
-    val active: Boolean get() = _on.value
+    /** Settings → Private mode: the same, always (set from settings at startup and on change). */
+    @Volatile var always = false
+
+    val active: Boolean get() = _on.value || always
 
     fun set(value: Boolean) { _on.value = value }
 }

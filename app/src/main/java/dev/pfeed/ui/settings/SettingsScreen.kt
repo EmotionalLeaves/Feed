@@ -424,15 +424,6 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 footer = "Touch the screen with three fingers at any time to leave the app instantly" +
                     if (lockOn) " and lock it." else ".",
             ) {
-                val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
-                SwitchSetting(
-                    "Incognito",
-                    incognito,
-                    subtitle = "Until you turn it off or close the app: no History, no seen marks, nothing learned. Saves and follows still work",
-                    icon = Icons.Filled.VisibilityOff,
-                    onChange = { dev.pfeed.domain.privacy.Incognito.set(it) },
-                )
-                RowDivider()
                 if (lockOn) {
                     val eraseOn by vm.erasePinOn.collectAsStateWithLifecycle()
                     SettingRow(
@@ -492,8 +483,8 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SwitchSetting(
                     "Private mode",
                     s.privateMode,
-                    subtitle = if (s.privateMode) "History, search history and For You are paused"
-                    else "Watch without history or teaching For You",
+                    subtitle = if (s.privateMode) "Always incognito: no history, seen marks or resume points, and For You learns nothing"
+                    else "Always incognito. For a while only, use Go incognito in a post's hold menu",
                     icon = Icons.Filled.VisibilityOff,
                     iconTint = Good,
                     onChange = vm::setPrivateMode,
