@@ -149,7 +149,8 @@ class Ranker(
                 // Exploring with a map: something good you haven't shown a taste for yet (far from
                 // every interest, decent quality), rather than any random post.
                 spread.pick(pool, { it.item }, minLevel) { c ->
-                    (1.0 - c.fit) * 0.6 + c.quality * 0.4 + random.nextDouble() * 0.5 -
+                    (1.0 - c.fit) * 0.6 + (if (c.vec != null) TasteEngine.NOVELTY * engine.unexplored(c.vec) else 0.0) +
+                        c.quality * 0.4 + random.nextDouble() * 0.5 -
                         1.5 * c.aversion - weights.similarity * repetition(c)
                 }
             } else if (explore) {
@@ -169,7 +170,7 @@ class Ranker(
             if (index < 0) break
             val picked = pool.removeAt(index)
             // Remember what it was shown for, so the reaction to it can tune the weights.
-            if (engine != null && picked.parts != null) engine.shown(picked.item.key, picked.parts)
+            if (engine != null && picked.parts != null) engine.shown(picked.item.key, picked.parts, explored = explore, vec = picked.vec)
             seenOrigins += Spread.origin(picked.item)
             spread.add(picked.item)
             out += picked.item

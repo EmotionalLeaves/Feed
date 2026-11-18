@@ -744,7 +744,11 @@ class FeedViewModel @Inject constructor(
                     out += Why(if (tag != null) "You like #${tag.first}" else "You like " + dev.pfeed.domain.reco.Features.label(feat), tag?.second, false)
                 }
         }
-        return out.distinctBy { it.text }.take(4)
+        // What the taste engine saw in it: the taste it serves, your mood, or a look past what you know.
+        if (aff != null) runCatching { signals.engine.use { it.explain(item, aff.tags) } }.getOrNull()?.forEach { r ->
+            out.add(minOf(out.size, if (r.strong) out.count { it.strong } else out.size), Why(r.text, r.tag, r.strong))
+        }
+        return out.distinctBy { it.text }.take(5)
     }
 
     /** First run: the topics picked teach For You straight away, then the feed starts over with them. */

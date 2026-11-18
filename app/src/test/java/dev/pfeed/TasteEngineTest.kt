@@ -91,4 +91,21 @@ class TasteEngineTest {
         val far = engine.aversion(engine.vectorOf(world.post(12).item)!!)
         assertTrue("posts like the rejected one should be avoided ($near vs $far)", near > far + 0.2)
     }
+
+    @Test
+    fun `the taste map draws two tastes apart and explains a pick`() {
+        val world = World(Random(4))
+        val engine = TasteEngine()
+        repeat(3000) { engine.observe(listOf(world.post().item)) }
+        val aff = HashMap<String, Double>()
+        repeat(30) { listOf(3, 11).forEach { t -> val p = world.post(t).item; engine.learn(p, 2.0); p.tags.forEach { aff[it] = 0.8 } } }
+        val map = engine.tasteMap(aff)
+        fun spot(t: Int) = map.stars.filter { it.tag.startsWith("t${t}_") }
+        val a = spot(3); val b = spot(11)
+        assertTrue("both tastes should be on the map", a.isNotEmpty() && b.isNotEmpty())
+        fun spread(x: List<TasteEngine.Star>, y: List<TasteEngine.Star>) = x.flatMap { p -> y.map { q -> kotlin.math.hypot((p.x - q.x).toDouble(), (p.y - q.y).toDouble()) } }.average()
+        assertTrue("a taste's own tags should sit closer together than to the other taste's", spread(a, a) < spread(a, b))
+        val why = engine.explain(world.post(3).item, aff)
+        assertTrue("a post from a taste should be explained by it: $why", why.any { it.strong })
+    }
 }

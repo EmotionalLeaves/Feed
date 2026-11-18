@@ -99,6 +99,12 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         val lessOf = dislikes.filterNot { Features.isMeta(it.first) }
         // The engine's interests: what For You is built from, and how much of it each one gets.
         val groups by vm.engineInterests.collectAsStateWithLifecycle()
+        val sky by vm.tasteMap.collectAsStateWithLifecycle()
+        sky?.takeIf { it.stars.size >= 5 }?.let { m ->
+            Section("Your taste map", footer = "Tags that keep company sit together. Bigger means you like it more; each colour is one of your interests below, glowing by its share of For You. Tap a star to open it.") {
+                TasteMapView(m, onOpenTag = { openTag(nav, it) })
+            }
+        }
         if (groups.isNotEmpty()) {
             Section("Your interests", footer = "For You takes turns between these, more often for the ones you enjoy most. Each is learned from what you linger on; a new one appears when you start loving something new.") {
                 groups.forEachIndexed { n, g ->

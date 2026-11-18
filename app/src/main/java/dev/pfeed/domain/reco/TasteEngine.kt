@@ -73,9 +73,58 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     private var tuneBias = 0.0
 
     /** Ranked and shown: remember the parts of its score until you react to it. */
-    fun shown(key: String, parts: DoubleArray) {
+    fun shown(key: String, parts: DoubleArray, explored: Boolean = false, vec: FloatArray? = null) {
+        if (vec != null) {
+            exposure.addLast(vec)
+            if (exposure.size > MAX_EXPOSURE) exposure.removeFirst()
+        }
         shownParts[key] = parts
         if (shownParts.size > MAX_REMEMBERED) shownParts.remove(shownParts.keys.first())
+        if (explored) {
+            exploredKeys += key
+            if (exploredKeys.size > MAX_REMEMBERED) exploredKeys.remove(exploredKeys.first())
+        }
+    }
+
+    /** Where on the map you've been shown things lately (liked or not). */
+    private val exposure = ArrayDeque<FloatArray>()
+
+    /**
+     * How far [x] is from everything you've been shown lately (0 = right where you've been, 1 =
+     * nowhere near). Exploring by this tries each region of the map in turn instead of drawing at
+     * random, so a second or third taste turns up in a fraction of the tries.
+     */
+    fun unexplored(x: FloatArray): Double {
+        var best = 0.0
+        for (e in exposure) { val c = cos(e, x); if (c > best) best = c }
+        return 1.0 - best
+    }
+
+    /** Posts put in a slot to explore (so "why am I seeing this" can say so). */
+    private val exploredKeys = LinkedHashSet<String>()
+
+    /** A reason in plain words, and the tag page it leads to (if any). */
+    data class Reason(val text: String, val tag: String?, val strong: Boolean)
+
+    /**
+     * Why For You picked [item], as the engine sees it: which of your tastes it serves (and that
+     * taste's share of the feed), that it's like what you've been watching just now, or that it was
+     * a look past what you know.
+     */
+    fun explain(item: MediaItem, affinity: Map<String, Double>): List<Reason> {
+        val out = ArrayList<Reason>()
+        if (item.key in exploredKeys) out += Reason("Something new, near what you like", null, false)
+        val x = vectorOf(item) ?: return out
+        val near = interests.filter { it.current > SERVE_MIN }.maxByOrNull { cos(it.centroid, x) }
+        if (near != null && cos(near.centroid, x) >= ATTRIBUTE) {
+            val view = describe(affinity).firstOrNull { interests.getOrNull(it.index) === near }
+            if (view != null) {
+                val name = view.tags.take(2).joinToString(" · ") { Features.label(it) }
+                out += Reason("Your taste for $name · ${(view.share * 100).toInt().coerceAtLeast(1)}% of For You", view.tags.first(), true)
+            }
+        }
+        if (moodScore(x) >= MOOD_REASON) out += Reason("Like what you've watched just now", null, false)
+        return out
     }
 
     private fun tuneFrom(key: String, target: Double) {
@@ -240,6 +289,66 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         return out
     }
 
+    /** A tag on the taste map: where it sits (-1..1), how much you like it (-1..1), whose taste it is (-1: none). */
+    data class Star(val tag: String, val x: Float, val y: Float, val liking: Double, val group: Int)
+    /** An interest's centre on the map. */
+    data class Sun(val group: Int, val x: Float, val y: Float, val share: Double)
+    data class TasteMap(val stars: List<Star>, val suns: List<Sun>)
+
+    /**
+     * Your taste as a picture: the tags you like and the ones at the heart of each interest, laid
+     * out flat so tags that keep company sit together (the two main directions of the map, found by
+     * principal components), each coloured by the interest it belongs to.
+     */
+    fun tasteMap(affinity: Map<String, Double>, maxStars: Int = 44): TasteMap {
+        val views = describe(affinity)
+        val serving = views.mapNotNull { v -> interests.getOrNull(v.index)?.let { v to it } }
+        val pool = space.tags(QUERY_MIN_COUNT).filter { !Features.isMeta(it) && !it.startsWith("w:") }
+            .mapNotNull { t -> space.tagVector(t)?.let { t to it } }.toMap()
+        val chosen = LinkedHashMap<String, FloatArray>()
+        // The heart of each interest first, then what you like most, then a few you don't.
+        for ((_, i) in serving) pool.entries.sortedByDescending { cos(i.centroid, it.value) }.take(5).forEach { chosen[it.key] = it.value }
+        affinity.entries.filter { it.value > 0.2 && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
+            .sortedByDescending { it.value }.forEach { e -> if (chosen.size < maxStars - 5) (pool[e.key] ?: space.tagVector(e.key))?.let { chosen[e.key] = it } }
+        affinity.entries.filter { it.value < -0.3 && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
+            .sortedBy { it.value }.take(5).forEach { e -> (pool[e.key] ?: space.tagVector(e.key))?.let { chosen[e.key] = it } }
+        if (chosen.size < 3) return TasteMap(emptyList(), emptyList())
+        val vecs = chosen.values.toList()
+        val dim = vecs.first().size
+        val mean = DoubleArray(dim).also { m -> vecs.forEach { v -> for (k in 0 until dim) m[k] += v[k] / vecs.size } }
+        val centred = vecs.map { v -> DoubleArray(dim) { k -> v[k] - mean[k] } }
+        fun component(orth: DoubleArray?): DoubleArray {
+            var c = DoubleArray(dim) { k -> kotlin.math.sin(k * 1.3 + 0.7) }
+            repeat(40) {
+                val n = DoubleArray(dim)
+                for (x in centred) { var d = 0.0; for (k in 0 until dim) d += x[k] * c[k]; for (k in 0 until dim) n[k] += d * x[k] }
+                if (orth != null) { var d = 0.0; for (k in 0 until dim) d += n[k] * orth[k]; for (k in 0 until dim) n[k] -= d * orth[k] }
+                val len = sqrt(n.sumOf { it * it }).coerceAtLeast(1e-12)
+                c = DoubleArray(dim) { k -> n[k] / len }
+            }
+            return c
+        }
+        val a = component(null); val b = component(a)
+        fun project(v: FloatArray): Pair<Double, Double> {
+            var x = 0.0; var y = 0.0
+            for (k in 0 until dim) { val d = v[k] - mean[k]; x += d * a[k]; y += d * b[k] }
+            return x to y
+        }
+        val pts = chosen.mapValues { project(it.value) }
+        val sunPts = serving.map { (v, i) -> v to project(i.centroid) }
+        val all = pts.values + sunPts.map { it.second }
+        val sx = all.maxOf { kotlin.math.abs(it.first) }.coerceAtLeast(1e-9)
+        val sy = all.maxOf { kotlin.math.abs(it.second) }.coerceAtLeast(1e-9)
+        val stars = chosen.keys.map { t ->
+            val (x, y) = pts.getValue(t)
+            val v = chosen.getValue(t)
+            val g = serving.maxByOrNull { cos(it.second.centroid, v) }?.takeIf { cos(it.second.centroid, v) >= NAME_MIN }?.first?.index ?: -1
+            Star(t, (x / sx).toFloat(), (y / sy).toFloat(), (affinity[t] ?: 0.0).coerceIn(-1.0, 1.0), g)
+        }
+        val suns = sunPts.map { (v, p) -> Sun(v.index, (p.first / sx).toFloat(), (p.second / sy).toFloat(), v.share) }
+        return TasteMap(stars, suns)
+    }
+
     /** An interest as people see it: the tags that best name it, its share of For You, and how it's going. */
     data class View(val index: Int, val tags: List<String>, val share: Double, val enjoyment: Double, val sour: Boolean)
 
@@ -257,7 +366,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             val names = vecs.entries
                 .map { (t, v) -> t to (v?.let { cos(i.centroid, it) } ?: -1.0) }
                 .filter { it.second > NAME_MIN }
-                .sortedByDescending { it.second + 0.02 * (liked[it.first] ?: 0.0) }
+                // Among close tags, prefer telling ones: a tag on nearly everything names nothing.
+                .sortedByDescending { it.second + 0.02 * (liked[it.first] ?: 0.0) + NAME_IDF * space.idf(it.first) / space.maxIdf }
                 .take(3).map { it.first }
             if (names.isEmpty()) return@mapIndexedNotNull null
             View(idx, names, (weights[i] ?: 0.0) / total, i.current, i.current <= SERVE_MIN)
@@ -277,7 +387,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
 
     /** Forget everything learned (Settings → reset what For You learned). The map of meaning stays. */
     fun resetTaste() {
-        interests.clear(); dislikes.clear(); session = null; sessionStrength = 0.0
+        interests.clear(); dislikes.clear(); exploredKeys.clear(); exposure.clear(); session = null; sessionStrength = 0.0
         tune.fill(1.0); tuneBias = 0.0; shownParts.clear()
     }
 
@@ -321,6 +431,10 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8)
         const val TUNE_RATE = 0.05
         const val EXPLORE_SHARE = 0.4
+        const val NAME_IDF = 0.25
+        const val MAX_EXPOSURE = 240
+        const val NOVELTY = 1.2
+        const val MOOD_REASON = 0.45
         const val QUERY_MIN_COUNT = 3
         const val QUERY_SAME = 0.7
         const val QUERY_MIN_AFFINITY = -0.3
@@ -437,6 +551,8 @@ class TagSpace(val dim: Int = DIM, private val maxTags: Int = MAX_TAGS) {
 
     /** Tags seen at least [minCount] times. */
     fun tags(minCount: Int): List<String> = counts.entries.filter { it.value >= minCount }.map { it.key }
+
+    val maxIdf: Double get() = ln(posts + 1.0) + 1.0
 
     /** How informative a tag is: rare tags say more than ones on every post. */
     fun idf(tag: String): Double = ln((posts + 1.0) / ((counts[tag] ?: 0) + 1.0)) + 1.0

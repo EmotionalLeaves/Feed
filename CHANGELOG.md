@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.90.0 — 2026-11-18
+
+Your taste map, and exploring that finds more of you
+
+- New: Your taste map (Settings → Interests). Your tags as a night sky: tags that keep company sit together, bigger for what you like more, each interest a glowing colour sized by its share of For You. Tap a star to open that tag.
+- New: "Why you're seeing this" now says which of your tastes a post was picked for (and its share of For You), when it's like what you've just been watching, or when For You was trying something new.
+- Better: Exploring tries each part of the map you haven't been shown lately, in turn, instead of drawing at random. A second or third taste turns up sooner, and the feed's share of each taste follows how much you like it. In the simulated world: +2-4% overall, shares 40/32/28 for someone who likes three things 100/85/70.
+- Better: Interests are named by their most telling tags, not the ones on everything.
+
 ## 4.89.0 — 2026-11-18
 
 A For You that learns you

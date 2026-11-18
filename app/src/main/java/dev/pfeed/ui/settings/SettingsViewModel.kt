@@ -304,7 +304,12 @@ class SettingsViewModel @Inject constructor(
         _interests.value = signals.topInterests()
         val aff = signals.affinities().tags
         _engineInterests.value = signals.engine.use { it.describe(aff) }
+        _tasteMap.value = signals.engine.use { it.tasteMap(aff) }
     }
+
+    private val _tasteMap = MutableStateFlow<dev.pfeed.domain.reco.TasteEngine.TasteMap?>(null)
+    /** Your taste as a picture (see [dev.pfeed.domain.reco.TasteEngine.tasteMap]). */
+    val tasteMap: StateFlow<dev.pfeed.domain.reco.TasteEngine.TasteMap?> = _tasteMap
 
     /** The taste engine's interests, as named groups with their share of For You. */
     private val _engineInterests = MutableStateFlow<List<dev.pfeed.domain.reco.TasteEngine.View>>(emptyList())
