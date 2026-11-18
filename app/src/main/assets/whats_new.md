@@ -1,3 +1,19 @@
+## 4.82.0 — 2026-11-17
+Share to Feed, incognito, sleep timer, smart volume
+
+- New: Share to Feed. Share a link from your browser or any app (a RedGIFs clip, a tube site's video page, a video or picture file, any page) and it plays here, ready to save. It shows under your disguise's name and icon.
+- New: Incognito, from the hold menu or Settings → Privacy. Until you turn it off or close the app, nothing you watch is remembered: no History, no seen marks, no resume points, and the algorithm learns nothing. Saves and follows still work.
+- New: Flip or shake to hide (Settings → Privacy, off by default). Turn the phone face down or shake it and the app leaves at once, locked.
+- New: Sleep timer in the hold menu (15 min to 1 h 30 min). A countdown pill, then a dim 'Time's up' screen.
+- New: Loop a part. From the hold menu, mark where it starts, tap when it reaches the end you want, and it plays that bit over and over.
+- New: Smart volume (on). Evens out loudness so quiet clips come up and loud ones don't blast.
+- New: Feel the sound, in the hold menu. The phone vibrates with the audio, stronger as it gets louder, with sound on or off.
+- New: Skip intros (Settings → Playback, off). Videos of 5 minutes or more start 25 s in the first time.
+- New: A 'Lock' tile for Quick Settings. Add it to the notification shade to lock the app from anywhere.
+- New: Updates also check in the background twice a day on Wi-Fi. When Android allows, they install while the app is closed.
+- New: 'Why you're seeing this' in the hold menu now lists what you follow first. Tap a reason to go to its page.
+- New: Data used, this session and this month, in Settings → Playback.
+
 ## 4.81.0 — 2026-11-17
 Updates from GitHub, profiles, colours
 
@@ -12,9 +28,3 @@ Live grids, Your week
 
 - New: Live grids. In Search results, Library and tag grids, the video nearest the middle of the screen plays silently in its tile, and every few seconds the next one takes over. Turn it off in Settings → Playback. Off Wi-Fi it waits, unless you've allowed autoplay on mobile data.
 - New: Your week. A card at the top of History shows how long you watched in the last seven days and how many posts, a bar for each day, who you watched most and your top tags. Tap one to go there.
-
-## 4.79.0 — 2026-11-16
-Picture-in-picture, swipe right to save
-
-- New: Picture-in-picture (Settings → Playback, off by default). Leave the app while a video plays and it keeps going in a small window.
-- New: Swipe right on a post to save it. A 'Save' hint grows at the edge as you pull, and a big bookmark pops when it lands. Swipe left still opens the creator's page.
