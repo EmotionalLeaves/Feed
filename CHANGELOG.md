@@ -1,5 +1,16 @@
 # Changelog
 
+## 4.85.0 — 2026-11-18
+
+Smart folders, secret collections, search combos
+
+- New: Smart folders in Saved. Your most-saved tags appear as chips next to your collections, so Saved sorts itself.
+- New: Secret collections. Name a collection starting with a dot (like .mine) and it's hidden, along with its posts, from Saved and the collection list. Type its full name in Library's Find to open it.
+- New: Search combos. Use + to need every part and -word to leave something out, as in “pov + redhead -toys”.
+- New: Carry on. When you open the app after leaving a long video partway, it offers to pick up where you stopped.
+- New: Pick several in Library. Hold a post, choose Pick several…, tap more, then remove them all at once.
+- New: Dim the screen, in the hold menu. Darker than your phone's lowest brightness, for watching in the dark.
+
 ## 4.84.0 — 2026-11-18
 
 For the road, zoom into videos, For You moods
