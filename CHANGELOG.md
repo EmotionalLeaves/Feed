@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.88.0 — 2026-11-18
+
+Love it, best quality, wrong-PIN alerts
+
+- New: Hold the heart to love a post. It's liked, saved to Favourites, and For You shows you much more like it, with a fountain of hearts.
+- New: Best quality (Settings → Playback). Up to 4K where the site has it.
+- New: Wrong PINs while you were away. After you unlock, a note says how many were typed and when.
+- Changed: Private mode now means always incognito. It also stops seen marks and resume points. For a while only, use Go incognito in the hold menu.
+
 ## 4.87.0 — 2026-11-18
 
 Reddit comments, quick filters, two-finger mute
