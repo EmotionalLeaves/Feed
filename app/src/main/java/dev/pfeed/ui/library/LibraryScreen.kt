@@ -48,6 +48,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
@@ -202,12 +204,20 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
     var finding by rememberSaveable { mutableStateOf(false) }
     var query by rememberSaveable { mutableStateOf("") }
     // Find in the current list: title, creator and tags.
+    // Order for Saved, Liked and collections (History stays by when you watched).
+    var order by rememberSaveable { mutableStateOf(LibOrder.NEWEST.name) }
+    var orderMenu by remember { mutableStateOf(false) }
     fun List<MediaItem>.found(): List<MediaItem> {
         val q = query.trim().lowercase()
-        if (!finding || q.isEmpty()) return this
-        return filter { item ->
+        val hit = if (!finding || q.isEmpty()) this else filter { item ->
             item.title?.lowercase()?.contains(q) == true || item.creator?.lowercase()?.contains(q) == true ||
                 item.tags.any { it.lowercase().replace('_', ' ').contains(q) }
+        }
+        return if (tab == 2) hit else when (LibOrder.valueOf(order)) {
+            LibOrder.NEWEST -> hit
+            LibOrder.OLDEST -> hit.asReversed()
+            LibOrder.LONGEST -> hit.sortedByDescending { it.durationSec ?: -1 }
+            LibOrder.SHORTEST -> hit.sortedBy { it.durationSec ?: Int.MAX_VALUE }
         }
     }
 
@@ -223,6 +233,20 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                 }
                 TextButton(onClick = { picking = null }) { Text("Done") }
                 return@ScreenHeader
+            }
+            if (tab < 2) Box {
+                androidx.compose.material3.IconButton(onClick = { orderMenu = true }) {
+                    androidx.compose.material3.Icon(Icons.AutoMirrored.Filled.Sort, contentDescription = "Order: " + LibOrder.valueOf(order).label)
+                }
+                androidx.compose.material3.DropdownMenu(expanded = orderMenu, onDismissRequest = { orderMenu = false }) {
+                    LibOrder.entries.forEach { o ->
+                        androidx.compose.material3.DropdownMenuItem(
+                            text = { Text(o.label, fontWeight = if (o.name == order) androidx.compose.ui.text.font.FontWeight.Bold else null) },
+                            leadingIcon = { if (o.name == order) androidx.compose.material3.Icon(Icons.Filled.Check, contentDescription = null, tint = Accent) },
+                            onClick = { order = o.name; orderMenu = false },
+                        )
+                    }
+                }
             }
             if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
             val open = collection
@@ -676,3 +700,7 @@ private fun timeLabel(minutes: Int): String = when {
 
 /** While picking several posts: the picked keys and what a tap on a post does. */
 private val LocalPicking = androidx.compose.runtime.staticCompositionLocalOf<Pair<Set<String>, (MediaItem) -> Unit>?> { null }
+
+private enum class LibOrder(val label: String) {
+    NEWEST("Newest first"), OLDEST("Oldest first"), LONGEST("Longest first"), SHORTEST("Shortest first"),
+}
