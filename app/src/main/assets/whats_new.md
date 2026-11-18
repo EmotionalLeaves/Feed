@@ -1,3 +1,9 @@
+## 5.1.0 — 2026-11-18
+Looking for your second taste
+
+- Better: While For You knows only one of your tastes, it looks around a good deal more (on the parts of the map you haven't seen), for a while, because most people have more than one. Once it finds a second, or after a few dozen looks with nothing new, it's back to normal. In the simulated world, for people with two or three tastes, how much they enjoyed the feed after the first half-hour rose 2-8%.
+- New: Tap the glow at the centre of a colour on your taste map to play that taste as a mix.
+
 ## 5.0.0 — 2026-11-18
 Five
 
@@ -10,11 +16,3 @@ For You says when it finds a new taste
 - New: When For You becomes sure of a new taste (you keep enjoying what's near it), it says so once: "For You noticed a new taste: #… · #…", with Not really to turn it down.
 - Better: Ready when you are also loads the opening seconds of the first few videos, where their links don't expire.
 - Faster, lighter: what For You has learned is written half the size, at most once a minute while you watch and when you leave the app (it was every 15 seconds).
-
-## 4.98.0 — 2026-11-18
-Mixes
-
-- New: Play any of your interests as a mix (Settings → Interests → ▶): For You leans toward that one taste for a while.
-- New: Any collection, Saved or Liked can become a mix: ✦ above the grid steers For You toward what those posts have in common.
-- Better: More like this finds posts about the same thing even when they're tagged differently (by meaning, on your map) and ones that look alike.
-- Changed: starting a mix or a blend from anywhere switches the feed to For You.

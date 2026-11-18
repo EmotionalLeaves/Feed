@@ -97,6 +97,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         shownParts[key] = parts
         if (shownParts.size > MAX_REMEMBERED) shownParts.remove(shownParts.keys.first())
         if (explored) {
+            if (oneTaste) lookedAround++
             exploredKeys += key
             if (exploredKeys.size > MAX_REMEMBERED) exploredKeys.remove(exploredKeys.first())
         }
@@ -320,7 +321,19 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
      * fewer slots: in the simulated world 40% of the old rate gave the best feeds, and shifts of
      * taste were still followed as fast. "Random discoveries" still sets the level.
      */
-    fun explorationRate(base: Double): Double = base * EXPLORE_SHARE
+    fun explorationRate(base: Double): Double {
+        // With only one taste known, the most valuable thing is finding a second: most people have
+        // more than one. Once two or more are being served, back to the usual rate.
+        // A budget, though: after a few dozen looks around with nothing new found, you may simply
+        // have one taste, and every further look is a wasted slot.
+        val serving = interests.count { it.currentAt(bin()) > 0.2 && it.confidence >= 0.5 }
+        oneTaste = serving <= 1 && interests.isNotEmpty()
+        val left = (1.0 - lookedAround / EXPLORE_BUDGET).coerceIn(0.0, 1.0)
+        return base * EXPLORE_SHARE * (if (oneTaste) 1.0 + (EXPLORE_ONE_TASTE - 1.0) * left else 1.0)
+    }
+    private var oneTaste = false
+    /** Looks around (exploration slots) while only one taste was known. */
+    private var lookedAround = 0.0
 
     /** A tag's direction on the map (null if never seen). */
     fun tagVector(tag: String): FloatArray? = space.tagVector(Features.normalizeTag(tag))
@@ -541,7 +554,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     /** Forget everything learned (Settings → reset what For You learned). The map of meaning stays. */
     fun resetTaste() {
         interests.clear(); dislikes.clear(); exploredKeys.clear(); exposure.clear(); session = null; sessionStrength = 0.0
-        tune.fill(1.0); tuneBias = 0.0; partMean.fill(0.0); visual.reset(); shownParts.clear()
+        tune.fill(1.0); tuneBias = 0.0; partMean.fill(0.0); lookedAround = 0.0; visual.reset(); shownParts.clear()
     }
 
     fun writeTo(out: java.io.DataOutputStream) {
@@ -604,6 +617,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val TUNE_CENTER = 0.02
         const val TUNE_NORMALIZED = true
         const val EXPLORE_SHARE = 0.4
+        const val EXPLORE_ONE_TASTE = 5.0
+        const val EXPLORE_BUDGET = 20.0
         const val LANDING_MIN = 5
         const val KEEP_DAYS = 60
         const val MAX_CREATORS = 1500

@@ -113,8 +113,17 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         }
         val sky by vm.tasteMap.collectAsStateWithLifecycle()
         sky?.takeIf { it.stars.size >= 5 }?.let { m ->
-            Section("Your taste map", footer = "Tags that keep company sit together. Bigger means you like it more; each colour is one of your interests below, glowing by its share of For You. Tap a star to open it.") {
-                TasteMapView(m, onOpenTag = { openTag(nav, it) })
+            Section("Your taste map", footer = "Tags that keep company sit together. Bigger means you like it more; each colour is one of your interests below, glowing by its share of For You. Tap a star to open it, or the glow at a colour's centre to play that taste.") {
+                TasteMapView(m, onOpenTag = { openTag(nav, it) }, onSun = { idx ->
+                    groups.firstOrNull { it.index == idx }?.let { g ->
+                        vm.playMix(g)
+                        nav.navigate(Routes.FEED) {
+                            popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    }
+                })
             }
         }
         val eye by vm.eye.collectAsStateWithLifecycle()

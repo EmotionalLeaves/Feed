@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.1.0 — 2026-11-18
+
+Looking for your second taste
+
+- Better: While For You knows only one of your tastes, it looks around a good deal more (on the parts of the map you haven't seen), for a while, because most people have more than one. Once it finds a second, or after a few dozen looks with nothing new, it's back to normal. In the simulated world, for people with two or three tastes, how much they enjoyed the feed after the first half-hour rose 2-8%.
+- New: Tap the glow at the centre of a colour on your taste map to play that taste as a mix.
+
 ## 5.0.0 — 2026-11-18
 
 Five

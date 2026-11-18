@@ -52,7 +52,7 @@ private val GroupColors = listOf(
  * Tap a star to open that tag.
  */
 @Composable
-fun TasteMapView(map: TasteEngine.TasteMap, onOpenTag: (String) -> Unit, modifier: Modifier = Modifier) {
+fun TasteMapView(map: TasteEngine.TasteMap, onOpenTag: (String) -> Unit, modifier: Modifier = Modifier, onSun: ((Int) -> Unit)? = null) {
     val measurer = rememberTextMeasurer()
     val rise = remember { Animatable(0f) }
     LaunchedEffect(map) { rise.snapTo(0f); rise.animateTo(1f, tween(1400, easing = FastOutSlowInEasing)) }
@@ -72,6 +72,8 @@ fun TasteMapView(map: TasteEngine.TasteMap, onOpenTag: (String) -> Unit, modifie
                 detectTapGestures { tap ->
                     val pad = 36.dp.toPx()
                     fun at(x: Float, y: Float) = Offset(pad + (x + 1f) / 2f * (size.width - 2 * pad), pad + (y + 1f) / 2f * (size.height - 2 * pad))
+                    // The glow at an interest's centre plays it as a mix.
+                    if (onSun != null) map.suns.firstOrNull { val p = at(it.x, it.y); hypot(p.x - tap.x, p.y - tap.y) < 22.dp.toPx() }?.let { onSun(it.group); return@detectTapGestures }
                     map.stars.minByOrNull { val p = at(it.x, it.y); hypot(p.x - tap.x, p.y - tap.y) }
                         ?.takeIf { val p = at(it.x, it.y); hypot(p.x - tap.x, p.y - tap.y) < 32.dp.toPx() }
                         ?.let { onOpenTag(it.tag) }
