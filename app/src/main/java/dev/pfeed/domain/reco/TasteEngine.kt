@@ -108,6 +108,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
      * nowhere near). Exploring by this tries each region of the map in turn instead of drawing at
      * random, so a second or third taste turns up in a fraction of the tries.
      */
+    fun exposureSize(): Int = exposure.size
+
     fun unexplored(x: FloatArray): Double {
         var best = 0.0
         for (e in exposure) { val c = cos(e, x); if (c > best) best = c }
@@ -388,15 +390,15 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         if (serving.isEmpty()) return emptyList()
         val candidates = space.tags(QUERY_MIN_COUNT)
             .filter { !Features.isMeta(it) && !it.startsWith("w:") && (affinity[it] ?: 0.0) > QUERY_MIN_AFFINITY }
-            .mapNotNull { t -> space.tagVector(t)?.let { t to it } }
+            .mapNotNull { t -> space.tagVector(t)?.let { v -> Triple(t, v, aversion(v)) } }
         val out = ArrayList<String>()
         val covered = ArrayList<FloatArray>()
         for (i in serving) {
             // Two interests that are nearly the same thing share one search.
             if (covered.any { cos(it, i.centroid) >= QUERY_SAME }) continue
             covered += i.centroid
-            val best = candidates.filter { it.first !in out }.maxByOrNull { (t, v) ->
-                cos(i.centroid, v) + 0.05 * (affinity[t] ?: 0.0).coerceIn(-1.0, 1.0) - 0.5 * aversion(v)
+            val best = candidates.filter { it.first !in out }.maxByOrNull { (t, v, av) ->
+                cos(i.centroid, v) + 0.05 * (affinity[t] ?: 0.0).coerceIn(-1.0, 1.0) - 0.5 * av
             } ?: continue
             out += best.first
             if (out.size >= limit) break

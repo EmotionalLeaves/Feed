@@ -108,7 +108,18 @@ The **Generic JSON adapter** turns any endpoint that returns JSON into a feed wi
 
 Every view is a signal: how long you stayed compared with *your own* usual pace, whether a video finished or was replayed, how far into a comic you read, likes, saves, follows, fast skips and "Not interested". Each one updates affinities for the post's tags, words, creator, site, format and length, which fade over time (14-day half-life). Your strongest interests are also searched for directly on every site, so rare tastes are found rather than waited for.
 
-Ranking mixes taste, community score (as a percentile within each source), freshness and a little exploration, then spaces the feed so no site, subreddit or creator runs together. **Settings → Your taste** shows what it has learned; remove anything with ×, or start over.
+On top of that sits the **taste engine** (`domain/reco/TasteEngine.kt`), all on the phone:
+
+- **A map of meaning.** Tags that keep company get nearby directions (random indexing, idf-weighted), so "ginger" and "redhead" meet even across sites. Posts that say little (a Reddit post's one tag) are read partly by what their creator usually makes.
+- **Several interests, not one average.** Each interest is a region of the map with its own record of how much you enjoy it, by time of day. Slots take turns between them (Thompson draws, stride scheduling), so tastes interleave instead of running in streaks, and a taste you've gone off loses its slots within a few posts.
+- **Mood and aversion.** What you've just been enjoying counts a little extra; anything near what you rejected or keep skipping is held back.
+- **Exploring on purpose.** Exploration slots go to the parts of the map you haven't been shown lately, and the first posts on a fresh install each come from somewhere new, so a second or third taste turns up fast.
+- **Your weighting.** How much tags, creator, votes, freshness, fit, mood and looks matter is tuned to you from what you actually stay for. Looks come from a 42-number reading of each thumbnail (colour, skin, light, detail, photo or drawn).
+- **Searches named from the map**, one per taste you're enjoying, so the general feeds' trickle is never all there is.
+
+Tuning was done against a simulated world (`app/src/test/java/dev/pfeed/sim`), with an oracle that knows the truth as the ceiling; `TasteEngineTest` keeps the gains.
+
+You can steer it in words ("more redheads, less cosplay"), play **This or that**, blend in someone's taste code, and see it all in **Settings → Your taste**: the taste map, your interests and when they're at their best, your eye, how well it's landing day by day. Remove anything with ×, or start over.
 
 ## Architecture
 

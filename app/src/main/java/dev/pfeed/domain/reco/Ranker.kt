@@ -150,8 +150,11 @@ class Ranker(
         var slot = 0
         val exploration = engine?.explorationRate(weights.exploration) ?: weights.exploration
         while (pool.isNotEmpty() && out.size < limit) {
-            val explore = random.nextDouble() < exploration
-            val index = if (explore && engine != null && engine.interests.isNotEmpty()) {
+            // Nothing learned yet: every slot is a look around, each somewhere new on the map, so
+            // the first reactions cover as many kinds of thing as possible.
+            val coldStart = engine != null && engine.interests.isEmpty() && engine.exposureSize() >= COLD_EXPOSED && COLD_START
+            val explore = coldStart || random.nextDouble() < exploration
+            val index = if (explore && engine != null && (engine.interests.isNotEmpty() || coldStart)) {
                 // Exploring with a map: something good you haven't shown a taste for yet (far from
                 // every interest, decent quality), rather than any random post.
                 spread.pick(pool, { it.item }, minLevel) { c ->
@@ -281,6 +284,8 @@ class Ranker(
         /** Semantic repetition: how many recent posts, and how much a near-twin in meaning counts. */
         const val SEMANTIC_WINDOW = 4
         const val REPEAT = 1.2
+        const val COLD_START = true
+        const val COLD_EXPOSED = 0
         /** How much a post's look counts (learned per person from what they stay for; see [Visual]). */
         const val VISUAL = 0.3
         /** How much "more of"/"less of" moves a post that has the tag (about one strong interest's worth). */

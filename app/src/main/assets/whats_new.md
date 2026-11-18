@@ -1,3 +1,10 @@
+## 4.97.0 — 2026-11-18
+A better first five minutes
+
+- Better: On a fresh start (or after starting your taste over), For You's first posts each come from a different part of the map, so your first reactions cover as many kinds of thing as possible. In the simulated world, first batches land about 10% more often and someone with two tastes finds both sooner.
+- Faster: choosing what to search for each load does a fraction of the work.
+- README: how the taste engine works.
+
 ## 4.96.0 — 2026-11-18
 This or that, and words that mean the same
 
@@ -12,9 +19,3 @@ Similar creators, plays from elsewhere, how well For You knows you
 - New: Plays from elsewhere. When a tube video won't load or play (taken down, geo-blocked, a dead link), For You looks for the same upload on the other sites (same title, same length to the second) and plays that copy instead of skipping it.
 - Better: A post that says little about itself (a Reddit post's one tag) is read partly by who posted it, when they stick to one kind of thing.
 - New: How well For You knows you (Settings → Interests). The share of its picks that landed this week, the change from the week before, and a bar for each day.
-
-## 4.94.0 — 2026-11-18
-Your eye
-
-- New: For You learns what you like the look of. Each thumbnail is read on the phone (no AI model, nothing sent anywhere): its colours and brightness, how much skin, how detailed, photo or drawn. Over time a small model learns which looks you stay for, and For You weighs it as much as it proves worth for you. It matters most where tags say little, as on Reddit, where a post's only tag is its subreddit.
-- New: Your eye (Settings → Interests), once it has seen enough: "You stay longer for lots of skin, bright pictures, photos; and pass quicker on drawn art…" And "Why you're seeing this" can say "Looks like what you stay for".

@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.97.0 — 2026-11-18
+
+A better first five minutes
+
+- Better: On a fresh start (or after starting your taste over), For You's first posts each come from a different part of the map, so your first reactions cover as many kinds of thing as possible. In the simulated world, first batches land about 10% more often and someone with two tastes finds both sooner.
+- Faster: choosing what to search for each load does a fraction of the work.
+- README: how the taste engine works.
+
 ## 4.96.0 — 2026-11-18
 
 This or that, and words that mean the same
