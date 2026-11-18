@@ -405,6 +405,23 @@ class SettingsViewModel @Inject constructor(
             .onFailure { _messages.tryEmit("Export failed: ${it.message}") }
     }
 
+    // ---- emergency erase PIN ----
+    private val _erasePinOn = kotlinx.coroutines.flow.MutableStateFlow(lock.hasErasePin)
+    val erasePinOn: kotlinx.coroutines.flow.StateFlow<Boolean> = _erasePinOn
+
+    fun setErasePin(pin: String?) = viewModelScope.launch {
+        if (pin != null && (pin.length < 4 || !pin.all(Char::isDigit))) { _messages.tryEmit("Use at least 4 digits"); return@launch }
+        val ok = lock.setErasePin(pin?.toCharArray())
+        _erasePinOn.value = lock.hasErasePin
+        _messages.tryEmit(
+            when {
+                !ok -> "It can't be the same as your PIN"
+                pin == null -> "Emergency PIN removed"
+                else -> "Emergency PIN set. Entering it on the lock screen erases everything"
+            },
+        )
+    }
+
     // ---- automatic weekly backups ----
     private val autoPrefs = app.getSharedPreferences(dev.pfeed.work.BackupWorker.PREFS, android.content.Context.MODE_PRIVATE)
 

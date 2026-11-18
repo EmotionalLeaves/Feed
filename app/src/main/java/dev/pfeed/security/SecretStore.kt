@@ -35,6 +35,21 @@ class SecretStore @Inject constructor(@ApplicationContext context: Context) {
             .apply()
     }
 
+    /** The emergency PIN: entered on the lock screen, it erases everything instead of opening. */
+    val hasErasePin: Boolean get() = prefs.contains(KEY_ERASE_HASH)
+
+    fun setErasePin(pin: CharArray?) {
+        if (pin == null) { prefs.edit().remove(KEY_ERASE_HASH).remove(KEY_ERASE_SALT).apply(); return }
+        val salt = ByteArray(16).also(SecureRandom()::nextBytes)
+        prefs.edit().putString(KEY_ERASE_SALT, b64(salt)).putString(KEY_ERASE_HASH, b64(pbkdf2(pin, salt))).apply()
+    }
+
+    fun verifyErasePin(pin: CharArray): Boolean {
+        val salt = prefs.getString(KEY_ERASE_SALT, null)?.let(::unb64) ?: return false
+        val expected = prefs.getString(KEY_ERASE_HASH, null)?.let(::unb64) ?: return false
+        return java.security.MessageDigest.isEqual(expected, pbkdf2(pin, salt))
+    }
+
     /** Turns the app lock off. The database key is separate (Keystore-wrapped) and unaffected. */
     fun clearPin() {
         prefs.edit().remove(KEY_PIN_HASH).remove(KEY_PIN_SALT).commit()
@@ -105,6 +120,8 @@ class SecretStore @Inject constructor(@ApplicationContext context: Context) {
         private const val AES_GCM = "AES/GCM/NoPadding"
         private const val KEY_PIN_HASH = "pin_hash"
         private const val KEY_PIN_SALT = "pin_salt"
+        private const val KEY_ERASE_HASH = "erase_hash"
+        private const val KEY_ERASE_SALT = "erase_salt"
         private const val KEY_DB = "db_key"
         private const val PIN_ITERATIONS = 60_000
 

@@ -124,6 +124,8 @@ private sealed interface PendingDialog {
     data object EraseAll : PendingDialog
     data class ExportPassword(val uri: Uri) : PendingDialog
     data class AutoBackupPassword(val folder: Uri) : PendingDialog
+    data object ErasePin : PendingDialog
+    data object RemoveErasePin : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
 
@@ -402,6 +404,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 )
                 RowDivider()
                 if (lockOn) {
+                    val eraseOn by vm.erasePinOn.collectAsStateWithLifecycle()
+                    SettingRow(
+                        "Emergency PIN",
+                        subtitle = if (eraseOn) "On: entering it on the lock screen erases everything and closes the app" else "A second PIN that erases everything instead of opening, if you're ever made to unlock",
+                        icon = Icons.Filled.DeleteForever,
+                        iconTint = if (eraseOn) dev.pfeed.ui.theme.Bad else TextLow,
+                        chevron = true,
+                        onClick = { dialog = if (eraseOn) PendingDialog.RemoveErasePin else PendingDialog.ErasePin },
+                    )
+                    RowDivider()
                     SwitchSetting(
                         "Calculator lock screen",
                         s.calculatorLock,
@@ -631,6 +643,17 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         is PendingDialog.AutoBackupPassword -> PasswordDialog("Password for weekly backups", confirmTwice = true, onDismiss = { dialog = null }) {
             vm.startAutoBackup(d.folder, it); dialog = null
         }
+        PendingDialog.ErasePin -> PasswordDialog("Emergency PIN (digits)", confirmTwice = true, minLength = 4, onDismiss = { dialog = null }) {
+            vm.setErasePin(it); dialog = null
+        }
+        PendingDialog.RemoveErasePin -> AlertDialog(
+            onDismissRequest = { dialog = null },
+            properties = SecureDialog,
+            title = { Text("Remove the emergency PIN?") },
+            text = { Text("Entering it will no longer erase anything.") },
+            confirmButton = { TextButton(onClick = { vm.setErasePin(null); dialog = null }) { Text("Remove") } },
+            dismissButton = { TextButton(onClick = { dialog = null }) { Text("Cancel") } },
+        )
         is PendingDialog.ImportPassword -> PasswordDialog("Decrypt import", confirmTwice = false, onDismiss = { dialog = null }) {
             vm.importSettings(d.uri, it); dialog = null
         }
@@ -783,10 +806,10 @@ private fun PinField(label: String, value: String, onChange: (String) -> Unit) {
 }
 
 @Composable
-private fun PasswordDialog(title: String, confirmTwice: Boolean, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+private fun PasswordDialog(title: String, confirmTwice: Boolean, minLength: Int = 8, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
     var pw by remember { mutableStateOf("") }
     var pw2 by remember { mutableStateOf("") }
-    val valid = pw.length >= 8 && (!confirmTwice || pw == pw2)
+    val valid = pw.length >= minLength && (!confirmTwice || pw == pw2)
     AlertDialog(
         onDismissRequest = onDismiss,
         properties = SecureDialog,
@@ -794,7 +817,7 @@ private fun PasswordDialog(title: String, confirmTwice: Boolean, onDismiss: () -
         text = {
             Column {
                 OutlinedTextField(
-                    value = pw, onValueChange = { pw = it }, label = { Text("Password (8+ characters)") },
+                    value = pw, onValueChange = { pw = it }, label = { Text(if (minLength >= 8) "Password (8+ characters)" else "At least $minLength digits") },
                     singleLine = true, visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )

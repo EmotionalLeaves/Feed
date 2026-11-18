@@ -22,6 +22,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class AppLockManager @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val secrets: SecretStore,
     private val settings: SettingsRepository,
     @ApplicationScope private val scope: CoroutineScope,
@@ -78,7 +79,7 @@ class AppLockManager @Inject constructor(
         val ok = withContext(Dispatchers.Default) { secrets.verifyPin(current) }
         current.fill('0')
         if (!ok) return false
-        withContext(Dispatchers.Default) { secrets.clearPin() }
+        withContext(Dispatchers.Default) { secrets.clearPin(); secrets.setErasePin(null) }
         _enabled.value = false
         _locked.value = false
         return true
@@ -93,6 +94,13 @@ class AppLockManager @Inject constructor(
     suspend fun unlockWithPin(pin: CharArray): PinResult {
         val now = SystemClock.elapsedRealtime()
         if (now < lockoutUntil) return PinResult.LockedOut((lockoutUntil - now) / 1000 + 1)
+        // The emergency PIN: everything this app stored is erased and it closes, as if never used.
+        // Checked first, and it looks like any other PIN to whoever is watching.
+        if (secrets.hasErasePin && withContext(Dispatchers.Default) { secrets.verifyErasePin(pin) }) {
+            pin.fill('0')
+            (context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager).clearApplicationUserData()
+            return PinResult.Wrong(MAX_ATTEMPTS)
+        }
         val ok = withContext(Dispatchers.Default) { secrets.verifyPin(pin) }
         pin.fill('0')
         if (ok) {
@@ -107,6 +115,16 @@ class AppLockManager @Inject constructor(
             return PinResult.LockedOut(LOCKOUT_MS / 1000)
         }
         return PinResult.Wrong(MAX_ATTEMPTS - failures)
+    }
+
+    val hasErasePin: Boolean get() = secrets.hasErasePin
+
+    /** Sets (or with null, removes) the emergency erase PIN. It can't be the same as the PIN. */
+    suspend fun setErasePin(pin: CharArray?): Boolean = withContext(Dispatchers.Default) {
+        if (pin != null && secrets.verifyPin(pin)) { pin.fill('0'); return@withContext false }
+        secrets.setErasePin(pin)
+        pin?.fill('0')
+        true
     }
 
     suspend fun changePin(current: CharArray, new: CharArray): Boolean {
