@@ -24,6 +24,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     @Inject lateinit var lockManager: AppLockManager
     @Inject lateinit var settings: dev.pfeed.data.settings.SettingsRepository
     @Inject lateinit var offline: dev.pfeed.data.repo.OfflineStore
+    @Inject lateinit var updater: dev.pfeed.update.Updater
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -45,6 +46,12 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 dev.pfeed.player.PlayerPool.maxHeight = height
             }
         }
+        // Updates from GitHub: look as the app comes up; a downloaded one that can go in without a
+        // prompt is installed once you've left the app, so it never closes in front of you.
+        androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
+            override fun onStart(owner: androidx.lifecycle.LifecycleOwner) = updater.auto()
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) = updater.install(quiet = true)
+        })
         MaintenanceWorker.schedule(this)
         offline.start()
     }

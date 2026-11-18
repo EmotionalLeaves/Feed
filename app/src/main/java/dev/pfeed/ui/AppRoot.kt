@@ -214,6 +214,10 @@ private fun MainNav(locked: Boolean) {
             composable(Routes.TASTE) { TasteScreen(nav) }
             composable(Routes.NETWORK) { dev.pfeed.ui.settings.NetworkScreen(nav) }
         }
+        // A downloaded update that needs a tap, just above the tab bar.
+        Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding() + 8.dp), contentAlignment = androidx.compose.ui.Alignment.BottomCenter) {
+            dev.pfeed.update.UpdateBanner()
+        }
         }
     }
 }

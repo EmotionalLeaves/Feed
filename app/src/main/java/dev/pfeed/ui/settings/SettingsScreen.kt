@@ -1,5 +1,9 @@
 package dev.pfeed.ui.settings
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Autorenew
+import androidx.compose.material.icons.filled.SystemUpdate
+import dev.pfeed.update.installFromUi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -92,6 +96,7 @@ import dev.pfeed.ui.common.SettingRow
 import dev.pfeed.ui.common.SwitchSetting
 import dev.pfeed.ui.theme.Good
 import dev.pfeed.ui.theme.TextLow
+import dev.pfeed.ui.theme.TextMid
 import dev.pfeed.ui.theme.Warn
 
 private val cacheSteps = listOf(256, 512, 1024, 2048, 4096, 8192)
@@ -148,7 +153,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             val scroll = rememberScrollState()
             val sectionY = remember { mutableStateMapOf<String, Int>() }
             fun Modifier.anchor(name: String) = onGloballyPositioned { sectionY[name] = it.positionInParent().y.toInt() }
-            val jumpNames = listOf("Feed", "Look", "Playback", "Storage", "Privacy", "Network", "Backup", "Help")
+            val jumpNames = listOf("Feed", "Look", "Playback", "Storage", "Privacy", "Network", "Backup", "Updates", "Help")
             // The section you're in is lit, and its chip kept in view.
             val currentSection by remember {
                 androidx.compose.runtime.derivedStateOf {
@@ -422,6 +427,25 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
 
             val context = androidx.compose.ui.platform.LocalContext.current
             val clipContext = androidx.compose.ui.platform.LocalContext.current
+            Section(
+                "Updates",
+                modifier = Modifier.anchor("Updates"),
+                footer = "New versions come from the project's GitHub releases, each one tested on an emulator before it's published. Android asks you to confirm the first update; after that they can go in by themselves when you leave the app.",
+            ) {
+                UpdatesCard(vm.updater)
+                RowDivider()
+                SwitchSetting(
+                    "Update automatically",
+                    s.autoUpdate,
+                    subtitle = "Look for new versions every few hours and download them on Wi-Fi",
+                    icon = Icons.Filled.Autorenew,
+                    onChange = vm::setAutoUpdate,
+                )
+                RowDivider()
+                val uri = androidx.compose.ui.platform.LocalUriHandler.current
+                SettingRow("Every version on GitHub", subtitle = "Release notes and APKs", icon = Icons.Filled.History, iconTint = TextLow, chevron = true, onClick = { runCatching { uri.openUri(dev.pfeed.update.Updater.RELEASES_PAGE) } })
+            }
+
             var crash by remember { mutableStateOf(dev.pfeed.CrashLog.read(context)) }
             Section("Help", modifier = Modifier.anchor("Help"), footer = if (crash != null) "The app closed unexpectedly last time. The report has the app and Android versions and where it failed, nothing you were viewing." else null) {
                 SettingRow("Gestures", subtitle = "Everything you can do on a post", icon = Icons.Filled.TouchApp, iconTint = TextLow, chevron = true, onClick = { dialog = PendingDialog.Gestures })
@@ -743,6 +767,59 @@ private fun AccentPicker(current: dev.pfeed.ui.theme.Palette, onPick: (dev.pfeed
                     if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
                 }
             }
+        }
+    }
+}
+
+/** This version, what GitHub has, and the one button for the next step. */
+@Composable
+private fun UpdatesCard(updater: dev.pfeed.update.Updater) {
+    val state by updater.state.collectAsStateWithLifecycle()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(dev.pfeed.ui.theme.BrandGradient),
+                contentAlignment = Alignment.Center,
+            ) { Icon(Icons.Filled.SystemUpdate, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp)) }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("Version ${updater.currentVersion}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                val line = when (val st = state) {
+                    dev.pfeed.update.Updater.State.Idle -> "Tap Check to look for a newer one"
+                    dev.pfeed.update.Updater.State.Checking -> "Looking on GitHub…"
+                    is dev.pfeed.update.Updater.State.UpToDate -> "Up to date"
+                    is dev.pfeed.update.Updater.State.Available -> "${st.release.version} is out" + if (st.release.size > 0) " · ${st.release.size / 1_048_576} MB" else ""
+                    is dev.pfeed.update.Updater.State.Downloading -> "Downloading ${st.release.version}… ${(st.progress * 100).toInt()}%"
+                    is dev.pfeed.update.Updater.State.Ready -> "${st.release.version} is downloaded and ready"
+                    is dev.pfeed.update.Updater.State.Installing -> "Installing ${st.release.version}…"
+                    is dev.pfeed.update.Updater.State.Failed -> st.message
+                }
+                Text(line, style = MaterialTheme.typography.bodySmall, color = if (state is dev.pfeed.update.Updater.State.Failed) dev.pfeed.ui.theme.Bad else TextMid)
+            }
+            when (val st = state) {
+                is dev.pfeed.update.Updater.State.Ready -> dev.pfeed.ui.common.BrandButton("Install", onClick = { updater.installFromUi(context) }, compact = true)
+                is dev.pfeed.update.Updater.State.Available -> dev.pfeed.ui.common.BrandButton("Download", onClick = updater::downloadNow, compact = true)
+                is dev.pfeed.update.Updater.State.Failed -> TextButton(onClick = { if (st.release != null) updater.downloadNow() else updater.checkAndDownload() }) { Text("Try again") }
+                dev.pfeed.update.Updater.State.Checking, is dev.pfeed.update.Updater.State.Downloading, is dev.pfeed.update.Updater.State.Installing -> dev.pfeed.ui.common.BrandSpinner(size = 22.dp, stroke = 2.5.dp)
+                else -> TextButton(onClick = updater::checkAndDownload) { Text("Check") }
+            }
+        }
+        val st = state
+        if (st is dev.pfeed.update.Updater.State.Downloading) {
+            Spacer(Modifier.height(12.dp))
+            androidx.compose.material3.LinearProgressIndicator(progress = { st.progress }, modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(50)))
+        }
+        val notes = (st as? dev.pfeed.update.Updater.State.Ready)?.release?.notes ?: (st as? dev.pfeed.update.Updater.State.Available)?.release?.notes
+        if (!notes.isNullOrBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                notes.lines().filter { it.isNotBlank() }.take(6).joinToString("\n"),
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMid,
+                maxLines = 8,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+            )
         }
     }
 }

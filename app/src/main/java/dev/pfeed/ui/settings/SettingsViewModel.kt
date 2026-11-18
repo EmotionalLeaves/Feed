@@ -61,6 +61,7 @@ class SettingsViewModel @Inject constructor(
     private val exporter: SettingsExporter,
     private val mediaCache: MediaCache,
     private val lock: AppLockManager,
+    val updater: dev.pfeed.update.Updater,
     private val discovery: SourceDiscovery,
     private val booruKeys: BooruKeys,
     private val feedHealth: dev.pfeed.data.repo.FeedHealthStore,
@@ -211,6 +212,7 @@ class SettingsViewModel @Inject constructor(
     }
     fun setAutoplayOnMobile(v: Boolean) = update { it.copy(autoplayOnMobileData = v) }
     fun setLivePreviews(v: Boolean) = update { it.copy(livePreviews = v) }
+    fun setAutoUpdate(v: Boolean) = update { it.copy(autoUpdate = v) }
     fun setAccent(p: dev.pfeed.ui.theme.Palette) {
         dev.pfeed.ui.theme.Palette.set(p.name) // repaint now, not after the write
         update { it.copy(accent = p.name) }

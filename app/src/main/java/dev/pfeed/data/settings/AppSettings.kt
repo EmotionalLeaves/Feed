@@ -63,6 +63,8 @@ data class AppSettings(
     val livePreviews: Boolean = true,
     /** The app's colour (a [dev.pfeed.ui.theme.Palette] name). */
     val accent: String = "ROSE",
+    /** Check GitHub for new versions and download them on Wi-Fi. */
+    val autoUpdate: Boolean = true,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

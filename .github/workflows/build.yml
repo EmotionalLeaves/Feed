@@ -169,3 +169,36 @@ jobs:
           path: app/build/reports/androidTests/
           if-no-files-found: ignore
           retention-days: 14
+
+  publish:
+    # A new version (versionName with no GitHub release yet) that passed the emulator tests goes up
+    # as a GitHub release with the APK attached. The app's updater reads releases/latest.
+    needs: [build, smoke-test]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Fetch the APK
+        uses: actions/download-artifact@v5
+        with:
+          pattern: app-{optimized,release}
+          path: apk
+          merge-multiple: true
+
+      - name: Release it if it's a new version
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          if gh release view "v$VER" > /dev/null 2>&1; then
+            echo "v$VER is already released"; exit 0
+          fi
+          APK=$(ls apk/*.apk | head -1)
+          [ -n "$APK" ] || { echo "::error::no APK"; exit 1; }
+          cp "$APK" "PrivateFeed-$VER.apk"
+          # This version's part of the changelog, as the release notes.
+          awk -v v="## $VER" 'index($0, v) == 1 { on = 1; next } on && /^## / { exit } on { print }' CHANGELOG.md > notes.md
+          gh release create "v$VER" "PrivateFeed-$VER.apk" --title "$VER" --notes-file notes.md --target "$GITHUB_SHA" --latest
