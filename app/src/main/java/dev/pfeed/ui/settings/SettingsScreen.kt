@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.ScreenRotation
@@ -320,6 +321,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.dataSaver) "Videos up to 480p" else "Videos up to 1080p",
                     icon = Icons.Filled.DataSaverOn,
                     onChange = vm::setDataSaver,
+                )
+                RowDivider()
+                // What the app has downloaded, refreshed while this screen is open.
+                var used by remember { mutableStateOf(dev.pfeed.data.repo.DataMeter.session() to dev.pfeed.data.repo.DataMeter.month()) }
+                LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3_000); used = dev.pfeed.data.repo.DataMeter.session() to dev.pfeed.data.repo.DataMeter.month() } }
+                SettingRow(
+                    "Data used",
+                    subtitle = "${dev.pfeed.data.repo.DataMeter.format(used.first)} since you opened the app · ${dev.pfeed.data.repo.DataMeter.format(used.second)} this month",
+                    icon = Icons.Filled.DataUsage,
+                    iconTint = TextLow,
                 )
             }
 

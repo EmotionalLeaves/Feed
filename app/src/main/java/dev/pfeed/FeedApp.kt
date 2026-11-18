@@ -51,8 +51,12 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         // prompt is installed once you've left the app, so it never closes in front of you.
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
             override fun onStart(owner: androidx.lifecycle.LifecycleOwner) = updater.auto()
-            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) = updater.install(quiet = true)
+            override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
+                dev.pfeed.data.repo.DataMeter.month()
+                updater.install(quiet = true)
+            }
         })
+        dev.pfeed.data.repo.DataMeter.init(this)
         MaintenanceWorker.schedule(this)
         dev.pfeed.work.UpdateWorker.schedule(this)
         offline.start()
