@@ -52,6 +52,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import kotlin.math.roundToInt
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Shuffle
@@ -1029,6 +1031,9 @@ private fun FeedPage(
     // Sideways swipe in progress (for the hints at the edges), and saves made by swiping right.
     var swipeDx by remember(item.key) { mutableFloatStateOf(0f) }
     var saveFlash by remember(item.key) { mutableIntStateOf(0) }
+    // Brightness or volume being slid at an edge (full screen): which, and how much (0..1).
+    var edgeSlide by remember(item.key) { mutableStateOf<Pair<Int, Float>?>(null) }
+    val context = LocalContext.current
     val savedNow by androidx.compose.runtime.rememberUpdatedState(saved)
     /** Which edge was just double-tapped to skip (−1 back, 1 ahead), and when: shows a brief "10 s" badge. */
     var seekFlash by remember(item.key) { mutableStateOf<Pair<Int, Long>?>(null) }
@@ -1107,6 +1112,40 @@ private fun FeedPage(
                         vm.like(item)
                     },
                 )
+            }
+            // Sideways (full screen), as in video players: slide up or down along the left edge for
+            // brightness, along the right edge for volume. The middle still moves between posts.
+            .pointerInput(item.key, landscape) {
+                if (!landscape) return@pointerInput
+                val activity = context.findActivity()
+                val audio = context.getSystemService(android.content.Context.AUDIO_SERVICE) as? android.media.AudioManager
+                awaitEachGesture {
+                    val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                    val edge = when {
+                        down.position.x < size.width * EDGE_SLIDE -> -1
+                        down.position.x > size.width * (1 - EDGE_SLIDE) -> 1
+                        else -> 0
+                    }
+                    if (edge == 0) return@awaitEachGesture
+                    val maxVol = audio?.getStreamMaxVolume(android.media.AudioManager.STREAM_MUSIC) ?: 15
+                    var value = if (edge < 0) {
+                        activity?.window?.attributes?.screenBrightness?.takeIf { it >= 0f } ?: 0.5f
+                    } else (audio?.getStreamVolume(android.media.AudioManager.STREAM_MUSIC) ?: 0).toFloat() / maxVol
+                    while (true) {
+                        val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                        val c = e.changes.firstOrNull { it.id == down.id } ?: break
+                        if (!c.pressed) break
+                        val dy = c.position.y - c.previousPosition.y
+                        if (dy != 0f) {
+                            value = (value - dy / (size.height * 0.8f)).coerceIn(0f, 1f)
+                            if (edge < 0) activity?.window?.let { w -> w.attributes = w.attributes.apply { screenBrightness = value.coerceAtLeast(0.01f) } }
+                            else audio?.setStreamVolume(android.media.AudioManager.STREAM_MUSIC, (value * maxVol).roundToInt(), 0)
+                            edgeSlide = edge to value
+                            c.consume()
+                        }
+                    }
+                    edgeSlide = null
+                }
             }
             // Sideways swipes (not on a comic, which turns pages that way):
             //  · left: their page, everything by them across every source, as in other short-video apps;
@@ -1253,6 +1292,19 @@ private fun FeedPage(
             )
         }
         HeartBurst(heartAt, heartTick)
+        edgeSlide?.let { (edge, v) ->
+            Row(
+                Modifier.align(Alignment.TopCenter).padding(top = 24.dp).clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.6f)).padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(if (edge < 0) Icons.Filled.Brightness6 else Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(10.dp))
+                Box(Modifier.width(120.dp).height(4.dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = 0.25f))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(v).background(Color.White))
+                }
+            }
+        }
         // The loop being marked, or playing.
         val a = loopA
         if (a != null && !landscape) {
@@ -1815,6 +1867,7 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 /** How far left a swipe must go to open the creator's page. */
 private const val FEEL_PULSE_MS = 45L
+private const val EDGE_SLIDE = 0.18f
 private const val STRETCH_RESET_MS = 10 * 60_000L
 private const val PINCH_TO_WALL = 0.6f
 private const val LOOP_SLACK_MS = 1_500L
