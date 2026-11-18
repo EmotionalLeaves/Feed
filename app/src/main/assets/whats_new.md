@@ -1,3 +1,14 @@
+## 4.83.0 — 2026-11-18
+Calculator lock, emergency PIN, weekly backups
+
+- New: Calculator lock screen (Settings → Privacy, with the lock on). The lock screen is a working calculator. Type your PIN and press = to get in, or hold = for your fingerprint.
+- New: Emergency PIN. A second PIN that erases everything and closes the app instead of opening it, in case you're ever made to unlock it.
+- New: Back up every week. An encrypted backup goes to a folder you pick (a cloud drive's folder works too). The last 4 are kept.
+- New: Pinch in on the feed to zoom out to the Wall. On a tag or creator page, it goes to the grid.
+- New: Volume keys turn pages (Settings → Playback, off). Volume down goes to the next post, up to the one before.
+- New: Sound only with headphones (off). With just the speaker, the feed stays silent.
+- New: Battery saver (on). At 15% or less, videos drop to 480p and grids stay still until you charge.
+
 ## 4.82.0 — 2026-11-17
 Share to Feed, incognito, sleep timer, smart volume
 
@@ -22,9 +33,3 @@ Updates from GitHub, profiles, colours
 - New: Spotlight at the top of Search. One big card per thing you like, playing silently and moving on by itself.
 - New: Long videos: double-tap the left or right edge to skip 10 s, upright too. Keep tapping to skip further.
 - New: Settings → Look: pick the app's colour (Rose, Violet, Ocean, Emerald, Amber, Crimson).
-
-## 4.80.0 — 2026-11-16
-Live grids, Your week
-
-- New: Live grids. In Search results, Library and tag grids, the video nearest the middle of the screen plays silently in its tile, and every few seconds the next one takes over. Turn it off in Settings → Playback. Off Wi-Fi it waits, unless you've allowed autoplay on mobile data.
-- New: Your week. A card at the top of History shows how long you watched in the last seven days and how many posts, a bar for each day, who you watched most and your top tags. Tap one to go there.

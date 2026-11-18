@@ -1,5 +1,17 @@
 # Changelog
 
+## 4.83.0 — 2026-11-18
+
+Calculator lock, emergency PIN, weekly backups
+
+- New: Calculator lock screen (Settings → Privacy, with the lock on). The lock screen is a working calculator. Type your PIN and press = to get in, or hold = for your fingerprint.
+- New: Emergency PIN. A second PIN that erases everything and closes the app instead of opening it, in case you're ever made to unlock it.
+- New: Back up every week. An encrypted backup goes to a folder you pick (a cloud drive's folder works too). The last 4 are kept.
+- New: Pinch in on the feed to zoom out to the Wall. On a tag or creator page, it goes to the grid.
+- New: Volume keys turn pages (Settings → Playback, off). Volume down goes to the next post, up to the one before.
+- New: Sound only with headphones (off). With just the speaker, the feed stays silent.
+- New: Battery saver (on). At 15% or less, videos drop to 480p and grids stay still until you charge.
+
 ## 4.82.0 — 2026-11-17
 
 Share to Feed, incognito, sleep timer, smart volume
