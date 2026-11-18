@@ -51,6 +51,20 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val current: Double get() = if (lately.isNaN() || lately >= mean) mean else mean + LATELY_PULL * (lately - mean)
         /** Stride-scheduling position: the interest with the lowest pass serves the next slot. */
         var pass: Double = 0.0
+        /** Reactions by time of day (4-hour stretches, faded): some tastes are for late at night. */
+        val hourSum = DoubleArray(TIME_BINS)
+        val hourCount = DoubleArray(TIME_BINS)
+
+        /** How much you enjoy it at this time of day: that stretch's own reactions, leaning on the overall mean until there are enough. */
+        fun meanAt(bin: Int): Double = (hourSum[bin] + TIME_SHRINK * mean) / (hourCount[bin] + TIME_SHRINK)
+
+        /** [current], for this time of day. */
+        fun currentAt(bin: Int): Double {
+            val m = meanAt(bin)
+            // Lately only speaks for the stretch of the day it was measured in.
+            return if (lately.isNaN() || latelyBin != bin || lately >= m) m else m + LATELY_PULL * (lately - m)
+        }
+        var latelyBin = -1
     }
 
     val interests = ArrayList<Interest>()
@@ -115,12 +129,13 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val out = ArrayList<Reason>()
         if (item.key in exploredKeys) out += Reason("Something new, near what you like", null, false)
         val x = vectorOf(item) ?: return out
-        val near = interests.filter { it.current > SERVE_MIN }.maxByOrNull { cos(it.centroid, x) }
+        val near = interests.filter { it.currentAt(bin()) > SERVE_MIN }.maxByOrNull { cos(it.centroid, x) }
         if (near != null && cos(near.centroid, x) >= ATTRIBUTE) {
             val view = describe(affinity).firstOrNull { interests.getOrNull(it.index) === near }
             if (view != null) {
                 val name = view.tags.take(2).joinToString(" · ") { Features.label(it) }
                 out += Reason("Your taste for $name · ${(view.share * 100).toInt().coerceAtLeast(1)}% of For You", view.tags.first(), true)
+                if (view.time != null && view.time == TIME_NAMES.getOrNull(bin())) out += Reason("You like it most ${view.time}", null, false)
             }
         }
         if (moodScore(x) >= MOOD_REASON) out += Reason("Like what you've watched just now", null, false)
@@ -163,7 +178,11 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             if (target > 0) near.alpha += target * sim else near.beta += -target * sim
             near.sum = near.sum * FADE + target * sim
             near.count = near.count * FADE + sim
+            val b = bin()
+            if (near.latelyBin != b) { near.lately = near.meanAt(b); near.latelyBin = b }
             near.lately = if (near.lately.isNaN()) near.mean else near.lately + LATELY_RATE * sim * (target - near.lately)
+            near.hourSum[b] = near.hourSum[b] * TIME_FADE + target * sim
+            near.hourCount[b] = near.hourCount[b] * TIME_FADE + sim
         }
         if (target > POSITIVE) {
             if (near != null && sim >= MERGE) {
@@ -208,8 +227,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     /** How well [x] fits what you like: the best interest's match, scaled by how well it's going (0..1). */
     fun interestScore(x: FloatArray): Double {
         var best = 0.0
+        val now = bin()
         for (i in interests) {
-            if (i.current <= 0) continue
+            if (i.currentAt(now) <= 0) continue
             val sim = cos(i.centroid, x)
             if (sim <= 0) continue
             best = max(best, sim * i.rate * (0.5 + 0.5 * i.confidence))
@@ -235,16 +255,22 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
 
     fun dislikeScore(x: FloatArray): Double = dislikes.maxOfOrNull { cos(it, x) }?.coerceAtLeast(0.0) ?: 0.0
 
+    /** The hour now (0–23); the simulation sets its own. */
+    var clock: () -> Int = { java.time.LocalTime.now().hour }
+    fun bin(): Int = (clock().coerceIn(0, 23) / (24 / TIME_BINS)).coerceIn(0, TIME_BINS - 1)
+
+
     /** Which interest the next slot serves (see inside). Null when nothing's been learned yet. */
     fun pickInterest(random: kotlin.random.Random): Interest? {
-        val liked = interests.filter { it.current > SERVE_MIN }
+        val now = bin()
+        val liked = interests.filter { it.currentAt(now) > SERVE_MIN }
         if (liked.isEmpty()) return null
         // Each interest's share of slots: a Thompson draw of how much you enjoy it (its mean, give
         // or take how unsure we still are), sharpened so the favourite leads without starving the
         // rest. Slots are then dealt out by stride scheduling: whoever is furthest behind its share
         // goes next. Your tastes interleave (A B C A B A C…) instead of running in streaks, and a
         // taste that starts missing loses share at once.
-        val draws = liked.associateWith { i -> kotlin.math.exp((i.current + gaussian(random) * SPREAD / sqrt(i.count + 1.0)) / TEMPERATURE) }
+        val draws = liked.associateWith { i -> kotlin.math.exp((i.currentAt(now) + gaussian(random) * SPREAD / sqrt(i.count + 1.0)) / TEMPERATURE) }
         val total = draws.values.sum()
         val minPass = liked.minOf { it.pass }
         liked.forEach { if (it.pass < minPass) it.pass = minPass }
@@ -263,8 +289,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
      * of how a change of taste is followed (the general feeds carry only a trickle of any one theme).
      */
     fun searchTags(affinity: Map<String, Double>, limit: Int = 3): List<String> {
-        val serving = interests.filter { it.current > SERVE_MIN && it.current > 0 }
-            .sortedByDescending { it.current * (0.5 + 0.5 * it.confidence) }
+        val now = bin()
+        val serving = interests.filter { it.currentAt(now) > SERVE_MIN && it.currentAt(now) > 0 }
+            .sortedByDescending { it.currentAt(now) * (0.5 + 0.5 * it.confidence) }
         if (serving.isEmpty()) return emptyList()
         val candidates = space.tags(QUERY_MIN_COUNT)
             .filter { !Features.isMeta(it) && !it.startsWith("w:") && (affinity[it] ?: 0.0) > QUERY_MIN_AFFINITY }
@@ -353,7 +380,14 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     /** An interest as people see it: the tags that best name it, its share of For You, and how it's going. */
-    data class View(val index: Int, val tags: List<String>, val share: Double, val enjoyment: Double, val sour: Boolean)
+    data class View(val index: Int, val tags: List<String>, val share: Double, val enjoyment: Double, val sour: Boolean, val time: String? = null)
+
+    /** When in the day [i] is clearly at its best ("late at night"), if it is. */
+    fun bestTime(i: Interest): String? {
+        val best = i.hourSum.indices.maxByOrNull { i.meanAt(it) } ?: return null
+        if (i.hourCount[best] < TIME_EVIDENCE || i.meanAt(best) < i.mean + TIME_STANDOUT) return null
+        return TIME_NAMES.getOrNull(best)
+    }
 
     /**
      * Your interests in plain terms (strongest first): each named by the liked tags closest to its
@@ -362,8 +396,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     fun describe(affinity: Map<String, Double>): List<View> {
         val liked = affinity.filter { it.value > 0.2 && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
         val vecs = liked.keys.associateWith { space.tagVector(it) }
-        val served = interests.filter { it.current > SERVE_MIN }
-        val weights = served.associateWith { kotlin.math.exp(it.current / TEMPERATURE) }
+        val now = bin()
+        val served = interests.filter { it.currentAt(now) > SERVE_MIN }
+        val weights = served.associateWith { kotlin.math.exp(it.currentAt(now) / TEMPERATURE) }
         val total = weights.values.sum().coerceAtLeast(1e-9)
         return interests.mapIndexedNotNull { idx, i ->
             val names = vecs.entries
@@ -373,7 +408,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
                 .sortedByDescending { it.second + 0.02 * (liked[it.first] ?: 0.0) + NAME_IDF * space.idf(it.first) / space.maxIdf }
                 .take(3).map { it.first }
             if (names.isEmpty()) return@mapIndexedNotNull null
-            View(idx, names, (weights[i] ?: 0.0) / total, i.current, i.current <= SERVE_MIN)
+            View(idx, names, (weights[i] ?: 0.0) / total, i.currentAt(now), i.currentAt(now) <= SERVE_MIN, bestTime(i))
         }.sortedByDescending { it.share }
     }
 
@@ -401,6 +436,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         for (i in interests) {
             writeVec(out, i.centroid)
             out.writeDouble(i.alpha); out.writeDouble(i.beta); out.writeDouble(i.sum); out.writeDouble(i.count); out.writeInt(i.hits)
+            i.hourSum.forEach { out.writeDouble(it) }; i.hourCount.forEach { out.writeDouble(it) }
         }
         out.writeInt(dislikes.size); dislikes.forEach { writeVec(out, it) }
         val s = session
@@ -410,13 +446,16 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     fun readFrom(input: java.io.DataInputStream) {
-        if (input.readInt() != FORMAT) return
+        val format = input.readInt()
+        // Format 2 (4.89–4.92) had no time of day; it reads fine, hours start empty.
+        if (format != FORMAT && format != 2) return
         space.readFrom(input)
         interests.clear()
         repeat(input.readInt()) {
             val c = readVec(input)
             interests += Interest(c, input.readDouble(), input.readDouble()).also { i ->
                 i.sum = input.readDouble(); i.count = input.readDouble(); i.hits = input.readInt()
+                if (format >= 3) { for (b in i.hourSum.indices) i.hourSum[b] = input.readDouble(); for (b in i.hourCount.indices) i.hourCount[b] = input.readDouble() }
             }
         }
         dislikes.clear(); repeat(input.readInt()) { dislikes += readVec(input) }
@@ -426,7 +465,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     companion object {
-        private const val FORMAT = 2
+        private const val FORMAT = 3
 
         /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
         const val PARTS = 7
@@ -434,6 +473,13 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8)
         const val TUNE_RATE = 0.05
         const val EXPLORE_SHARE = 0.4
+        const val TIME_BINS = 6
+        const val TIME_FADE = 0.97
+        /** How many reactions' worth the overall mean counts for in each stretch of the day. */
+        const val TIME_SHRINK = 3.0
+        const val TIME_EVIDENCE = 4.0
+        const val TIME_STANDOUT = 0.4
+        val TIME_NAMES = listOf("late at night", "early in the morning", "in the mornings", "in the afternoons", "in the evenings", "at night")
         const val NAME_IDF = 0.25
         const val MAX_EXPOSURE = 240
         const val NOVELTY = 1.2

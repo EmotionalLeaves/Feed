@@ -389,6 +389,10 @@ private fun InterestGroupRow(g: dev.pfeed.domain.reco.TasteEngine.View, onOpen: 
                     androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
                     Text("${(g.share * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = dev.pfeed.ui.theme.TextMid)
                 }
+                g.time?.let { t ->
+                    androidx.compose.foundation.layout.Spacer(Modifier.height(4.dp))
+                    Text("Mostly $t", style = MaterialTheme.typography.labelMedium, color = dev.pfeed.ui.theme.TextLow)
+                }
             }
         }
         if (!g.sour) androidx.compose.material3.IconButton(onClick = onLess) {

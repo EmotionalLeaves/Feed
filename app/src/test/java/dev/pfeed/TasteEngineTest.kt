@@ -108,4 +108,29 @@ class TasteEngineTest {
         val why = engine.explain(world.post(3).item, aff)
         assertTrue("a post from a taste should be explained by it: $why", why.any { it.strong })
     }
+
+    @Test
+    fun `a late-night taste gets the late-night slots`() {
+        val world = World(Random(5))
+        val engine = TasteEngine()
+        repeat(3000) { engine.observe(listOf(world.post().item)) }
+        var hour = 14
+        engine.clock = { hour }
+        // Afternoons: loves theme 3, skips theme 11. Late at night: the other way round.
+        repeat(40) {
+            hour = 14; engine.learn(world.post(3).item, 2.0); engine.learn(world.post(11).item, -1.0)
+            hour = 23; engine.learn(world.post(11).item, 2.0); engine.learn(world.post(3).item, -1.0)
+        }
+        fun share(h: Int, theme: Int): Double {
+            hour = h
+            val probe = FloatArray(engine.vectorOf(world.post(theme).item)!!.size)
+            repeat(30) { engine.vectorOf(world.post(theme).item)?.let { v -> for (k in probe.indices) probe[k] += v[k] } }
+            TasteEngine.normalize(probe)
+            val rng = Random(9)
+            val picks = List(200) { engine.pickInterest(rng) }
+            return picks.count { it != null && TasteEngine.cos(it.centroid, probe) > 0.6 } / 200.0
+        }
+        assertTrue("late at night, theme 11 should get the slots (${share(23, 11)} vs ${share(23, 3)})", share(23, 11) > share(23, 3) + 0.15)
+        assertTrue("in the afternoon, theme 3 should (${share(14, 3)} vs ${share(14, 11)})", share(14, 3) > share(14, 11) + 0.15)
+    }
 }
