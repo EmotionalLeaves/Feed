@@ -230,6 +230,9 @@ private fun MainNav(locked: Boolean) {
             }
             nav.navigate(Routes.viewer(entry.holder().put(listOf(item), 0, title = "Shared link")))
         }
+        // Dim: a veil over everything that lets every touch through.
+        val dim by dev.pfeed.ui.feed.Dimmer.level.collectAsStateWithLifecycle()
+        if (dim > 0f) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = dim)))
         // A downloaded update that needs a tap, just above the tab bar.
         Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding() + 8.dp), contentAlignment = androidx.compose.ui.Alignment.BottomCenter) {
             dev.pfeed.update.UpdateBanner()

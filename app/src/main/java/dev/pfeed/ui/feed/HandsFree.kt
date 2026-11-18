@@ -88,6 +88,18 @@ object FrameGrab {
     val request = MutableStateFlow<String?>(null)
 }
 
+/**
+ * Dim: a dark veil over the whole app, darker than the phone's lowest brightness, for watching in
+ * the dark. Steps through off, 30%, 50%, 70%; for this session.
+ */
+object Dimmer {
+    private val _level = MutableStateFlow(0f)
+    val level: StateFlow<Float> = _level
+    private val steps = listOf(0f, 0.3f, 0.5f, 0.7f)
+    fun next() { _level.value = steps[(steps.indexOf(_level.value) + 1).mod(steps.size)] }
+    fun off() { _level.value = 0f }
+}
+
 /** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
 object Pip {
     private val _active = MutableStateFlow(false)

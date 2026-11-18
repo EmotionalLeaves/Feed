@@ -28,6 +28,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Repeat
@@ -232,6 +233,12 @@ fun ItemMenuSheet(
                 ) { FeelTheSound.set(!feel); onDismiss() }
             }
             if (onForTheRoad != null) MenuRow("Take 20 for the road", Icons.Filled.FlightTakeoff, "This and the next posts, downloaded to watch offline") { onForTheRoad(); onDismiss() }
+            val dim by Dimmer.level.collectAsStateWithLifecycle()
+            MenuRow(
+                if (dim == 0f) "Dim the screen" else "Dim: ${(dim * 100).toInt()}% (tap for more, then off)",
+                Icons.Filled.Brightness4,
+                "Darker than your phone's lowest brightness, for watching in the dark",
+            ) { Dimmer.next() }
             val sleepLeft = SleepTimer.endsAt.collectAsStateWithLifecycle().value?.let { SleepTimer.minutesLeft() }
             MenuRow("Sleep timer", Icons.Filled.Bedtime, if (sleepLeft != null) "Stops in $sleepLeft min" else "Stop playing after a while") { pickTag = "sleep" }
             val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
