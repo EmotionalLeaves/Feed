@@ -47,7 +47,9 @@ All versions are pinned in `gradle/libs.versions.toml`. If a newer AGP or Androi
 
 ## Sideload
 
-Download **app-optimized** from the latest CI run's Artifacts. It's the R8-optimized build, signed with the repo's fixed key under the `dev.pfeed.debug` id, so each new one installs over the last and keeps your data. (`app-debug` is the same app unoptimized: bigger and slower.)
+Download the APK from the **[latest GitHub release](https://github.com/EmotionalLeaves/Feed/releases/latest)**: every version that passes the emulator tests is published there automatically. After that first install the app **updates itself** from those releases (Settings → Updates): it checks every few hours and in the background twice a day, downloads on Wi-Fi, checks the download is signed with the same key, and installs. Android asks you to confirm the first update; from then on (Android 12+) updates go in quietly once you've left the app.
+
+You can also download **app-optimized** from any CI run's Artifacts. It's the R8-optimized build, signed with the repo's fixed key under the `dev.pfeed.debug` id, so each new one installs over the last and keeps your data. (`app-debug` is the same app unoptimized: bigger and slower.)
 
 1. Copy the APK to the phone (USB, local network, etc.).
 2. Open it from a file manager. If Android blocks it, go to **Settings → Apps → (your file manager) → Install unknown apps** and turn on **Allow from this source**.
@@ -68,6 +70,12 @@ Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 - **Search** asks every site at once and streams results in as each answers (best first, mixed across sites). Before you type, it shows what to **Continue** (videos and comics you left partway), picture rows for your top interests, your recent searches and topics. Filters: videos, images, GIFs, comics, length, source.
 - **Videos:** clips loop; full scenes (3 min+) play once and the feed moves on; a long video reopened partway carries on where you left it (with Start over).
 - **Library:** Saved, Liked, History (grouped by day) and Following, with Find, Play all and Shuffle. **Collections** sort saved posts into your own folders (hold a post → Add to collection; rename or delete from the Library); a kept post can be exported to the phone's Downloads from its menu. **Saved posts are kept on the phone** (videos download on Wi-Fi, pictures and comics on any connection, into private storage) and play offline.
+- **Share to Feed:** share any link from another app (a RedGIFs clip, a tube site's page, a video or picture file, any page) and it plays here.
+- **More from the hold menu:** Loop a part, Save this frame, Sleep timer, Feel the sound (vibration with the audio), Dim the screen, Take 20 for the road (download to watch offline), Comments (Reddit), Go incognito, More like this, Hands-free, Clean screen.
+- **More gestures:** swipe right to save; hold the heart to love it (saved to Favourites, strong "more like this"); pinch in to zoom out to the Wall; two-finger tap for sound; double-tap an edge of a long video to skip; full screen, slide the left edge for brightness and the right for volume; hold For You to set its mood (familiar to adventurous) and what the feeds show.
+- **Search:** Spotlight cards on top, Surprise me, and combos: `pov + redhead -toys`.
+- **Library:** Your week recap, smart folders by top tag, secret collections (a name starting with `.` stays hidden until you type it in Find), order by newest/oldest/longest/shortest, pick several to remove.
+- **Playback options:** smart volume, best quality (up to 4K), battery saver, skip intros, volume keys turn pages, sound only with headphones, picture-in-picture, live grids, break reminder.
 - The app lock (PIN, then biometrics) is optional: turn it on in **Settings → Privacy**.
 
 ## Sources
@@ -160,7 +168,12 @@ dev.pfeed
 | Encrypted database (SQLCipher, key wrapped by the Android Keystore) | `SecretStore.databasePassphrase` |
 | Disguised home-screen icon and name (Notes, Calculator or Browser) | `LauncherDisguise` |
 | Panic: three fingers anywhere locks and leaves | `AppRoot.panicGesture` |
-| Private mode: no history, no search history, nothing learned | Settings → Privacy |
+| Private mode (always incognito) and Go incognito (for a while): no history, seen marks, resume points or learning | Settings → Privacy, hold menu |
+| Calculator lock screen: a working calculator; the PIN then = opens the app | Settings → Privacy |
+| Emergency PIN: entering it erases everything | Settings → Privacy |
+| Wrong-PIN alert: how many wrong PINs and when, shown after you unlock | `AppLockManager` |
+| Flip face down or shake to hide; a plain "Lock" Quick Settings tile | `FlipToHide`, `LockTileService` |
+| Weekly encrypted backups to a folder you choose | `BackupWorker` |
 | Blur previews in Library and Search | Settings → Privacy |
 | Encrypted DNS (1.1.1.1), automatic when a network blocks a site | `EncryptedDns` |
 | Erase everything in one step | Settings → Privacy |
