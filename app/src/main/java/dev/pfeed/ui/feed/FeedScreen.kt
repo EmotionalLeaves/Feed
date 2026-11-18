@@ -553,6 +553,10 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         onFollow = { vm.toggleFollowTag(tag) },
                         onPlay = { gridView = false; pagerScope.launch { pagerState.scrollToPage(0) } },
                         onShuffle = { gridView = false; pagerScope.launch { pagerState.scrollToPage(items.indices.random()) } },
+                        similar = androidx.compose.runtime.produceState(emptyList<String>(), tag, items.size / 10) {
+                            value = vm.similarCreators(tag.removePrefix("@"), items)
+                        }.value,
+                        onOpenCreator = { nav.openTag("@$it") },
                     )
                 }) else if (profilePage) ({
                     TagHeader(
@@ -1708,6 +1712,8 @@ private fun TagHeader(
     onOpenTag: (String) -> Unit,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
+    similar: List<String> = emptyList(),
+    onOpenCreator: (String) -> Unit = {},
 ) {
     val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.distinct().size }
     val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
@@ -1844,6 +1850,28 @@ private fun CreatorHeader(
                     Text("Play all")
                 }
                 IconButton(onClick = onShuffle) { Icon(Icons.Filled.Shuffle, "Shuffle", tint = Color.White.copy(alpha = 0.8f)) }
+            }
+        }
+        // Who else makes this kind of thing (by where their posts sit on your map), tap to open.
+        if (similar.isNotEmpty()) {
+            Spacer(Modifier.height(18.dp))
+            Text(
+                "SIMILAR CREATORS",
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White.copy(alpha = 0.5f),
+                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+            )
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
+                for (c in similar) item(key = c) {
+                    Column(
+                        Modifier.width(64.dp).clip(RoundedCornerShape(10.dp)).clickable { onOpenCreator(c) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        dev.pfeed.ui.common.InitialAvatar(c.substringBefore('@'), 52.dp)
+                        Spacer(Modifier.height(4.dp))
+                        Text(c.substringBefore('@'), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
         }
         if (items.isEmpty()) {

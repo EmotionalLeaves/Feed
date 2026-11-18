@@ -133,4 +133,15 @@ class TasteEngineTest {
         assertTrue("late at night, theme 11 should get the slots (${share(23, 11)} vs ${share(23, 3)})", share(23, 11) > share(23, 3) + 0.15)
         assertTrue("in the afternoon, theme 3 should (${share(14, 3)} vs ${share(14, 11)})", share(14, 3) > share(14, 11) + 0.15)
     }
+
+    @Test
+    fun `finds creators who make the same kind of thing`() {
+        val world = World(Random(7))
+        val engine = TasteEngine()
+        repeat(4000) { engine.observe(listOf(world.post().item)) }
+        fun byCreator(name: String, theme: Int) = List(8) { world.post(theme).item.copy(creator = name) }
+        listOf("ann" to 3, "bea" to 3, "cat" to 11, "dee" to 11).forEach { (n, t) -> engine.observe(byCreator(n, t)) }
+        assertEquals("bea", engine.similarCreators("ann").firstOrNull())
+        assertEquals("dee", engine.similarCreators("cat").firstOrNull())
+    }
 }

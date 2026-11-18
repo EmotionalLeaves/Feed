@@ -307,7 +307,12 @@ class SettingsViewModel @Inject constructor(
         _engineInterests.value = signals.engine.use { it.describe(aff) }
         _tasteMap.value = signals.engine.use { it.tasteMap(aff) }
         _eye.value = signals.engine.use { it.visual.describe() }
+        _landing.value = signals.engine.use { it.landing(14) }
     }
+
+    private val _landing = MutableStateFlow<List<Double?>>(emptyList())
+    /** Share of For You's picks that landed, day by day, last 14 days (null: nothing watched). */
+    val landing: StateFlow<List<Double?>> = _landing
 
     private val _eye = MutableStateFlow<Pair<List<String>, List<String>>>(emptyList<String>() to emptyList())
     /** What looks you stay for and don't (see [dev.pfeed.domain.reco.Visual.Taste.describe]). */

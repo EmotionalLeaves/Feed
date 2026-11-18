@@ -161,7 +161,12 @@ fun VideoPage(
     val pool = vm.playerPool
     val version by pool.changes.collectAsState()
     val player = remember(item.key, version) { pool.acquire(item.key) }
-    val stream by produceState<StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
+    val resolved by produceState<StreamInfo?>(initialValue = null, item.key) { value = vm.resolve(item) }
+    // A copy of the same video from another site, once this one has failed to play.
+    var copy by remember(item.key) { mutableStateOf<StreamInfo?>(null) }
+    var triedCopy by remember(item.key) { mutableStateOf(false) }
+    val stream = copy ?: resolved
+    val copyScope = androidx.compose.runtime.rememberCoroutineScope()
     var firstFrame by remember(item.key) { mutableStateOf(false) }
     var error by remember(item.key) { mutableStateOf<String?>(null) }
     val stats = remember(item.key) { vm.statsFor(item.key) }
@@ -187,7 +192,7 @@ fun VideoPage(
         val p = player ?: return@LaunchedEffect
         val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
         if (Display.isStillForVideo(item, s)) return@LaunchedEffect
-        if (p.currentMediaItem?.mediaId != item.key) {
+        if (p.currentMediaItem?.mediaId != item.key || p.currentMediaItem?.localConfiguration?.uri?.toString() != s.url) {
             firstFrame = false
             p.setMediaItem(
                 ExoMediaItem.Builder()
@@ -240,7 +245,16 @@ fun VideoPage(
                     ended()
                 }
             }
-            override fun onPlayerError(e: PlaybackException) { error = e.errorCodeName; vm.markBroken(item, "player: ${e.errorCodeName} ${e.cause?.message?.take(80).orEmpty()}") }
+            override fun onPlayerError(e: PlaybackException) {
+                val reason = "player: ${e.errorCodeName} ${e.cause?.message?.take(80).orEmpty()}"
+                if (triedCopy) { error = e.errorCodeName; vm.markBroken(item, reason); return }
+                // First failure: look for the same video on another site before giving up on it.
+                triedCopy = true
+                copyScope.launch {
+                    val other = vm.findElsewhere(item)
+                    if (other != null && other != resolved) { error = null; copy = other } else { error = e.errorCodeName; vm.markBroken(item, reason) }
+                }
+            }
             // Headphones unplugged: the player paused itself so nothing played on the speaker.
             // Mute the feed and carry on silently instead of leaving a frozen video.
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {

@@ -6,6 +6,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -102,6 +103,12 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         val lessOf = dislikes.filterNot { Features.isMeta(it.first) }
         // The engine's interests: what For You is built from, and how much of it each one gets.
         val groups by vm.engineInterests.collectAsStateWithLifecycle()
+        val landing by vm.landing.collectAsStateWithLifecycle()
+        if (landing.count { it != null } >= 2) {
+            Section("How well For You knows you", footer = "The share of the posts For You picked that you stayed on, liked or saved, day by day for two weeks.") {
+                LandingCard(landing)
+            }
+        }
         val sky by vm.tasteMap.collectAsStateWithLifecycle()
         sky?.takeIf { it.stars.size >= 5 }?.let { m ->
             Section("Your taste map", footer = "Tags that keep company sit together. Bigger means you like it more; each colour is one of your interests below, glowing by its share of For You. Tap a star to open it.") {
@@ -411,6 +418,55 @@ private fun InterestGroupRow(g: dev.pfeed.domain.reco.TasteEngine.View, onOpen: 
         }
         androidx.compose.material3.IconButton(onClick = onForget) {
             androidx.compose.material3.Icon(Icons.Filled.Close, contentDescription = "Forget this interest", tint = dev.pfeed.ui.theme.TextLow)
+        }
+    }
+}
+
+/** This week's landing rate, the change from the week before, and a bar per day. */
+@Composable
+private fun LandingCard(days: List<Double?>) {
+    val week = days.takeLast(7).filterNotNull()
+    val before = days.dropLast(7).filterNotNull()
+    val now = week.takeIf { it.isNotEmpty() }?.average()
+    val then = before.takeIf { it.isNotEmpty() }?.average()
+    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+        androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.Bottom) {
+            Text(
+                now?.let { "${(it * 100).roundToInt()}%" } ?: "–",
+                style = MaterialTheme.typography.displaySmall,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+            val change = if (now != null && then != null) ((now - then) * 100).roundToInt() else null
+            Text(
+                when {
+                    change == null -> "landed this week"
+                    change > 0 -> "landed this week · up $change from the week before"
+                    change < 0 -> "landed this week · down ${-change} from the week before"
+                    else -> "landed this week · same as the week before"
+                },
+                style = MaterialTheme.typography.bodySmall,
+                color = TextMid,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+        }
+        androidx.compose.foundation.layout.Spacer(Modifier.height(14.dp))
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxWidth().height(56.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            days.forEachIndexed { i, d ->
+                Box(
+                    Modifier.weight(1f).fillMaxHeight(((d ?: 0.0).toFloat()).coerceIn(0.04f, 1f))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                        .background(
+                            if (d == null) androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            else if (i >= days.size - 7) dev.pfeed.ui.theme.BrandGradient
+                            else androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)),
+                        ),
+                )
+            }
         }
     }
 }

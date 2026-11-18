@@ -267,6 +267,15 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Creators who make the same kind of thing as [name] (see [dev.pfeed.domain.reco.TasteEngine.similarCreators]). */
+    suspend fun similarCreators(name: String, items: List<MediaItem>): List<String> {
+        val found = runCatching { signals.engine.use { it.similarCreators(name, items.take(40)) } }.getOrDefault(emptyList())
+        // Never suggest someone you've blocked.
+        val probe = items.firstOrNull() ?: return found
+        val blocklist = blocks.current()
+        return found.filter { c -> blocklist.allows(probe.copy(creator = c, tags = emptyList())) }
+    }
+
     /** What For You is being told in words right now (see [dev.pfeed.domain.reco.Steer]). */
     val steering: StateFlow<List<dev.pfeed.domain.reco.Steer.Directive>> = dev.pfeed.data.repo.SteerState.active
 
@@ -385,9 +394,39 @@ class FeedViewModel @Inject constructor(
             } catch (e: Exception) {
                 null
             }
-            if (resolved == null) markBroken(item, "couldn't find its file")
-            resolved
+            // Its own site has lost it: the same video is usually up on another one.
+            val stream = resolved ?: findElsewhere(item)
+            if (stream == null) markBroken(item, "couldn't find its file")
+            stream
         }
+    }
+
+    private val elsewhere = HashMap<String, Deferred<StreamInfo?>>()
+
+    /**
+     * The same video on another site (same title, same length to the second), for when this copy
+     * won't load or play. Null if there's none, or for anything that isn't a tube video.
+     */
+    suspend fun findElsewhere(item: MediaItem): StreamInfo? {
+        if (item.type != dev.pfeed.domain.model.MediaType.VIDEO || item.sourceId != dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) return null
+        val query = dev.pfeed.domain.reco.SameVideo.query(item) ?: return null
+        return elsewhere.getOrPut(item.key) {
+            viewModelScope.async {
+                val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) ?: return@async null
+                val found = kotlinx.coroutines.withTimeoutOrNull(ELSEWHERE_TIMEOUT_MS) {
+                    runCatching { tube.search(query, null).items }.getOrNull()
+                }.orEmpty()
+                val host = item.id.substringBefore('/')
+                for (copy in dev.pfeed.domain.reco.SameVideo.copies(item, found.filter { it.id.substringBefore('/') != host }).take(3)) {
+                    val s = runCatching { tube.resolveStream(copy) }.getOrNull()
+                    if (s is StreamInfo.Direct) {
+                        _messages.tryEmit("Playing a copy from ${Display.source(copy, copy.sourceId)}")
+                        return@async s
+                    }
+                }
+                null
+            }
+        }.await()
     }
 
     /**
@@ -875,6 +914,7 @@ class FeedViewModel @Inject constructor(
         const val FRAMES = "Frames"
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
+        private const val ELSEWHERE_TIMEOUT_MS = 10_000L
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L
         private const val LOAD_AHEAD = 10

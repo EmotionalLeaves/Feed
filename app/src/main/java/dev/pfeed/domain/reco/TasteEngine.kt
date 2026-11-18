@@ -159,21 +159,72 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     /** Learn the map from posts passing through the feed (whether or not they're shown). */
-    fun observe(items: Collection<MediaItem>) = items.forEach { space.observe(Features.of(it)) }
+    fun observe(items: Collection<MediaItem>) = items.forEach { item ->
+        space.observe(Features.of(item))
+        val c = item.creator?.takeIf { it.isNotBlank() } ?: return@forEach
+        val v = vectorOf(item) ?: return@forEach
+        val key = dev.pfeed.domain.filter.Blocklist.normalize(c)
+        val at = creators.getOrPut(key) { Creator(c, FloatArray(v.size)) }
+        for (k in v.indices) at.sum[k] += v[k]
+        at.posts++
+        if (creators.size > MAX_CREATORS) creators.remove(creators.keys.first())
+    }
+
+    /** A creator on the map: the sum of their posts' directions (so, what they make). */
+    class Creator(val name: String, val sum: FloatArray, var posts: Int = 0)
+    private val creators = LinkedHashMap<String, Creator>(256, 0.75f, true)
+
+    /**
+     * Creators who make the same kind of thing as [name] (by where their posts sit on the map),
+     * leaning toward what you like. [items] are posts of theirs at hand, for someone not met yet.
+     */
+    fun similarCreators(name: String, items: List<MediaItem> = emptyList(), limit: Int = 10): List<String> {
+        val key = dev.pfeed.domain.filter.Blocklist.normalize(name)
+        val target = FloatArray(space.dim)
+        creators[key]?.sum?.let { for (k in it.indices) target[k] += it[k] }
+        items.forEach { vectorOf(it)?.let { v -> for (k in v.indices) target[k] += v[k] } }
+        if (target.all { it == 0f }) return emptyList()
+        normalize(target)
+        return creators.entries.asSequence()
+            .filter { it.key != key && it.value.posts >= SIMILAR_MIN_POSTS }
+            .map { (_, c) ->
+                val v = c.sum.copyOf().also(::normalize)
+                c.name to (cos(target, v) + SIMILAR_TASTE * interestScore(v) - aversion(v))
+            }
+            .filter { it.second >= SIMILAR_MIN }
+            .sortedByDescending { it.second }
+            .take(limit).map { it.first }.toList()
+    }
 
     fun vectorOf(item: MediaItem): FloatArray? = space.itemVector(Features.of(item))
 
-    /**
-     * One reaction to [item]: [target] as from [Engagement] / [SignalWeights] (about −1 skip … +3
-     * like … −8 for Not interested).
-     */
     /** How you react to what posts look like (see [Visual]). */
     val visual = Visual.Taste()
 
     /** How much the look of [item] suits you (-1..1; 0 when its thumbnail wasn't read, or early on). */
     fun visualScore(item: MediaItem): Double = Visual.decode(item.extras[Visual.EXTRA])?.let(visual::score) ?: 0.0
 
+    /**
+     * One reaction to [item]: [target] as from [Engagement] / [SignalWeights] (about −1 skip … +3
+     * like … −8 for Not interested).
+     */
+    /** Day number (days since 1970, local) → (reactions, ones that landed): how well For You is doing. */
+    val days = java.util.TreeMap<Int, IntArray>()
+    var today: () -> Int = { java.time.LocalDate.now().toEpochDay().toInt() }
+
+    /** The share of posts that landed, per day, for the last [n] days (null where nothing was watched). */
+    fun landing(n: Int = 14): List<Double?> {
+        val t = today()
+        return (t - n + 1..t).map { d -> days[d]?.takeIf { it[0] >= LANDING_MIN }?.let { it[1].toDouble() / it[0] } }
+    }
+
     fun learn(item: MediaItem, target: Double) {
+        // Only posts For You picked count toward how well it's doing.
+        if (shownParts.containsKey(item.key)) {
+            val day = days.getOrPut(today()) { IntArray(2) }
+            day[0]++; if (target > POSITIVE) day[1]++
+            while (days.size > KEEP_DAYS) days.remove(days.firstKey())
+        }
         tuneFrom(item.key, target)
         Visual.decode(item.extras[Visual.EXTRA])?.let { visual.learn(it, target) }
         val x = vectorOf(item) ?: return
@@ -452,11 +503,15 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         out.writeDouble(sessionStrength)
         out.writeInt(tune.size); tune.forEach { out.writeDouble(it) }
         visual.writeTo(out)
+        out.writeInt(days.size); days.forEach { (d, c) -> out.writeInt(d); out.writeInt(c[0]); out.writeInt(c[1]) }
+        val keep = creators.entries.toList().takeLast(SAVED_CREATORS)
+        out.writeInt(keep.size)
+        for ((k, c) in keep) { out.writeUTF(k); out.writeUTF(c.name.take(200)); out.writeInt(c.posts); writeVec(out, c.sum) }
     }
 
     fun readFrom(input: java.io.DataInputStream) {
         val format = input.readInt()
-        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste.
+        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators.
         if (format !in 2..FORMAT) return
         space.readFrom(input)
         interests.clear()
@@ -472,10 +527,17 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         sessionStrength = input.readDouble()
         repeat(input.readInt()) { i -> val v = input.readDouble(); if (i < tune.size) tune[i] = v }
         if (format >= 4) visual.readFrom(input)
+        days.clear()
+        if (format >= 5) repeat(input.readInt()) { val d = input.readInt(); days[d] = intArrayOf(input.readInt(), input.readInt()) }
+        creators.clear()
+        if (format >= 5) repeat(input.readInt()) {
+            val k = input.readUTF(); val n = input.readUTF(); val posts = input.readInt(); val v = readVec(input)
+            creators[k] = Creator(n, v, posts)
+        }
     }
 
     companion object {
-        private const val FORMAT = 4
+        private const val FORMAT = 5
 
         /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
         const val PARTS = 8
@@ -483,6 +545,13 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8, Ranker.VISUAL)
         const val TUNE_RATE = 0.05
         const val EXPLORE_SHARE = 0.4
+        const val LANDING_MIN = 5
+        const val KEEP_DAYS = 60
+        const val MAX_CREATORS = 1500
+        const val SAVED_CREATORS = 600
+        const val SIMILAR_MIN_POSTS = 2
+        const val SIMILAR_MIN = 0.55
+        const val SIMILAR_TASTE = 0.2
         const val TIME_BINS = 6
         const val TIME_FADE = 0.97
         /** How many reactions' worth the overall mean counts for in each stretch of the day. */

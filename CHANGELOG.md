@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.95.0 — 2026-11-18
+
+Similar creators, plays from elsewhere, how well For You knows you
+
+- New: Similar creators on every creator's page. Who else makes the same kind of thing, judged by where their posts sit on your taste map and leaning toward what you like. Tap one to open them. Creators you've blocked never show.
+- New: Plays from elsewhere. When a tube video won't load or play (taken down, geo-blocked, a dead link), For You looks for the same upload on the other sites (same title, same length to the second) and plays that copy instead of skipping it.
+- New: How well For You knows you (Settings → Interests). The share of its picks that landed this week, the change from the week before, and a bar for each day.
+
 ## 4.94.0 — 2026-11-18
 
 Your eye
