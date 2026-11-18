@@ -1,5 +1,13 @@
 # Changelog
 
+## 4.87.0 — 2026-11-18
+
+Reddit comments, quick filters, two-finger mute
+
+- New: Comments on Reddit posts, in the hold menu. The top comments, read-only.
+- New: Hold the For You tab to choose what the feeds show (everything, videos only, pictures & GIFs, comics only) as well as its mood.
+- New: Tap with two fingers anywhere in a feed to turn the sound on or off.
+
 ## 4.86.0 — 2026-11-18
 
 Chameleon colour, edge slides, break reminder
