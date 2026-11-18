@@ -319,12 +319,12 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                     val l = saved.filter { item -> dev.pfeed.ui.feed.Display.tags(item, 12).any { it.first.equals(tag, ignoreCase = true) } }.found()
                     Grid(l, Icons.Filled.BookmarkBorder, "Nothing tagged $open", "", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to "Saved" })
                 } else if (open == null) {
-                    saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Saved" }) }
+                    saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Saved" }, onMoreLike = { moreLikeThese(l); toFeed() }) }
                 } else {
-                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to open }) }
+                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to open }, onMoreLike = { moreLikeThese(l); toFeed() }) }
                 }
             }
-            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Liked" }) }
+            1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Liked" }, onMoreLike = { moreLikeThese(l); toFeed() }) }
             2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }, onLongPress = { holding = it to "History" }, header = if (query.isBlank()) ({ WeekRecap(history, historyTimes, onOpenTag = { nav.openTag(it) }) }) else null) }
             else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
                 if (follows.isEmpty()) item {
@@ -531,7 +531,7 @@ private fun whenWatched(at: Long?): String {
 }
 
 @Composable
-private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null, onLongPress: ((MediaItem) -> Unit)? = null, header: (@Composable () -> Unit)? = null) {
+private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint: String, onOpen: (Int) -> Unit, onBrowse: (() -> Unit)? = null, sectionOf: ((MediaItem) -> String)? = null, onShuffle: (() -> Unit)? = null, onLongPress: ((MediaItem) -> Unit)? = null, header: (@Composable () -> Unit)? = null, onMoreLike: (() -> Unit)? = null) {
     if (items.isEmpty()) {
         EmptyState(icon, title, hint, action = onBrowse?.let { go ->
             {
@@ -548,6 +548,9 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.weight(1f),
             )
+            if (onMoreLike != null && items.size >= 3) androidx.compose.material3.IconButton(onClick = onMoreLike) {
+                androidx.compose.material3.Icon(Icons.Filled.AutoAwesome, contentDescription = "More like these, in For You", tint = Color.White.copy(alpha = 0.8f))
+            }
             if (onShuffle != null && items.size > 2) androidx.compose.material3.IconButton(onClick = onShuffle) {
                 androidx.compose.material3.Icon(Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = Color.White.copy(alpha = 0.8f))
             }
@@ -703,4 +706,15 @@ private val LocalPicking = androidx.compose.runtime.staticCompositionLocalOf<Pai
 
 private enum class LibOrder(val label: String) {
     NEWEST("Newest first"), OLDEST("Oldest first"), LONGEST("Longest first"), SHORTEST("Shortest first"),
+}
+
+/**
+ * For You steered toward what a list of posts has in common (its most shared tags), for a while:
+ * a collection becomes a mix.
+ */
+private fun moreLikeThese(items: List<MediaItem>) {
+    val tags = items.take(200)
+        .flatMap { dev.pfeed.domain.reco.Features.of(it).filterNot { f -> dev.pfeed.domain.reco.Features.isMeta(f) || f.startsWith("w:") } }
+        .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(3).map { it.key }
+    if (tags.isNotEmpty()) dev.pfeed.data.repo.SteerState.set(tags.map { dev.pfeed.domain.reco.Steer.Directive(dev.pfeed.domain.reco.Steer.Kind.MORE, it) })
 }

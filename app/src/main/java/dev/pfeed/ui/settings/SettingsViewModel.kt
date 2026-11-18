@@ -336,6 +336,11 @@ class SettingsViewModel @Inject constructor(
         return true
     }
 
+    /** Play one interest as its own mix: For You steered toward its tags for a while. */
+    fun playMix(view: dev.pfeed.domain.reco.TasteEngine.View) {
+        dev.pfeed.data.repo.SteerState.set(view.tags.take(3).map { dev.pfeed.domain.reco.Steer.Directive(dev.pfeed.domain.reco.Steer.Kind.MORE, it) })
+    }
+
     fun lessOfInterest(index: Int) = viewModelScope.launch { signals.engine.use { it.quieten(index) }; loadInterests() }
     fun forgetEngineInterest(index: Int) = viewModelScope.launch { signals.engine.use { it.forget(index) }; loadInterests() }
 

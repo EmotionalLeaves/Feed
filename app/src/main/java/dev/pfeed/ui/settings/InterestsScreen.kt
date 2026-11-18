@@ -52,6 +52,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.pfeed.domain.reco.Features
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Visibility
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Share
@@ -126,12 +128,20 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
             }
         }
         if (groups.isNotEmpty()) {
-            Section("Your interests", footer = "For You takes turns between these, more often for the ones you enjoy most. Each is learned from what you linger on; a new one appears when you start loving something new.") {
+            Section("Your interests", footer = "For You takes turns between these, more often for the ones you enjoy most. Each is learned from what you linger on; a new one appears when you start loving something new. ▶ plays one on its own for a while.") {
                 groups.forEachIndexed { n, g ->
                     if (n > 0) RowDivider()
                     InterestGroupRow(
                         g,
                         onOpen = { openTag(nav, g.tags.first()) },
+                        onPlay = {
+                            vm.playMix(g)
+                            nav.navigate(Routes.FEED) {
+                                popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
                         onLess = { vm.lessOfInterest(g.index) },
                         onForget = { vm.forgetEngineInterest(g.index) },
                     )
@@ -376,7 +386,7 @@ private fun InterestRow(feature: String, score: Double, positive: Boolean, onFor
 
 /** One interest: its names, a bar for its share of For You, and "less" / "forget". */
 @Composable
-private fun InterestGroupRow(g: dev.pfeed.domain.reco.TasteEngine.View, onOpen: () -> Unit, onLess: () -> Unit, onForget: () -> Unit) {
+private fun InterestGroupRow(g: dev.pfeed.domain.reco.TasteEngine.View, onOpen: () -> Unit, onLess: () -> Unit, onForget: () -> Unit, onPlay: () -> Unit = {}) {
     androidx.compose.foundation.layout.Row(
         Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
@@ -412,6 +422,9 @@ private fun InterestGroupRow(g: dev.pfeed.domain.reco.TasteEngine.View, onOpen: 
                     Text("Mostly $t", style = MaterialTheme.typography.labelMedium, color = dev.pfeed.ui.theme.TextLow)
                 }
             }
+        }
+        if (!g.sour) androidx.compose.material3.IconButton(onClick = onPlay) {
+            androidx.compose.material3.Icon(Icons.Filled.PlayArrow, contentDescription = "Play this as a mix", tint = Accent)
         }
         if (!g.sour) androidx.compose.material3.IconButton(onClick = onLess) {
             androidx.compose.material3.Icon(Icons.Filled.ThumbDown, contentDescription = "Less of this", tint = dev.pfeed.ui.theme.TextLow)

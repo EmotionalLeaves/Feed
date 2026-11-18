@@ -491,7 +491,11 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch { VolumeKeys.up.collect { if (_muted.value && soundAllowedHere()) _muted.value = false } }
         // Steering changed (here, or from a blend in Settings): For You starts over with it.
         if (isMainFeed) viewModelScope.launch {
-            dev.pfeed.data.repo.SteerState.active.drop(1).collect { if (_mode.value == FeedMode.FOR_YOU) restart() }
+            dev.pfeed.data.repo.SteerState.active.drop(1).collect { list ->
+                // Steering is For You's: a mix or blend started elsewhere brings you there.
+                if (list.isNotEmpty() && _mode.value != FeedMode.FOR_YOU) setMode(FeedMode.FOR_YOU)
+                else if (_mode.value == FeedMode.FOR_YOU) restart()
+            }
         }
     }
 
@@ -726,7 +730,7 @@ class FeedViewModel @Inject constructor(
         val tags = features.filterNot { it.startsWith("w:") }.map { it.replace('_', ' ') }.filter(::searchable).take(3)
         val words = features.filter { it.startsWith("w:") }.take(2).map { it.removePrefix("w:") }
         val queries = (listOfNotNull(creator) + tags + words).distinct().ifEmpty { listOfNotNull(item.title?.take(40)) }
-        return FeedSpec.Similar(item.key, queries, features.toSet(), item.creator)
+        return FeedSpec.Similar(item.key, queries, features.toSet(), item.creator, item.extras[dev.pfeed.domain.reco.Visual.EXTRA])
     }
 
     /** Tags For You has learned you like (normalised), refreshed now and then: they're lit on posts. */

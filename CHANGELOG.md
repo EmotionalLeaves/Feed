@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.98.0 — 2026-11-18
+
+Mixes
+
+- New: Play any of your interests as a mix (Settings → Interests → ▶): For You leans toward that one taste for a while.
+- New: Any collection, Saved or Liked can become a mix: ✦ above the grid steers For You toward what those posts have in common.
+- Better: More like this finds posts about the same thing even when they're tagged differently (by meaning, on your map) and ones that look alike.
+- Changed: starting a mix or a blend from anywhere switches the feed to For You.
+
 ## 4.97.0 — 2026-11-18
 
 A better first five minutes

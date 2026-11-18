@@ -35,7 +35,7 @@ sealed interface FeedSpec {
      * More like one post: [queries] (its creator and strongest tags) are searched on every source,
      * and the results ranked by how much they share with the post ([signature]).
      */
-    data class Similar(val seedKey: String, val queries: List<String>, val signature: Set<String>, val creator: String?) : FeedSpec
+    data class Similar(val seedKey: String, val queries: List<String>, val signature: Set<String>, val creator: String?, val look: String? = null) : FeedSpec
 }
 
 data class LoadResult(
@@ -466,12 +466,18 @@ class FeedSession(
             // extra; the post itself never comes back. Spread keeps one site from filling a screen.
             val sig = spec.signature
             val creator = spec.creator?.let(Blocklist::normalize)
+            // Also by meaning (posts tagged differently that are about the same thing) and by look.
+            val (seedVec, vecs) = signals.engine.use { e -> e.space.itemVector(sig.toList()) to candidates.associate { it.key to e.vectorOf(it) } }
+            val seedLook = dev.pfeed.domain.reco.Visual.decode(spec.look)
             fun closeness(c: MediaItem): Double {
                 val f = Features.of(c).filterNot(Features::isMeta).toSet()
                 val shared = f.count { it in sig }
                 val cos = if (f.isEmpty() || sig.isEmpty()) 0.0 else shared / kotlin.math.sqrt(f.size.toDouble() * sig.size)
                 val same = if (creator != null && c.creator?.let(Blocklist::normalize) == creator) 0.6 else 0.0
-                return cos + same
+                val v = vecs[c.key]
+                val meaning = if (seedVec != null && v != null) dev.pfeed.domain.reco.TasteEngine.cos(seedVec, v).coerceAtLeast(0.0) else 0.0
+                val look = seedLook?.let { a -> dev.pfeed.domain.reco.Visual.decode(c.extras[dev.pfeed.domain.reco.Visual.EXTRA])?.let { b -> dev.pfeed.domain.reco.Visual.similarity(a, b) } } ?: 0.0
+                return cos + same + SIMILAR_MEANING * meaning + SIMILAR_LOOK * look
             }
             candidates.removeAll { it.key == spec.seedKey }
             Spread.order(
@@ -570,6 +576,8 @@ class FeedSession(
         private const val STALE_LOADS = 8
         private const val INTEREST_PREFIX = "interest|"
         private const val INTERESTS_PER_LOAD = 2
+        private const val SIMILAR_MEANING = 0.5
+        private const val SIMILAR_LOOK = 0.3
         private const val MAX_INTERESTS = 8
         /** TasteModel weight above which a feature counts as a real interest worth searching for. */
         private const val INTEREST_MIN_WEIGHT = 0.6

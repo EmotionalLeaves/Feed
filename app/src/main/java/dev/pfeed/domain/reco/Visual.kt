@@ -83,6 +83,14 @@ object Visual {
 
     const val EXTRA = "vis"
 
+    /** 0..1: how alike two pictures look (1 = the same colours, light and detail). */
+    fun similarity(a: FloatArray, b: FloatArray): Double {
+        var d = 0.0
+        for (i in a.indices) { val x = (a[i] - b[i]).toDouble(); d += x * x }
+        return kotlin.math.exp(-d / SIMILAR_SCALE)
+    }
+    private const val SIMILAR_SCALE = 1.5
+
     /** How the user's eye works: a small linear model from looks to how much they stay, learned as they watch. */
     class Taste {
         val w = DoubleArray(DIM + 1)
