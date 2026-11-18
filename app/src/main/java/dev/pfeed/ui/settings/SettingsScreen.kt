@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.CloudUpload
@@ -126,6 +127,7 @@ private sealed interface PendingDialog {
     data class ExportPassword(val uri: Uri) : PendingDialog
     data class AutoBackupPassword(val folder: Uri) : PendingDialog
     data object ErasePin : PendingDialog
+    data object PickBreak : PendingDialog
     data object RemoveErasePin : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
@@ -292,6 +294,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.autoplayOnMobileData) null else "Videos wait for a tap when you're off Wi-Fi",
                     icon = Icons.Filled.SignalCellularAlt,
                     onChange = vm::setAutoplayOnMobile,
+                )
+                RowDivider()
+                SettingRow(
+                    "Break reminder",
+                    subtitle = "A gentle nudge after a long stretch of watching",
+                    value = if (s.breakReminderMin == 0) "Off" else "${s.breakReminderMin} min",
+                    icon = Icons.Filled.SelfImprovement,
+                    onClick = { dialog = PendingDialog.PickBreak },
                 )
                 RowDivider()
                 SwitchSetting(
@@ -639,6 +649,13 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             selected = s.historyRetentionDays,
             onDismiss = { dialog = null },
         ) { vm.setHistoryRetention(it); dialog = null }
+        PendingDialog.PickBreak -> ChoiceDialog(
+            title = "Break reminder",
+            note = "After this long watching without stopping, a quiet message offers a break or a sleep timer. Nothing else changes.",
+            options = listOf(0 to "Off", 30 to "30 min", 45 to "45 min", 60 to "1 h", 90 to "1 h 30 min", 120 to "2 h"),
+            selected = s.breakReminderMin,
+            onDismiss = { dialog = null },
+        ) { vm.setBreakReminder(it); dialog = null }
         PendingDialog.PickCache -> ChoiceDialog(
             title = "Video cache",
             note = "Space kept for videos you've watched, so they don't download again. Takes effect next launch.",

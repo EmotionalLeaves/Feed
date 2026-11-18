@@ -100,6 +100,13 @@ object Dimmer {
     fun off() { _level.value = 0f }
 }
 
+/** Minutes watched in one stretch (any feed), for the break reminder; a pause of 10 min resets it. */
+object WatchStretch {
+    @Volatile var minutes = 0
+    @Volatile var lastTick = 0L
+    @Volatile var reminded = false
+}
+
 /** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
 object Pip {
     private val _active = MutableStateFlow(false)

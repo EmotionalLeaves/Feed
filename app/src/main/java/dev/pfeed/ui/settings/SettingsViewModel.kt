@@ -221,6 +221,7 @@ class SettingsViewModel @Inject constructor(
     fun setBatterySaver(v: Boolean) = update { it.copy(batterySaver = v) }
     fun setVolumeKeysTurnPages(v: Boolean) = update { it.copy(volumeKeysTurnPages = v) }
     fun setHeadphonesOnly(v: Boolean) = update { it.copy(headphonesOnly = v) }
+    fun setBreakReminder(min: Int) = update { it.copy(breakReminderMin = min) }
     fun setAccent(p: dev.pfeed.ui.theme.Palette) {
         dev.pfeed.ui.theme.Palette.set(p.name) // repaint now, not after the write
         update { it.copy(accent = p.name) }

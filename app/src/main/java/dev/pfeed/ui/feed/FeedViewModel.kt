@@ -360,6 +360,8 @@ class FeedViewModel @Inject constructor(
         return minOf(INTRO_SKIP_MS, d * 1000L / 20)
     }
 
+    val breakReminderMin: Int get() = settings.value.breakReminderMin
+
     fun autoplayAllowed(): Boolean = settings.value.autoplayOnMobileData || !network.isMetered
 
     fun toggleMute() {

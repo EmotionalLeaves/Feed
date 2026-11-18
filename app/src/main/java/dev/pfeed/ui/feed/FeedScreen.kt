@@ -169,6 +169,22 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         if (SleepTimer.endsAt.value == end) SleepTimer.runOut()
     }
     val active = (lifecycleState.isAtLeast(Lifecycle.State.RESUMED) || (inPip && lifecycleState.isAtLeast(Lifecycle.State.STARTED))) && !locked && !sleepUp
+    // Break reminder: count the minutes watched in one go; at the chosen mark, a quiet offer.
+    LaunchedEffect(active) {
+        if (!active) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(60_000)
+            val now = System.currentTimeMillis()
+            if (now - WatchStretch.lastTick > STRETCH_RESET_MS) { WatchStretch.minutes = 0; WatchStretch.reminded = false }
+            WatchStretch.lastTick = now
+            WatchStretch.minutes++
+            val mark = vm.breakReminderMin
+            if (mark > 0 && WatchStretch.minutes >= mark && !WatchStretch.reminded) {
+                WatchStretch.reminded = true
+                vm.offer("You've been watching for ${WatchStretch.minutes} min. Time for a break?", "Stop in 15 min") { SleepTimer.start(15) }
+            }
+        }
+    }
     // Feel the sound: pulse the vibrator with the loudness of whatever is playing.
     val feel by FeelTheSound.on.collectAsStateWithLifecycle()
     val feelContext = LocalContext.current
@@ -1792,6 +1808,7 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 /** How far left a swipe must go to open the creator's page. */
 private const val FEEL_PULSE_MS = 45L
+private const val STRETCH_RESET_MS = 10 * 60_000L
 private const val PINCH_TO_WALL = 0.6f
 private const val LOOP_SLACK_MS = 1_500L
 private const val LOOP_TICK_MS = 80L

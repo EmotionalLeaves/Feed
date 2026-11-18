@@ -79,6 +79,8 @@ data class AppSettings(
     val volumeKeysTurnPages: Boolean = false,
     /** Sound plays only through headphones; with only the speaker, the feed stays silent. */
     val headphonesOnly: Boolean = false,
+    /** A gentle "time for a break?" after this many minutes of watching in one go (0 = never). */
+    val breakReminderMin: Int = 0,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */
