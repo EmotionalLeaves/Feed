@@ -38,6 +38,18 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var offlineStore: dev.pfeed.data.repo.OfflineStore
     @Inject lateinit var settingsExporter: dev.pfeed.data.repo.SettingsExporter
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        takeSharedLink(intent)
+    }
+
+    /** A link shared to the app ("Share → Feed"): played once the app is open and unlocked. */
+    private fun takeSharedLink(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND && intent?.action != Intent.ACTION_VIEW) return
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: intent.dataString ?: return
+        dev.pfeed.ui.SharedLink.pending.value = text
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // No screenshots, no screen recording, blank thumbnail in Recents.
         window.setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE)
@@ -48,6 +60,7 @@ class MainActivity : FragmentActivity() {
         )
         super.onCreate(savedInstanceState)
         if (intent?.getBooleanExtra(dev.pfeed.ui.AgeGate.EXTRA_CONFIRMED, false) == true) dev.pfeed.ui.AgeGate.confirm(this)
+        if (savedInstanceState == null) takeSharedLink(intent)
         setContent {
             PFeedTheme {
                 val blurFlow = androidx.compose.runtime.remember { settingsRepository.flow.map { it.blurPreviews } }

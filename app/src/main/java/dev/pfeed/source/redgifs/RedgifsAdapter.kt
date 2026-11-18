@@ -75,6 +75,16 @@ class RedgifsAdapter @Inject constructor(
         return media
     }
 
+    /** One clip as a post (for a shared watch link), with its tags and creator. Null if it's gone. */
+    suspend fun gif(gid: String): MediaItem? {
+        val url = "https://api.redgifs.com/v2/gifs/${gid.lowercase()}"
+        val root = attempt { http.get(this.id, url, authHeaders(token())) }.getOrNull() ?: run {
+            invalidateToken()
+            attempt { http.get(this.id, url, authHeaders(token())) }.getOrNull()
+        } ?: return null
+        return ((root as? JsonObject)?.get("gif") as? JsonObject)?.let { parseGif(it) }
+    }
+
     /** Token = page number for this seed term. */
     override suspend fun fetchEntryPage(entry: String, token: String?): EntryPage {
         val page = token?.toIntOrNull() ?: Random.nextInt(1, RANDOM_START_PAGES + 1)

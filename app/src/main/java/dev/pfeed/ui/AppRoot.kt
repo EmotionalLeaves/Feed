@@ -214,6 +214,22 @@ private fun MainNav(locked: Boolean) {
             composable(Routes.TASTE) { TasteScreen(nav) }
             composable(Routes.NETWORK) { dev.pfeed.ui.settings.NetworkScreen(nav) }
         }
+        // Shared links: open each one in the viewer as it arrives.
+        val shared by SharedLink.pending.collectAsStateWithLifecycle()
+        val appContext = androidx.compose.ui.platform.LocalContext.current.applicationContext
+        androidx.compose.runtime.LaunchedEffect(shared, locked) {
+            if (locked) return@LaunchedEffect // waits for the PIN
+            val text = shared ?: return@LaunchedEffect
+            SharedLink.pending.value = null
+            val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(appContext, LinkEntryPoint::class.java)
+            val url = entry.opener().findUrl(text)
+            val item = url?.let { runCatching { entry.opener().open(it) }.getOrNull() }
+            if (item == null) {
+                android.widget.Toast.makeText(appContext, "That doesn't look like a link", android.widget.Toast.LENGTH_SHORT).show()
+                return@LaunchedEffect
+            }
+            nav.navigate(Routes.viewer(entry.holder().put(listOf(item), 0, title = "Shared link")))
+        }
         // A downloaded update that needs a tap, just above the tab bar.
         Box(Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding() + 8.dp), contentAlignment = androidx.compose.ui.Alignment.BottomCenter) {
             dev.pfeed.update.UpdateBanner()
@@ -226,6 +242,18 @@ private fun MainNav(locked: Boolean) {
 val LocalBottomBarInset = androidx.compose.runtime.staticCompositionLocalOf { 0.dp }
 
 /** Screens can hide the tab bar (the feed does, sideways). */
+/** A link shared into the app, waiting to be opened (MainActivity sets it; AppRoot plays it). */
+object SharedLink {
+    val pending = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+}
+
+@dagger.hilt.EntryPoint
+@dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+interface LinkEntryPoint {
+    fun opener(): dev.pfeed.source.LinkOpener
+    fun holder(): dev.pfeed.data.repo.TransientFeedHolder
+}
+
 object BottomBar {
     var hidden by androidx.compose.runtime.mutableStateOf(false)
     /** Last touch anywhere: over the feed the bar dims while you just watch, and comes back on touch. */
