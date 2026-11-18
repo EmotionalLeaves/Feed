@@ -1,3 +1,11 @@
+## 4.86.0 — 2026-11-18
+Chameleon colour, edge slides, break reminder
+
+- New: Chameleon colour (Settings → Look). The app takes its colour from the post you're on, changing as you scroll.
+- New: Full screen, as in video players. Slide up or down along the left edge for brightness, along the right edge for volume.
+- New: Headphone and remote buttons. Next and previous track go to the next or previous post.
+- New: Break reminder (Settings → Playback, off). A quiet nudge after a long stretch of watching, with a 15-minute sleep timer one tap away.
+
 ## 4.85.0 — 2026-11-18
 Smart folders, secret collections, search combos
 
@@ -16,14 +24,3 @@ For the road, zoom into videos, For You moods
 - New: For You's mood. Hold the For You tab to pick Familiar (more of what you like), Balanced, or Adventurous (lots you haven't seen).
 - New: Save this frame, in the hold menu. Keeps the exact moment as a picture in Saved → Frames.
 - New: Surprise me on Search opens a random topic you haven't explored yet.
-
-## 4.83.0 — 2026-11-18
-Calculator lock, emergency PIN, weekly backups
-
-- New: Calculator lock screen (Settings → Privacy, with the lock on). The lock screen is a working calculator. Type your PIN and press = to get in, or hold = for your fingerprint.
-- New: Emergency PIN. A second PIN that erases everything and closes the app instead of opening it, in case you're ever made to unlock it.
-- New: Back up every week. An encrypted backup goes to a folder you pick (a cloud drive's folder works too). The last 4 are kept.
-- New: Pinch in on the feed to zoom out to the Wall. On a tag or creator page, it goes to the grid.
-- New: Volume keys turn pages (Settings → Playback, off). Volume down goes to the next post, up to the one before.
-- New: Sound only with headphones (off). With just the speaker, the feed stays silent.
-- New: Battery saver (on). At 15% or less, videos drop to 480p and grids stay still until you charge.
