@@ -42,6 +42,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.first
@@ -278,7 +279,6 @@ class FeedViewModel @Inject constructor(
             val list = dev.pfeed.domain.reco.Steer.parse(text, dev.pfeed.domain.reco.Steer.resolver(known))
             if (list.isEmpty()) { offer("Didn't catch that. Try \"more redheads, less cosplay\".", "OK") {}; return@launch }
             dev.pfeed.data.repo.SteerState.set(list)
-            restart()
             offer("For You: " + list.joinToString("  ") { it.label } + ", for the next few hours", "Undo") { clearSteer() }
         }
     }
@@ -286,7 +286,6 @@ class FeedViewModel @Inject constructor(
     fun clearSteer() {
         if (dev.pfeed.data.repo.SteerState.active.value.isEmpty()) return
         dev.pfeed.data.repo.SteerState.clear()
-        restart()
     }
 
     private fun restart() {
@@ -418,6 +417,10 @@ class FeedViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { VolumeKeys.up.collect { if (_muted.value && soundAllowedHere()) _muted.value = false } }
+        // Steering changed (here, or from a blend in Settings): For You starts over with it.
+        if (isMainFeed) viewModelScope.launch {
+            dev.pfeed.data.repo.SteerState.active.drop(1).collect { if (_mode.value == FeedMode.FOR_YOU) restart() }
+        }
     }
 
     /** Audio route went away (headphones unplugged): silence the feed rather than use the speaker. */

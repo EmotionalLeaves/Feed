@@ -39,6 +39,8 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         dev.pfeed.player.PlayerPool.maxHeight = height
     }
 
+    private var readyScheduled: Boolean? = null
+
     override fun onCreate() {
         super.onCreate()
         dev.pfeed.player.ResumePoints.init(this)
@@ -58,6 +60,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 dataSaver = it.dataSaver
                 bestQuality = it.bestQuality
                 dev.pfeed.player.Battery.saverOn = it.batterySaver
+                if (it.readyAhead != readyScheduled) { readyScheduled = it.readyAhead; dev.pfeed.work.ReadyWorker.schedule(this@FeedApp, it.readyAhead) }
                 applyQuality()
             }
         }

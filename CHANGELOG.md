@@ -1,5 +1,14 @@
 # Changelog
 
+## 4.92.0 — 2026-11-18
+
+Ready when you are, and taste blending
+
+- New: Ready when you are (Settings → Playback, on by default). Every few hours on Wi-Fi, while the app is closed, For You fetches and ranks your next posts and loads their pictures, so the app opens straight onto them instead of a spinner. Nothing is shown, learned or marked seen.
+- New: Share your taste (Settings → Interests → Share & blend). A short code holding only the tags you like most; send it to someone.
+- New: Blend with someone's taste. Paste their code and For You mixes their favourites in with yours for the next few hours (the chip on For You shows it; × stops it).
+- Changed: changing what For You is steered by, from anywhere, starts For You over with it.
+
 ## 4.91.0 — 2026-11-18
 
 Tell For You what you want

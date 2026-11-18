@@ -383,6 +383,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     onChange = vm::setBatterySaver,
                 )
                 RowDivider()
+                SwitchSetting(
+                    "Ready when you are",
+                    s.readyAhead,
+                    subtitle = "Every few hours on Wi-Fi, For You gets your next posts ready while the app is closed, so it opens straight onto them",
+                    icon = Icons.Filled.AutoAwesome,
+                    onChange = vm::setReadyAhead,
+                )
+                RowDivider()
                 // What the app has downloaded, refreshed while this screen is open.
                 var used by remember { mutableStateOf(dev.pfeed.data.repo.DataMeter.session() to dev.pfeed.data.repo.DataMeter.month()) }
                 LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3_000); used = dev.pfeed.data.repo.DataMeter.session() to dev.pfeed.data.repo.DataMeter.month() } }

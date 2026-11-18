@@ -219,6 +219,7 @@ class SettingsViewModel @Inject constructor(
     fun setSmartVolume(v: Boolean) = update { it.copy(smartVolume = v) }
     fun setCalculatorLock(v: Boolean) = update { it.copy(calculatorLock = v) }
     fun setBatterySaver(v: Boolean) = update { it.copy(batterySaver = v) }
+    fun setReadyAhead(on: Boolean) = update { it.copy(readyAhead = on) }
     fun setVolumeKeysTurnPages(v: Boolean) = update { it.copy(volumeKeysTurnPages = v) }
     fun setHeadphonesOnly(v: Boolean) = update { it.copy(headphonesOnly = v) }
     fun setBreakReminder(min: Int) = update { it.copy(breakReminderMin = min) }
@@ -314,6 +315,16 @@ class SettingsViewModel @Inject constructor(
     /** The taste engine's interests, as named groups with their share of For You. */
     private val _engineInterests = MutableStateFlow<List<dev.pfeed.domain.reco.TasteEngine.View>>(emptyList())
     val engineInterests: StateFlow<List<dev.pfeed.domain.reco.TasteEngine.View>> = _engineInterests
+
+    /** Your taste as a code to give someone (see [dev.pfeed.domain.reco.TasteCode]). */
+    suspend fun tasteCode(): String? = dev.pfeed.domain.reco.TasteCode.encode(signals.affinities().tags)
+
+    /** Blend someone's taste code into For You for this sitting. False if it isn't a code. */
+    fun blendWith(text: String): Boolean {
+        val tags = dev.pfeed.domain.reco.TasteCode.decode(text) ?: return false
+        dev.pfeed.data.repo.SteerState.set(dev.pfeed.domain.reco.TasteCode.blend(tags))
+        return true
+    }
 
     fun lessOfInterest(index: Int) = viewModelScope.launch { signals.engine.use { it.quieten(index) }; loadInterests() }
     fun forgetEngineInterest(index: Int) = viewModelScope.launch { signals.engine.use { it.forget(index) }; loadInterests() }

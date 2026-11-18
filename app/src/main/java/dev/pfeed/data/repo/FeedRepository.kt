@@ -138,6 +138,30 @@ class FeedSession(
 
     suspend fun loadMore(): LoadResult = kotlinx.coroutines.withContext(SESSION_THREAD) { loadMoreHere() }
 
+    /**
+     * Get For You ready while the app is closed: a couple of rounds of fetching and ranking, then
+     * everything gathered (the ranked batches first) is kept for the next launch's first screen.
+     * Returns how many posts were kept.
+     */
+    suspend fun prepareForLater(rounds: Int = 2, pauseMs: Long = 8_000): Int {
+        val ranked = ArrayList<MediaItem>()
+        repeat(rounds) { i ->
+            ranked += loadMore().items
+            if (i < rounds - 1) kotlinx.coroutines.delay(pauseMs)
+        }
+        return kotlinx.coroutines.withContext(SESSION_THREAD) {
+            collect(library.followsOnce(), null, FeedMode.FOR_YOU)
+            val keep = (ranked + candidates).distinctBy { it.key }
+            poolCache.save(keep)
+            kept = PoolCache.cacheable(keep)
+            kept.size
+        }
+    }
+    private var kept: List<MediaItem> = emptyList()
+
+    /** The first [n] posts [prepareForLater] kept (what the next launch opens on). */
+    fun firstKept(n: Int): List<MediaItem> = kept.take(n)
+
     private suspend fun loadMoreHere(): LoadResult {
         loads++
         val adapters = registry.enabledAdapters()

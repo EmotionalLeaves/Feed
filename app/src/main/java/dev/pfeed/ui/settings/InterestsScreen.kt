@@ -51,6 +51,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.pfeed.domain.reco.Features
+import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.Share
 import dev.pfeed.domain.reco.Ranker
 import dev.pfeed.ui.Routes
 import dev.pfeed.ui.common.EmptyState
@@ -118,6 +120,72 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 }
             }
         }
+        // Share your taste with someone, or blend theirs into yours.
+        val context = androidx.compose.ui.platform.LocalContext.current
+        val scope = androidx.compose.runtime.rememberCoroutineScope()
+        var blending by remember { mutableStateOf(false) }
+        Section("Share & blend", footer = "A taste code holds only the tags you like most and how much. Blending lasts a few hours; stop it from the chip on For You.") {
+            SettingRow(
+                "Share your taste",
+                subtitle = "A short code for someone else's app, so they can blend your taste into theirs",
+                icon = Icons.Filled.Share,
+                onClick = {
+                    scope.launch {
+                        val code = vm.tasteCode()
+                        if (code == null) {
+                            android.widget.Toast.makeText(context, "Nothing learned yet to share", android.widget.Toast.LENGTH_SHORT).show()
+                        } else {
+                            val send = android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain")
+                                .putExtra(android.content.Intent.EXTRA_TEXT, "My taste code (paste it in Your taste → Blend): $code")
+                            runCatching { context.startActivity(android.content.Intent.createChooser(send, "Share your taste")) }
+                        }
+                    }
+                },
+            )
+            RowDivider()
+            SettingRow(
+                "Blend with someone's taste",
+                subtitle = "Paste their code: For You mixes their favourites in with yours",
+                icon = Icons.Filled.AutoAwesome,
+                onClick = { blending = true },
+            )
+        }
+        if (blending) {
+            var text by remember { mutableStateOf("") }
+            val preview = remember(text) { dev.pfeed.domain.reco.TasteCode.decode(text) }
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { blending = false },
+                properties = SecureDialog,
+                title = { Text("Blend with someone's taste") },
+                text = {
+                    Column {
+                        androidx.compose.material3.OutlinedTextField(
+                            value = text, onValueChange = { text = it.take(3000) },
+                            placeholder = { Text("PF1.…") }, maxLines = 3,
+                        )
+                        if (preview != null) {
+                            Text(
+                                "Their favourites: " + preview.take(8).joinToString(", ") { Features.label(it.first).removePrefix("#") },
+                                style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                modifier = Modifier.padding(top = 10.dp),
+                            )
+                        } else if (text.isNotBlank()) {
+                            Text("That isn't a taste code.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = Bad, modifier = Modifier.padding(top = 10.dp))
+                        }
+                    }
+                },
+                confirmButton = {
+                    TextButton(enabled = preview != null, onClick = {
+                        if (vm.blendWith(text)) {
+                            android.widget.Toast.makeText(context, "For You is blended for the next few hours", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                        blending = false
+                    }) { Text("Blend") }
+                },
+                dismissButton = { TextButton(onClick = { blending = false }) { Text("Cancel") } },
+            )
+        }
+
         // Tell it directly, rather than waiting for it to notice.
         Section {
             SettingRow(

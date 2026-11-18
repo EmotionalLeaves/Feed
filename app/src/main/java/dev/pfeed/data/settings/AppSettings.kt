@@ -75,6 +75,8 @@ data class AppSettings(
     val calculatorLock: Boolean = false,
     /** When the battery is low: 480p and still grids, until it's charging. */
     val batterySaver: Boolean = true,
+    /** Every few hours on Wi-Fi, For You is fetched and ranked while the app is closed, so it opens instantly. */
+    val readyAhead: Boolean = true,
     /** Volume down = next post, up = the one before, while a feed is on screen. */
     val volumeKeysTurnPages: Boolean = false,
     /** Sound plays only through headphones; with only the speaker, the feed stays silent. */
