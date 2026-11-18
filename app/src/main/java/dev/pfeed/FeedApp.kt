@@ -37,6 +37,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         lockManager.attach()
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {
             settings.flow.collect {
+                dev.pfeed.ui.theme.Palette.set(it.accent)
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
                 dev.pfeed.source.net.AppProxy.configure(proxyConfig(it))
                 val height = if (it.dataSaver) 480 else 1080

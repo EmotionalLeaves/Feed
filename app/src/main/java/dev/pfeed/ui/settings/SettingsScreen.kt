@@ -1,5 +1,9 @@
 package dev.pfeed.ui.settings
 
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.foundation.border
 import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.size
 import androidx.compose.ui.graphics.Color
@@ -144,7 +148,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             val scroll = rememberScrollState()
             val sectionY = remember { mutableStateMapOf<String, Int>() }
             fun Modifier.anchor(name: String) = onGloballyPositioned { sectionY[name] = it.positionInParent().y.toInt() }
-            val jumpNames = listOf("Feed", "Playback", "Storage", "Privacy", "Network", "Backup", "Help")
+            val jumpNames = listOf("Feed", "Look", "Playback", "Storage", "Privacy", "Network", "Backup", "Help")
             // The section you're in is lit, and its chip kept in view.
             val currentSection by remember {
                 androidx.compose.runtime.derivedStateOf {
@@ -252,6 +256,10 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     icon = Icons.Filled.AutoAwesome,
                     onChange = vm::setHideAiArt,
                 )
+            }
+
+            Section("Look", modifier = Modifier.anchor("Look")) {
+                AccentPicker(dev.pfeed.ui.theme.Palette.current, onPick = vm::setAccent)
             }
 
             Section("Playback", modifier = Modifier.anchor("Playback")) {
@@ -700,6 +708,40 @@ private fun LibraryCard(counts: Triple<Int, Int, Int>, onOpen: () -> Unit) {
                     fontWeight = FontWeight.ExtraBold,
                 )
                 Text(label, style = MaterialTheme.typography.labelMedium, color = TextLow)
+            }
+        }
+    }
+}
+
+/** The app's colour: a row of gradient swatches, the chosen one ringed and named. */
+@Composable
+private fun AccentPicker(current: dev.pfeed.ui.theme.Palette, onPick: (dev.pfeed.ui.theme.Palette) -> Unit) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Colour", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            Text(current.label, style = MaterialTheme.typography.labelLarge, color = dev.pfeed.ui.theme.Accent)
+        }
+        Spacer(Modifier.height(14.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            dev.pfeed.ui.theme.Palette.entries.forEach { p ->
+                val on = p == current
+                val ring by androidx.compose.animation.core.animateDpAsState(if (on) 3.dp else 0.dp, label = "swatchRing")
+                Box(
+                    Modifier.size(42.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                        .border(ring, Color.White, androidx.compose.foundation.shape.CircleShape)
+                        .padding(if (on) 5.dp else 0.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(p.gradient)
+                        .clickable {
+                            haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                            onPick(p)
+                        }
+                        .semantics { contentDescription = p.label + if (on) ", chosen" else "" },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (on) Icon(Icons.Filled.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                }
             }
         }
     }

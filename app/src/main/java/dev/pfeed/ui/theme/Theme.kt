@@ -12,17 +12,39 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * The app's colour, chosen in Settings → Appearance. Two stops: the accent itself and the warmer
+ * (or cooler) second stop of the brand gradient. Held in snapshot state, so everything that reads
+ * [Accent] or [BrandGradient] repaints the moment you pick another.
+ */
+enum class Palette(val label: String, val main: Color, val second: Color) {
+    ROSE("Rose", Color(0xFFFF3D68), Color(0xFFFF7A45)),
+    VIOLET("Violet", Color(0xFF8B5CF6), Color(0xFFEC4899)),
+    OCEAN("Ocean", Color(0xFF3B82F6), Color(0xFF22D3EE)),
+    EMERALD("Emerald", Color(0xFF10B981), Color(0xFF0EA5E9)),
+    AMBER("Amber", Color(0xFFF97316), Color(0xFFEF4444)),
+    CRIMSON("Crimson", Color(0xFFDC2626), Color(0xFF9333EA));
+
+    val gradient: androidx.compose.ui.graphics.Brush get() = androidx.compose.ui.graphics.Brush.linearGradient(listOf(main, second))
+
+    companion object {
+        private val chosen = androidx.compose.runtime.mutableStateOf(ROSE)
+        val current: Palette get() = chosen.value
+        fun set(name: String?) { chosen.value = entries.firstOrNull { it.name.equals(name, true) } ?: ROSE }
+    }
+}
+
 /** Brand accent: used for the one primary action on a screen, selection, and progress. */
-val Accent = Color(0xFFFF3D68)
-val AccentSoft = Color(0x33FF3D68)
-/** The second stop of the brand gradient (pink → coral). */
-val AccentWarm = Color(0xFFFF7A45)
+val Accent: Color get() = Palette.current.main
+val AccentSoft: Color get() = Palette.current.main.copy(alpha = 0.2f)
+/** The second stop of the brand gradient. */
+val AccentWarm: Color get() = Palette.current.second
 
 /**
- * The app's signature: pink into coral. Used only where it counts (the main action on a screen,
+ * The app's signature gradient. Used only where it counts (the main action on a screen,
  * Follow, the like) so it stays distinctive rather than decorative.
  */
-val BrandGradient = androidx.compose.ui.graphics.Brush.linearGradient(listOf(Accent, AccentWarm))
+val BrandGradient: androidx.compose.ui.graphics.Brush get() = Palette.current.gradient
 val HeartRed = Color(0xFFFF2D55)
 val Good = Color(0xFF34D399)
 val Warn = Color(0xFFFBBF24)
@@ -33,10 +55,10 @@ val TextHigh = Color(0xFFF4F4F6)
 val TextMid = Color(0xB3F4F4F6)
 val TextLow = Color(0x73F4F4F6)
 
-private val Scheme = darkColorScheme(
-    primary = Accent,
+private fun scheme(p: Palette) = darkColorScheme(
+    primary = p.main,
+    primaryContainer = p.main.copy(alpha = 0.2f),
     onPrimary = Color.White,
-    primaryContainer = AccentSoft,
     onPrimaryContainer = Color.White,
     secondary = Color(0xFFA1A1AA),
     background = Color(0xFF09090B),
@@ -111,5 +133,7 @@ private val AppShapes = Shapes(
 
 @Composable
 fun PFeedTheme(content: @Composable () -> Unit) {
-    MaterialTheme(colorScheme = Scheme, typography = Type, shapes = AppShapes, content = content)
+    val p = Palette.current
+    val colors = androidx.compose.runtime.remember(p) { scheme(p) }
+    MaterialTheme(colorScheme = colors, typography = Type, shapes = AppShapes, content = content)
 }

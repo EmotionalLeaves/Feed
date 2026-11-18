@@ -211,6 +211,10 @@ class SettingsViewModel @Inject constructor(
     }
     fun setAutoplayOnMobile(v: Boolean) = update { it.copy(autoplayOnMobileData = v) }
     fun setLivePreviews(v: Boolean) = update { it.copy(livePreviews = v) }
+    fun setAccent(p: dev.pfeed.ui.theme.Palette) {
+        dev.pfeed.ui.theme.Palette.set(p.name) // repaint now, not after the write
+        update { it.copy(accent = p.name) }
+    }
     fun setDefaultMute(v: Boolean) = update { it.copy(defaultMute = v) }
     fun setHistoryRetention(days: Int) = update { it.copy(historyRetentionDays = days) }
     fun setEncryptedDns(v: Boolean) = update { it.copy(encryptedDns = v) }
