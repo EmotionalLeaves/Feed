@@ -249,14 +249,21 @@ class FeedSession(
         return computeInterests().also { interestCache = loads to it }
     }
 
-    private suspend fun computeInterests(): List<String> =
-        signals.affinities().tags.entries
+    private suspend fun computeInterests(): List<String> {
+        val tags = signals.affinities().tags
+        // One search per interest the engine knows (so every one of your tastes stays supplied),
+        // then the strongest single tags.
+        val perInterest = signals.engine.use { it.searchTags(tags, MAX_INTERESTS) }
+        val strongest = tags.entries
             .filter { it.value >= INTEREST_MIN_WEIGHT }
             .sortedByDescending { it.value }
-            .take(MAX_INTERESTS)
-            .map { it.key.removePrefix("w:").replace('_', ' ').trim() }
+            .map { it.key }
+        return (perInterest + strongest)
+            .map { it.removePrefix("w:").replace('_', ' ').trim() }
             .filter { it.length >= 2 }
             .distinct()
+            .take(MAX_INTERESTS)
+    }
 
     private suspend fun searchFetch(a: SourceAdapter, query: String, cursor: String?): Result<Page<MediaItem>> = try {
         Result.success(a.search(query, cursor))
@@ -331,6 +338,8 @@ class FeedSession(
         // (often one booru) can't crowd out everything else and make the feed feel single-source.
         // Same idea one level down: no single subreddit/site may fill the pool either, and a big
         // gallery post (30 images on Coomer) contributes a few images, not all of them.
+        // Everything admitted also teaches the taste engine's map which tags go together.
+        val admitted = ArrayList<MediaItem>()
         val perSource = candidates.groupingBy { it.sourceId }.eachCount().toMutableMap()
         val perOrigin = candidates.groupingBy { Spread.origin(it) }.eachCount().toMutableMap()
         items.shuffled().forEach { item ->
@@ -342,6 +351,7 @@ class FeedSession(
             val post = Spread.postKey(item)
             if (post != null && (admittedPerPost[post] ?: 0) >= MAX_PER_POST) return@forEach
             if (candidateKeys.add(item.key)) {
+                admitted += item
                 candidates += item
                 pooledAt[item.key] = loads
                 perSource[item.sourceId] = n + 1
@@ -349,6 +359,7 @@ class FeedSession(
                 if (post != null) admittedPerPost[post] = (admittedPerPost[post] ?: 0) + 1
             }
         }
+        signals.engine.observe(admitted)
         return errors
     }
 
@@ -396,7 +407,10 @@ class FeedSession(
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
             val ranker = Ranker(settings.get().weights)
-            val picked = ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins)
+            // With the taste engine: slots take turns between your interests, scored on the map of meaning.
+            val picked = signals.engine.use { engine ->
+                ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins, engine = engine)
+            }
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {
                 val pickedKeys = picked.mapTo(HashSet()) { it.key }

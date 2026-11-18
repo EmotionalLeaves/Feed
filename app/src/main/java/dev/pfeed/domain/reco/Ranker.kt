@@ -81,12 +81,42 @@ class Ranker(
         allowForcedRun: Boolean = true,
         /** Origins (see [Spread.origin]) of the last [NOVELTY_WINDOW] or so items shown. */
         recentOrigins: Collection<String> = emptySet(),
+        /**
+         * The taste engine (interests on a map of meaning, the current mood). With it, every slot
+         * serves one of your interests in turn, and exploration looks just past what you know
+         * instead of anywhere at random.
+         */
+        engine: TasteEngine? = null,
     ): List<MediaItem> {
         val seenOrigins = HashSet(recentOrigins)
         val relative = relativeQuality(items)
-        val pool = items.map { Candidate(it, baseScore(it, tagAffinity, creatorAffinity, now, relative[it.key] ?: UNKNOWN_QUALITY), signature(it)) }.toMutableList()
+        val pool = items.map {
+            val q = relative[it.key] ?: UNKNOWN_QUALITY
+            var score = baseScore(it, tagAffinity, creatorAffinity, now, q)
+            val vec = engine?.vectorOf(it)
+            var fit = 0.0
+            if (engine != null && vec != null) {
+                fit = engine.interestScore(vec)
+                score += SEMANTIC * fit + MOOD * engine.moodScore(vec) - AVOID * engine.aversion(vec)
+            }
+            Candidate(it, score, signature(it), vec, fit, q, if (engine != null && vec != null) engine.aversion(vec) else 0.0)
+        }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
         val recentSigs = ArrayDeque(recent.takeLast(SIMILARITY_WINDOW).map(::signature))
+        // With the engine: "the same kind of thing" by meaning too, not only by shared tags, over a
+        // slightly longer stretch (people tire of one theme even when the tags differ).
+        val recentVecs = ArrayDeque(if (engine != null) recent.takeLast(SEMANTIC_WINDOW).mapNotNull { engine.vectorOf(it) } else emptyList())
+        fun repetition(c: Candidate): Double {
+            val tags = maxSimilarity(c.sig, recentSigs)
+            val v = c.vec ?: return tags
+            var sem = 0.0
+            recentVecs.forEachIndexed { i, r ->
+                // The nearer in the past, the more it counts.
+                val w = (i + 1).toDouble() / recentVecs.size
+                sem = kotlin.math.max(sem, TasteEngine.cos(v, r) * w)
+            }
+            return kotlin.math.max(tags, REPEAT * sem)
+        }
         val out = ArrayList<MediaItem>(limit.coerceIn(0, items.size))
         // Hard spacing (no runs from one subreddit/site/creator/post) decides which candidates are
         // eligible; the score picks among them. When [allowForcedRun] is false, a pick that would
@@ -94,17 +124,30 @@ class Ranker(
         // one origin; the feed resumes next load once more varied candidates arrive.
         val minLevel = if (allowForcedRun) 0 else Spread.ALL_RULES
         val spread = Spread(recent)
+        var slot = 0
         while (pool.isNotEmpty() && out.size < limit) {
-            val index = if (random.nextDouble() < weights.exploration) {
+            val explore = random.nextDouble() < weights.exploration
+            val index = if (explore && engine != null && engine.interests.isNotEmpty()) {
+                // Exploring with a map: something good you haven't shown a taste for yet (far from
+                // every interest, decent quality), rather than any random post.
+                spread.pick(pool, { it.item }, minLevel) { c ->
+                    (1.0 - c.fit) * 0.6 + c.quality * 0.4 + random.nextDouble() * 0.5 -
+                        1.5 * c.aversion - weights.similarity * repetition(c)
+                }
+            } else if (explore) {
                 spread.pickRandom(pool, { it.item }, random, minLevel)
             } else {
+                // This slot's interest (taking turns, in proportion to how much you like each).
+                val focus = engine?.pickInterest(random)
                 spread.pick(pool, { it.item }, minLevel) { c ->
                     c.score +
+                        (if (focus != null && c.vec != null) SLOT * TasteEngine.cos(focus.centroid, c.vec) else 0.0) +
                         weights.diversity * diversityBonus(c.item.sourceId, window) +
                         (if (Spread.origin(c.item) in seenOrigins) 0.0 else weights.novelty) -
-                        weights.similarity * maxSimilarity(c.sig, recentSigs)
+                        weights.similarity * repetition(c)
                 }
             }
+            slot++
             if (index < 0) break
             val picked = pool.removeAt(index)
             seenOrigins += Spread.origin(picked.item)
@@ -114,6 +157,7 @@ class Ranker(
             if (window.size > DIVERSITY_WINDOW) window.removeFirst()
             recentSigs.addLast(picked.sig)
             if (recentSigs.size > SIMILARITY_WINDOW) recentSigs.removeFirst()
+            picked.vec?.let { recentVecs.addLast(it); if (recentVecs.size > SEMANTIC_WINDOW) recentVecs.removeFirst() }
         }
         return out
     }
@@ -130,7 +174,15 @@ class Ranker(
         else -> 0.0
     }
 
-    private class Candidate(val item: MediaItem, val score: Double, val sig: Set<String>)
+    private class Candidate(
+        val item: MediaItem,
+        val score: Double,
+        val sig: Set<String>,
+        val vec: FloatArray? = null,
+        val fit: Double = 0.0,
+        val quality: Double = UNKNOWN_QUALITY,
+        val aversion: Double = 0.0,
+    )
 
     /**
      * Quality as a percentile within each source's own candidates. Vote scales differ wildly
@@ -156,6 +208,15 @@ class Ranker(
         1.0 - window.count { it == sourceId }.toDouble() / DIVERSITY_WINDOW
 
     companion object {
+        /** Weight of the engine's interest match, the mood, and a disliked direction. */
+        const val SEMANTIC = 0.9
+        const val MOOD = 0.35
+        const val AVOID = 0.8
+        /** Bonus toward the interest a slot is serving. */
+        const val SLOT = 0.6
+        /** Semantic repetition: how many recent posts, and how much a near-twin in meaning counts. */
+        const val SEMANTIC_WINDOW = 4
+        const val REPEAT = 1.2
         const val DIVERSITY_WINDOW = 5
         /** How many recently shown origins count as "seen lately" for the novelty bonus. */
         const val NOVELTY_WINDOW = 80

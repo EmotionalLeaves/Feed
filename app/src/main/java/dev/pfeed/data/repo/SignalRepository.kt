@@ -27,6 +27,8 @@ data class Affinities(val tags: Map<String, Double>, val creators: Map<String, D
 class SignalRepository @Inject constructor(
     private val db: AppDatabase,
     private val settings: SettingsRepository,
+    /** The taste engine (interests on a map of meaning): learns from every reaction recorded here. */
+    val engine: TasteEngineStore,
 ) {
     private val signalDao = db.signalDao()
     private val affinityDao = db.affinityDao()
@@ -67,6 +69,7 @@ class SignalRepository @Inject constructor(
         val delta = SignalWeights.delta(signal)
         // Learn from every tag on the item (plus title keywords where tags are thin), error-driven.
         val tags = Features.of(item)
+        engine.learn(item, delta)
         db.withTransaction {
             signalDao.insert(SignalEntity(itemKey = item.key, type = signal.type.name, value = signal.value, at = now))
             if (tags.isNotEmpty()) {
@@ -104,6 +107,8 @@ class SignalRepository @Inject constructor(
         // Only the words: not "o:search" or "type:image", which would teach a site and a format.
         val tags = Features.of(probe).filterNot(Features::isMeta)
         if (tags.isEmpty()) return
+        // A search or a picked topic also seeds an interest on the map (one per topic you pick).
+        engine.learn(probe, target)
         ensureModel()
         val now = System.currentTimeMillis()
         val model = AffinityModel(settings.get().halfLifeDays)
@@ -131,6 +136,7 @@ class SignalRepository @Inject constructor(
     }
 
     suspend fun reset() {
+        engine.reset()
         db.withTransaction {
             signalDao.clear()
             affinityDao.clearTags()
