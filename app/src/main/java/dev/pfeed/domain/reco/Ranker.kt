@@ -98,8 +98,12 @@ class Ranker(
          * instead of anywhere at random.
          */
         engine: TasteEngine? = null,
+        /** What you asked For You for in words, this sitting (see [Steer]). */
+        steer: List<Steer.Directive> = emptyList(),
     ): List<MediaItem> {
         val seenOrigins = HashSet(recentOrigins)
+        val steering = if (steer.isEmpty()) null else Steering(steer, engine)
+        val items = if (steering == null) items else items.filter(steering::allows)
         val relative = relativeQuality(items)
         // With the engine, every part's weight is also tuned to you (see [TasteEngine.tune]): someone
         // who always stays for the top-voted posts gets votes counted more, someone who doesn't, less.
@@ -116,6 +120,7 @@ class Ranker(
             }
             var score = formatPrior(it)
             for (i in x.indices) score += w[i] * x[i]
+            if (steering != null) score += steering.bonus(it, vec)
             Candidate(it, score, signature(it), vec, x[4], q, x[6], x)
         }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
@@ -183,6 +188,42 @@ class Ranker(
         return out
     }
 
+    /** [Steer] directives applied to posts: which may be shown at all, and how much each one gains or loses. */
+    private class Steering(directives: List<Steer.Directive>, private val engine: TasteEngine?) {
+        private class D(val kind: Steer.Kind, val tag: String, val vec: FloatArray?)
+        private val list = directives.map { d ->
+            // Formats and lengths are exact; subjects also reach posts that mean the same thing.
+            val semantic = !Features.isMeta(d.tag)
+            D(d.kind, d.tag, if (semantic) engine?.tagVector(d.tag) else null)
+        }
+        private val only = list.filter { it.kind == Steer.Kind.ONLY }
+
+        private fun match(d: D, feats: Collection<String>, vec: FloatArray?): Double {
+            if (d.tag in feats) return 1.0
+            if (d.vec == null || vec == null) return 0.0
+            return TasteEngine.cos(d.vec, vec).coerceAtLeast(0.0)
+        }
+
+        fun allows(item: MediaItem): Boolean {
+            val feats = Features.of(item)
+            val vec = engine?.vectorOf(item)
+            if (list.any { it.kind == Steer.Kind.NO && match(it, feats, vec) >= STEER_NEAR }) return false
+            // Only: each "only" holds (only videos + only redheads = videos of redheads).
+            return only.all { match(it, feats, vec) >= STEER_NEAR }
+        }
+
+        fun bonus(item: MediaItem, vec: FloatArray?): Double {
+            val feats = Features.of(item)
+            var b = 0.0
+            for (d in list) when (d.kind) {
+                Steer.Kind.MORE -> b += STEER_BOOST * match(d, feats, vec)
+                Steer.Kind.LESS -> b -= STEER_BOOST * match(d, feats, vec)
+                else -> {}
+            }
+            return b
+        }
+    }
+
     /**
      * A small lean toward video before anything is learned: measured on a fresh install, For You
      * served 35% video and 20% comics, which is backwards for most people opening a porn app. It's
@@ -239,6 +280,10 @@ class Ranker(
         /** Semantic repetition: how many recent posts, and how much a near-twin in meaning counts. */
         const val SEMANTIC_WINDOW = 4
         const val REPEAT = 1.2
+        /** How much "more of"/"less of" moves a post that has the tag (about one strong interest's worth). */
+        const val STEER_BOOST = 0.9
+        /** How close on the map counts as the same thing for "no" and "only". */
+        const val STEER_NEAR = 0.62
         const val DIVERSITY_WINDOW = 5
         /** How many recently shown origins count as "seen lately" for the novelty bonus. */
         const val NOVELTY_WINDOW = 80

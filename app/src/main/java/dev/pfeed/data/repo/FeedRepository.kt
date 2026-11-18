@@ -227,7 +227,9 @@ class FeedSession(
      */
     private fun launchInterestFetches(adapters: List<SourceAdapter>, queries: List<String>): Int {
         if (queries.isEmpty()) return 0
-        val picks = List(minOf(INTERESTS_PER_LOAD, queries.size)) { queries[(interestRound + it) % queries.size] }.distinct()
+        // Anything you asked For You for in words is searched every load, on top of the rotation.
+        val asked = SteerState.current().map { it.tag.replace('_', ' ') }.filter { it in queries }
+        val picks = (asked + List(minOf(INTERESTS_PER_LOAD, queries.size)) { queries[(interestRound + it) % queries.size] }).distinct()
         interestRound += picks.size
         var n = 0
         for (q in picks) for (a in adapters) {
@@ -258,7 +260,11 @@ class FeedSession(
             .filter { it.value >= INTEREST_MIN_WEIGHT }
             .sortedByDescending { it.value }
             .map { it.key }
-        return (perInterest + strongest)
+        // What you asked for in words comes first: those searches go out on the very next load.
+        val asked = SteerState.current()
+            .filter { (it.kind == dev.pfeed.domain.reco.Steer.Kind.MORE || it.kind == dev.pfeed.domain.reco.Steer.Kind.ONLY) && !dev.pfeed.domain.reco.Features.isMeta(it.tag) }
+            .map { it.tag }
+        return (asked + perInterest + strongest)
             .map { it.removePrefix("w:").replace('_', ' ').trim() }
             .filter { it.length >= 2 }
             .distinct()
@@ -409,7 +415,7 @@ class FeedSession(
             val ranker = Ranker(settings.get().weights)
             // With the taste engine: slots take turns between your interests, scored on the map of meaning.
             val picked = signals.engine.use { engine ->
-                ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins, engine = engine)
+                ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins, engine = engine, steer = SteerState.current())
             }
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {

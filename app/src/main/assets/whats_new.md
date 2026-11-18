@@ -1,3 +1,8 @@
+## 4.91.0 — 2026-11-18
+Tell For You what you want
+
+- New: Tell For You what you're in the mood for, in your own words. Hold the For You tab → Tell it what you want: "more redheads, less cosplay", "only amateur", "no feet", "just videos", "short clips and pov". It understands more of, less of, no and only, matches your words to the tags it knows (redheads → redhead, big boobs → big tits), reaches posts that mean the same thing even when they're tagged differently, and searches every site for what you asked for straight away. A chip under the tabs shows what it's following; tap it to change, × to go back to normal. It lapses by itself after a few hours.
+
 ## 4.90.0 — 2026-11-18
 Your taste map, and exploring that finds more of you
 
@@ -17,11 +22,3 @@ A For You that learns you
 - New: Library sort order: newest, oldest, A to Z, most watched.
 - New: Hide from recents (Settings → Privacy) blanks the app in the app switcher.
 - New: Leave to (Settings → Privacy). A panic can land on the browser, calculator or messages instead of the home screen.
-
-## 4.88.0 — 2026-11-18
-Love it, best quality, wrong-PIN alerts
-
-- New: Hold the heart to love a post. It's liked, saved to Favourites, and For You shows you much more like it, with a fountain of hearts.
-- New: Best quality (Settings → Playback). Up to 4K where the site has it.
-- New: Wrong PINs while you were away. After you unlock, a note says how many were typed and when.
-- Changed: Private mode now means always incognito. It also stops seen marks and resume points. For a while only, use Go incognito in the hold menu.

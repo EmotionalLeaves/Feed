@@ -266,6 +266,29 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** What For You is being told in words right now (see [dev.pfeed.domain.reco.Steer]). */
+    val steering: StateFlow<List<dev.pfeed.domain.reco.Steer.Directive>> = dev.pfeed.data.repo.SteerState.active
+
+    /** "more redheads, less cosplay": read it, steer For You by it for this sitting, start fresh. */
+    fun steer(text: String) {
+        viewModelScope.launch {
+            val known = HashMap<String, Int>()
+            runCatching { signals.engine.use { it.space.counted(2) } }.getOrNull()?.let(known::putAll)
+            runCatching { signals.affinities().tags }.getOrNull()?.keys?.forEach { known.merge(it, 50, Int::plus) }
+            val list = dev.pfeed.domain.reco.Steer.parse(text, dev.pfeed.domain.reco.Steer.resolver(known))
+            if (list.isEmpty()) { offer("Didn't catch that. Try \"more redheads, less cosplay\".", "OK") {}; return@launch }
+            dev.pfeed.data.repo.SteerState.set(list)
+            restart()
+            offer("For You: " + list.joinToString("  ") { it.label } + ", for the next few hours", "Undo") { clearSteer() }
+        }
+    }
+
+    fun clearSteer() {
+        if (dev.pfeed.data.repo.SteerState.active.value.isEmpty()) return
+        dev.pfeed.data.repo.SteerState.clear()
+        restart()
+    }
+
     private fun restart() {
         if (isViewer) return
         finishCurrent()

@@ -202,6 +202,9 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
      */
     fun explorationRate(base: Double): Double = base * EXPLORE_SHARE
 
+    /** A tag's direction on the map (null if never seen). */
+    fun tagVector(tag: String): FloatArray? = space.tagVector(Features.normalizeTag(tag))
+
     /** How well [x] fits what you like: the best interest's match, scaled by how well it's going (0..1). */
     fun interestScore(x: FloatArray): Double {
         var best = 0.0
@@ -548,6 +551,9 @@ class TagSpace(val dim: Int = DIM, private val maxTags: Int = MAX_TAGS) {
             for (o in tags) if (o != t) addIndex(ctx, o, idf(o).toFloat())
         }
     }
+
+    /** Every tag seen at least [minCount] times, with how often. */
+    fun counted(minCount: Int): Map<String, Int> = counts.filter { it.value >= minCount }
 
     /** Tags seen at least [minCount] times. */
     fun tags(minCount: Int): List<String> = counts.entries.filter { it.value >= minCount }.map { it.key }

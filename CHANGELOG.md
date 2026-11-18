@@ -1,5 +1,11 @@
 # Changelog
 
+## 4.91.0 — 2026-11-18
+
+Tell For You what you want
+
+- New: Tell For You what you're in the mood for, in your own words. Hold the For You tab → Tell it what you want: "more redheads, less cosplay", "only amateur", "no feet", "just videos", "short clips and pov". It understands more of, less of, no and only, matches your words to the tags it knows (redheads → redhead, big boobs → big tits), reaches posts that mean the same thing even when they're tagged differently, and searches every site for what you asked for straight away. A chip under the tabs shows what it's following; tap it to change, × to go back to normal. It lapses by itself after a few hours.
+
 ## 4.90.0 — 2026-11-18
 
 Your taste map, and exploring that finds more of you
