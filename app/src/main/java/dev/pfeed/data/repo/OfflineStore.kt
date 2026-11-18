@@ -181,6 +181,8 @@ class OfflineStore @Inject constructor(
         if (item.isGallery) item.pages.mapIndexed { i, url -> "${item.key}#$i" to url } else listOf(item.key to null)
 
     private suspend fun keep(item: MediaItem) {
+        // Already on the phone (a saved frame): nothing to download.
+        if (item.extras["media"]?.startsWith("file:") == true) return
         // The thumbnail first, so Saved looks right offline; it's best-effort and not retried on its own.
         val thumb = thumbKey(item.key)
         if (!index.containsKey(hash(thumb)) && item.thumbnailUrl?.startsWith("http") == true) {

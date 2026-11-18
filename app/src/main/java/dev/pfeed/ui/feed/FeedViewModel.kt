@@ -588,6 +588,41 @@ class FeedViewModel @Inject constructor(
             .map { dev.pfeed.domain.reco.Features.label(it.first) }
     }
 
+    /**
+     * Keeps a still from a video: written as a JPEG in the app's own storage (encrypted along with
+     * the rest of the app's data by the phone), saved, and put in the "Frames" collection.
+     */
+    fun saveFrame(context: android.content.Context, from: MediaItem, bitmap: android.graphics.Bitmap, atMs: Long) {
+        viewModelScope.launch {
+            val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val dir = java.io.File(context.filesDir, "frames").apply { mkdirs() }
+                java.io.File(dir, "frame-${System.currentTimeMillis()}.jpg").also { f ->
+                    f.outputStream().use { bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, it) }
+                    bitmap.recycle()
+                }
+            }
+            val uri = android.net.Uri.fromFile(file).toString()
+            val frame = MediaItem(
+                id = "frame/" + file.nameWithoutExtension,
+                sourceId = "direct",
+                type = dev.pfeed.domain.model.MediaType.IMAGE,
+                title = (from.title?.let { "$it · " } ?: "") + "at " + dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt()),
+                creator = from.creator,
+                tags = from.tags,
+                durationSec = null,
+                thumbnailUrl = uri,
+                pageUrl = from.pageUrl,
+                publishedAt = System.currentTimeMillis(),
+                extras = mapOf("media" to uri),
+            )
+            runCatching {
+                library.add(dev.pfeed.data.repo.LibraryKind.SAVED, frame)
+                library.addToCollection(FRAMES, frame)
+            }
+            offer("Frame saved to $FRAMES", "OK") {}
+        }
+    }
+
     /** One reason a post is in For You: what to say, and the page it leads to (a tag or "@creator"). */
     data class Why(val text: String, val page: String?, val strong: Boolean)
 
@@ -712,6 +747,7 @@ class FeedViewModel @Inject constructor(
     fun reportUrl(item: MediaItem): String? = registry.byId(item.sourceId)?.reportUrl(item)
 
     companion object {
+        const val FRAMES = "Frames"
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L
         private const val LOAD_AHEAD = 10

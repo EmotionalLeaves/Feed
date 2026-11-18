@@ -172,7 +172,7 @@ object SourceCatalog {
 
     // ── RedGIFs ─────────────────────────────────────────────────────────────────
 
-    private val redgifsCategories = listOf(
+    val redgifsCategories = listOf(
         "amateur", "homemade", "couple", "real couple", "pov", "close up", "60fps", "4k", "onlyfans",
         "blowjob", "deepthroat", "sloppy blowjob", "throatpie", "face fuck", "handjob", "titfuck", "footjob",
         "anal", "anal creampie", "ass to mouth", "gape", "creampie", "cumshot", "facial", "cum in mouth",

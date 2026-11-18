@@ -83,6 +83,11 @@ object LoopPart {
     val request = MutableStateFlow<String?>(null)
 }
 
+/** "Save this frame" from the hold menu: the post (by key) whose current frame should be kept. */
+object FrameGrab {
+    val request = MutableStateFlow<String?>(null)
+}
+
 /** The app is showing as a small floating window (picture-in-picture): just the video, still playing. */
 object Pip {
     private val _active = MutableStateFlow(false)

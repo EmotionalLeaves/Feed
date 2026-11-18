@@ -284,10 +284,32 @@ fun VideoPage(
     }
     LaunchedEffect(player, muted) { player?.let { dev.pfeed.player.PlayerPool.applyMute(it, muted) } }
 
+    // "Save this frame": copy what's on the video surface right now into Saved (a "Frames" collection).
+    var playerView by remember { mutableStateOf<PlayerView?>(null) }
+    val grab by FrameGrab.request.collectAsState()
+    val grabContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(grab) {
+        if (grab != item.key) return@LaunchedEffect
+        FrameGrab.request.value = null
+        val surface = playerView?.videoSurfaceView as? android.view.SurfaceView
+        val size = player?.videoSize
+        if (surface == null || size == null || size.width == 0 || android.os.Build.VERSION.SDK_INT < 24) {
+            vm.offer("Couldn't capture this one", "OK") {}
+            return@LaunchedEffect
+        }
+        val bitmap = android.graphics.Bitmap.createBitmap(size.width, size.height, android.graphics.Bitmap.Config.ARGB_8888)
+        val ok = kotlinx.coroutines.suspendCancellableCoroutine { cont ->
+            android.view.PixelCopy.request(surface, bitmap, { r -> cont.resume(r == android.view.PixelCopy.SUCCESS) {} }, android.os.Handler(android.os.Looper.getMainLooper()))
+        }
+        if (!ok) { vm.offer("Couldn't capture this one", "OK") {}; return@LaunchedEffect }
+        val at = player?.currentPosition ?: 0L
+        vm.saveFrame(grabContext, item, bitmap, at)
+    }
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
+                    playerView = this
                     useController = false
                     resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
                     setShutterBackgroundColor(AndroidColor.BLACK)

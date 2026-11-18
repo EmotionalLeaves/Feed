@@ -1,5 +1,7 @@
 package dev.pfeed.ui.search
 
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Casino
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import dev.pfeed.ui.feed.Display
@@ -638,6 +640,13 @@ private fun SuggestionsPane(
             }
             Spacer(Modifier.height(16.dp))
         }
+        // Surprise me: somewhere you haven't been. A random topic that isn't one of yours yet.
+        SurpriseCard {
+            val mine = interests.map { it.lowercase() }.toSet()
+            val pool = (dev.pfeed.data.settings.SourceCatalog.redgifsCategories + POPULAR).map { it.lowercase() }.distinct().filter { it !in mine }
+            pool.randomOrNull()?.let(onPick)
+        }
+        Spacer(Modifier.height(22.dp))
         SectionTitle("Popular")
         // Browse cards, two by two, each in a colour of its own (the same colour every time).
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -649,6 +658,40 @@ private fun SuggestionsPane(
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+/** A wide card with a die on it: a random topic you haven't explored. */
+@Composable
+private fun SurpriseCard(onClick: () -> Unit) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val spin = remember { androidx.compose.animation.core.Animatable(0f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp))
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF312E81), Color(0xFF7C3AED), Color(0xFFDB2777))))
+            .clickable {
+                haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                scope.launch {
+                    spin.animateTo(spin.value + 360f, androidx.compose.animation.core.tween(420))
+                    onClick()
+                }
+            }
+            .padding(horizontal = 18.dp, vertical = 16.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(
+            Icons.Filled.Casino,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(34.dp).graphicsLayer { rotationZ = spin.value },
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(Modifier.weight(1f)) {
+            Text("Surprise me", style = MaterialTheme.typography.titleMedium, fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold, color = Color.White)
+            Text("Something you haven't explored yet", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.75f))
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White.copy(alpha = 0.8f))
     }
 }
 
