@@ -117,6 +117,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalView
@@ -366,23 +367,42 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 beyondViewportPageCount = 1,
                 key = { index -> items.getOrNull(index)?.key ?: index },
                 // Pinch in (two fingers together) on the main feed: zoom out to the Wall, as in a photo app.
-                // On a tag's or creator's page: back to its grid. Watched without taking the touch.
+                // On a tag's or creator's page: back to its grid. A quick two-finger tap anywhere: sound
+                // on or off. Watched without taking the touch.
                 modifier = Modifier.fillMaxSize().pointerInput(vm.isMainFeed, profilePage) {
-                    if (!vm.isMainFeed && !profilePage) return@pointerInput
+                    val canPinch = vm.isMainFeed || profilePage
                     awaitPointerEventScope {
                         var start = 0f
+                        var twoAt = 0L
+                        var moved = false
+                        var maxDown = 0
+                        val origin = HashMap<androidx.compose.ui.input.pointer.PointerId, androidx.compose.ui.geometry.Offset>()
                         while (true) {
                             val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
                             val down = e.changes.filter { it.pressed }
+                            down.forEach { c -> origin.getOrPut(c.id) { c.position }.let { o -> if ((c.position - o).getDistance() > TWO_TAP_SLOP) moved = true } }
+                            maxDown = maxOf(maxDown, down.size)
+                            // A two-finger tap's lifts aren't single taps on the post (no pause, no like).
+                            if (maxDown == 2 && down.size < 2 && !moved && twoAt != 0L && e.changes.first().uptimeMillis - twoAt < TWO_TAP_MS) {
+                                e.changes.forEach { if (it.changedToUp()) it.consume() }
+                            }
                             if (down.size == 2) {
+                                if (twoAt == 0L) twoAt = e.changes.first().uptimeMillis
                                 val d = (down[0].position - down[1].position).getDistance()
-                                if (start == 0f) start = if (Zoom.active) -1f else d // zoomed in: that pinch is zooming out
+                                if (start == 0f) start = if (Zoom.active || !canPinch) -1f else d // zoomed in: that pinch is zooming out
                                 else if (start > 0f && d < start * PINCH_TO_WALL) {
                                     start = -1f // once per pinch
                                     pinchHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     if (vm.isMainFeed) wallMode = true else gridView = true
                                 }
-                            } else if (down.isEmpty()) start = 0f
+                            } else if (down.isEmpty()) {
+                                val quick = twoAt != 0L && e.changes.first().uptimeMillis - twoAt < TWO_TAP_MS
+                                if (maxDown == 2 && quick && !moved) {
+                                    pinchHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    vm.toggleMute()
+                                }
+                                start = 0f; twoAt = 0L; moved = false; maxDown = 0; origin.clear()
+                            }
                         }
                     }
                 },
@@ -1891,6 +1911,8 @@ private const val FEEL_PULSE_MS = 45L
 private const val EDGE_SLIDE = 0.18f
 private const val STRETCH_RESET_MS = 10 * 60_000L
 private const val PINCH_TO_WALL = 0.6f
+private const val TWO_TAP_MS = 260L
+private const val TWO_TAP_SLOP = 24f
 private const val LOOP_SLACK_MS = 1_500L
 private const val LOOP_TICK_MS = 80L
 private const val LOOP_MIN_MS = 1_000L
