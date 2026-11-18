@@ -277,14 +277,17 @@ class SearchViewModel @Inject constructor(
             recent.add(query)
             runCatching { signals.recordSearch(query) }
         }
+        // Combos: "anal + pov" needs every part; "-toys" leaves a word out. The sites are asked for
+        // the first part, and the rest is checked against each post's tags and title.
+        val combo = Combo.parse(query)
         job = viewModelScope.launch {
-            repo.search(query).collect { r ->
+            repo.search(combo.ask).collect { r ->
                 _ui.update {
                     it.copy(
                         loading = !r.done,
                         pending = r.pending,
                         total = maxOf(it.total, r.pending),
-                        results = r.items,
+                        results = if (combo.isPlain) r.items else r.items.filter(combo::matches),
                         errors = r.errors,
                         elapsedMs = r.elapsedMs,
                         sourcesWithResults = r.sourcesWithResults,
@@ -330,6 +333,27 @@ class SearchViewModel @Inject constructor(
 }
 
 /** Shown before the first search when nothing has been learned yet. */
+/** A search with "+" (all of these) and "-word" (none of this), checked against tags and titles. */
+internal data class Combo(val ask: String, val need: List<String>, val without: List<String>) {
+    val isPlain: Boolean get() = need.isEmpty() && without.isEmpty()
+
+    fun matches(item: MediaItem): Boolean {
+        val text = (item.tags + listOfNotNull(item.title, item.creator)).joinToString(" ").lowercase().replace('_', ' ')
+        return need.all { it in text } && without.none { it in text }
+    }
+
+    companion object {
+        fun parse(query: String): Combo {
+            val words = query.split(Regex("\\s+")).filter { it.isNotBlank() }
+            val without = words.filter { it.length > 1 && it.startsWith("-") }.map { it.drop(1).lowercase() }
+            val rest = words.filterNot { it.length > 1 && it.startsWith("-") }.joinToString(" ")
+            val parts = rest.split('+').map { it.trim().lowercase().replace('_', ' ') }.filter { it.isNotEmpty() }
+            val ask = parts.firstOrNull() ?: rest.ifBlank { query }
+            return Combo(ask, parts.drop(1), without)
+        }
+    }
+}
+
 private val POPULAR = listOf(
     "amateur", "bondage", "rough", "pov", "blowjob", "anal", "bdsm", "cosplay",
     "milf", "deepthroat", "gangbang", "hentai", "femdom", "lingerie", "creampie", "redhead",
@@ -420,7 +444,11 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
             TextField(
                 value = ui.query,
                 onValueChange = vm::setQuery,
-                placeholder = { Text("Search every site", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
+                placeholder = {
+                    // Now and then, the trick: combine with +, leave out with -.
+                    val tip = remember { (System.currentTimeMillis() / 60_000) % 3 == 0L }
+                    Text(if (tip) "Try: pov + redhead -toys" else "Search every site", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
