@@ -1,3 +1,12 @@
+## 4.81.0 — 2026-11-17
+Updates from GitHub, profiles, colours
+
+- New: Updates straight from GitHub. Every version that passes the tests is published on the project's GitHub releases page. The app checks there every few hours and downloads new versions on Wi-Fi. It checks each download is signed like the app before installing it. Android asks you to confirm the first update; after that, on Android 12 and up, updates can install by themselves once you've left the app. See Settings → Updates.
+- New: Creator and tag pages open as a page, with a big avatar (or # tile), counts, Follow, Play all, Shuffle, related tags and a live grid of everything there.
+- New: Spotlight at the top of Search. One big card per thing you like, playing silently and moving on by itself.
+- New: Long videos: double-tap the left or right edge to skip 10 s, upright too. Keep tapping to skip further.
+- New: Settings → Look: pick the app's colour (Rose, Violet, Ocean, Emerald, Amber, Crimson).
+
 ## 4.80.0 — 2026-11-16
 Live grids, Your week
 
@@ -9,10 +18,3 @@ Picture-in-picture, swipe right to save
 
 - New: Picture-in-picture (Settings → Playback, off by default). Leave the app while a video plays and it keeps going in a small window.
 - New: Swipe right on a post to save it. A 'Save' hint grows at the edge as you pull, and a big bookmark pops when it lands. Swipe left still opens the creator's page.
-
-## 4.78.0 — 2026-11-16
-Your mixes, Clean screen
-
-- New: Your mixes on Search. Playlists that weave two of your interests together, shown as big cards with three covers fanned out. Tap one to play the whole mix.
-- New: Clean screen. In the hold menu, it hides everything over the post: caption, buttons, top bar and tab bar. Touch the screen and a 'Show everything' button appears for a moment.
-- Copy link moved from the round buttons into the menu list to make room.
