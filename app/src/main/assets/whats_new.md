@@ -1,3 +1,12 @@
+## 4.84.0 — 2026-11-18
+For the road, zoom into videos, For You moods
+
+- New: Take 20 for the road, in the hold menu. This post and the next ones are saved to Saved → For the road and downloaded so you can watch them offline. Videos wait for Wi-Fi.
+- New: Pinch to zoom into videos, up to 4×. While zoomed, move around with one finger.
+- New: For You's mood. Hold the For You tab to pick Familiar (more of what you like), Balanced, or Adventurous (lots you haven't seen).
+- New: Save this frame, in the hold menu. Keeps the exact moment as a picture in Saved → Frames.
+- New: Surprise me on Search opens a random topic you haven't explored yet.
+
 ## 4.83.0 — 2026-11-18
 Calculator lock, emergency PIN, weekly backups
 
@@ -24,12 +33,3 @@ Share to Feed, incognito, sleep timer, smart volume
 - New: Updates also check in the background twice a day on Wi-Fi. When Android allows, they install while the app is closed.
 - New: 'Why you're seeing this' in the hold menu now lists what you follow first. Tap a reason to go to its page.
 - New: Data used, this session and this month, in Settings → Playback.
-
-## 4.81.0 — 2026-11-17
-Updates from GitHub, profiles, colours
-
-- New: Updates straight from GitHub. Every version that passes the tests is published on the project's GitHub releases page. The app checks there every few hours and downloads new versions on Wi-Fi. It checks each download is signed like the app before installing it. Android asks you to confirm the first update; after that, on Android 12 and up, updates can install by themselves once you've left the app. See Settings → Updates.
-- New: Creator and tag pages open as a page, with a big avatar (or # tile), counts, Follow, Play all, Shuffle, related tags and a live grid of everything there.
-- New: Spotlight at the top of Search. One big card per thing you like, playing silently and moving on by itself.
-- New: Long videos: double-tap the left or right edge to skip 10 s, upright too. Keep tapping to skip further.
-- New: Settings → Look: pick the app's colour (Rose, Violet, Ocean, Emerald, Amber, Crimson).

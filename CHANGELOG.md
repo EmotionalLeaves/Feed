@@ -1,5 +1,15 @@
 # Changelog
 
+## 4.84.0 — 2026-11-18
+
+For the road, zoom into videos, For You moods
+
+- New: Take 20 for the road, in the hold menu. This post and the next ones are saved to Saved → For the road and downloaded so you can watch them offline. Videos wait for Wi-Fi.
+- New: Pinch to zoom into videos, up to 4×. While zoomed, move around with one finger.
+- New: For You's mood. Hold the For You tab to pick Familiar (more of what you like), Balanced, or Adventurous (lots you haven't seen).
+- New: Save this frame, in the hold menu. Keeps the exact moment as a picture in Saved → Frames.
+- New: Surprise me on Search opens a random topic you haven't explored yet.
+
 ## 4.83.0 — 2026-11-18
 
 Calculator lock, emergency PIN, weekly backups
