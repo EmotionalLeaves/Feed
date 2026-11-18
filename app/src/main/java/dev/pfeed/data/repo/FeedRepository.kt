@@ -364,6 +364,12 @@ class FeedSession(
         val hashBudget = if (shown.isEmpty()) FIRST_HASH_BUDGET_MS else HASH_BUDGET_MS
         val hashes = withTimeoutOrNull(hashBudget) { hasher.hashAll(items) } ?: hasher.cached(items)
         items = dedup.filter(items, hashes)
+        // What each one looks like rides along with it, for the visual side of your taste.
+        items = items.map { item ->
+            val look = hasher.look(item)
+            if (look == null || item.extras.containsKey(dev.pfeed.domain.reco.Visual.EXTRA)) item
+            else item.copy(extras = item.extras + (dev.pfeed.domain.reco.Visual.EXTRA to look))
+        }
         // Cap how many candidates any one source holds in the pool, so the fastest/largest source
         // (often one booru) can't crowd out everything else and make the feed feel single-source.
         // Same idea one level down: no single subreddit/site may fill the pool either, and a big

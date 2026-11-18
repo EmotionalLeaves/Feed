@@ -1,5 +1,12 @@
 # Changelog
 
+## 4.94.0 — 2026-11-18
+
+Your eye
+
+- New: For You learns what you like the look of. Each thumbnail is read on the phone (no AI model, nothing sent anywhere): its colours and brightness, how much skin, how detailed, photo or drawn. Over time a small model learns which looks you stay for, and For You weighs it as much as it proves worth for you. It matters most where tags say little, as on Reddit, where a post's only tag is its subreddit.
+- New: Your eye (Settings → Interests), once it has seen enough: "You stay longer for lots of skin, bright pictures, photos; and pass quicker on drawn art…" And "Why you're seeing this" can say "Looks like what you stay for".
+
 ## 4.93.0 — 2026-11-18
 
 For You knows what time it is

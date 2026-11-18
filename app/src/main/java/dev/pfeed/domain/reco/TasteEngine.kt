@@ -139,6 +139,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             }
         }
         if (moodScore(x) >= MOOD_REASON) out += Reason("Like what you've watched just now", null, false)
+        if (visualScore(item) >= LOOK_REASON) out += Reason("Looks like what you stay for", null, false)
         return out
     }
 
@@ -166,8 +167,15 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
      * One reaction to [item]: [target] as from [Engagement] / [SignalWeights] (about −1 skip … +3
      * like … −8 for Not interested).
      */
+    /** How you react to what posts look like (see [Visual]). */
+    val visual = Visual.Taste()
+
+    /** How much the look of [item] suits you (-1..1; 0 when its thumbnail wasn't read, or early on). */
+    fun visualScore(item: MediaItem): Double = Visual.decode(item.extras[Visual.EXTRA])?.let(visual::score) ?: 0.0
+
     fun learn(item: MediaItem, target: Double) {
         tuneFrom(item.key, target)
+        Visual.decode(item.extras[Visual.EXTRA])?.let { visual.learn(it, target) }
         val x = vectorOf(item) ?: return
         events++
         val near = interests.maxByOrNull { cos(it.centroid, x) }
@@ -426,7 +434,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     /** Forget everything learned (Settings → reset what For You learned). The map of meaning stays. */
     fun resetTaste() {
         interests.clear(); dislikes.clear(); exploredKeys.clear(); exposure.clear(); session = null; sessionStrength = 0.0
-        tune.fill(1.0); tuneBias = 0.0; shownParts.clear()
+        tune.fill(1.0); tuneBias = 0.0; visual.reset(); shownParts.clear()
     }
 
     fun writeTo(out: java.io.DataOutputStream) {
@@ -443,12 +451,13 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         out.writeBoolean(s != null); if (s != null) writeVec(out, s)
         out.writeDouble(sessionStrength)
         out.writeInt(tune.size); tune.forEach { out.writeDouble(it) }
+        visual.writeTo(out)
     }
 
     fun readFrom(input: java.io.DataInputStream) {
         val format = input.readInt()
-        // Format 2 (4.89–4.92) had no time of day; it reads fine, hours start empty.
-        if (format != FORMAT && format != 2) return
+        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste.
+        if (format !in 2..FORMAT) return
         space.readFrom(input)
         interests.clear()
         repeat(input.readInt()) {
@@ -462,15 +471,16 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         session = if (input.readBoolean()) readVec(input) else null
         sessionStrength = input.readDouble()
         repeat(input.readInt()) { i -> val v = input.readDouble(); if (i < tune.size) tune[i] = v }
+        if (format >= 4) visual.readFrom(input)
     }
 
     companion object {
-        private const val FORMAT = 3
+        private const val FORMAT = 4
 
         /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
-        const val PARTS = 7
+        const val PARTS = 8
         /** Their default weights (aversion counts against). */
-        val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8)
+        val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8, Ranker.VISUAL)
         const val TUNE_RATE = 0.05
         const val EXPLORE_SHARE = 0.4
         const val TIME_BINS = 6
@@ -484,6 +494,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val MAX_EXPOSURE = 240
         const val NOVELTY = 1.2
         const val MOOD_REASON = 0.45
+        const val LOOK_REASON = 0.5
         const val QUERY_MIN_COUNT = 3
         const val QUERY_SAME = 0.7
         const val QUERY_MIN_AFFINITY = -0.3

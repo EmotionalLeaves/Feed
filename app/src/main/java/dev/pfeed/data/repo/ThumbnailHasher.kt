@@ -23,6 +23,11 @@ import javax.inject.Singleton
 class ThumbnailHasher @Inject constructor(@ApplicationContext private val context: Context) {
     private val memo = LruCache<String, Long>(4000)
     private val permits = Semaphore(6)
+    /** Each thumbnail's look (see [dev.pfeed.domain.reco.Visual]), encoded. */
+    private val looks = LruCache<String, String>(4000)
+
+    /** The look of [item]'s thumbnail, if it has been read. */
+    fun look(item: MediaItem): String? = item.thumbnailUrl?.let(looks::get)
 
     suspend fun hashAll(items: List<MediaItem>): Map<String, Long?> = coroutineScope {
         items.map { item -> async { item.key to hash(item.thumbnailUrl) } }.awaitAll().toMap()
@@ -43,6 +48,13 @@ class ThumbnailHasher @Inject constructor(@ApplicationContext private val contex
                     ImageRequest.Builder(context).data(url).size(64).allowHardware(false).build(),
                 )
                 val drawable = (result as? SuccessResult)?.drawable ?: return@withTimeoutOrNull null
+                // The same small picture also says what the post looks like (see Visual).
+                runCatching {
+                    val small = drawable.toBitmap(dev.pfeed.domain.reco.Visual.SIDE, dev.pfeed.domain.reco.Visual.SIDE)
+                    val px = IntArray(dev.pfeed.domain.reco.Visual.SIDE * dev.pfeed.domain.reco.Visual.SIDE)
+                    small.getPixels(px, 0, dev.pfeed.domain.reco.Visual.SIDE, 0, 0, dev.pfeed.domain.reco.Visual.SIDE, dev.pfeed.domain.reco.Visual.SIDE)
+                    looks.put(url, dev.pfeed.domain.reco.Visual.encode(dev.pfeed.domain.reco.Visual.describe(px)))
+                }
                 val bitmap = drawable.toBitmap(PerceptualHash.WIDTH, PerceptualHash.HEIGHT)
                 val pixels = IntArray(PerceptualHash.WIDTH * PerceptualHash.HEIGHT)
                 bitmap.getPixels(pixels, 0, PerceptualHash.WIDTH, 0, 0, PerceptualHash.WIDTH, PerceptualHash.HEIGHT)

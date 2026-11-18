@@ -51,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import dev.pfeed.domain.reco.Features
+import androidx.compose.material.icons.filled.Visibility
 import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.Share
 import dev.pfeed.domain.reco.Ranker
@@ -105,6 +106,16 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         sky?.takeIf { it.stars.size >= 5 }?.let { m ->
             Section("Your taste map", footer = "Tags that keep company sit together. Bigger means you like it more; each colour is one of your interests below, glowing by its share of For You. Tap a star to open it.") {
                 TasteMapView(m, onOpenTag = { openTag(nav, it) })
+            }
+        }
+        val eye by vm.eye.collectAsStateWithLifecycle()
+        if (eye.first.isNotEmpty() || eye.second.isNotEmpty()) {
+            Section("Your eye", footer = "Read from the thumbnails of what you stay on and what you flick past, on this phone. It counts most where tags say little.") {
+                SettingRow(
+                    if (eye.first.isNotEmpty()) "You stay longer for " + eye.first.joinToString(", ") else "Still watching what you like the look of",
+                    subtitle = if (eye.second.isNotEmpty()) "and pass quicker on " + eye.second.joinToString(", ") else null,
+                    icon = Icons.Filled.Visibility,
+                )
             }
         }
         if (groups.isNotEmpty()) {

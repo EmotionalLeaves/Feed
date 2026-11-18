@@ -107,7 +107,7 @@ class Ranker(
         val relative = relativeQuality(items)
         // With the engine, every part's weight is also tuned to you (see [TasteEngine.tune]): someone
         // who always stays for the top-voted posts gets votes counted more, someone who doesn't, less.
-        val base = doubleArrayOf(weights.tag, weights.creator, weights.quality, weights.freshness, SEMANTIC, MOOD, -AVOID)
+        val base = doubleArrayOf(weights.tag, weights.creator, weights.quality, weights.freshness, SEMANTIC, MOOD, -AVOID, VISUAL)
         val w = engine?.let { e -> DoubleArray(base.size) { i -> base[i] * e.tune[i] } } ?: base
         val pool = items.map {
             val q = relative[it.key] ?: UNKNOWN_QUALITY
@@ -118,6 +118,7 @@ class Ranker(
             if (engine != null && vec != null) {
                 x[4] = engine.interestScore(vec); x[5] = engine.moodScore(vec); x[6] = engine.aversion(vec)
             }
+            if (engine != null) x[7] = engine.visualScore(it)
             var score = formatPrior(it)
             for (i in x.indices) score += w[i] * x[i]
             if (steering != null) score += steering.bonus(it, vec)
@@ -280,6 +281,8 @@ class Ranker(
         /** Semantic repetition: how many recent posts, and how much a near-twin in meaning counts. */
         const val SEMANTIC_WINDOW = 4
         const val REPEAT = 1.2
+        /** How much a post's look counts (learned per person from what they stay for; see [Visual]). */
+        const val VISUAL = 0.3
         /** How much "more of"/"less of" moves a post that has the tag (about one strong interest's worth). */
         const val STEER_BOOST = 0.9
         /** How close on the map counts as the same thing for "no" and "only". */

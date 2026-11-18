@@ -306,7 +306,12 @@ class SettingsViewModel @Inject constructor(
         val aff = signals.affinities().tags
         _engineInterests.value = signals.engine.use { it.describe(aff) }
         _tasteMap.value = signals.engine.use { it.tasteMap(aff) }
+        _eye.value = signals.engine.use { it.visual.describe() }
     }
+
+    private val _eye = MutableStateFlow<Pair<List<String>, List<String>>>(emptyList<String>() to emptyList())
+    /** What looks you stay for and don't (see [dev.pfeed.domain.reco.Visual.Taste.describe]). */
+    val eye: StateFlow<Pair<List<String>, List<String>>> = _eye
 
     private val _tasteMap = MutableStateFlow<dev.pfeed.domain.reco.TasteEngine.TasteMap?>(null)
     /** Your taste as a picture (see [dev.pfeed.domain.reco.TasteEngine.tasteMap]). */
