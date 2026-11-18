@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.runtime.LaunchedEffect
@@ -200,7 +201,7 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
             }
             if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
             val open = collection
-            if (tab == 0 && open != null) {
+            if (tab == 0 && open != null && !open.startsWith("#")) {
                 androidx.compose.material3.IconButton(onClick = { renaming = open }) {
                     androidx.compose.material3.Icon(Icons.Filled.Edit, contentDescription = "Rename collection")
                 }
@@ -239,9 +240,22 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
         val shuffle: (List<MediaItem>) -> () -> Unit = { list -> { nav.navigate(Routes.viewer(vm.open(list.shuffled(), 0, tabs[tab] + " · shuffled"))) } }
         when (tab) {
             0 -> Column {
-                if (collections.isNotEmpty() || collection != null) CollectionChips(collections, collection, saved.size) { vm.collection.value = it }
+                // Smart folders: Saved sorted by its most common tags, without lifting a finger.
+                val autoTags = remember(saved) {
+                    saved.flatMap { item -> dev.pfeed.ui.feed.Display.tags(item, 12).map { it.first.lowercase() }.distinct() }
+                        .groupingBy { it }.eachCount()
+                        .filter { it.value >= AUTO_TAG_MIN }
+                        .entries.sortedByDescending { it.value }
+                        .take(AUTO_TAG_MAX)
+                        .map { it.key to it.value }
+                }
+                if (collections.isNotEmpty() || collection != null || autoTags.isNotEmpty()) CollectionChips(collections, collection, saved.size, autoTags) { vm.collection.value = it }
                 val open = collection
-                if (open == null) {
+                if (open != null && open.startsWith("#")) {
+                    val tag = open.removePrefix("#")
+                    val l = saved.filter { item -> dev.pfeed.ui.feed.Display.tags(item, 12).any { it.first.equals(tag, ignoreCase = true) } }.found()
+                    Grid(l, Icons.Filled.BookmarkBorder, "Nothing tagged $open", "", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to "Saved" })
+                } else if (open == null) {
                     saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Saved" }) }
                 } else {
                     collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to open }) }
@@ -349,6 +363,7 @@ private fun CollectionChips(
     collections: List<dev.pfeed.data.repo.LibraryRepository.Collection>,
     selected: String?,
     savedCount: Int,
+    autoTags: List<Pair<String, Int>> = emptyList(),
     onSelect: (String?) -> Unit,
 ) {
     androidx.compose.foundation.lazy.LazyRow(
@@ -387,8 +402,21 @@ private fun CollectionChips(
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
             )
         }
+        // The smart folders: your most saved tags, sorted for you.
+        items(autoTags, key = { "#" + it.first }) { (tag, count) ->
+            androidx.compose.material3.FilterChip(
+                selected = selected == "#$tag",
+                onClick = { onSelect("#$tag") },
+                label = { Text("#$tag · $count", maxLines = 1) },
+                leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp)) },
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
+            )
+        }
     }
 }
+
+private const val AUTO_TAG_MIN = 3
+private const val AUTO_TAG_MAX = 6
 
 /** A followed creator or tag: a round initial (or #) in a colour of its own, the name, and Unfollow. */
 @Composable
