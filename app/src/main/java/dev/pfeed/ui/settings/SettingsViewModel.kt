@@ -224,6 +224,7 @@ class SettingsViewModel @Inject constructor(
     fun setBreakReminder(min: Int) = update { it.copy(breakReminderMin = min) }
     fun setBestQuality(v: Boolean) = update { it.copy(bestQuality = v) }
     fun setHideFromRecents(v: Boolean) = update { it.copy(hideFromRecents = v) }
+    fun setPanicTo(v: String) = update { it.copy(panicTo = v) }
     fun setAccent(p: dev.pfeed.ui.theme.Palette) {
         dev.pfeed.ui.theme.Palette.set(p.name) // repaint now, not after the write
         update { it.copy(accent = p.name) }

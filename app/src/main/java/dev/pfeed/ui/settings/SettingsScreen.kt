@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.SelfImprovement
@@ -130,6 +131,7 @@ private sealed interface PendingDialog {
     data class AutoBackupPassword(val folder: Uri) : PendingDialog
     data object ErasePin : PendingDialog
     data object PickBreak : PendingDialog
+    data object PickPanic : PendingDialog
     data object RemoveErasePin : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
@@ -445,6 +447,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     )
                     RowDivider()
                 }
+                SettingRow(
+                    "Leave to",
+                    subtitle = "Where three fingers, a flip or a shake takes you",
+                    value = PANIC_TARGETS.firstOrNull { it.first == s.panicTo }?.second ?: "Home screen",
+                    icon = Icons.AutoMirrored.Filled.ExitToApp,
+                    onClick = { dialog = PendingDialog.PickPanic },
+                )
+                RowDivider()
                 SwitchSetting(
                     "Hide from recent apps",
                     s.hideFromRecents,
@@ -660,6 +670,13 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
             selected = s.historyRetentionDays,
             onDismiss = { dialog = null },
         ) { vm.setHistoryRetention(it); dialog = null }
+        PendingDialog.PickPanic -> ChoiceDialog(
+            title = "Leave to",
+            note = "When you leave in a hurry, the app locks (if the lock is on) and this opens instead, so the screen shows something ordinary.",
+            options = PANIC_TARGETS,
+            selected = s.panicTo,
+            onDismiss = { dialog = null },
+        ) { vm.setPanicTo(it); dialog = null }
         PendingDialog.PickBreak -> ChoiceDialog(
             title = "Break reminder",
             note = "After this long watching without stopping, a quiet message offers a break or a sleep timer. Nothing else changes.",
@@ -989,3 +1006,5 @@ private fun UpdatesCard(updater: dev.pfeed.update.Updater) {
         }
     }
 }
+
+private val PANIC_TARGETS = listOf("home" to "Home screen", "browser" to "Browser (Google)", "calculator" to "Calculator", "messages" to "Messages")

@@ -85,6 +85,8 @@ data class AppSettings(
     val bestQuality: Boolean = false,
     /** Leave the app out of the recent-apps list entirely. */
     val hideFromRecents: Boolean = false,
+    /** Where a panic (three fingers, flip, shake) leaves to: "home", "browser", "calculator" or "messages". */
+    val panicTo: String = "home",
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

@@ -138,10 +138,12 @@ class MainActivity : FragmentActivity() {
     /** Panic: lock immediately and jump to the home screen. Debounced: both detectors may fire for one gesture. */
     private val flip by lazy { dev.pfeed.security.FlipToHide(this) { runOnUiThread { panic() } } }
 
+    @Volatile private var panicTo = "home"
+
     /** "Hide from recent apps": the app's task stays out of the recents list (follows the setting). */
     private fun watchHideFromRecents() {
         lifecycleScope.launch {
-            settingsRepository.flow.map { it.hideFromRecents }.distinctUntilChanged().collect { hide ->
+            settingsRepository.flow.map { panicTo = it.panicTo; it.hideFromRecents }.distinctUntilChanged().collect { hide ->
                 runCatching {
                     (getSystemService(ACTIVITY_SERVICE) as android.app.ActivityManager).appTasks.forEach { it.setExcludeFromRecents(hide) }
                 }
@@ -167,11 +169,15 @@ class MainActivity : FragmentActivity() {
         if (lastPanicAt != 0L && now - lastPanicAt < 1_000L) return
         lastPanicAt = now
         lockManager.lockNow()
-        startActivity(
-            Intent(Intent.ACTION_MAIN)
-                .addCategory(Intent.CATEGORY_HOME)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
+        // Somewhere ordinary to land: the home screen, or an everyday app if you chose one.
+        val home = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val target = when (panicTo) {
+            "browser" -> Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://www.google.com/"))
+            "calculator" -> Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_CALCULATOR)
+            "messages" -> Intent.makeMainSelectorActivity(Intent.ACTION_MAIN, Intent.CATEGORY_APP_MESSAGING)
+            else -> null
+        }?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { startActivity(target ?: home) }.onFailure { startActivity(home) }
     }
 
     override fun onDestroy() {
