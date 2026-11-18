@@ -468,6 +468,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onMode = vm::setMode,
             mood = vm.mood.collectAsStateWithLifecycle().value,
             onMood = if (vm.isMainFeed) vm::setMood else null,
+            showing = vm.showing.collectAsStateWithLifecycle().value,
+            onShowing = if (vm.isMainFeed) vm::setShowing else null,
             onBack = if (!vm.isMainFeed) ({ nav.popBackStack(); Unit }) else null,
             followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
@@ -831,6 +833,8 @@ private fun TopBar(
     onMode: (FeedMode) -> Unit,
     mood: FeedViewModel.Mood = FeedViewModel.Mood.BALANCED,
     onMood: ((FeedViewModel.Mood) -> Unit)? = null,
+    showing: FeedViewModel.Showing? = null,
+    onShowing: ((FeedViewModel.Showing) -> Unit)? = null,
     onBack: (() -> Unit)?,
     followTag: Pair<String, Boolean>?,
     onFollowTag: () -> Unit,
@@ -893,6 +897,22 @@ private fun TopBar(
                                             leadingIcon = { if (md == mood) Icon(Icons.Filled.Check, contentDescription = null, tint = Accent) else Spacer(Modifier.size(24.dp)) },
                                             onClick = { moodOpen = false; onMood(md) },
                                         )
+                                    }
+                                    if (onShowing != null) {
+                                        androidx.compose.material3.HorizontalDivider(Modifier.padding(vertical = 4.dp))
+                                        Text(
+                                            "SHOWING",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = Color.White.copy(alpha = 0.5f),
+                                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                                        )
+                                        FeedViewModel.Showing.entries.forEach { w ->
+                                            androidx.compose.material3.DropdownMenuItem(
+                                                text = { Text(w.label, fontWeight = if (w == showing) FontWeight.Bold else FontWeight.Normal) },
+                                                leadingIcon = { if (w == showing) Icon(Icons.Filled.Check, contentDescription = null, tint = Accent) else Spacer(Modifier.size(24.dp)) },
+                                                onClick = { moodOpen = false; onShowing(w) },
+                                            )
+                                        }
                                     }
                                 }
                             }

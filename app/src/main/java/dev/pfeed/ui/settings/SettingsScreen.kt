@@ -698,7 +698,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         "Swipe left on a post" to "Everything by its creator, from every source",
                         "Swipe right on a post" to "Save it",
                         "Pinch in on the feed" to "Zoom out to the Wall (on a tag or creator page: its grid)",
-                        "Hold \"For You\"" to "Choose its mood: familiar, balanced or adventurous",
+                        "Hold \"For You\"" to "Choose its mood (familiar, balanced, adventurous) and what the feeds show",
                         "Swipe a comic, or tap its left / right edge" to "Turn the page (tap the page count for every page)",
                         "Pinch" to "Zoom; zoomed in, one finger moves around",
                         "Pull down on the first post" to "Fresh posts",

@@ -240,6 +240,24 @@ class FeedViewModel @Inject constructor(
         Mood.entries.minByOrNull { kotlin.math.abs(it.exploration - s.weights.exploration) } ?: Mood.BALANCED
     }.stateIn(viewModelScope, SharingStarted.Eagerly, Mood.BALANCED)
 
+    /** What the main feeds show, as one quick choice (the Settings chips, in short). */
+    enum class Showing(val label: String, val hidden: Set<String>) {
+        EVERYTHING("Everything", emptySet()),
+        VIDEOS("Videos only", setOf("image", "gif", "comic")),
+        PICTURES("Pictures & GIFs", setOf("video", "comic")),
+        COMICS("Comics only", setOf("video", "image", "gif")),
+    }
+
+    val showing: StateFlow<Showing?> = settingsRepo.flow.map { s -> Showing.entries.firstOrNull { it.hidden == s.hiddenFeedTypes } }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, Showing.EVERYTHING)
+
+    fun setShowing(w: Showing) {
+        viewModelScope.launch {
+            settingsRepo.update { it.copy(hiddenFeedTypes = w.hidden) }
+            restart()
+        }
+    }
+
     fun setMood(m: Mood) {
         viewModelScope.launch {
             settingsRepo.update { it.copy(weights = it.weights.copy(exploration = m.exploration, novelty = m.novelty)) }
