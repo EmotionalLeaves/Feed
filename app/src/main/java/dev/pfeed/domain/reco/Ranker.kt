@@ -142,8 +142,9 @@ class Ranker(
         val minLevel = if (allowForcedRun) 0 else Spread.ALL_RULES
         val spread = Spread(recent)
         var slot = 0
+        val exploration = engine?.explorationRate(weights.exploration) ?: weights.exploration
         while (pool.isNotEmpty() && out.size < limit) {
-            val explore = random.nextDouble() < weights.exploration
+            val explore = random.nextDouble() < exploration
             val index = if (explore && engine != null && engine.interests.isNotEmpty()) {
                 // Exploring with a map: something good you haven't shown a taste for yet (far from
                 // every interest, decent quality), rather than any random post.

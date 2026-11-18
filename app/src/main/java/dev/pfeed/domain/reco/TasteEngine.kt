@@ -42,6 +42,13 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         /** How sure we are it's real: grows with evidence. */
         val confidence: Double get() = alpha / (alpha + 2.0)
         val mean: Double get() = sum / count
+        /** The last few reactions only (fast fading): a sudden change shows here long before in [mean]. */
+        var lately: Double = Double.NaN
+        /**
+         * What to go by now: the long view, unless lately has turned worse; then mostly lately (a
+         * taste you've gone off shouldn't keep its slots for a dozen more posts while the mean catches up).
+         */
+        val current: Double get() = if (lately.isNaN() || lately >= mean) mean else mean + LATELY_PULL * (lately - mean)
         /** Stride-scheduling position: the interest with the lowest pass serves the next slot. */
         var pass: Double = 0.0
     }
@@ -107,6 +114,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             if (target > 0) near.alpha += target * sim else near.beta += -target * sim
             near.sum = near.sum * FADE + target * sim
             near.count = near.count * FADE + sim
+            near.lately = if (near.lately.isNaN()) near.mean else near.lately + LATELY_RATE * sim * (target - near.lately)
         }
         if (target > POSITIVE) {
             if (near != null && sim >= MERGE) {
@@ -137,11 +145,19 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         if (interests.size > MAX_INTERESTS) interests.remove(interests.minBy { it.mean * it.confidence })
     }
 
+    /**
+     * How often to explore. Exploring on the map (just past what you know, good posts, nothing like
+     * what you turned down) finds a new taste in far fewer tries than random posts did, so it needs
+     * fewer slots: in the simulated world 40% of the old rate gave the best feeds, and shifts of
+     * taste were still followed as fast. "Random discoveries" still sets the level.
+     */
+    fun explorationRate(base: Double): Double = base * EXPLORE_SHARE
+
     /** How well [x] fits what you like: the best interest's match, scaled by how well it's going (0..1). */
     fun interestScore(x: FloatArray): Double {
         var best = 0.0
         for (i in interests) {
-            if (i.mean <= 0) continue
+            if (i.current <= 0) continue
             val sim = cos(i.centroid, x)
             if (sim <= 0) continue
             best = max(best, sim * i.rate * (0.5 + 0.5 * i.confidence))
@@ -169,14 +185,14 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
 
     /** Which interest the next slot serves (see inside). Null when nothing's been learned yet. */
     fun pickInterest(random: kotlin.random.Random): Interest? {
-        val liked = interests.filter { it.mean > SERVE_MIN }
+        val liked = interests.filter { it.current > SERVE_MIN }
         if (liked.isEmpty()) return null
         // Each interest's share of slots: a Thompson draw of how much you enjoy it (its mean, give
         // or take how unsure we still are), sharpened so the favourite leads without starving the
         // rest. Slots are then dealt out by stride scheduling: whoever is furthest behind its share
         // goes next. Your tastes interleave (A B C A B A C…) instead of running in streaks, and a
         // taste that starts missing loses share at once.
-        val draws = liked.associateWith { i -> kotlin.math.exp((i.mean + gaussian(random) * SPREAD / sqrt(i.count + 1.0)) / TEMPERATURE) }
+        val draws = liked.associateWith { i -> kotlin.math.exp((i.current + gaussian(random) * SPREAD / sqrt(i.count + 1.0)) / TEMPERATURE) }
         val total = draws.values.sum()
         val minPass = liked.minOf { it.pass }
         liked.forEach { if (it.pass < minPass) it.pass = minPass }
@@ -189,21 +205,37 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     /**
-     * Tags to search for, one per interest (strongest first): the tag that best names each interest
-     * (closest to its centre, among tags you've actually engaged with), so searches keep every one of
-     * your tastes supplied, not just the top one.
+     * What to search the sites for, one query per interest you're enjoying now (sour ones get none):
+     * the tag that sits closest to the interest's centre on the map. It needn't be a tag you've
+     * liked yet; a taste you found two posts ago gets its own searches straight away, which is most
+     * of how a change of taste is followed (the general feeds carry only a trickle of any one theme).
      */
     fun searchTags(affinity: Map<String, Double>, limit: Int = 3): List<String> {
-        val liked = affinity.filter { it.value > 0.3 && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
-        if (liked.isEmpty()) return emptyList()
+        val serving = interests.filter { it.current > SERVE_MIN && it.current > 0 }
+            .sortedByDescending { it.current * (0.5 + 0.5 * it.confidence) }
+        if (serving.isEmpty()) return emptyList()
+        val candidates = space.tags(QUERY_MIN_COUNT)
+            .filter { !Features.isMeta(it) && !it.startsWith("w:") && (affinity[it] ?: 0.0) > QUERY_MIN_AFFINITY }
+            .mapNotNull { t -> space.tagVector(t)?.let { t to it } }
         val out = ArrayList<String>()
-        for (i in interests.sortedByDescending { it.rate * it.confidence }) {
-            val tag = liked.keys.filter { it !in out }.maxByOrNull { t ->
-                val v = space.tagVector(t) ?: return@maxByOrNull -1.0
-                cos(i.centroid, v) + 0.05 * (liked[t] ?: 0.0)
+        val covered = ArrayList<FloatArray>()
+        for (i in serving) {
+            // Two interests that are nearly the same thing share one search.
+            if (covered.any { cos(it, i.centroid) >= QUERY_SAME }) continue
+            covered += i.centroid
+            val best = candidates.filter { it.first !in out }.maxByOrNull { (t, v) ->
+                cos(i.centroid, v) + 0.05 * (affinity[t] ?: 0.0).coerceIn(-1.0, 1.0) - 0.5 * aversion(v)
             } ?: continue
-            out += tag
+            out += best.first
             if (out.size >= limit) break
+        }
+        // Room left: your best-liked tags, nearest your interests first.
+        if (out.size < limit) {
+            val liked = affinity.filter { it.value > 0.3 && it.key !in out && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
+            liked.keys.sortedByDescending { t ->
+                val v = space.tagVector(t) ?: return@sortedByDescending -1.0
+                (serving.maxOfOrNull { cos(it.centroid, v) } ?: 0.0) + 0.05 * (liked[t] ?: 0.0)
+            }.take(limit - out.size).forEach { out += it }
         }
         return out
     }
@@ -218,8 +250,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     fun describe(affinity: Map<String, Double>): List<View> {
         val liked = affinity.filter { it.value > 0.2 && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
         val vecs = liked.keys.associateWith { space.tagVector(it) }
-        val served = interests.filter { it.mean > SERVE_MIN }
-        val weights = served.associateWith { kotlin.math.exp(it.mean / TEMPERATURE) }
+        val served = interests.filter { it.current > SERVE_MIN }
+        val weights = served.associateWith { kotlin.math.exp(it.current / TEMPERATURE) }
         val total = weights.values.sum().coerceAtLeast(1e-9)
         return interests.mapIndexedNotNull { idx, i ->
             val names = vecs.entries
@@ -228,7 +260,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
                 .sortedByDescending { it.second + 0.02 * (liked[it.first] ?: 0.0) }
                 .take(3).map { it.first }
             if (names.isEmpty()) return@mapIndexedNotNull null
-            View(idx, names, (weights[i] ?: 0.0) / total, i.mean, i.mean <= SERVE_MIN)
+            View(idx, names, (weights[i] ?: 0.0) / total, i.current, i.current <= SERVE_MIN)
         }.sortedByDescending { it.share }
     }
 
@@ -288,6 +320,12 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         /** Their default weights (aversion counts against). */
         val DEFAULT_PART = doubleArrayOf(1.0, 0.6, 0.3, 0.15, 0.9, 0.35, -0.8)
         const val TUNE_RATE = 0.05
+        const val EXPLORE_SHARE = 0.4
+        const val QUERY_MIN_COUNT = 3
+        const val QUERY_SAME = 0.7
+        const val QUERY_MIN_AFFINITY = -0.3
+        const val LATELY_RATE = 0.3
+        const val LATELY_PULL = 0.6
         const val TUNE_PULL = 0.002
         const val TUNE_MIN = 0.25
         const val TUNE_MAX = 3.0
@@ -396,6 +434,9 @@ class TagSpace(val dim: Int = DIM, private val maxTags: Int = MAX_TAGS) {
             for (o in tags) if (o != t) addIndex(ctx, o, idf(o).toFloat())
         }
     }
+
+    /** Tags seen at least [minCount] times. */
+    fun tags(minCount: Int): List<String> = counts.entries.filter { it.value >= minCount }.map { it.key }
 
     /** How informative a tag is: rare tags say more than ones on every post. */
     fun idf(tag: String): Double = ln((posts + 1.0) / ((counts[tag] ?: 0) + 1.0)) + 1.0

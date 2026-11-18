@@ -7,6 +7,7 @@ A For You that learns you
 - New: For You has a new brain. It learns a map of what tags mean from what it sees, keeps several separate interests instead of one average, gives each a share of the feed by how much you enjoy it, follows the mood you're in right now, and steers away from what you skip or reject. In a simulated world, first batches land 45-65% more often and a change of taste is followed about 30% sooner.
 - New: Your interests (Settings → Interests). The groups For You has found in your taste, named by their tags, with each one's share. Less of this, or Forget.
 - New: For You learns which things matter to you (tags, creators, quality, freshness), and weighs them your way.
+- Better: For You searches the sites for each of your tastes by the tag at its heart on the map, even one you found two posts ago, so a new taste fills the feed sooner. Tastes you've gone off lose their place within a few posts. Exploring on the map needs fewer wasted slots.
 - New: Peek in grids. Hold a tile to see it big; let go to close.
 - New: Library sort order: newest, oldest, A to Z, most watched.
 - New: Hide from recents (Settings → Privacy) blanks the app in the app switcher.
