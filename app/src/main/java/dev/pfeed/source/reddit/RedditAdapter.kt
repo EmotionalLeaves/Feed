@@ -157,7 +157,28 @@ class RedditAdapter @Inject constructor(
         (items + subResults.flatten() + poolMatches(query)).distinctBy { it.key }
     }
 
+    /** One comment under a Reddit post, as Reddit shows it (top first). */
+    data class Comment(val author: String, val body: String, val score: Int)
+
+    /** The post's top comments, read-only (no sign-in): what people said under it. */
+    suspend fun comments(item: MediaItem, limit: Int = 25): List<Comment> {
+        val link = item.pageUrl.takeIf { "/comments/" in it } ?: return emptyList()
+        val url = link.substringBefore('?').trimEnd('/') + ".json?limit=$limit&depth=1&sort=top&raw_json=1"
+        val root = http.get(id, url) as? kotlinx.serialization.json.JsonArray ?: return emptyList()
+        val children = (((root.getOrNull(1) as? kotlinx.serialization.json.JsonObject)?.get("data") as? kotlinx.serialization.json.JsonObject)
+            ?.get("children") as? kotlinx.serialization.json.JsonArray) ?: return emptyList()
+        return children.mapNotNull { c ->
+            val d = (c as? kotlinx.serialization.json.JsonObject)?.get("data") as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+            fun str(k: String) = (d[k] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+            val body = str("body")?.takeIf { it.isNotBlank() && it != "[deleted]" && it != "[removed]" } ?: return@mapNotNull null
+            val author = str("author") ?: "someone"
+            if (author == "AutoModerator") return@mapNotNull null
+            Comment(author, body.take(MAX_COMMENT), (d["score"] as? kotlinx.serialization.json.JsonPrimitive)?.content?.toIntOrNull() ?: 0)
+        }
+    }
+
     companion object {
+        private const val MAX_COMMENT = 600
         /**
          * www only: old.reddit.com has a separate budget but answers feeds with a "Welcome to
          * Reddit" page (checked live), and every other alias redirects to www.

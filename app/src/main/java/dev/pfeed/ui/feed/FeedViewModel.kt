@@ -673,6 +673,13 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** What people said under a Reddit post (empty for anything else, or if Reddit won't say). */
+    suspend fun comments(item: MediaItem): List<dev.pfeed.source.reddit.RedditAdapter.Comment> {
+        if (item.sourceId != dev.pfeed.source.parse.RedditParser.SOURCE_ID) return emptyList()
+        val reddit = registry.byId(item.sourceId) as? dev.pfeed.source.reddit.RedditAdapter ?: return emptyList()
+        return try { reddit.comments(item) } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }
+    }
+
     /** One reason a post is in For You: what to say, and the page it leads to (a tag or "@creator"). */
     data class Why(val text: String, val page: String?, val strong: Boolean)
 

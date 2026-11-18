@@ -1,5 +1,6 @@
 package dev.pfeed.ui.feed
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.foundation.clickable
@@ -28,6 +29,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.ChatBubbleOutline
 import androidx.compose.material.icons.filled.Brightness4
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -98,6 +101,34 @@ fun ItemMenuSheet(
             val mode = pickTag
             if (mode == "collect") {
                 CollectionPicker(item, vm, onBack = { pickTag = null }, onDone = onDismiss)
+                return@Column
+            }
+            if (mode == "comments") {
+                ListItem(
+                    headlineContent = { Text("Comments on Reddit", fontWeight = FontWeight.Bold) },
+                    leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
+                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                    modifier = Modifier.clickable { pickTag = null },
+                )
+                HorizontalDivider()
+                val comments by androidx.compose.runtime.produceState<List<dev.pfeed.source.reddit.RedditAdapter.Comment>?>(initialValue = null, item.key) { value = vm.comments(item) }
+                val list = comments
+                when {
+                    list == null -> Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) { dev.pfeed.ui.common.BrandSpinner() }
+                    list.isEmpty() -> Text("No comments to show", color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f), modifier = Modifier.padding(20.dp))
+                    else -> list.forEach { c ->
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("u/${c.author}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Spacer(Modifier.width(8.dp))
+                                Icon(Icons.Filled.ArrowUpward, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                Text("${c.score}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                            }
+                            Spacer(Modifier.height(3.dp))
+                            Text(c.body, style = MaterialTheme.typography.bodyMedium, maxLines = 8, overflow = TextOverflow.Ellipsis)
+                        }
+                    }
+                }
                 return@Column
             }
             if (mode == "sleep") {
@@ -233,6 +264,9 @@ fun ItemMenuSheet(
                 ) { FeelTheSound.set(!feel); onDismiss() }
             }
             if (onForTheRoad != null) MenuRow("Take 20 for the road", Icons.Filled.FlightTakeoff, "This and the next posts, downloaded to watch offline") { onForTheRoad(); onDismiss() }
+            if (item.sourceId == dev.pfeed.source.parse.RedditParser.SOURCE_ID && "/comments/" in item.pageUrl) {
+                MenuRow("Comments", Icons.Filled.ChatBubbleOutline, "What people said under it on Reddit") { pickTag = "comments" }
+            }
             val dim by Dimmer.level.collectAsStateWithLifecycle()
             MenuRow(
                 if (dim == 0f) "Dim the screen" else "Dim: ${(dim * 100).toInt()}% (tap for more, then off)",
