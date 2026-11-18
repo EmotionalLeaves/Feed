@@ -50,7 +50,7 @@ class LivePreviews @Inject constructor(
     /** On in Settings, and either on Wi-Fi or allowed to autoplay on mobile data. */
     suspend fun allowed(): Boolean {
         val s = settings.flow.first()
-        return s.livePreviews && (s.autoplayOnMobileData || !network.isMetered)
+        return s.livePreviews && (s.autoplayOnMobileData || !network.isMetered) && !dev.pfeed.player.Battery.saving
     }
 
     private companion object { const val MAX_REMEMBERED = 300 }

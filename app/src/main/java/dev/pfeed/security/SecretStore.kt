@@ -64,6 +64,27 @@ class SecretStore @Inject constructor(@ApplicationContext context: Context) {
         return raw
     }
 
+    /** A small secret kept wrapped by the Keystore key (the automatic-backup password). */
+    @Synchronized
+    fun putSecret(name: String, value: String?) {
+        if (value == null) { prefs.edit().remove("secret_$name").apply(); return }
+        val cipher = Cipher.getInstance(AES_GCM)
+        cipher.init(Cipher.ENCRYPT_MODE, keystoreKey())
+        val ct = cipher.doFinal(value.toByteArray(Charsets.UTF_8))
+        prefs.edit().putString("secret_$name", b64(cipher.iv) + ":" + b64(ct)).apply()
+    }
+
+    @Synchronized
+    fun secret(name: String): String? {
+        val stored = prefs.getString("secret_$name", null) ?: return null
+        return runCatching {
+            val (iv, ct) = stored.split(':').map(::unb64)
+            val cipher = Cipher.getInstance(AES_GCM)
+            cipher.init(Cipher.DECRYPT_MODE, keystoreKey(), GCMParameterSpec(128, iv))
+            String(cipher.doFinal(ct), Charsets.UTF_8)
+        }.getOrNull()
+    }
+
     private fun keystoreKey(): SecretKey {
         val ks = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
         (ks.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }

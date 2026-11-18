@@ -29,6 +29,15 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
+    @Volatile private var dataSaver = false
+
+    /** 480p with Data saver on, or while the battery is low (battery saver); 1080p otherwise. */
+    private fun applyQuality() {
+        val height = if (dataSaver || dev.pfeed.player.Battery.saving) 480 else 1080
+        dev.pfeed.source.tube.TubeSite.maxHeight = height
+        dev.pfeed.player.PlayerPool.maxHeight = height
+    }
+
     override fun onCreate() {
         super.onCreate()
         dev.pfeed.player.ResumePoints.init(this)
@@ -43,11 +52,12 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 dev.pfeed.ui.lock.LockLook.calculator.value = it.calculatorLock
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
                 dev.pfeed.source.net.AppProxy.configure(proxyConfig(it))
-                val height = if (it.dataSaver) 480 else 1080
-                dev.pfeed.source.tube.TubeSite.maxHeight = height
-                dev.pfeed.player.PlayerPool.maxHeight = height
+                dataSaver = it.dataSaver
+                dev.pfeed.player.Battery.saverOn = it.batterySaver
+                applyQuality()
             }
         }
+        dev.pfeed.player.Battery.init(this) { applyQuality() }
         // Updates from GitHub: look as the app comes up; a downloaded one that can go in without a
         // prompt is installed once you've left the app, so it never closes in front of you.
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {

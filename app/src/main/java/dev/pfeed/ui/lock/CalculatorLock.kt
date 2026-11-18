@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -83,12 +84,12 @@ fun CalculatorLock(lock: AppLockManager, onBiometric: () -> Unit) {
         )
         Text(
             calc.display,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp).testTag("calc_display"),
             color = Color.White,
             fontSize = if (calc.display.length > 9) 44.sp else 64.sp,
             fontWeight = FontWeight.Light,
             textAlign = TextAlign.End,
             maxLines = 1,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 12.dp),
         )
         val rows = listOf(
             listOf("C", "±", "%", "÷"),
@@ -105,7 +106,7 @@ fun CalculatorLock(lock: AppLockManager, onBiometric: () -> Unit) {
                             val op = k in OPS || k == "="
                             val fn = k in setOf("C", "±", "%")
                             Box(
-                                Modifier.weight(1f).aspectRatio(1f).clip(CircleShape)
+                                Modifier.weight(1f).aspectRatio(1f).testTag("calc_$k").clip(CircleShape)
                                     .background(
                                         when {
                                             op -> Color(0xFFFF9F0A)

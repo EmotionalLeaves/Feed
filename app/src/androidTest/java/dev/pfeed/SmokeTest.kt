@@ -10,6 +10,7 @@ import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.swipe
@@ -497,7 +498,22 @@ class SmokeTest {
             rule.runOnUiThread { lm.lockNow() }
             Thread.sleep(800)
             shot("09_lock")
-            runBlocking { lm.unlockWithPin("1234".toCharArray()); lm.disable("1234".toCharArray()) }
+            // The calculator lock: works as a calculator, and the PIN then = opens the app.
+            runCatching {
+                rule.runOnUiThread { dev.pfeed.ui.lock.LockLook.calculator.value = true }
+                waitFor(what = "calculator lock", timeoutMs = 5_000) { rule.onAllNodes(hasTestTag("calc_÷")).fetchSemanticsNodes().isNotEmpty() }
+                fun key(k: String) = rule.onNode(hasTestTag("calc_$k")).performClick()
+                listOf("7", "×", "6", "=").forEach(::key)
+                rule.waitForIdle()
+                val sums = rule.onNode(hasTestTag("calc_display")).fetchSemanticsNode().config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.joinToString() == "42"
+                shot("09b_calculator_lock")
+                key("C")
+                listOf("1", "2", "3", "4", "=").forEach(::key)
+                waitFor(what = "unlocked by the calculator", timeoutMs = 8_000) { !lm.locked.value }
+                android.util.Log.i("PFHEALTH", "calculator lock: 7×6 ${if (sums) "= 42" else "wrong"}; PIN then = unlocked")
+            }.onFailure { android.util.Log.i("PFHEALTH", "calculator lock: failed (${it.message?.take(80)})") }
+            rule.runOnUiThread { dev.pfeed.ui.lock.LockLook.calculator.value = false }
+            runBlocking { if (lm.locked.value) lm.unlockWithPin("1234".toCharArray()); lm.disable("1234".toCharArray()) }
             // The first-run topic picker, as a new install sees it.
             rule.activity.getSharedPreferences("ui_hints", android.content.Context.MODE_PRIVATE).edit().remove("interests_asked").commit()
             dev.pfeed.ui.feed.FirstRun.askInterests = true

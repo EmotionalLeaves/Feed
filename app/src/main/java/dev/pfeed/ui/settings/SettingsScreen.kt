@@ -39,6 +39,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.GraphicEq
@@ -120,6 +122,7 @@ private sealed interface PendingDialog {
     data object Gestures : PendingDialog
     data object EraseAll : PendingDialog
     data class ExportPassword(val uri: Uri) : PendingDialog
+    data class AutoBackupPassword(val folder: Uri) : PendingDialog
     data class ImportPassword(val uri: Uri) : PendingDialog
 }
 
@@ -143,6 +146,9 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
         if (uri != null) dialog = PendingDialog.ExportPassword(uri)
+    }
+    val folderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) dialog = PendingDialog.AutoBackupPassword(uri)
     }
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) dialog = PendingDialog.ImportPassword(uri)
@@ -324,6 +330,15 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     onChange = vm::setDataSaver,
                 )
                 RowDivider()
+                val batteryLow by dev.pfeed.player.Battery.low.collectAsStateWithLifecycle()
+                SwitchSetting(
+                    "Battery saver",
+                    s.batterySaver,
+                    subtitle = (if (batteryLow && s.batterySaver) "Saving now: " else "") + "at 15% or less, videos drop to 480p and grids stay still until you charge",
+                    icon = Icons.Filled.BatterySaver,
+                    onChange = vm::setBatterySaver,
+                )
+                RowDivider()
                 // What the app has downloaded, refreshed while this screen is open.
                 var used by remember { mutableStateOf(dev.pfeed.data.repo.DataMeter.session() to dev.pfeed.data.repo.DataMeter.month()) }
                 LaunchedEffect(Unit) { while (true) { kotlinx.coroutines.delay(3_000); used = dev.pfeed.data.repo.DataMeter.session() to dev.pfeed.data.repo.DataMeter.month() } }
@@ -482,6 +497,21 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                 SettingRow("Export backup", icon = Icons.Filled.Upload, iconTint = TextLow, onClick = { exportLauncher.launch("feed-backup.json") })
                 RowDivider()
                 SettingRow("Import backup", icon = Icons.Filled.Download, iconTint = TextLow, onClick = { importLauncher.launch(arrayOf("application/json", "*/*")) })
+                RowDivider()
+                val auto by vm.autoBackup.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { while (true) { vm.refreshAutoBackup(); kotlinx.coroutines.delay(5_000) } }
+                SwitchSetting(
+                    "Back up every week",
+                    auto.folder != null,
+                    subtitle = when {
+                        auto.folder == null -> "To a folder you pick (a cloud drive's works too), encrypted with a password; the last 4 are kept"
+                        auto.error != null -> "Last try failed: ${auto.error}"
+                        auto.last > 0 -> "Last backup " + android.text.format.DateUtils.getRelativeTimeSpanString(auto.last)
+                        else -> "Writing the first one…"
+                    },
+                    icon = Icons.Filled.CloudUpload,
+                    onChange = { on -> if (on) runCatching { folderLauncher.launch(null) } else vm.stopAutoBackup() },
+                )
             }
 
             val context = androidx.compose.ui.platform.LocalContext.current
@@ -588,6 +618,9 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
         ) { vm.setCacheSize(it); dialog = null }
         is PendingDialog.ExportPassword -> PasswordDialog("Encrypt export", confirmTwice = true, onDismiss = { dialog = null }) {
             vm.exportSettings(d.uri, it); dialog = null
+        }
+        is PendingDialog.AutoBackupPassword -> PasswordDialog("Password for weekly backups", confirmTwice = true, onDismiss = { dialog = null }) {
+            vm.startAutoBackup(d.folder, it); dialog = null
         }
         is PendingDialog.ImportPassword -> PasswordDialog("Decrypt import", confirmTwice = false, onDismiss = { dialog = null }) {
             vm.importSettings(d.uri, it); dialog = null

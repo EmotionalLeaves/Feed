@@ -61,6 +61,7 @@ class SettingsViewModel @Inject constructor(
     private val exporter: SettingsExporter,
     private val mediaCache: MediaCache,
     private val lock: AppLockManager,
+    private val secrets: dev.pfeed.security.SecretStore,
     val updater: dev.pfeed.update.Updater,
     private val discovery: SourceDiscovery,
     private val booruKeys: BooruKeys,
@@ -217,6 +218,7 @@ class SettingsViewModel @Inject constructor(
     fun setSkipIntros(v: Boolean) = update { it.copy(skipIntros = v) }
     fun setSmartVolume(v: Boolean) = update { it.copy(smartVolume = v) }
     fun setCalculatorLock(v: Boolean) = update { it.copy(calculatorLock = v) }
+    fun setBatterySaver(v: Boolean) = update { it.copy(batterySaver = v) }
     fun setAccent(p: dev.pfeed.ui.theme.Palette) {
         dev.pfeed.ui.theme.Palette.set(p.name) // repaint now, not after the write
         update { it.copy(accent = p.name) }
@@ -400,6 +402,44 @@ class SettingsViewModel @Inject constructor(
                 ?: error("Couldn't open file")
         }.onSuccess { _messages.tryEmit("Backup exported") }
             .onFailure { _messages.tryEmit("Export failed: ${it.message}") }
+    }
+
+    // ---- automatic weekly backups ----
+    private val autoPrefs = app.getSharedPreferences(dev.pfeed.work.BackupWorker.PREFS, android.content.Context.MODE_PRIVATE)
+
+    /** On (a folder chosen), when the last one was written, and what went wrong last time. */
+    data class AutoBackup(val folder: Uri?, val last: Long, val error: String?)
+
+    private val _autoBackup = kotlinx.coroutines.flow.MutableStateFlow(readAutoBackup())
+    val autoBackup: kotlinx.coroutines.flow.StateFlow<AutoBackup> = _autoBackup
+
+    private fun readAutoBackup() = AutoBackup(
+        autoPrefs.getString(dev.pfeed.work.BackupWorker.KEY_FOLDER, null)?.let(Uri::parse),
+        autoPrefs.getLong(dev.pfeed.work.BackupWorker.KEY_LAST, 0L),
+        autoPrefs.getString(dev.pfeed.work.BackupWorker.KEY_ERROR, null),
+    )
+
+    fun refreshAutoBackup() { _autoBackup.value = readAutoBackup() }
+
+    fun startAutoBackup(folder: Uri, password: String) {
+        runCatching {
+            app.contentResolver.takePersistableUriPermission(folder, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+        }
+        secrets.putSecret(dev.pfeed.work.BackupWorker.SECRET, password)
+        autoPrefs.edit().putString(dev.pfeed.work.BackupWorker.KEY_FOLDER, folder.toString()).apply()
+        dev.pfeed.work.BackupWorker.schedule(app, on = true)
+        refreshAutoBackup()
+        _messages.tryEmit("Backing up every week; the first one is being written now")
+    }
+
+    fun stopAutoBackup() {
+        autoPrefs.getString(dev.pfeed.work.BackupWorker.KEY_FOLDER, null)?.let { f ->
+            runCatching { app.contentResolver.releasePersistableUriPermission(Uri.parse(f), android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
+        }
+        secrets.putSecret(dev.pfeed.work.BackupWorker.SECRET, null)
+        autoPrefs.edit().clear().apply()
+        dev.pfeed.work.BackupWorker.schedule(app, on = false)
+        refreshAutoBackup()
     }
 
     fun importSettings(uri: Uri, password: String) = viewModelScope.launch {

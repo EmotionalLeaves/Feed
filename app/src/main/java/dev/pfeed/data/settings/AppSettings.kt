@@ -73,6 +73,8 @@ data class AppSettings(
     val smartVolume: Boolean = true,
     /** The lock screen looks (and works) like a calculator; the PIN then = gets in. */
     val calculatorLock: Boolean = false,
+    /** When the battery is low: 480p and still grids, until it's charging. */
+    val batterySaver: Boolean = true,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */
