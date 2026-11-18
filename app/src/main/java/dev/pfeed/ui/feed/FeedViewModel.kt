@@ -508,6 +508,23 @@ class FeedViewModel @Inject constructor(
         noteKeeper(item)
     }
 
+    /**
+     * Love it (hold the heart): a like, saved into the "Favourites" collection, and taught to For You
+     * as strongly as replaying it twice.
+     */
+    fun love(item: MediaItem) {
+        like(item)
+        statsFor(item.key).explicit = true
+        viewModelScope.launch {
+            runCatching {
+                library.add(LibraryKind.SAVED, item)
+                library.addToCollection(FAVOURITES, item)
+                signals.record(item, Signal(SignalType.REPLAY, 2.0))
+            }
+            offer("Loved: saved to $FAVOURITES, and you'll see more like it", "OK") {}
+        }
+    }
+
     /** Creators whose posts you liked or saved this session, and the ones already suggested. */
     private val keptByCreator = HashMap<String, Int>()
     private val suggested = HashSet<String>()
@@ -826,6 +843,7 @@ class FeedViewModel @Inject constructor(
         @Volatile private var carryOnOffered = false
         private const val CARRY_ON_MIN_MS = 60_000L
         const val FRAMES = "Frames"
+        const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L

@@ -735,6 +735,55 @@ private class SandboxClient(private val host: String?, private val onLoaded: () 
     }
 }
 
+/** Holding the heart ("love it"): a fountain of hearts. [tick] restarts it. */
+@Composable
+fun LoveBurst(tick: Int) {
+    // Loved: a fountain of hearts from the middle, each its own way, fading as they go.
+    val t = remember(tick) { Animatable(0f) }
+    LaunchedEffect(tick) { t.snapTo(0f); t.animateTo(1f, tween(1100, easing = androidx.compose.animation.core.LinearOutSlowInEasing)) }
+    val hearts = remember(tick) { List(LOVE_HEARTS) { i -> Triple(-150f + 300f * i / (LOVE_HEARTS - 1) + (Math.random() * 30 - 15).toFloat(), 0.6f + Math.random().toFloat() * 0.7f, 220f + Math.random().toFloat() * 160f) } }
+    val v = t.value
+    Box(contentAlignment = Alignment.Center) {
+        hearts.forEach { (angle, size, reach) ->
+            val rad = Math.toRadians(angle.toDouble() - 90)
+            Icon(
+                Icons.Filled.Favorite,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size((44 * size).dp).graphicsLayer {
+                    translationX = (kotlin.math.cos(rad) * reach * v).toFloat()
+                    translationY = (kotlin.math.sin(rad) * reach * v).toFloat() - 60f * v
+                    val grow = if (v < 0.2f) v / 0.2f else 1f
+                    scaleX = grow; scaleY = grow
+                    alpha = if (v < 0.6f) 1f else (1f - v) / 0.4f
+                    rotationZ = angle * 0.3f
+                    compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+                }.drawWithContent {
+                    drawContent()
+                    drawRect(dev.pfeed.ui.theme.BrandGradient, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+                },
+            )
+        }
+        // The big one, in the middle.
+        Icon(
+            Icons.Filled.Favorite,
+            contentDescription = null,
+            tint = Color.White,
+            modifier = Modifier.size(120.dp).graphicsLayer {
+                val pop = if (v < 0.25f) 0.5f + 2.4f * v else 1.1f
+                scaleX = pop; scaleY = pop
+                alpha = if (v < 0.5f) 1f else (1f - v) / 0.5f
+                compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+            }.drawWithContent {
+                drawContent()
+                drawRect(dev.pfeed.ui.theme.BrandGradient, blendMode = androidx.compose.ui.graphics.BlendMode.SrcAtop)
+            },
+        )
+    }
+}
+
+private const val LOVE_HEARTS = 9
+
 /** Double-tap heart. [tick] restarts the animation on every double tap. */
 @Composable
 fun HeartBurst(position: Offset?, tick: Int) {

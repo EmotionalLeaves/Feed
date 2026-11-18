@@ -1043,6 +1043,7 @@ private fun FeedPage(
     var paused by remember(item.key) { mutableStateOf(!vm.autoplayAllowed()) }
     val haptic = LocalHapticFeedback.current
     var heartAt by remember { mutableStateOf<Offset?>(null) }
+    var loveTick by remember(item.key) { mutableIntStateOf(0) }
     var heartTick by remember { mutableIntStateOf(0) }
     var player by remember(item.key) { mutableStateOf<androidx.media3.exoplayer.ExoPlayer?>(null) }
     // Loop a part: A is set from the hold menu (where you are), B with a tap on the pill; then it
@@ -1333,6 +1334,7 @@ private fun FeedPage(
             )
         }
         HeartBurst(heartAt, heartTick)
+        if (loveTick > 0) Box(Modifier.align(Alignment.Center)) { LoveBurst(loveTick) }
         edgeSlide?.let { (edge, v) ->
             Row(
                 Modifier.align(Alignment.TopCenter).padding(top = 24.dp).clip(RoundedCornerShape(50))
@@ -1439,6 +1441,11 @@ private fun FeedPage(
             // Turning sideways is for video; a still or a comic page reads fine upright.
             canFullscreen = isVideo || type == MediaType.EMBED,
             onLike = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleLike(item) },
+            onSuperLike = {
+                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                vm.love(item)
+                loveTick++
+            },
             onSave = { haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove); vm.toggleSave(item) },
             onMute = vm::toggleMute,
             onFollow = { vm.toggleFollowCreator(item) },
@@ -1498,6 +1505,8 @@ private fun Overlay(
     isVideo: Boolean,
     canFullscreen: Boolean,
     onLike: () -> Unit,
+    /** Hold the heart: love it (like, save to Favourites, a strong "more of this"). */
+    onSuperLike: (() -> Unit)? = null,
     onSave: () -> Unit,
     onMute: () -> Unit,
     onFollow: () -> Unit,
@@ -1586,7 +1595,7 @@ private fun Overlay(
         }
 
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            LikeButton(liked = liked, onLike = onLike)
+            LikeButton(liked = liked, onLike = onLike, onSuperLike = onSuperLike)
             SaveButton(saved = saved, onSave = onSave)
             if (isVideo) {
                 RailButton(if (muted) Icons.AutoMirrored.Filled.VolumeOff else Icons.AutoMirrored.Filled.VolumeUp, if (muted) "Muted" else "Sound", onMute)
@@ -1598,6 +1607,7 @@ private fun Overlay(
 }
 
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun RailButton(
     icon: ImageVector,
     label: String,
@@ -1606,6 +1616,7 @@ private fun RailButton(
     iconScale: Float = 1f,
     /** On: the icon is painted in the brand gradient (a liked heart, a saved bookmark). */
     branded: Boolean = false,
+    onLongClick: (() -> Unit)? = null,
 ) {
     // A little give when pressed, like a physical button.
     val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -1616,7 +1627,7 @@ private fun RailButton(
         modifier = Modifier
             .graphicsLayer { scaleX = squeeze; scaleY = squeeze }
             .clip(RoundedCornerShape(14.dp))
-            .clickable(interactionSource = press, indication = null, onClick = onClick)
+            .combinedClickable(interactionSource = press, indication = null, onClick = onClick, onLongClick = onLongClick)
             .padding(2.dp),
     ) {
         Box(
@@ -1832,8 +1843,9 @@ private fun SaveButton(saved: Boolean, onSave: () -> Unit) {
 
 /** Like with a little pop when it turns on (not when the page appears already liked). */
 @Composable
-private fun LikeButton(liked: Boolean, onLike: () -> Unit) {
+private fun LikeButton(liked: Boolean, onLike: () -> Unit, onSuperLike: (() -> Unit)? = null) {
     val pop = remember { Animatable(1f) }
+    val scope = rememberCoroutineScope()
     var previous by remember { mutableStateOf(liked) }
     LaunchedEffect(liked) {
         if (liked && !previous) {
@@ -1849,6 +1861,7 @@ private fun LikeButton(liked: Boolean, onLike: () -> Unit) {
         tint = Color.White,
         iconScale = pop.value,
         branded = liked,
+        onLongClick = onSuperLike?.let { act -> { act(); scope.launch { pop.animateTo(1.8f, tween(140)); pop.animateTo(1f, spring(dampingRatio = 0.35f)) } } },
     )
 }
 
