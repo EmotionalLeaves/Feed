@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Checklist
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Link
@@ -190,6 +191,9 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
     var deleting by remember { mutableStateOf<String?>(null) }
     // Press and hold a tile: what you can do with that post, in the list you're looking at.
     var holding by remember { mutableStateOf<Pair<MediaItem, String>?>(null) }
+    // Picking several posts in one list (its name, and the picked posts by key) to remove at once.
+    var picking by remember { mutableStateOf<Pair<String, Map<String, MediaItem>>?>(null) }
+    androidx.activity.compose.BackHandler(enabled = picking != null) { picking = null }
     // A collection that's gone (deleted elsewhere, or emptied by unsaving): back to all saved posts.
     LaunchedEffect(collections, collection) {
         val c = collection
@@ -211,6 +215,14 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
         ScreenHeader("Library") {
             if (tab < 3) androidx.compose.material3.IconButton(onClick = { finding = !finding; if (!finding) query = "" }) {
                 androidx.compose.material3.Icon(if (finding) Icons.Filled.Close else Icons.Filled.Search, contentDescription = if (finding) "Close find" else "Find in library")
+            }
+            picking?.let { (list, chosen) ->
+                Text("${chosen.size} picked", style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(end = 4.dp))
+                TextButton(enabled = chosen.isNotEmpty(), onClick = { chosen.values.forEach { vm.removeFrom(list, it) }; picking = null }) {
+                    Text("Remove", color = dev.pfeed.ui.theme.Bad)
+                }
+                TextButton(onClick = { picking = null }) { Text("Done") }
+                return@ScreenHeader
             }
             if (tab == 2 && history.isNotEmpty()) TextButton(onClick = { confirmClear = true }) { Text("Clear") }
             val open = collection
@@ -251,6 +263,15 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
         }
         val openGrid: (List<MediaItem>) -> (Int) -> Unit = { list -> { index -> nav.navigate(Routes.viewer(vm.open(list, index, tabs[tab]))) } }
         val shuffle: (List<MediaItem>) -> () -> Unit = { list -> { nav.navigate(Routes.viewer(vm.open(list.shuffled(), 0, tabs[tab] + " · shuffled"))) } }
+        LaunchedEffect(tab, collection) { picking = null }
+        val pickNow = picking
+        androidx.compose.runtime.CompositionLocalProvider(
+            LocalPicking provides pickNow?.let { (list, chosen) ->
+                chosen.keys to { item: MediaItem ->
+                    picking = list to (if (item.key in chosen) chosen - item.key else chosen + (item.key to item))
+                }
+            },
+        ) {
         when (tab) {
             0 -> Column {
                 // Smart folders: Saved sorted by its most common tags, without lifting a finger.
@@ -298,6 +319,7 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                 }
             }
         }
+        }
     }
     holding?.let { (item, list) ->
         val context = androidx.compose.ui.platform.LocalContext.current
@@ -320,6 +342,13 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                     icon = Icons.Filled.DeleteOutline,
                     iconTint = dev.pfeed.ui.theme.Bad,
                     onClick = { vm.removeFrom(list, item); holding = null },
+                )
+                SettingRow(
+                    "Pick several…",
+                    subtitle = "Tap more posts, then remove them all at once",
+                    icon = Icons.Filled.Checklist,
+                    iconTint = dev.pfeed.ui.theme.TextLow,
+                    onClick = { picking = list to mapOf(item.key to item); holding = null },
                 )
                 if (item.pageUrl.isNotBlank()) SettingRow(
                     "Open on the site",
@@ -500,7 +529,8 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
             }
             dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
         }
-        MediaGrid(items, onOpen, sectionOf = sectionOf, onLongPress = onLongPress)
+        val pick = LocalPicking.current
+        MediaGrid(items, onOpen, sectionOf = sectionOf, onLongPress = onLongPress, picked = pick?.first, onPick = pick?.second)
     }
 }
 
@@ -643,3 +673,6 @@ private fun timeLabel(minutes: Int): String = when {
     minutes % 60 == 0 -> "${minutes / 60} h"
     else -> "${minutes / 60} h ${minutes % 60} min"
 }
+
+/** While picking several posts: the picked keys and what a tap on a post does. */
+private val LocalPicking = androidx.compose.runtime.staticCompositionLocalOf<Pair<Set<String>, (MediaItem) -> Unit>?> { null }

@@ -1,5 +1,7 @@
 package dev.pfeed.ui.common
 
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.foundation.border
 import android.app.Activity
 import android.content.ActivityNotFoundException
 import android.content.Context
@@ -98,6 +100,9 @@ fun MediaGrid(
      * seconds the spotlight moves on to the next one in view. Null keeps every tile still.
      */
     livePreview: (@Composable (MediaItem) -> Unit)? = LocalLivePreview.current,
+    /** Picking several (keys of the picked ones): taps pick and unpick instead of opening. Null when not picking. */
+    picked: Set<String>? = null,
+    onPick: ((MediaItem) -> Unit)? = null,
     /** Full-width content above the tiles that scrolls with them (a profile, say). */
     header: (@Composable () -> Unit)? = null,
 ) {
@@ -155,8 +160,11 @@ fun MediaGrid(
             }
             item(key = post.key) {
                 GridTile(
-                    post, index, onOpen, label, seen = seen?.invoke(post) == true, onLongPress = onLongPress,
-                    live = if (livePreview != null && spot == post.key) ({ livePreview(post) }) else null,
+                    post, index, if (picked != null && onPick != null) ({ _: Int -> onPick(post) }) else onOpen, label,
+                    seen = seen?.invoke(post) == true,
+                    onLongPress = if (picked != null && onPick != null) ({ onPick(it) }) else onLongPress,
+                    live = if (livePreview != null && spot == post.key && picked == null) ({ livePreview(post) }) else null,
+                    picked = picked?.contains(post.key),
                 )
                 if (onNearEnd != null && index >= items.size - NEAR_END_TILES) androidx.compose.runtime.LaunchedEffect(items.size) { onNearEnd() }
             }
@@ -178,6 +186,8 @@ private fun GridTile(
     seen: Boolean = false,
     onLongPress: ((MediaItem) -> Unit)? = null,
     live: (@Composable () -> Unit)? = null,
+    /** Null when not picking; else whether this one is picked. */
+    picked: Boolean? = null,
 ) {
     val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     val shape = RoundedCornerShape(6.dp)
@@ -208,6 +218,20 @@ private fun GridTile(
         // The live preview, playing in place over the still (never while previews are blurred).
         if (live != null && !LocalBlurPreviews.current) live()
         MediaMask()
+        // Picking: a ring in the corner, filled and ticked when picked, the tile dimmed when not.
+        if (picked != null) {
+            if (picked) Box(Modifier.fillMaxSize().border(3.dp, dev.pfeed.ui.theme.Accent, shape))
+            else Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.25f)))
+            Box(
+                Modifier.align(Alignment.TopEnd).padding(6.dp).size(22.dp)
+                    .clip(androidx.compose.foundation.shape.CircleShape)
+                    .background(if (picked) dev.pfeed.ui.theme.Accent else Color.Black.copy(alpha = 0.35f))
+                    .border(1.5.dp, Color.White, androidx.compose.foundation.shape.CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (picked) Icon(Icons.Filled.Check, contentDescription = "Picked", tint = Color.White, modifier = Modifier.size(14.dp))
+            }
+        }
         val badge = when (item.type) {
             MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
             MediaType.GIF -> "GIF"

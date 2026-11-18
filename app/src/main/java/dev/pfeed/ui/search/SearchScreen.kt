@@ -444,11 +444,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
             TextField(
                 value = ui.query,
                 onValueChange = vm::setQuery,
-                placeholder = {
-                    // Now and then, the trick: combine with +, leave out with -.
-                    val tip = remember { (System.currentTimeMillis() / 60_000) % 3 == 0L }
-                    Text(if (tip) "Try: pov + redhead -toys" else "Search every site", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                },
+                placeholder = { Text("Search every site", maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis) },
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                 trailingIcon = {
@@ -674,7 +670,13 @@ private fun SuggestionsPane(
             val pool = (dev.pfeed.data.settings.SourceCatalog.redgifsCategories + POPULAR).map { it.lowercase() }.distinct().filter { it !in mine }
             pool.randomOrNull()?.let(onPick)
         }
-        Spacer(Modifier.height(22.dp))
+        Text(
+            "Tip: + needs both, - leaves out. Try “pov + redhead -toys”",
+            style = MaterialTheme.typography.bodySmall,
+            color = Color.White.copy(alpha = 0.45f),
+            modifier = Modifier.padding(top = 10.dp).clickable { onPick("pov + redhead -toys") },
+        )
+        Spacer(Modifier.height(18.dp))
         SectionTitle("Popular")
         // Browse cards, two by two, each in a colour of its own (the same colour every time).
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
