@@ -81,6 +81,8 @@ data class AppSettings(
     val headphonesOnly: Boolean = false,
     /** A gentle "time for a break?" after this many minutes of watching in one go (0 = never). */
     val breakReminderMin: Int = 0,
+    /** Highest quality, up to 4K where a site has it (more data; Data saver still wins). */
+    val bestQuality: Boolean = false,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

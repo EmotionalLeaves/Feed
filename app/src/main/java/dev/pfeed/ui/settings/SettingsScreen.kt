@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.HighQuality
 import androidx.compose.material.icons.filled.SelfImprovement
 import androidx.compose.material.icons.filled.Headphones
 import androidx.compose.material.icons.filled.SwapVert
@@ -352,6 +353,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     onChange = vm::setPictureInPicture,
                 )
                 RowDivider()
+                if (!s.dataSaver) {
+                    SwitchSetting(
+                        "Best quality",
+                        s.bestQuality,
+                        subtitle = if (s.bestQuality) "Up to 4K where the site has it; uses much more data" else "Videos up to 1080p; switch on for 1440p and 4K where there is",
+                        icon = Icons.Filled.HighQuality,
+                        onChange = vm::setBestQuality,
+                    )
+                    RowDivider()
+                }
                 SwitchSetting(
                     "Data saver",
                     s.dataSaver,

@@ -30,10 +30,11 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     @Volatile private var dataSaver = false
+    @Volatile private var bestQuality = false
 
     /** 480p with Data saver on, or while the battery is low (battery saver); 1080p otherwise. */
     private fun applyQuality() {
-        val height = if (dataSaver || dev.pfeed.player.Battery.saving) 480 else 1080
+        val height = if (dataSaver || dev.pfeed.player.Battery.saving) 480 else if (bestQuality) 2160 else 1080
         dev.pfeed.source.tube.TubeSite.maxHeight = height
         dev.pfeed.player.PlayerPool.maxHeight = height
     }
@@ -54,6 +55,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
                 dev.pfeed.source.net.AppProxy.configure(proxyConfig(it))
                 dataSaver = it.dataSaver
+                bestQuality = it.bestQuality
                 dev.pfeed.player.Battery.saverOn = it.batterySaver
                 applyQuality()
             }
