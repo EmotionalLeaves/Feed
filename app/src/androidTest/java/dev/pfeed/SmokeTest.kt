@@ -505,7 +505,7 @@ class SmokeTest {
                 fun key(k: String) = rule.onNode(hasTestTag("calc_$k")).performClick()
                 listOf("7", "×", "6", "=").forEach(::key)
                 rule.waitForIdle()
-                val sums = rule.onNode(hasTestTag("calc_display")).fetchSemanticsNode().config.getOrNull(androidx.compose.ui.semantics.SemanticsProperties.Text)?.joinToString() == "42"
+                val sums = rule.onNode(hasTestTag("calc_display")).fetchSemanticsNode().config.getOrElseNullable(androidx.compose.ui.semantics.SemanticsProperties.Text) { null }?.joinToString() == "42"
                 shot("09b_calculator_lock")
                 key("C")
                 listOf("1", "2", "3", "4", "=").forEach(::key)

@@ -206,6 +206,18 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(profilePage) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val pinchHaptic = LocalHapticFeedback.current
+    // Volume keys turn pages here while this feed is on screen (if that's switched on).
+    val turnable = active && !gridView && !wallMode && items.isNotEmpty()
+    DisposableEffect(turnable, pagerState) {
+        val turn: (Int) -> Unit = { d ->
+            pagerScope.launch {
+                val to = (pagerState.currentPage + d).coerceIn(0, (pagerState.pageCount - 1).coerceAtLeast(0))
+                pagerState.animateScrollToPage(to)
+            }
+        }
+        if (turnable) VolumeKeys.turner = turn
+        onDispose { if (VolumeKeys.turner === turn) VolumeKeys.turner = null }
+    }
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
     // Keep the screen awake while the feed is on screen (long videos, long comics).

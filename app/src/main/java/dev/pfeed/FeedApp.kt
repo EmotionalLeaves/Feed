@@ -50,6 +50,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 dev.pfeed.ui.theme.Palette.set(it.accent)
                 dev.pfeed.player.SmartVolume.enabled = it.smartVolume
                 dev.pfeed.ui.lock.LockLook.calculator.value = it.calculatorLock
+                dev.pfeed.ui.feed.VolumeKeys.turnPages = it.volumeKeysTurnPages
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
                 dev.pfeed.source.net.AppProxy.configure(proxyConfig(it))
                 dataSaver = it.dataSaver

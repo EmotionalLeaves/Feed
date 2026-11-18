@@ -719,4 +719,13 @@ class FeedViewModel @Inject constructor(
 /** Volume-key presses from the activity, for the feed's mute state. */
 object VolumeKeys {
     val up = kotlinx.coroutines.flow.MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+
+    /** "Volume keys turn pages" (Settings → Playback): set from settings at startup. */
+    @Volatile var turnPages = false
+
+    /**
+     * The feed on screen right now, when it takes volume keys: called with +1 (down = next post)
+     * or −1 (up = the one before). Null when no feed is showing.
+     */
+    @Volatile var turner: ((Int) -> Unit)? = null
 }

@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.BatterySaver
 import androidx.compose.material.icons.filled.Calculate
@@ -288,6 +289,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = if (s.autoplayOnMobileData) null else "Videos wait for a tap when you're off Wi-Fi",
                     icon = Icons.Filled.SignalCellularAlt,
                     onChange = vm::setAutoplayOnMobile,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Volume keys turn pages",
+                    s.volumeKeysTurnPages,
+                    subtitle = "In a feed, volume down goes to the next post and up to the one before, for one-handed scrolling",
+                    icon = Icons.Filled.SwapVert,
+                    onChange = vm::setVolumeKeysTurnPages,
                 )
                 RowDivider()
                 SwitchSetting(

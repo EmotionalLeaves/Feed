@@ -75,6 +75,8 @@ data class AppSettings(
     val calculatorLock: Boolean = false,
     /** When the battery is low: 480p and still grids, until it's charging. */
     val batterySaver: Boolean = true,
+    /** Volume down = next post, up = the one before, while a feed is on screen. */
+    val volumeKeysTurnPages: Boolean = false,
     val defaultMute: Boolean = true,
     val historyRetentionDays: Int = 30,
     /** Look every site up over encrypted DNS (1.1.1.1), not just ones the network blocks. */

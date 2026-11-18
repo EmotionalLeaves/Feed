@@ -112,6 +112,14 @@ class MainActivity : FragmentActivity() {
      */
     /** Volume up while the feed is muted turns the sound on, as in other video apps (and still raises the volume). */
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        // "Volume keys turn pages": down = next post, up = the one before (instead of the volume).
+        val turner = dev.pfeed.ui.feed.VolumeKeys.turner
+        if (dev.pfeed.ui.feed.VolumeKeys.turnPages && turner != null &&
+            (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP)
+        ) {
+            if ((event?.repeatCount ?: 0) == 0) turner(if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) 1 else -1)
+            return true
+        }
         if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) dev.pfeed.ui.feed.VolumeKeys.up.tryEmit(Unit)
         return super.onKeyDown(keyCode, event)
     }
