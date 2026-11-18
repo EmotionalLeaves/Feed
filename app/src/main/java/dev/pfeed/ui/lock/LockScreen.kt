@@ -27,6 +27,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -92,6 +93,13 @@ fun LockScreen(lock: AppLockManager) {
                 .setAllowedAuthenticators(BIOMETRIC_WEAK)
                 .build(),
         )
+    }
+
+    // Disguised as a calculator (Settings → Privacy): type the PIN and press =.
+    val asCalculator by LockLook.calculator.collectAsState()
+    if (asCalculator && lock.hasPin) {
+        CalculatorLock(lock, onBiometric = { if (biometricAvailable) showBiometric() })
+        return
     }
 
     LaunchedEffect(Unit) {

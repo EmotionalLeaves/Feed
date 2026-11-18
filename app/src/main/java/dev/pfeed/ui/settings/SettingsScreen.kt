@@ -39,6 +39,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.FastForward
@@ -376,6 +377,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     onChange = { dev.pfeed.domain.privacy.Incognito.set(it) },
                 )
                 RowDivider()
+                if (lockOn) {
+                    SwitchSetting(
+                        "Calculator lock screen",
+                        s.calculatorLock,
+                        subtitle = "The lock screen is a working calculator. Type your PIN and press = to get in; hold = for fingerprint",
+                        icon = Icons.Filled.Calculate,
+                        onChange = vm::setCalculatorLock,
+                    )
+                    RowDivider()
+                }
                 SwitchSetting(
                     "Flip or shake to hide",
                     s.flipToHide,
@@ -595,6 +606,7 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                         "Press and hold" to "More: why it's here, hide, block, copy or open the link, export",
                         "Swipe left on a post" to "Everything by its creator, from every source",
                         "Swipe right on a post" to "Save it",
+                        "Pinch in on the feed" to "Zoom out to the Wall (on a tag or creator page: its grid)",
                         "Swipe a comic, or tap its left / right edge" to "Turn the page (tap the page count for every page)",
                         "Pinch" to "Zoom; zoomed in, one finger moves around",
                         "Pull down on the first post" to "Fresh posts",

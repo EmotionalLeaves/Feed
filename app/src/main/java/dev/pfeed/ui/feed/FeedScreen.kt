@@ -205,6 +205,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val profilePage = vm.tag != null
     var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(profilePage) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    val pinchHaptic = LocalHapticFeedback.current
 
     LaunchedEffect(active) { vm.onVisibilityChanged(active) }
     // Keep the screen awake while the feed is on screen (long videos, long comics).
@@ -315,7 +316,27 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 state = pagerState,
                 beyondViewportPageCount = 1,
                 key = { index -> items.getOrNull(index)?.key ?: index },
-                modifier = Modifier.fillMaxSize(),
+                // Pinch in (two fingers together) on the main feed: zoom out to the Wall, as in a photo app.
+                // On a tag's or creator's page: back to its grid. Watched without taking the touch.
+                modifier = Modifier.fillMaxSize().pointerInput(vm.isMainFeed, profilePage) {
+                    if (!vm.isMainFeed && !profilePage) return@pointerInput
+                    awaitPointerEventScope {
+                        var start = 0f
+                        while (true) {
+                            val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                            val down = e.changes.filter { it.pressed }
+                            if (down.size == 2) {
+                                val d = (down[0].position - down[1].position).getDistance()
+                                if (start == 0f) start = d
+                                else if (start > 0f && d < start * PINCH_TO_WALL) {
+                                    start = -1f // once per pinch
+                                    pinchHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    if (vm.isMainFeed) wallMode = true else gridView = true
+                                }
+                            } else if (down.isEmpty()) start = 0f
+                        }
+                    }
+                },
             ) { page ->
                 val item = items.getOrNull(page) ?: return@VerticalPager
                 FeedPage(
@@ -1715,6 +1736,7 @@ private fun GestureTips(page: Int, modifier: Modifier = Modifier) {
 
 /** How far left a swipe must go to open the creator's page. */
 private const val FEEL_PULSE_MS = 45L
+private const val PINCH_TO_WALL = 0.6f
 private const val LOOP_SLACK_MS = 1_500L
 private const val LOOP_TICK_MS = 80L
 private const val LOOP_MIN_MS = 1_000L
