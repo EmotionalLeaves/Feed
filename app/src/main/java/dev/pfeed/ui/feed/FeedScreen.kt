@@ -614,6 +614,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             vm = vm,
             onDismiss = { menuFor = null },
             onMoreLikeThis = { nav.openTag(vm.similarRoute(item)) },
+            onOpenPage = { nav.openTag(it) },
         )
     }
 }

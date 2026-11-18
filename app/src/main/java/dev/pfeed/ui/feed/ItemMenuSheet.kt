@@ -73,6 +73,8 @@ fun ItemMenuSheet(
     onDismiss: () -> Unit,
     /** Opens an endless feed built around this post (its creator and tags). */
     onMoreLikeThis: (() -> Unit)? = null,
+    /** Opens a tag's or creator's page ("Why you're seeing this"). */
+    onOpenPage: ((String) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     var pickTag by remember { mutableStateOf<String?>(null) } // "block" while picking a tag to hide
@@ -154,15 +156,33 @@ fun ItemMenuSheet(
                     )
                 }
             }
-            // Why it's here: the interests it matches (For You's reasoning, in plain words).
-            val reasons by androidx.compose.runtime.produceState(initialValue = emptyList<String>(), item.key) { value = vm.reasons(item) }
-            if (reasons.isNotEmpty()) {
+            // Why it's here, in plain words: what you follow first, then what you like. Tap one to go there.
+            val why by androidx.compose.runtime.produceState(initialValue = emptyList<FeedViewModel.Why>(), item.key) { value = vm.whyThis(item) }
+            if (why.isNotEmpty()) {
                 Text(
-                    "Because you like " + reasons.joinToString(", "),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+                    "WHY YOU'RE SEEING THIS",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
                 )
+                FlowRow(
+                    Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    why.forEach { w ->
+                        Text(
+                            w.text,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (w.strong) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            modifier = Modifier.clip(RoundedCornerShape(50))
+                                .background(if (w.strong) dev.pfeed.ui.theme.BrandGradient else androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)))
+                                .then(if (w.page != null && onOpenPage != null) Modifier.clickable { onDismiss(); onOpenPage(w.page) } else Modifier)
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                        )
+                    }
+                }
             }
             HorizontalDivider()
 

@@ -4,4 +4,5 @@
     <string name="disguise_notes">Notes</string>
     <string name="disguise_calculator">Calculator</string>
     <string name="disguise_browser">Browser</string>
+    <string name="tile_lock">Lock</string>
 </resources>

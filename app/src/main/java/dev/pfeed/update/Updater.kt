@@ -85,14 +85,20 @@ class Updater @Inject constructor(
     /** The automatic part: check every few hours, download on Wi-Fi. Called as the app opens. */
     fun auto() {
         if (work?.isActive == true) return
-        work = scope.launch {
-            if (!settings.flow.first().autoUpdate) return@launch
-            val last = prefs.getLong(KEY_LAST_CHECK, 0L)
-            if (_state.value !is State.Ready && System.currentTimeMillis() - last > CHECK_EVERY_MS) checkNow()
-            val s = _state.value
-            if (s is State.Available && !network.isMetered) download(s.release)
-        }
+        work = scope.launch { automatic() }
     }
+
+    /** One automatic round, start to end: check (if it's been a while), then download on Wi-Fi. */
+    suspend fun automatic(minGapMs: Long = CHECK_EVERY_MS) {
+        if (!settings.flow.first().autoUpdate) return
+        val last = prefs.getLong(KEY_LAST_CHECK, 0L)
+        if (_state.value !is State.Ready && System.currentTimeMillis() - last > minGapMs) checkNow()
+        val s = _state.value
+        if (s is State.Available && !network.isMetered) download(s.release)
+    }
+
+    /** Ready to install without a prompt right now? */
+    val readyQuietly: Boolean get() = _state.value is State.Ready && canInstallQuietly()
 
     /** "Check now" in Settings: also downloads straight away if there's something newer. */
     fun checkAndDownload() {
@@ -230,9 +236,15 @@ class Updater @Inject constructor(
      * prompt (used when you leave the app); otherwise Android shows its confirmation.
      */
     fun install(quiet: Boolean = false) {
-        val s = _state.value as? State.Ready ?: return
-        if (quiet && !canInstallQuietly()) return
-        scope.launch {
+        if (_state.value !is State.Ready) return
+        scope.launch { installNow(quiet) }
+    }
+
+    /** [install], finishing once the APK is handed over (for the background worker). */
+    suspend fun installNow(quiet: Boolean) = withContext(Dispatchers.IO) {
+        val s = _state.value as? State.Ready ?: return@withContext
+        if (quiet && !canInstallQuietly()) return@withContext
+        run {
             try {
                 val installer = context.packageManager.packageInstaller
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL).apply {

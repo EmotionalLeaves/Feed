@@ -575,6 +575,38 @@ class FeedViewModel @Inject constructor(
             .map { dev.pfeed.domain.reco.Features.label(it.first) }
     }
 
+    /** One reason a post is in For You: what to say, and the page it leads to (a tag or "@creator"). */
+    data class Why(val text: String, val page: String?, val strong: Boolean)
+
+    /**
+     * Why this post: who and what you follow comes first, then the learned interests it matches
+     * most, each one tappable.
+     */
+    suspend fun whyThis(item: MediaItem): List<Why> {
+        val out = mutableListOf<Why>()
+        val f = follows.value
+        val creator = Display.creator(item)
+        if (creator != null && f.creators.any { it.equals(creator, ignoreCase = true) }) out += Why("You follow @$creator", "@$creator", true)
+        val tags = Display.tags(item, max = 30)
+        tags.firstOrNull { (_, raw) -> f.tags.any { it.equals(raw, ignoreCase = true) } }?.let { (label, raw) -> out += Why("You follow #$label", raw, true) }
+        val aff = runCatching { signals.affinities() }.getOrNull()
+        if (aff != null) {
+            creator?.let { c -> aff.creators[dev.pfeed.domain.filter.Blocklist.normalize(c)]?.takeIf { it >= 0.3 } }
+                ?.let { if (out.none { it.page == "@$creator" }) out += Why("You watch a lot of @$creator", "@$creator", false) }
+            val byFeature = tags.associateBy { dev.pfeed.domain.reco.Features.normalizeTag(it.second) }
+            dev.pfeed.domain.reco.Features.of(item)
+                .filterNot(dev.pfeed.domain.reco.Features::isMeta)
+                .mapNotNull { feat -> aff.tags[feat]?.takeIf { it >= 0.3 }?.let { feat to it } }
+                .sortedByDescending { it.second }
+                .take(3)
+                .forEach { (feat, _) ->
+                    val tag = byFeature[feat]
+                    out += Why(if (tag != null) "You like #${tag.first}" else "You like " + dev.pfeed.domain.reco.Features.label(feat), tag?.second, false)
+                }
+        }
+        return out.distinctBy { it.text }.take(4)
+    }
+
     /** First run: the topics picked teach For You straight away, then the feed starts over with them. */
     fun pickInterests(topics: List<String>) {
         viewModelScope.launch {

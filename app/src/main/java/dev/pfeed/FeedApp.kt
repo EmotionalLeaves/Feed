@@ -53,6 +53,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
             override fun onStop(owner: androidx.lifecycle.LifecycleOwner) = updater.install(quiet = true)
         })
         MaintenanceWorker.schedule(this)
+        dev.pfeed.work.UpdateWorker.schedule(this)
         offline.start()
     }
 

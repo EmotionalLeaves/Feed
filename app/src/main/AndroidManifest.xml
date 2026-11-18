@@ -136,5 +136,17 @@
                 tools:node="remove" />
         </provider>
         <receiver android:name=".update.InstallResultReceiver" android:exported="false" />
+
+        <!-- Quick Settings tile that locks the app; a plain "Lock" with a padlock. -->
+        <service
+            android:name=".security.LockTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_tile_lock"
+            android:label="@string/tile_lock"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+        </service>
     </application>
 </manifest>
