@@ -612,7 +612,7 @@ class FeedViewModel @Inject constructor(
                 durationSec = null,
                 thumbnailUrl = uri,
                 pageUrl = from.pageUrl,
-                publishedAt = System.currentTimeMillis(),
+                publishedAt = java.time.Instant.now(),
                 extras = mapOf("media" to uri),
             )
             runCatching {

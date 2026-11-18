@@ -305,7 +305,61 @@ fun VideoPage(
         val at = player?.currentPosition ?: 0L
         vm.saveFrame(grabContext, item, bitmap, at)
     }
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+    // Pinch to zoom into a video (up to 4×), one finger to move around while zoomed, as with pictures.
+    var vScale by remember(item.key) { mutableFloatStateOf(1f) }
+    var vX by remember(item.key) { mutableFloatStateOf(0f) }
+    var vY by remember(item.key) { mutableFloatStateOf(0f) }
+    DisposableEffect(item.key) { onDispose { if (vScale > 1f) Zoom.active = false } }
+    Box(
+        Modifier.fillMaxSize().pointerInput(item.key) {
+            fun clampPan() {
+                val mx = size.width * (vScale - 1f) / 2f
+                val my = size.height * (vScale - 1f) / 2f
+                vX = vX.coerceIn(-mx, mx); vY = vY.coerceIn(-my, my)
+            }
+            awaitEachGesture {
+                val down = awaitFirstDown(requireUnconsumed = false)
+                if (vScale > 1f) {
+                    var pinch = false
+                    do {
+                        val event = awaitPointerEvent()
+                        if (event.changes.count { it.pressed } >= 2) { pinch = true; break }
+                        val c = event.changes.firstOrNull { it.id == down.id && it.pressed } ?: break
+                        val d = c.positionChange()
+                        if (d != Offset.Zero) { vX += d.x; vY += d.y; clampPan(); c.consume() }
+                    } while (event.changes.any { it.pressed })
+                    if (!pinch) return@awaitEachGesture
+                } else {
+                    val second = withTimeoutOrNull(300) {
+                        do { val event = awaitPointerEvent() } while (event.changes.count { it.pressed } < 2)
+                        true
+                    }
+                    if (second != true) return@awaitEachGesture
+                }
+                do {
+                    val event = awaitPointerEvent()
+                    val pressed = event.changes.filter { it.pressed }
+                    if (pressed.size >= 2) {
+                        val cur = (pressed[0].position - pressed[1].position).getDistance()
+                        val prev = (pressed[0].previousPosition - pressed[1].previousPosition).getDistance()
+                        // Only zooming in from 1× here; pinching in at 1× is the Wall's gesture.
+                        if (prev > 1f && (vScale > 1f || cur > prev)) {
+                            vScale = (vScale * cur / prev).coerceIn(1f, VIDEO_MAX_ZOOM)
+                            val c0 = (pressed[0].position + pressed[1].position) / 2f
+                            val c1 = (pressed[0].previousPosition + pressed[1].previousPosition) / 2f
+                            vX += (c0 - c1).x; vY += (c0 - c1).y
+                            clampPan()
+                            Zoom.active = vScale > 1.01f
+                            event.changes.forEach { it.consume() }
+                        }
+                    }
+                } while (event.changes.any { it.pressed })
+                if (vScale < 1.05f) { vScale = 1f; vX = 0f; vY = 0f }
+                Zoom.active = vScale > 1.01f
+            }
+        },
+        contentAlignment = Alignment.Center,
+    ) {
         AndroidView(
             factory = { ctx ->
                 PlayerView(ctx).apply {
@@ -320,6 +374,9 @@ fun VideoPage(
             update = { view ->
                 val want = if (detached) null else player
                 if (view.player !== want) view.player = want
+                // The zoom, on the view itself so the video surface follows it.
+                view.scaleX = vScale; view.scaleY = vScale
+                view.translationX = vX; view.translationY = vY
             },
             onRelease = { view -> view.player = null },
             modifier = Modifier.fillMaxSize(),
@@ -539,6 +596,7 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                                 val zoom = curSpan / prevSpan
                                 val newScale = (scale * zoom).coerceIn(MIN_ZOOM, MAX_ZOOM)
                                 scale = newScale
+                                Zoom.active = newScale > 1.01f
                                 val img = imageSize
                                 if (img != null) {
                                     val fw = size.width.toFloat(); val fh = fw * img.height / img.width
@@ -555,6 +613,7 @@ fun ImagePage(item: MediaItem, vm: FeedViewModel) {
                     } while (event.changes.any { it.pressed })
                     // If the user pinched back to ~1×, snap to exactly 1× and reset offset
                     if (scale < 1.05f) { scale = 1f; offsetX = 0f; offsetY = 0f }
+                    Zoom.active = scale > 1.01f
                 }
             },
         contentAlignment = Alignment.Center,
@@ -738,6 +797,7 @@ private const val STALL_TIMEOUT_MS = 12_000L
 /** Clips at least this long count an automatic loop as a deliberate rewatch. */
 private const val MIN_LOOP_AS_REPLAY_MS = 15_000L
 private const val MIN_ZOOM = 1f
+private const val VIDEO_MAX_ZOOM = 4f
 private const val MAX_ZOOM = 5f
 /** Past this zoom the original file replaces the sample. */
 private const val ZOOM_FULL_RES = 1.5f
@@ -747,4 +807,9 @@ fun CenteredHint(text: String) {
     Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
         Text(text, color = Color.White, style = MaterialTheme.typography.bodyLarge)
     }
+}
+
+/** Whether a picture or video on screen is zoomed in (the Wall's pinch leaves it alone then). */
+object Zoom {
+    @Volatile var active = false
 }

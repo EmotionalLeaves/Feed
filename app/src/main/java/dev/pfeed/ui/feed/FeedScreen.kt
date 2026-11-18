@@ -340,7 +340,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                             val down = e.changes.filter { it.pressed }
                             if (down.size == 2) {
                                 val d = (down[0].position - down[1].position).getDistance()
-                                if (start == 0f) start = d
+                                if (start == 0f) start = if (Zoom.active) -1f else d // zoomed in: that pinch is zooming out
                                 else if (start > 0f && d < start * PINCH_TO_WALL) {
                                     start = -1f // once per pinch
                                     pinchHaptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
