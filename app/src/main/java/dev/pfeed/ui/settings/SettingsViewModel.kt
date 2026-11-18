@@ -300,7 +300,18 @@ class SettingsViewModel @Inject constructor(
     /** (likes, dislikes), strongest first; null until loaded. */
     val interests: StateFlow<Pair<List<Pair<String, Double>>, List<Pair<String, Double>>>?> = _interests
 
-    fun loadInterests() = viewModelScope.launch { _interests.value = signals.topInterests() }
+    fun loadInterests() = viewModelScope.launch {
+        _interests.value = signals.topInterests()
+        val aff = signals.affinities().tags
+        _engineInterests.value = signals.engine.use { it.describe(aff) }
+    }
+
+    /** The taste engine's interests, as named groups with their share of For You. */
+    private val _engineInterests = MutableStateFlow<List<dev.pfeed.domain.reco.TasteEngine.View>>(emptyList())
+    val engineInterests: StateFlow<List<dev.pfeed.domain.reco.TasteEngine.View>> = _engineInterests
+
+    fun lessOfInterest(index: Int) = viewModelScope.launch { signals.engine.use { it.quieten(index) }; loadInterests() }
+    fun forgetEngineInterest(index: Int) = viewModelScope.launch { signals.engine.use { it.forget(index) }; loadInterests() }
 
     fun addInterests(topics: List<String>) = viewModelScope.launch {
         topics.forEach { runCatching { signals.recordInterest(it) } }

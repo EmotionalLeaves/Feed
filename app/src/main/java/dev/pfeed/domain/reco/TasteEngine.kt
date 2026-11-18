@@ -176,6 +176,41 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         return out
     }
 
+    /** An interest as people see it: the tags that best name it, its share of For You, and how it's going. */
+    data class View(val index: Int, val tags: List<String>, val share: Double, val enjoyment: Double, val sour: Boolean)
+
+    /**
+     * Your interests in plain terms (strongest first): each named by the liked tags closest to its
+     * centre, with the share of For You's slots it gets right now.
+     */
+    fun describe(affinity: Map<String, Double>): List<View> {
+        val liked = affinity.filter { it.value > 0.2 && !Features.isMeta(it.key) && !it.key.startsWith("w:") }
+        val vecs = liked.keys.associateWith { space.tagVector(it) }
+        val served = interests.filter { it.mean > SERVE_MIN }
+        val weights = served.associateWith { kotlin.math.exp(it.mean / TEMPERATURE) }
+        val total = weights.values.sum().coerceAtLeast(1e-9)
+        return interests.mapIndexedNotNull { idx, i ->
+            val names = vecs.entries
+                .map { (t, v) -> t to (v?.let { cos(i.centroid, it) } ?: -1.0) }
+                .filter { it.second > NAME_MIN }
+                .sortedByDescending { it.second + 0.02 * (liked[it.first] ?: 0.0) }
+                .take(3).map { it.first }
+            if (names.isEmpty()) return@mapIndexedNotNull null
+            View(idx, names, (weights[i] ?: 0.0) / total, i.mean, i.mean <= SERVE_MIN)
+        }.sortedByDescending { it.share }
+    }
+
+    /** "Less of this": the interest goes sour, so it's avoided rather than served. */
+    fun quieten(index: Int) {
+        val i = interests.getOrNull(index) ?: return
+        i.sum = -i.count * 0.8
+    }
+
+    /** Forget one interest entirely. */
+    fun forget(index: Int) {
+        if (index in interests.indices) interests.removeAt(index)
+    }
+
     /** Forget everything learned (Settings → reset what For You learned). The map of meaning stays. */
     fun resetTaste() {
         interests.clear(); dislikes.clear(); session = null; sessionStrength = 0.0
@@ -235,6 +270,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val TEMPERATURE = 1.5
         /** Interests with a record below this aren't served (they're kept to steer away from). */
         const val SERVE_MIN = -0.2
+        /** How close a tag must be to an interest's centre to be one of its names. */
+        const val NAME_MIN = 0.35
         /** How strong a reaction must be to start a new interest, and its starting tally. */
         const val SPAWN = 0.8
         const val NEW_ALPHA = 0.6

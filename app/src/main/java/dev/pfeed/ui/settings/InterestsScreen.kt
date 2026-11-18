@@ -1,5 +1,6 @@
 package dev.pfeed.ui.settings
 
+import androidx.compose.material.icons.filled.ThumbDown
 import dev.pfeed.ui.openTag
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.animation.AnimatedVisibility
@@ -96,6 +97,21 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         val sites = all.filter { it.first.startsWith(Features.ORIGIN) }
         val moreOf = likes.filterNot { Features.isMeta(it.first) }
         val lessOf = dislikes.filterNot { Features.isMeta(it.first) }
+        // The engine's interests: what For You is built from, and how much of it each one gets.
+        val groups by vm.engineInterests.collectAsStateWithLifecycle()
+        if (groups.isNotEmpty()) {
+            Section("Your interests", footer = "For You takes turns between these, more often for the ones you enjoy most. Each is learned from what you linger on; a new one appears when you start loving something new.") {
+                groups.forEachIndexed { n, g ->
+                    if (n > 0) RowDivider()
+                    InterestGroupRow(
+                        g,
+                        onOpen = { openTag(nav, g.tags.first()) },
+                        onLess = { vm.lessOfInterest(g.index) },
+                        onForget = { vm.forgetEngineInterest(g.index) },
+                    )
+                }
+            }
+        }
         // Tell it directly, rather than waiting for it to notice.
         Section {
             SettingRow(
@@ -262,6 +278,50 @@ private fun InterestRow(feature: String, score: Double, positive: Boolean, onFor
         }
         androidx.compose.material3.IconButton(onClick = onForget) {
             Icon(androidx.compose.material.icons.Icons.Filled.Close, contentDescription = "Forget", tint = TextLow, modifier = Modifier.size(18.dp))
+        }
+    }
+}
+
+/** One interest: its names, a bar for its share of For You, and "less" / "forget". */
+@Composable
+private fun InterestGroupRow(g: dev.pfeed.domain.reco.TasteEngine.View, onOpen: () -> Unit, onLess: () -> Unit, onForget: () -> Unit) {
+    androidx.compose.foundation.layout.Row(
+        Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(start = 16.dp, end = 4.dp, top = 12.dp, bottom = 12.dp),
+        verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+    ) {
+        androidx.compose.foundation.layout.Column(Modifier.weight(1f)) {
+            Text(
+                g.tags.joinToString("  ·  ") { "#" + it.replace('_', ' ') },
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                maxLines = 2,
+                color = if (g.sour) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface,
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.height(8.dp))
+            if (g.sour) {
+                Text("Being avoided", style = MaterialTheme.typography.labelMedium, color = dev.pfeed.ui.theme.TextLow)
+            } else {
+                androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                    androidx.compose.foundation.layout.Box(
+                        Modifier.weight(1f).height(6.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)),
+                    ) {
+                        androidx.compose.foundation.layout.Box(
+                            Modifier.fillMaxWidth(g.share.toFloat().coerceIn(0.02f, 1f)).height(6.dp)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))
+                                .background(dev.pfeed.ui.theme.BrandGradient),
+                        )
+                    }
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+                    Text("${(g.share * 100).toInt()}%", style = MaterialTheme.typography.labelMedium, color = dev.pfeed.ui.theme.TextMid)
+                }
+            }
+        }
+        if (!g.sour) androidx.compose.material3.IconButton(onClick = onLess) {
+            androidx.compose.material3.Icon(Icons.Filled.ThumbDown, contentDescription = "Less of this", tint = dev.pfeed.ui.theme.TextLow)
+        }
+        androidx.compose.material3.IconButton(onClick = onForget) {
+            androidx.compose.material3.Icon(Icons.Filled.Close, contentDescription = "Forget this interest", tint = dev.pfeed.ui.theme.TextLow)
         }
     }
 }
