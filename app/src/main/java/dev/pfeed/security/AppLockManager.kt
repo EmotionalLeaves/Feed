@@ -104,11 +104,19 @@ class AppLockManager @Inject constructor(
         val ok = withContext(Dispatchers.Default) { secrets.verifyPin(pin) }
         pin.fill('0')
         if (ok) {
+            // Wrong PINs since the last time you got in: tell you now (when, how many).
+            val tries = attemptsPrefs.getString(KEY_TRIES, null)?.split(',')?.mapNotNull { it.toLongOrNull() }.orEmpty()
+            if (tries.isNotEmpty()) {
+                _intrusions.value = tries
+                attemptsPrefs.edit().remove(KEY_TRIES).apply()
+            }
             failures = 0
             _locked.value = false
             return PinResult.Ok
         }
         failures++
+        val before = attemptsPrefs.getString(KEY_TRIES, null).orEmpty()
+        attemptsPrefs.edit().putString(KEY_TRIES, (before.split(',').filter { it.isNotBlank() }.takeLast(MAX_LOGGED - 1) + System.currentTimeMillis().toString()).joinToString(",")).apply()
         if (failures >= MAX_ATTEMPTS) {
             failures = 0
             lockoutUntil = SystemClock.elapsedRealtime() + LOCKOUT_MS
@@ -116,6 +124,12 @@ class AppLockManager @Inject constructor(
         }
         return PinResult.Wrong(MAX_ATTEMPTS - failures)
     }
+
+    private val attemptsPrefs = context.getSharedPreferences("lock_attempts", android.content.Context.MODE_PRIVATE)
+    private val _intrusions = MutableStateFlow<List<Long>>(emptyList())
+    /** Times of wrong PINs entered since you last unlocked, shown once after you get in. */
+    val intrusions: StateFlow<List<Long>> = _intrusions
+    fun intrusionsSeen() { _intrusions.value = emptyList() }
 
     val hasErasePin: Boolean get() = secrets.hasErasePin
 
@@ -137,6 +151,8 @@ class AppLockManager @Inject constructor(
 
     companion object {
         private const val MAX_ATTEMPTS = 5
+        private const val MAX_LOGGED = 50
+        private const val KEY_TRIES = "tries"
         private const val LOCKOUT_MS = 30_000L
     }
 }

@@ -1,5 +1,6 @@
 package dev.pfeed.ui
 
+import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.runtime.setValue
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -117,6 +118,25 @@ fun AppRoot(lockManager: AppLockManager, onPanic: () -> Unit) {
         if (dev.pfeed.ui.common.WhatsNew.showing) dev.pfeed.ui.common.WhatsNewDialog { dev.pfeed.ui.common.WhatsNew.showing = false }
         // The lock screen sits outside the Scaffold, so give it the app's text colour itself
         // (without this its title drew in the default black, invisible on the dark background).
+        // Someone typed wrong PINs while you were away: say so once you're in.
+        val intrusions by lockManager.intrusions.collectAsStateWithLifecycle()
+        if (!locked && intrusions.isNotEmpty()) {
+            val fmt = androidx.compose.runtime.remember { java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT) }
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { lockManager.intrusionsSeen() },
+                properties = androidx.compose.ui.window.DialogProperties(securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn),
+                icon = { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.GppMaybe, contentDescription = null) },
+                title = { androidx.compose.material3.Text(if (intrusions.size == 1) "1 wrong PIN while you were away" else "${intrusions.size} wrong PINs while you were away") },
+                text = {
+                    androidx.compose.material3.Text(
+                        "Last one: " + fmt.format(java.util.Date(intrusions.last())) +
+                            (if (intrusions.size > 1) "\nFirst one: " + fmt.format(java.util.Date(intrusions.first())) else "") +
+                            "\n\nIf that wasn't you, someone tried to open the app.",
+                    )
+                },
+                confirmButton = { androidx.compose.material3.TextButton(onClick = { lockManager.intrusionsSeen() }) { androidx.compose.material3.Text("OK") } },
+            )
+        }
         if (locked) androidx.compose.runtime.CompositionLocalProvider(
             androidx.compose.material3.LocalContentColor provides MaterialTheme.colorScheme.onBackground,
         ) { LockScreen(lockManager) }
