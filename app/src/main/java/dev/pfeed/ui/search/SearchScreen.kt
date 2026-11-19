@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -269,6 +270,26 @@ class SearchViewModel @Inject constructor(
                 signals.engine.use { it.searchTags(aff, TOPIC_ROWS) }
             }.getOrDefault(emptyList()).map { it.replace('_', ' ') }
             loadTopicRows((tastes + _interests.value).distinct().ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
+            loadLiveRow()
+        }
+    }
+
+    /** Live now: the rooms you'd most enjoy, first among Discover's rows. */
+    private fun loadLiveRow() {
+        val live = registry.byId(dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID) ?: return
+        viewModelScope.launch {
+            if (registry.enabledAdapters().none { it.id == live.id }) return@launch
+            val rooms = runCatching { live.fetchFeed(null, dev.pfeed.domain.model.FeedPrefs(dev.pfeed.domain.model.FeedMode.LIVE)).items }.getOrDefault(emptyList())
+            val ranked = runCatching {
+                signals.engine.use { e ->
+                    rooms.sortedByDescending { r ->
+                        val v = e.vectorOf(r)
+                        (v?.let { 0.9 * e.interestScore(it) - 0.8 * e.aversion(it) } ?: 0.0) + 0.5 * e.visualScore(r) +
+                            0.12 * kotlin.math.ln(1.0 + (r.extras["viewers"]?.toDoubleOrNull() ?: 0.0))
+                    }
+                }
+            }.getOrDefault(rooms).take(12)
+            if (ranked.size >= 4) _topicRows.update { rows -> listOf(LIVE_ROW to ranked) + rows.filter { it.first != LIVE_ROW } }
         }
     }
 
@@ -293,7 +314,7 @@ class SearchViewModel @Inject constructor(
                         }
                     }
                 }.getOrDefault(found).take(12)
-                if (items.size >= 4) _topicRows.update { rows -> (rows + (topic to items)).sortedBy { topics.indexOf(it.first) } }
+                if (items.size >= 4) _topicRows.update { rows -> (rows + (topic to items)).sortedBy { if (it.first == LIVE_ROW) -1 else topics.indexOf(it.first) } }
             }
         }
     }
@@ -570,6 +591,14 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 onPick = run,
                 onRemoveRecent = vm::removeRecent,
                 onClearRecent = vm::clearRecent,
+                onLive = {
+                    dev.pfeed.ui.feed.OpenFeedMode.request.value = dev.pfeed.domain.model.FeedMode.LIVE
+                    nav.navigate(Routes.FEED) {
+                        popUpTo(nav.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                },
             )
         } else {
             ResultsPane(
@@ -618,6 +647,7 @@ private fun SuggestionsPane(
     onPick: (String) -> Unit,
     onRemoveRecent: (String) -> Unit,
     onClearRecent: () -> Unit,
+    onLive: () -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         // As you type: matching searches you've made, things you like and common tags.
@@ -676,7 +706,7 @@ private fun SuggestionsPane(
         }
         // Your mixes: two of your interests woven together, as playlists you can start in one tap.
         val mixes = remember(topicRows) {
-            val rows = topicRows.filter { it.second.size >= 4 }
+            val rows = topicRows.filter { it.second.size >= 4 && it.first != LIVE_ROW }
             val pairs = listOf(0 to 1, 2 to 3, 0 to 2, 1 to 3).filter { (a, b) -> a < rows.size && b < rows.size }.take(3)
             pairs.map { (a, b) ->
                 val first = rows[a].second; val second = rows[b].second
@@ -698,8 +728,12 @@ private fun SuggestionsPane(
         }
         if (t.isEmpty()) topicRows.forEach { (topic, items) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
+                if (topic == LIVE_ROW) {
+                    Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFFF3B4E)))
+                    Spacer(Modifier.width(8.dp))
+                }
                 SectionTitle(topic.replaceFirstChar { it.uppercase() }, Modifier.weight(1f))
-                TextButton(onClick = { onPick(topic) }) { Text("See all") }
+                TextButton(onClick = { if (topic == LIVE_ROW) onLive() else onPick(topic) }) { Text("See all") }
             }
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }
@@ -1182,3 +1216,6 @@ private fun FiltersSheet(
         Spacer(Modifier.height(24.dp))
     }
 }
+
+/** Discover's row of people live right now. */
+private const val LIVE_ROW = "Live now"

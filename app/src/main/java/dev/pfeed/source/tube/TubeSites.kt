@@ -641,7 +641,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val PLAYER = Regex("""(//mydaddy\.cc/video/[0-9a-f]+/)""")
         private val MP4 = Regex("""(//[a-z0-9.]+\.bigcdn\.cc/pubs/[^"'\\ ]+/(\d{3,4})\.mp4)""")
 
-        override val checkTagsFirst = true
+        // Pages are big (300–500 KB): tags are read when a video is played, not before listing it.
+        override val checkTagsFirst = false
 
         override fun parseList(body: String): List<TubeVideo> {
             val hits = MARK.findAll(body).toList()
@@ -686,7 +687,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val PLAYER = Regex("""<iframe[^>]*\bsrc="(https://videos\.porndig\.com/player/index/[0-9/]+)"""")
         private val MP4 = Regex("""(https:\\?/\\?/video-cdn\.porndig\.com\\?/videos\\?/[^"]+?_h264_\d+_(\d{3,4})\.mp4[^"]*)"""")
 
-        override val checkTagsFirst = true
+        // Pages are big (300–500 KB): tags are read when a video is played, not before listing it.
+        override val checkTagsFirst = false
 
         override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
             val link = LINK.find(c) ?: return@mapNotNull null
@@ -731,7 +733,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val SOURCE = Regex("""<source src="(https://[^"]+)"[^>]*label="(\d+)p"""")
         private val TAG = Regex("""href="(?:https://www\.perfectgirls\.xxx)?/tags/([a-z0-9-]+)/"""")
 
-        override val checkTagsFirst = true
+        // Pages are big (300–500 KB): tags are read when a video is played, not before listing it.
+        override val checkTagsFirst = false
 
         override fun parseList(body: String): List<TubeVideo> {
             val hits = MARK.findAll(body).toList()
@@ -773,7 +776,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val SOURCE = Regex("""<source src="(https://[^"]+)"[^>]*label="(\d+)p"""")
         private val TAG = Regex("""href="(?:https://ok\.xxx)?/tags/([a-z0-9-]+)/"""")
 
-        override val checkTagsFirst = true
+        // Pages are big (300–500 KB): tags are read when a video is played, not before listing it.
+        override val checkTagsFirst = false
 
         override fun parseList(body: String): List<TubeVideo> {
             val hits = MARK.findAll(body).toList()
@@ -813,7 +817,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val SOURCE = Regex("""<source src='(https://www\.porngo\.com/get_file/[^']+)'[^>]*type='video/mp4'""")
         private val CATEGORY = Regex("""href="https://www\.porngo\.com/categories/([a-z0-9-]+)/"""")
 
-        override val checkTagsFirst = true
+        // Pages are big (300–500 KB): tags are read when a video is played, not before listing it.
+        override val checkTagsFirst = false
 
         override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (_, c) ->
             val m = MARK.find(c) ?: return@mapNotNull null
@@ -850,7 +855,8 @@ sealed class TubeSite(val host: String, val label: String) {
         private val SOURCE = Regex("""<source src="(https://[^"]+\.mp4)" title="(SD|HD)"""")
         private val TAG = Regex("""href="https://beta\.xfreehd\.com/tag/([^"]+)"""")
 
-        override val checkTagsFirst = true
+        // Pages are big (300–500 KB): tags are read when a video is played, not before listing it.
+        override val checkTagsFirst = false
 
         override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (_, c) ->
             val m = MARK.find(c) ?: return@mapNotNull null

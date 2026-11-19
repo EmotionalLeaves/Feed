@@ -65,7 +65,7 @@ object Features {
     }
 
     fun of(item: MediaItem): List<String> {
-        val tags = item.tags.asSequence()
+        val tags = (item.tags.asSequence() + PageTags.of(item.key).asSequence())
             .map(::normalizeTag)
             .filter { it.isNotBlank() && it !in GENERIC }
             .distinct()

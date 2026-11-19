@@ -163,6 +163,8 @@ class TubeAdapter @Inject constructor(
         val stream: StreamInfo = try {
             val page = site.streamPageUrl(item.pageUrl, vid)
             val html = http.getRaw(id, page)
+            // The page names the video's tags: kept for what For You learns from watching it.
+            if (page == item.pageUrl) site.pageTags(html).takeIf { it.isNotEmpty() }?.let { dev.pfeed.domain.reco.PageTags.put(item.key, it) }
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.playerUrl(html)?.let { player ->

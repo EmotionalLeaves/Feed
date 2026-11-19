@@ -524,6 +524,10 @@ class FeedViewModel @Inject constructor(
 
     init {
         viewModelScope.launch { VolumeKeys.up.collect { if (_muted.value && soundAllowedHere()) _muted.value = false } }
+        // Asked to open a particular feed (Discover's "Live now" → See all).
+        if (isMainFeed) viewModelScope.launch {
+            OpenFeedMode.request.collect { m -> if (m != null) { OpenFeedMode.request.value = null; setMode(m) } }
+        }
         // Steering changed (here, or from a blend in Settings): For You starts over with it.
         if (isMainFeed) viewModelScope.launch {
             dev.pfeed.data.repo.SteerState.active.drop(1).collect { list ->
@@ -1057,4 +1061,9 @@ object VolumeKeys {
      * or −1 (up = the one before). Null when no feed is showing.
      */
     @Volatile var turner: ((Int) -> Unit)? = null
+}
+
+/** A request, from elsewhere in the app, for the main feed to switch to a mode. */
+object OpenFeedMode {
+    val request = MutableStateFlow<FeedMode?>(null)
 }
