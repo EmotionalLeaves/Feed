@@ -7,6 +7,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -159,6 +160,8 @@ fun VideoPage(
     onEnded: () -> Unit = {},
     /** When true, this page gives up the player's video surface (the fullscreen view has it). */
     detached: Boolean = false,
+    /** The post after this one: shown as "Up next" as a full scene nears its end. */
+    upNext: MediaItem? = null,
 ) {
     val pool = vm.playerPool
     val version by pool.changes.collectAsState()
@@ -174,6 +177,9 @@ fun VideoPage(
     val stats = remember(item.key) { vm.statsFor(item.key) }
     val handsFree by HandsFree.on.collectAsState()
     val ended by androidx.compose.runtime.rememberUpdatedState(onEnded)
+    // The last seconds of a full scene: what's next, and whether you'd rather stay.
+    var stayAtEnd by remember(item.key) { mutableStateOf(false) }
+    var endingIn by remember(item.key) { mutableStateOf<Long?>(null) }
 
     DisposableEffect(item.key) {
         onDispose {
@@ -250,7 +256,8 @@ fun VideoPage(
                 }
                 if (state == Player.STATE_ENDED && p != null && p.repeatMode == Player.REPEAT_MODE_OFF) {
                     p.repeatMode = Player.REPEAT_MODE_ONE // the pooled player loops again for the next post
-                    ended()
+                    // "Stay here" on the Up next card: start it over, paused, instead of moving on.
+                    if (stayAtEnd) { p.seekTo(0); p.pause(); stayAtEnd = false } else ended()
                 }
             }
             override fun onPlayerError(e: PlaybackException) {
@@ -279,6 +286,18 @@ fun VideoPage(
 
     LaunchedEffect(player, play) { player?.playWhenReady = play }
 
+    LaunchedEffect(player, play, firstFrame) {
+        endingIn = null
+        val p = player ?: return@LaunchedEffect
+        if (!play || !firstFrame) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(500)
+            if (p.currentMediaItem?.mediaId != item.key) continue
+            val d = p.duration
+            val left = d - p.currentPosition
+            endingIn = if (d >= UP_NEXT_MIN_MS && p.repeatMode == Player.REPEAT_MODE_OFF && left in 0..UP_NEXT_MS) left else null
+        }
+    }
     // Which of its named acts you sit through and which you jump over: learned per act when you leave.
     val actTally = remember(item.key, stream) {
         dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters?.takeIf { it.size >= 2 }?.let { dev.pfeed.domain.reco.ActWatch.Tally(it) }
@@ -314,7 +333,7 @@ fun VideoPage(
         if (!highlightsOn || !play || !firstFrame || keepWatching || d < Highlights.MIN_SEC ||
             item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") return@LaunchedEffect
         // Starting this one's highlight: be at its good part (a scene found since it was lined up can move it).
-        if (highlightPlayed == 0L && p.currentMediaItem?.mediaId == item.key) {
+        if (highlightPlayed == 0L && p.currentMediaItem?.mediaId == item.key && !(vm.fromMoments && dev.pfeed.player.Moments.of(item.key).isNotEmpty())) {
             vm.highlightStartMs(item)?.takeIf { it > 5_000 && kotlin.math.abs(it - p.currentPosition) > 4_000 }?.let { p.seekTo(it) }
         }
         // One scene long, when the scenes are known (within reason); else the standard stretch.
@@ -594,6 +613,50 @@ fun VideoPage(
                 )
             }
         }
+        // Up next: the last seconds of a full scene say what comes after it (or let you stay).
+        val next = upNext
+        val ending = endingIn
+        val handsFreeNow by HandsFree.on.collectAsState()
+        if (next != null && ending != null && !detached && !handsFreeNow && highlightLeft == null) androidx.compose.foundation.layout.Row(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 150.dp, start = 24.dp, end = 24.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f))
+                .padding(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            coil.compose.AsyncImage(
+                model = next.thumbnailUrl,
+                contentDescription = null,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.size(96.dp, 54.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.width(10.dp))
+            androidx.compose.foundation.layout.Column(Modifier.weight(1f, fill = false)) {
+                androidx.compose.material3.Text(
+                    if (stayAtEnd) "Staying on this one" else "Up next in ${(ending + 999) / 1000}s",
+                    color = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.7f),
+                    style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                )
+                androidx.compose.material3.Text(
+                    next.title ?: next.creator ?: "",
+                    color = androidx.compose.ui.graphics.Color.White,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                    maxLines = 1,
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.widthIn(max = 180.dp),
+                )
+            }
+            androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+            androidx.compose.material3.Text(
+                if (stayAtEnd) "Go on" else "Stay",
+                color = androidx.compose.ui.graphics.Color.White,
+                style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                    .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.18f))
+                    .clickable { stayAtEnd = !stayAtEnd }
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
+            )
+        }
         // Highlights: how long this one has left, with a way to stay on it.
         val left = highlightLeft
         if (left != null && !detached) androidx.compose.foundation.layout.Row(
@@ -625,6 +688,9 @@ private const val BEST_OFFER_MS = 9_000L
 private const val HIGHLIGHT_TICK_MS = 250L
 private const val ACT_TICK_MS = 500L
 private const val SCENES_AFTER_MS = 6_000L
+/** "Up next" shows this long before a full scene ends. */
+private const val UP_NEXT_MS = 8_000L
+private const val UP_NEXT_MIN_MS = 3 * 60_000L
 private const val CHAPTERS_MS = 12_000L
 
 /**

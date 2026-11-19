@@ -429,6 +429,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 val item = items.getOrNull(page) ?: return@VerticalPager
                 FeedPage(
                     item = item,
+                    upNext = items.getOrNull(page + 1),
                     playing = active && !gridView && page == pagerState.settledPage,
                     muted = muted,
                     liked = item.key in liked,
@@ -1198,6 +1199,8 @@ private fun FollowPill(following: Boolean, onClick: () -> Unit, modifier: Modifi
 private fun FeedPage(
     item: MediaItem,
     playing: Boolean,
+    /** The post after this one, for the "Up next" card at the end of a full scene. */
+    upNext: MediaItem? = null,
     muted: Boolean,
     liked: Boolean,
     saved: Boolean,
@@ -1417,7 +1420,7 @@ private fun FeedPage(
     ) {
         if (!landscape && type != MediaType.EMBED && !item.isGallery) AmbientBackdrop(item)
         when (type) {
-            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, onEnded = onEnded)
+            MediaType.VIDEO -> VideoPage(item, play = playing && !paused, muted = muted, vm = vm, onPlayer = { player = it }, onEnded = onEnded, upNext = upNext)
             MediaType.IMAGE, MediaType.GIF ->
                 if (item.isGallery) GalleryPage(item, vm, active = playing, autoFlip = handsFree && playing && !paused, onEnded = onEnded, turn = galleryTurn)
                 else ImagePage(item, vm)
