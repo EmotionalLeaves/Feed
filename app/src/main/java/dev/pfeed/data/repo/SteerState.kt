@@ -24,5 +24,7 @@ object SteerState {
 
 /** The Live tab's choice of who's on cam ("female", "couple", "male", "trans"), or null for everyone. */
 object LiveFilter {
+    /** The "Following" chip: only rooms of people you follow. */
+    const val FOLLOWING = "@following"
     val who = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
 }

@@ -559,6 +559,9 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 item(key = "everyone") { TasteChip("Everyone", selected = who == null) { dev.pfeed.data.repo.LiveFilter.who.value = null; chipsOpen = false; vm.refresh() } }
+                if (follows.creators.isNotEmpty()) item(key = "following") {
+                    TasteChip("Following", selected = who == dev.pfeed.data.repo.LiveFilter.FOLLOWING) { dev.pfeed.data.repo.LiveFilter.who.value = dev.pfeed.data.repo.LiveFilter.FOLLOWING; chipsOpen = false; vm.refresh() }
+                }
                 for ((tag, label) in dev.pfeed.source.live.LiveCamsAdapter.WHO) item(key = tag) {
                     TasteChip(label, selected = who == tag) { dev.pfeed.data.repo.LiveFilter.who.value = tag; chipsOpen = false; vm.refresh() }
                 }

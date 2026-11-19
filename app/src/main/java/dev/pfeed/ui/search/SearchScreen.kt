@@ -102,6 +102,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import dev.pfeed.ui.openTag
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
@@ -310,7 +311,11 @@ class SearchViewModel @Inject constructor(
                             0.12 * kotlin.math.ln(1.0 + (r.extras["viewers"]?.toDoubleOrNull() ?: 0.0))
                     }
                 }
-            }.getOrDefault(rooms).take(12)
+            }.getOrDefault(rooms).let { list ->
+                // People you follow who are on right now come first.
+                val mine = runCatching { library.follows.first().creators.map { it.lowercase() }.toSet() }.getOrDefault(emptySet())
+                list.sortedByDescending { it.creator?.lowercase() in mine }
+            }.take(12)
             if (ranked.size >= 4) _topicRows.update { rows -> listOf(LIVE_ROW to ranked) + rows.filter { it.first != LIVE_ROW } }
         }
     }

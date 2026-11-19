@@ -535,7 +535,15 @@ class FeedSession(
         } else if (mode == FeedMode.LIVE) {
             // Live: the rooms you'd most enjoy first (by everything For You knows), busy ones a little ahead.
             val who = LiveFilter.who.value
-            val rooms = if (who == null) candidates else candidates.filter { who in it.tags }
+            val rooms = when (who) {
+                null -> candidates
+                // Only people you follow who are on now.
+                LiveFilter.FOLLOWING -> {
+                    val mine = library.followsOnce().creators.map(Blocklist::normalize).toSet()
+                    candidates.filter { it.creator?.let { c -> Blocklist.normalize(c) in mine } == true }
+                }
+                else -> candidates.filter { who in it.tags }
+            }
             val personal = signals.engine.use { e ->
                 rooms.associate { item ->
                     val v = e.vectorOf(item)

@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.32.0 — 2026-11-19
+
+Following, live
+
+- **Following chip in the Live tab**: shows only the rooms of people you follow who are on now.
+- In Discover's **Live now** row, people you follow come first.
+
 ## 5.31.0 — 2026-11-19
 
 Know when they go live
