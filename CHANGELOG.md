@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.4.0 — 2026-11-18
+
+Search by voice, results for you
+
+- New: Search by voice: the mic in the search field (your phone's own speech recogniser).
+- New: Sort search results For you: what you'd most enjoy first, by everything For You knows about you.
+- Better: Tag pages put the posts you'd most enjoy first (newer ones a little ahead), instead of newest only.
+- Better: This or that ends by saying what it learned: "More #… Less #…".
+
 ## 5.3.0 — 2026-11-18
 
 Your tastes, one tap away

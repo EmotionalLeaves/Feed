@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SearchOff
 import androidx.compose.material.icons.filled.Tune
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Button
@@ -113,7 +114,7 @@ enum class DurationFilter(val label: String, val range: IntRange?) {
 }
 
 /** Order of results: best match (mixed across sites), or by length. */
-enum class SortOrder(val label: String) { BEST("Best match"), LONGEST("Longest first"), SHORTEST("Shortest first") }
+enum class SortOrder(val label: String) { BEST("Best match"), FOR_YOU("For you"), LONGEST("Longest first"), SHORTEST("Shortest first") }
 
 /** One of the main "what kind of thing" choices; null type = everything. */
 enum class TypeFilter(val label: String, val types: Set<MediaType>) {
@@ -221,11 +222,32 @@ class SearchViewModel @Inject constructor(
         // Unknown lengths go last either way.
         when (f.sort) {
             SortOrder.BEST -> kept
+            // What you'd most likely enjoy first, by everything For You knows about you.
+            SortOrder.FOR_YOU -> forYouOrder(kept)
             SortOrder.LONGEST -> kept.sortedByDescending { it.durationSec ?: -1 }
             SortOrder.SHORTEST -> kept.sortedBy { it.durationSec ?: Int.MAX_VALUE }
         }
     }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val personal = HashMap<String, Double>()
+
+    private suspend fun forYouOrder(list: List<MediaItem>): List<MediaItem> {
+        val missing = list.filter { it.key !in personal }
+        if (missing.isNotEmpty()) runCatching {
+            val aff = signals.affinities()
+            val ranker = dev.pfeed.domain.reco.Ranker(dev.pfeed.domain.reco.RankWeights())
+            val now = java.time.Instant.now()
+            signals.engine.use { e ->
+                for (item in missing) {
+                    val v = e.vectorOf(item)
+                    personal[item.key] = ranker.baseScore(item, aff.tags, aff.creators, now) +
+                        (v?.let { 0.9 * e.interestScore(it) - 0.8 * e.aversion(it) } ?: 0.0) + 0.3 * e.visualScore(item)
+                }
+            }
+        }
+        return list.sortedByDescending { personal[it.key] ?: 0.0 }
+    }
 
     private var job: Job? = null
 
@@ -455,6 +477,14 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
         dev.pfeed.ui.BottomBar.reselected.collect { route -> if (route == dev.pfeed.ui.Routes.SEARCH) runCatching { searchBox.requestFocus() } }
     }
 
+    val voiceContext = androidx.compose.ui.platform.LocalContext.current
+    val voiceAvailable = remember {
+        android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(voiceContext.packageManager) != null
+    }
+    val voice = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()) { r ->
+        val said = r.data?.getStringArrayListExtra(android.speech.RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()?.trim()
+        if (!said.isNullOrEmpty()) { vm.setQuery(said); run(said) }
+    }
     Column(Modifier.fillMaxSize()) {
         // The big title steps aside once you're searching, so results get the room.
         androidx.compose.animation.AnimatedVisibility(
@@ -475,6 +505,18 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 trailingIcon = {
                     if (ui.query.isNotEmpty()) {
                         IconButton(onClick = vm::clearQuery) { Icon(Icons.Filled.Close, "Clear") }
+                    } else if (voiceAvailable) {
+                        // Say it instead of typing it (the phone's own speech recogniser).
+                        IconButton(onClick = {
+                            runCatching {
+                                voice.launch(
+                                    android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+                                        .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                                        .putExtra(android.speech.RecognizerIntent.EXTRA_PREFER_OFFLINE, true)
+                                        .putExtra(android.speech.RecognizerIntent.EXTRA_PROMPT, "Search every site"),
+                                )
+                            }
+                        }) { Icon(Icons.Filled.Mic, "Search by voice") }
                     }
                 },
                 shape = RoundedCornerShape(28.dp),

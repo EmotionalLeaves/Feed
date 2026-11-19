@@ -55,6 +55,8 @@ fun ThisOrThat(vm: FeedViewModel, onDone: (choices: Int) -> Unit) {
     val pairs by produceState<List<Pair<MediaItem, MediaItem>>?>(null) { value = vm.thisOrThatPairs() }
     var round by remember { mutableIntStateOf(0) }
     var chosen by remember { mutableIntStateOf(0) }
+    // What was picked over what, to say what it learned at the end.
+    val picks = remember { androidx.compose.runtime.mutableStateListOf<Pair<MediaItem, MediaItem>>() }
     Dialog(
         onDismissRequest = { onDone(chosen) },
         properties = DialogProperties(usePlatformDefaultWidth = false, securePolicy = SecureFlagPolicy.SecureOn),
@@ -86,6 +88,16 @@ fun ThisOrThat(vm: FeedViewModel, onDone: (choices: Int) -> Unit) {
                             if (list.isEmpty()) "Scroll a little first, then try again" else "Thanks: For You took note",
                             style = MaterialTheme.typography.titleMedium, color = Color.White, fontWeight = FontWeight.Bold,
                         )
+                        // The tags your picks had that the others didn't (and the other way round).
+                        val (more, less) = remember(picks.size) { learned(picks) }
+                        if (more.isNotEmpty()) {
+                            Spacer(Modifier.height(14.dp))
+                            Text("More " + more.joinToString(", ") { "#$it" }, color = Color.White.copy(alpha = 0.85f), style = MaterialTheme.typography.bodyMedium)
+                        }
+                        if (less.isNotEmpty()) {
+                            Spacer(Modifier.height(4.dp))
+                            Text("Less " + less.joinToString(", ") { "#$it" }, color = Color.White.copy(alpha = 0.6f), style = MaterialTheme.typography.bodyMedium)
+                        }
                         Spacer(Modifier.height(16.dp))
                         dev.pfeed.ui.common.BrandButton("Back to the feed", onClick = { onDone(chosen) })
                     }
@@ -101,7 +113,7 @@ fun ThisOrThat(vm: FeedViewModel, onDone: (choices: Int) -> Unit) {
                         listOf(a to b, b to a).forEach { (pick, other) ->
                             Box(
                                 Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(Color.White.copy(alpha = 0.06f))
-                                    .clickable { vm.preferred(pick, listOf(other)); chosen++; round++ },
+                                    .clickable { vm.preferred(pick, listOf(other)); picks += pick to other; chosen++; round++ },
                             ) {
                                 Thumbnail(pick, Modifier.fillMaxSize())
                                 dev.pfeed.ui.common.MediaMask()
@@ -124,4 +136,17 @@ fun ThisOrThat(vm: FeedViewModel, onDone: (choices: Int) -> Unit) {
             }
         }
     }
+}
+
+/** Tags more common among the picks than among what they were picked over, and vice versa (top 3 each). */
+private fun learned(picks: List<Pair<MediaItem, MediaItem>>): Pair<List<String>, List<String>> {
+    if (picks.isEmpty()) return emptyList<String>() to emptyList()
+    val score = HashMap<String, Int>()
+    for ((won, lost) in picks) {
+        Display.tags(won, max = 12).map { it.first.lowercase() }.distinct().forEach { score.merge(it, 1, Int::plus) }
+        Display.tags(lost, max = 12).map { it.first.lowercase() }.distinct().forEach { score.merge(it, -1, Int::plus) }
+    }
+    val more = score.entries.filter { it.value >= 2 }.sortedByDescending { it.value }.take(3).map { it.key }
+    val less = score.entries.filter { it.value <= -2 }.sortedBy { it.value }.take(3).map { it.key }
+    return more to less
 }

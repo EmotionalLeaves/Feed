@@ -1,3 +1,11 @@
+## 5.4.0 — 2026-11-18
+Search by voice, results for you
+
+- New: Search by voice: the mic in the search field (your phone's own speech recogniser).
+- New: Sort search results For you: what you'd most enjoy first, by everything For You knows about you.
+- Better: Tag pages put the posts you'd most enjoy first (newer ones a little ahead), instead of newest only.
+- Better: This or that ends by saying what it learned: "More #… Less #…".
+
 ## 5.3.0 — 2026-11-18
 Your tastes, one tap away
 
@@ -14,9 +22,3 @@ Fixes: notes that wouldn't go away, the feed tab marker
 - Fixed: the white marker under Following / For You / Latest sat in the wrong place; it now sits under the feed you're on and slides to the next.
 - New: Your taste over time (Settings → Interests): a bar a day showing how For You shared its slots between your interests.
 - New: For newcomers, a one-time nudge after the first posts to play This or that.
-
-## 5.1.0 — 2026-11-18
-Looking for your second taste
-
-- Better: While For You knows only one of your tastes, it looks around a good deal more (on the parts of the map you haven't seen), for a while, because most people have more than one. Once it finds a second, or after a few dozen looks with nothing new, it's back to normal. In the simulated world, for people with two or three tastes, how much they enjoyed the feed after the first half-hour rose 2-8%.
-- New: Tap the glow at the centre of a colour on your taste map to play that taste as a mix.

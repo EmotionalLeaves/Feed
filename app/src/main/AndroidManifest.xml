@@ -10,6 +10,13 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- POST_NOTIFICATIONS is deliberately NOT requested: the app never shows notifications. -->
 
+    <!-- Voice search: to see whether the phone has a speech recogniser. -->
+    <queries>
+        <intent>
+            <action android:name="android.speech.action.RECOGNIZE_SPEECH" />
+        </intent>
+    </queries>
+
     <application
         android:name=".FeedApp"
         android:allowBackup="false"

@@ -493,13 +493,23 @@ class FeedSession(
             val t = Features.normalizeTag(spec.tag)
             // "@name" is a creator page: their own posts first, then what searching their name found.
             val creatorName = spec.tag.takeIf { it.startsWith("@") }?.removePrefix("@")?.let(Blocklist::normalize)
+            // Among the exact matches: the ones you'd most enjoy first, with newer ones a little ahead
+            // (a tag page is still a place for what's new). Before, it was newest first only.
+            val personal = signals.engine.use { e ->
+                candidates.associate { item ->
+                    val v = e.vectorOf(item)
+                    val days = item.publishedAt?.let { java.time.Duration.between(it, now).toHours() / 24.0 }
+                    val fresh = days?.let { kotlin.math.exp(-it.coerceAtLeast(0.0) / 14.0) } ?: 0.3
+                    item.key to ((v?.let { 0.9 * e.interestScore(it) - 0.8 * e.aversion(it) } ?: 0.0) + 0.3 * e.visualScore(item) + 0.5 * fresh)
+                }
+            }
             Spread.order(
                 candidates.sortedWith(
                     compareByDescending<MediaItem> { item ->
                         if (creatorName != null) item.creator?.let(Blocklist::normalize) == creatorName
                         else item.tags.any { Features.normalizeTag(it) == t }
                     }
-                        .thenByDescending { it.publishedAt ?: Instant.EPOCH },
+                        .thenByDescending { personal[it.key] ?: 0.0 },
                 ),
                 recentShown,
                 BATCH,
