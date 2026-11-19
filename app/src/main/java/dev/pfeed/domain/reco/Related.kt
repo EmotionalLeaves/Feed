@@ -48,6 +48,13 @@ object Related {
      */
     @Synchronized fun support(key: String): Int = support[key] ?: 0
 
+    /** Videos beside at least [min] of the ones you enjoyed lately, most-paired first. */
+    @Synchronized fun cowatched(min: Int = 2, limit: Int = 12): List<MediaItem> =
+        enjoyedKeys.flatMap { map[it].orEmpty() }.distinctBy { it.key }
+            .filter { (support[it.key] ?: 0) >= min && it.key !in enjoyedKeys }
+            .sortedByDescending { support[it.key] ?: 0 }
+            .take(limit)
+
     /** Everything queued since last asked. */
     @Synchronized fun drain(): List<MediaItem> = queue.toList().also { queue.clear() }
 

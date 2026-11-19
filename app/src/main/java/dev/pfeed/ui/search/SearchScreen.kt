@@ -290,6 +290,10 @@ class SearchViewModel @Inject constructor(
             loadTopicRows((tastes + _interests.value).distinct().ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
             loadLiveRow()
             // Because you liked …: what the site showed beside videos you enjoyed lately.
+            // Watched with your favourites: beside two or more of the videos you enjoyed, on their sites.
+            dev.pfeed.domain.reco.Related.cowatched().takeIf { it.size >= 4 }?.let { list ->
+                _topicRows.update { rows -> rows.filter { it.first != COWATCHED_ROW } + (COWATCHED_ROW to list) }
+            }
             dev.pfeed.domain.reco.Related.recentlyEnjoyed().take(2).forEach { (title, list) ->
                 val name = "Because you liked “" + title.take(36).trim() + (if (title.length > 36) "…" else "") + "”"
                 _topicRows.update { rows -> rows.filter { it.first != name } + (name to list) }
@@ -798,10 +802,10 @@ private fun SuggestionsPane(
                 TextButton(onClick = {
                     when {
                         topic == LIVE_ROW -> onLive()
-                        topic.startsWith("Because you liked") -> onTopicItem(topic, 0)
+                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW -> onTopicItem(topic, 0)
                         else -> onPick(topic)
                     }
-                }) { Text(if (topic.startsWith("Because you liked")) "Play" else "See all") }
+                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW) "Play" else "See all") }
             }
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }
@@ -1287,3 +1291,4 @@ private fun FiltersSheet(
 
 /** Discover's row of people live right now. */
 private const val LIVE_ROW = "Live now"
+private const val COWATCHED_ROW = "Watched with your favourites"

@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.33.0 — 2026-11-19
+
+Watched with your favourites
+
+- **Watched with your favourites** on Discover: videos that sit beside two or more of the ones you enjoyed lately on their sites, the ones those sites' viewers keep pairing with your kind of thing. Tap Play to watch them in a row.
+- The Up next card stays out of the way in the sideways player.
+
 ## 5.32.0 — 2026-11-19
 
 Following, live
