@@ -99,7 +99,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -903,6 +903,97 @@ sealed class TubeSite(val host: String, val label: String) {
                 .filterNot { it == "hd-videos" || it == "hot" || it == "hottest" || it == "sex" }
                 .map { it.replace('-', ' ') }.distinct().take(30).toList()
         override fun embedUrl(id: String) = "https://www.porngo.com/embed/$id"
+    }
+
+    /** 3Movs: a KVS tube; HQ/LQ MP4s in the player config, pornstars and tags on the video page. */
+    object ThreeMovs : TubeSite("3movs.com", "3Movs") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.3movs.com/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "https://www.3movs.com/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            // Search has one page of results; later "pages" sort them differently instead.
+            else -> when (page) {
+                0 -> "https://www.3movs.com/search_videos/?q=${enc(section)}"
+                1 -> "https://www.3movs.com/search_videos/most-viewed/all-time/?q=${enc(section)}"
+                else -> "https://www.3movs.com/search_videos/most-viewed/month/?q=${enc(section)}"
+            }
+        }
+        private val MARK = Regex("""class="item thumb\s""")
+        private val HREF = Regex("""class="wrap_image" href="https://www\.3movs\.com/videos/(\d+)/[^"]*" title="([^"]*)"""")
+        private val IMG = Regex("""data-src="(https://img\.3movs\.com/[^"]+\.jpg)"""")
+        private val CLIP = Regex("""data-preview="(https://www\.3movs\.com/get_file/[^"]+\.mp4/?)"""")
+        private val DUR = Regex("""<div class="time">(\d{1,2}:\d{2}(?::\d{2})?)</div>""")
+        private val URL_HQ = Regex("""video_url: '(https://[^']+)'""")
+        private val URL_LQ = Regex("""video_alt_url: '(https://[^']+)'""")
+        private val TAG = Regex("""href="https://www\.3movs\.com/tags/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList()
+            return hits.mapIndexedNotNull { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 5000))
+                val link = HREF.find(c) ?: return@mapIndexedNotNull null
+                TubeVideo(
+                    id = link.groupValues[1],
+                    title = unescape(link.groupValues[2]).trim().ifEmpty { null },
+                    pageUrl = HREF_URL.find(c)!!.groupValues[1],
+                    thumb = IMG.find(c)?.groupValues?.get(1),
+                    durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    preview = CLIP.find(c)?.groupValues?.get(1),
+                )
+            }.distinctBy { it.id }
+        }
+        private val HREF_URL = Regex("""class="wrap_image" href="(https://www\.3movs\.com/videos/\d+/[^"]*)"""")
+
+        override fun stream(pageHtml: String): TubeStream? =
+            (URL_HQ.find(pageHtml) ?: URL_LQ.find(pageHtml))?.let { TubeStream(it.groupValues[1], "video/mp4") }
+        override fun pageTags(pageHtml: String): List<String> =
+            TAG.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') }.distinct().take(30).toList()
+        override fun embedUrl(id: String) = "https://www.3movs.com/embed/$id"
+    }
+
+    /** AnySex: a big KVS tube; 240/480/720p sources on the video page, channels and models on every tile. */
+    object AnySex : TubeSite("anysex.com", "AnySex") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://anysex.com/videos/new/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "https://anysex.com/videos/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "https://anysex.com/search/${if (page == 0) "" else "${page + 1}/"}?q=${enc(section.lowercase()).replace("+", "-")}"
+        }
+        private val MARK = Regex("""<div class="item\s[^"]*"\s+data-video-id="(\d+)"""")
+        private val HREF = Regex("""<a href="(https://anysex\.com/video/\d+/[^"]*)"""")
+        private val IMG = Regex("""<img\s+src="(https://i\d*\.anysex\.com/[^"]+\.jpg)"""")
+        private val CLIP = Regex("""data-preview="(https://preview\.anysex\.com/[^"]+\.mp4)"""")
+        private val DUR = Regex("""<div class="duration">(\d{1,2}:\d{2}(?::\d{2})?)</div>""")
+        private val TITLE = Regex("""<strong class="title">\s*(.*?)\s*</strong>""", RegexOption.DOT_MATCHES_ALL)
+        private val AUTHOR = Regex("""class="author-link"><a href="https://anysex\.com/(?:models|channels)/[^"]+/">(?:<i[^>]*></i>)?([^<]+)<""")
+        private val SOURCE = Regex("""<source id="video_source_\d+" src="(https://[^"]+)" type="video/mp4" title="(\d+)p"""")
+        private val TAG = Regex("""href="https://anysex\.com/tags/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList()
+            return hits.mapIndexedNotNull { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 5000))
+                val link = HREF.find(c) ?: return@mapIndexedNotNull null
+                TubeVideo(
+                    id = m.groupValues[1],
+                    title = TITLE.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
+                    pageUrl = link.groupValues[1],
+                    thumb = IMG.find(c)?.groupValues?.get(1),
+                    durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    creator = AUTHOR.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
+                    preview = CLIP.find(c)?.groupValues?.get(1),
+                )
+            }.distinctBy { it.id }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            best(SOURCE.findAll(pageHtml).map { it.groupValues[2].toInt() to unescape(it.groupValues[1]) }.toList())
+        override fun pageTags(pageHtml: String): List<String> =
+            TAG.findAll(pageHtml).map { it.groupValues[1] }.filterNot { it in setOf("porn", "sex", "xxx", "hd") }
+                .map { it.replace('-', ' ') }.distinct().take(30).toList()
+        override fun embedUrl(id: String) = "https://anysex.com/embed/$id/"
     }
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */

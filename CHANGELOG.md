@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.20.0 — 2026-11-19
+
+Two new sites: 3Movs and AnySex
+
+- **3Movs** and **AnySex** join the tube sites (23 now). Both play their own MP4s directly (AnySex up to 720p), show preview clips in grids, and read their tags when you play a video. AnySex tiles carry the channel or model, so you can follow them. Both can be switched off in Sources like the others.
+
 ## 5.19.0 — 2026-11-19
 
 Scenes as pictures
