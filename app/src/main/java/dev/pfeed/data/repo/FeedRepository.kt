@@ -371,6 +371,8 @@ class FeedSession(
         val hashBudget = if (shown.isEmpty()) FIRST_HASH_BUDGET_MS else HASH_BUDGET_MS
         val hashes = withTimeoutOrNull(hashBudget) { hasher.hashAll(items) } ?: hasher.cached(items)
         items = dedup.filter(items, hashes)
+        // The same video uploaded to several sites (same length, nearly the same title): once is enough.
+        items = items.filter { item -> !sameVideoSeen(item).also { if (!it) indexSameVideo(item) } }
         // What each one looks like rides along with it, for the visual side of your taste.
         items = items.map { item ->
             val look = hasher.look(item)
@@ -595,7 +597,29 @@ class FeedSession(
          */
         private val SOURCE_POOL_CAPS = mapOf("tube" to 40, dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID to 150)
 
-        private fun isLive(item: MediaItem) = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"
+        /** Videos taken in this feed so far, by length in seconds, to spot the same one from another site. */
+    private val byLength = HashMap<Int, ArrayList<MediaItem>>()
+    private var lengthIndexed = 0
+
+    private fun sameVideoSeen(item: MediaItem): Boolean {
+        val d = item.durationSec ?: return false
+        if (item.type != dev.pfeed.domain.model.MediaType.VIDEO || item.title.isNullOrBlank() || d < SAME_VIDEO_MIN_SEC) return false
+        val slack = maxOf(3, d / 50)
+        for (len in d - slack..d + slack) {
+            val near = byLength[len] ?: continue
+            if (near.any { it.key != item.key && dev.pfeed.domain.reco.SameVideo.score(item, it) >= dev.pfeed.domain.reco.SameVideo.MATCH }) return true
+        }
+        return false
+    }
+
+    private fun indexSameVideo(item: MediaItem) {
+        val d = item.durationSec ?: return
+        if (item.type != dev.pfeed.domain.model.MediaType.VIDEO || item.title.isNullOrBlank() || d < SAME_VIDEO_MIN_SEC) return
+        if (++lengthIndexed > SAME_VIDEO_INDEX_MAX) { byLength.clear(); lengthIndexed = 1 }
+        byLength.getOrPut(d) { ArrayList() } += item
+    }
+
+    private fun isLive(item: MediaItem) = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"
         /** Most candidates one subreddit / board site / server may hold at once. */
         private const val PER_ORIGIN_POOL_CAP = 10
         /** Most images taken from one multi-image post per session. */
@@ -610,6 +634,9 @@ class FeedSession(
         private const val FIRST_HASH_BUDGET_MS = 400L
         /** A candidate passed over for this many loads (~12 items each) is dropped. */
         private const val STALE_LOADS = 8
+        /** Shorter clips are too often trimmed differently to call the same by title and length. */
+        private const val SAME_VIDEO_MIN_SEC = 60
+        private const val SAME_VIDEO_INDEX_MAX = 4000
         private const val INTEREST_PREFIX = "interest|"
         private const val INTERESTS_PER_LOAD = 2
         private const val SIMILAR_MEANING = 0.5

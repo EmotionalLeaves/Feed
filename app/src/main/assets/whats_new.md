@@ -1,3 +1,9 @@
+## 5.16.0 — 2026-11-19
+One copy of each video, real faces in Following
+
+- **No more reuploads**: the same video posted to several sites (same length, nearly the same title) now shows once per feed instead of two or three times.
+- **Following row shows real pictures**: each followed creator's avatar is their newest post, ringed in the brand colour when they have posts in your feed (and red when live). People with something new come first.
+
 ## 5.15.0 — 2026-11-18
 Save this moment
 
@@ -8,11 +14,3 @@ Save this moment
 Co-watched videos rank higher
 
 - **Co-watching**: when the same video sits beside several videos you enjoyed on their sites, the sites' own viewers keep pairing it with your kind of thing. For You now ranks it higher, more so the more of your favourites it's beside.
-
-## 5.13.0 — 2026-11-18
-Searches land on the moment
-
-- **Search lands on the moment**: search or open a tag for an act (cowgirl, blowjob, doggystyle…) and videos that mark that act start right at it, with a "From the start" undo.
-- **Highlights reel from your library**: the flame button on Saved, Liked, History and collections plays their long videos as highlights.
-- **Highlights pill** at the top of the feed while the mode is on; tap it to turn it off.
-- **The Wall uses preview clips** where sites offer them: much lighter than several full videos at once.

@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.16.0 — 2026-11-19
+
+One copy of each video, real faces in Following
+
+- **No more reuploads**: the same video posted to several sites (same length, nearly the same title) now shows once per feed instead of two or three times.
+- **Following row shows real pictures**: each followed creator's avatar is their newest post, ringed in the brand colour when they have posts in your feed (and red when live). People with something new come first.
+
 ## 5.15.0 — 2026-11-18
 
 Save this moment

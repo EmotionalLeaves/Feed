@@ -708,17 +708,34 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                // Live ones first, ringed in red: one tap into their room.
+                // Live ones first, ringed in red: one tap into their room. Then those with posts in this
+                // feed (their newest as the picture, in a brand ring), then the rest.
                 val liveNow = liveFollowedNow
-                items(follows.creators.sortedWith(compareBy<String> { it.lowercase() !in liveNow }.thenBy { it }), key = { it }) { name ->
+                val newest = items.groupBy { it.creator?.lowercase() }.mapValues { (_, l) -> l.first() }
+                items(follows.creators.sortedWith(compareBy<String> { it.lowercase() !in liveNow }.thenBy { it.lowercase() !in newest }.thenBy { it }), key = { it }) { name ->
                     val room = liveNow[name.lowercase()]
+                    val latest = newest[name.lowercase()]
+                    val picture = (room ?: latest)?.thumbnailUrl
                     Column(
                         Modifier.width(52.dp).clip(RoundedCornerShape(10.dp)).clickable {
                             if (room != null) nav.navigate(Routes.viewer(vm.openLive(room))) else nav.openTag("@$name")
                         },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp, modifier = Modifier.border(if (room != null) 2.5.dp else 1.5.dp, if (room != null) Color(0xFFFF3B4E) else Color.White.copy(alpha = 0.8f), CircleShape))
+                        val ring = when {
+                            room != null -> Modifier.border(2.5.dp, Color(0xFFFF3B4E), CircleShape)
+                            latest != null -> Modifier.border(2.dp, dev.pfeed.ui.theme.BrandGradient, CircleShape)
+                            else -> Modifier.border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape)
+                        }
+                        if (picture != null) Box(Modifier.size(40.dp).then(ring).padding(2.5.dp).clip(CircleShape)) {
+                            dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp)
+                            coil.compose.AsyncImage(
+                                model = picture,
+                                contentDescription = null,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.matchParentSize(),
+                            )
+                        } else dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp, modifier = ring)
                         Spacer(Modifier.height(3.dp))
                         Text(if (room != null) "LIVE" else name, color = if (room != null) Color(0xFFFF3B4E) else Color.White, style = MaterialTheme.typography.labelSmall.shadowed(), fontWeight = if (room != null) FontWeight.Bold else null, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
