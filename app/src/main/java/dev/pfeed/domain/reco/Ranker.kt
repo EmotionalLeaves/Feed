@@ -122,6 +122,8 @@ class Ranker(
             var score = formatPrior(it)
             for (i in x.indices) score += w[i] * x[i]
             if (steering != null) score += steering.bonus(it, vec)
+            // Beside videos you enjoyed, on their sites: watched together with your kind of thing.
+            score += CO_WATCHED * minOf(Related.support(it.key), CO_WATCHED_MAX)
             Candidate(it, score, signature(it), vec, x[4], q, x[6], x)
         }.toMutableList()
         val window = ArrayDeque(recentSources.takeLast(DIVERSITY_WINDOW))
@@ -288,6 +290,12 @@ class Ranker(
         const val COLD_EXPOSED = 0
         /** How much a post's look counts (learned per person from what they stay for; see [Visual]). */
         const val VISUAL = 0.3
+        /**
+         * Per video you enjoyed that lists a post beside it on its site (up to [CO_WATCHED_MAX]):
+         * about a third of a strong interest match each.
+         */
+        const val CO_WATCHED = 0.25
+        const val CO_WATCHED_MAX = 3
         /** How much "more of"/"less of" moves a post that has the tag (about one strong interest's worth). */
         const val STEER_BOOST = 0.9
         /** How close on the map counts as the same thing for "no" and "only". */

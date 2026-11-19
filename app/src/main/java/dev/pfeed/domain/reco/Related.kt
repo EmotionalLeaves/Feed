@@ -32,8 +32,21 @@ object Related {
             while (recent.size > 5) recent.removeLast()
         }
         r.forEach { queue.addLast(it) }
+        // Shown beside several videos you enjoyed: the sites' viewers keep pairing it with your kind of thing.
+        if (enjoyedKeys.add(key)) r.forEach { support[it.key] = (support[it.key] ?: 0) + 1 }
         while (queue.size > MAX_QUEUED) queue.removeFirst()
     }
+
+    private val enjoyedKeys = HashSet<String>()
+    private val support = object : LinkedHashMap<String, Int>(64, 0.75f, true) {
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>?) = size > 800
+    }
+
+    /**
+     * How many videos you enjoyed lately list [key] beside them (0 if none): co-watching, as each
+     * site's own viewers do it. For You counts it in a post's favour.
+     */
+    @Synchronized fun support(key: String): Int = support[key] ?: 0
 
     /** Everything queued since last asked. */
     @Synchronized fun drain(): List<MediaItem> = queue.toList().also { queue.clear() }

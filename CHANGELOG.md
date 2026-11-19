@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.14.0 — 2026-11-18
+
+Co-watched videos rank higher
+
+- **Co-watching**: when the same video sits beside several videos you enjoyed on their sites, the sites' own viewers keep pairing it with your kind of thing. For You now ranks it higher, more so the more of your favourites it's beside.
+
 ## 5.13.0 — 2026-11-18
 
 Searches land on the moment

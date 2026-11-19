@@ -21,4 +21,16 @@ class RelatedTest {
         assertTrue(Related.drain().isEmpty())
         assertEquals("Seed video", Related.recentlyEnjoyed().first().first)
     }
+
+    @Test
+    fun `a post beside several videos you enjoyed counts more, each video once`() {
+        val one = v("cw-one"); val two = v("cw-two")
+        Related.put(one.key, listOf(v("cw-x"), v("cw-y")))
+        Related.put(two.key, listOf(v("cw-x"), v("cw-z")))
+        Related.enjoyed(one.key); Related.enjoyed(one.key); Related.enjoyed(two.key)
+        Related.drain()
+        assertEquals(2, Related.support(v("cw-x").key))
+        assertEquals(1, Related.support(v("cw-y").key))
+        assertEquals(0, Related.support(v("cw-nothing").key))
+    }
 }
