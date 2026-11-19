@@ -1,3 +1,8 @@
+## 5.31.0 — 2026-11-19
+Know when they go live
+
+- **Live alerts inside the app**: while you're in For You on Wi-Fi, the app looks every ten minutes for people you follow who've just come on cam. When one has, you get a quiet banner, "<name> is live now · Watch", which opens their room. No system notifications, as always.
+
 ## 5.30.0 — 2026-11-19
 The bit you keep going back to
 
@@ -9,9 +14,3 @@ Creators for you
 
 - **Creators for you** on Discover: the people whose posts you keep staying for but don't follow yet, as a row of round pictures (their latest post you saw). Tap one for their page, where Follow is one tap.
 - Lighter on memory while finding scenes (one preview sheet held at a time).
-
-## 5.28.0 — 2026-11-19
-Scenes respect mobile data
-
-- On mobile data, scenes are only found when you ask for them (**Next scene**) or when Highlights needs them. On Wi-Fi they're still found in the background as you watch.
-- **Next scene** now finds the scenes on the spot if they aren't known yet, instead of saying it doesn't know.

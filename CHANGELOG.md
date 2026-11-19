@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.31.0 — 2026-11-19
+
+Know when they go live
+
+- **Live alerts inside the app**: while you're in For You on Wi-Fi, the app looks every ten minutes for people you follow who've just come on cam. When one has, you get a quiet banner, "<name> is live now · Watch", which opens their room. No system notifications, as always.
+
 ## 5.30.0 — 2026-11-19
 
 The bit you keep going back to

@@ -170,19 +170,39 @@ class FeedViewModel @Inject constructor(
     init {
         if (isMainFeed) viewModelScope.launch {
             delay(3_000) // after construction (it reads properties declared further down)
+            var rounds = 0
             while (true) {
-                if (_mode.value == FeedMode.FOLLOWING) runCatching {
+                // In Following every couple of minutes (the row shows who's on); in For You, on Wi-Fi,
+                // every ten, to say when someone you follow has just come on.
+                val following = _mode.value == FeedMode.FOLLOWING
+                val forYouCheck = _mode.value == FeedMode.FOR_YOU && !network.isMetered && rounds % LIVE_FOR_YOU_EVERY == 0
+                if (following || forYouCheck) runCatching {
                     val names = follows.value.creators.map { it.lowercase() }.toSet()
                     val live = registry.byId(dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID)
                     if (names.isNotEmpty() && live != null && registry.enabledAdapters().any { it.id == live.id }) {
                         val rooms = live.fetchFeed(null, dev.pfeed.domain.model.FeedPrefs(FeedMode.LIVE)).items
+                        val before = liveFollowed.value.keys
                         liveFollowed.value = rooms.filter { it.creator?.lowercase() in names }.associateBy { it.creator!!.lowercase() }
+                        // Just came on (not on at the last look, and not said already this session).
+                        val fresh = liveFollowed.value.filterKeys { it !in before && it !in announcedLive }
+                        if (forYouCheck && checkedLiveOnce) fresh.values.firstOrNull()?.let { room ->
+                            announcedLive += room.creator!!.lowercase()
+                            offer("${room.creator} is live now", "Watch") { openViewerRequest.value = openLive(room) }
+                        }
+                        checkedLiveOnce = true
                     }
                 }
+                rounds++
                 delay(LIVE_FOLLOW_CHECK_MS)
             }
         }
     }
+
+    private val announcedLive = HashSet<String>()
+    private var checkedLiveOnce = false
+
+    /** A viewer to open (its token), asked for from an offer: the screen navigates there. */
+    val openViewerRequest = MutableStateFlow<String?>(null)
 
     /** Opens a live room you follow as its own viewer. */
     fun openLive(item: MediaItem): String = holder.put(listOf(item), 0, title = "Live")
@@ -1154,6 +1174,8 @@ class FeedViewModel @Inject constructor(
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
         private const val NOTICE_GAP_MS = 5 * 60_000L
         private const val LIVE_FOLLOW_CHECK_MS = 2 * 60_000L
+        /** In For You, look every this many rounds (ten minutes). */
+        private const val LIVE_FOR_YOU_EVERY = 5
         private const val THIS_OR_THAT_AFTER = 25
         private const val NEW_USER_REACTIONS = 200
         private const val INTRO_MIN_SEC = 300

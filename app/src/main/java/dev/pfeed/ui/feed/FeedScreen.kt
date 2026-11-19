@@ -572,6 +572,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp, start = 48.dp, end = 48.dp),
             )
         }
+        val viewerAsked by vm.openViewerRequest.collectAsStateWithLifecycle()
+        LaunchedEffect(viewerAsked) { viewerAsked?.let { vm.openViewerRequest.value = null; nav.navigate(Routes.viewer(it)) } }
         val asked by vm.thisOrThatRequest.collectAsStateWithLifecycle()
         LaunchedEffect(asked) { if (asked) { vm.thisOrThatRequest.value = false; thisOrThat = true } }
         if (thisOrThat) ThisOrThat(vm) { n ->
