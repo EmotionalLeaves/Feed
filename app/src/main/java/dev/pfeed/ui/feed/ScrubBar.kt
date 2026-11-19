@@ -53,7 +53,7 @@ import coil.imageLoader
 fun ScrubBar(
     player: ExoPlayer?,
     modifier: Modifier = Modifier,
-    onScrubbedBack: () -> Unit = {},
+    onScrubbedBack: (Long) -> Unit = {},
     /** The video's preview frames, chapters and watch counts, where its site gives them. */
     extras: dev.pfeed.domain.reco.VideoExtras.Info? = null,
     /** Moments you saved in this video: always marked on the bar. */
@@ -93,7 +93,7 @@ fun ScrubBar(
     fun finish() {
         seekTo(dragFraction, final = true)
         val target = (dragFraction * duration).toLong()
-        if (target < startPosition - REWIND_THRESHOLD_MS) onScrubbedBack()
+        if (target < startPosition - REWIND_THRESHOLD_MS) onScrubbedBack(target)
         position = target
         dragging = false
     }

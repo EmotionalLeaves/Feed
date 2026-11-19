@@ -1652,7 +1652,7 @@ private fun FeedPage(
                 player = player,
                 modifier = Modifier.align(Alignment.BottomCenter),
                 // Scrubbing back to see something again is a rewatch: a strong signal for For You.
-                onScrubbedBack = { vm.statsFor(item.key).replays++ },
+                onScrubbedBack = { at -> vm.scrubbedBack(item, at) },
                 extras = remember(item.key, player) { dev.pfeed.domain.reco.VideoExtras.of(item.key) },
                 moments = run {
                     val v by dev.pfeed.player.Moments.changes.collectAsStateWithLifecycle()

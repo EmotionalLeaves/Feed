@@ -1,3 +1,9 @@
+## 5.30.0 — 2026-11-19
+The bit you keep going back to
+
+- Includes 5.29's **Creators for you** row on Discover (that build didn't compile).
+- **Auto-moments**: scrub back to the same bit of a video twice and the app marks it as a moment (amber dot, "Your moment" next time), with an Undo.
+
 ## 5.29.0 — 2026-11-19
 Creators for you
 
@@ -9,9 +15,3 @@ Scenes respect mobile data
 
 - On mobile data, scenes are only found when you ask for them (**Next scene**) or when Highlights needs them. On Wi-Fi they're still found in the background as you watch.
 - **Next scene** now finds the scenes on the spot if they aren't known yet, instead of saying it doesn't know.
-
-## 5.27.0 — 2026-11-19
-Up next
-
-- **Up next card**: in the last 8 seconds of a full scene, a card shows what's coming next (picture and title) with a countdown. Tap **Stay** and the video starts over, paused, instead of moving on.
-- Playing Saved → Moments as highlights now starts each video at its moment, not at the best part.

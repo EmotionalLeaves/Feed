@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.30.0 — 2026-11-19
+
+The bit you keep going back to
+
+- Includes 5.29's **Creators for you** row on Discover (that build didn't compile).
+- **Auto-moments**: scrub back to the same bit of a video twice and the app marks it as a moment (amber dot, "Your moment" next time), with an Undo.
+
 ## 5.29.0 — 2026-11-19
 
 Creators for you

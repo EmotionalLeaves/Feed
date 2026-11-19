@@ -922,6 +922,21 @@ class FeedViewModel @Inject constructor(
         return if (acts.size >= 2) acts else dev.pfeed.domain.reco.Scenes.of(item.key).orEmpty()
     }
 
+    /**
+     * Scrubbed back to [atMs]: a rewatch (a strong signal for For You), and if it's the second time
+     * back to the same bit, that bit is marked as a moment (with an undo).
+     */
+    fun scrubbedBack(item: MediaItem, atMs: Long) {
+        statsFor(item.key).replays++
+        if (settings.value.privateMode || dev.pfeed.domain.privacy.Incognito.active) return
+        val bit = dev.pfeed.domain.reco.Rewinds.note(item.key, atMs) ?: return
+        if (dev.pfeed.player.Moments.of(item.key).any { kotlin.math.abs(it - bit) <= dev.pfeed.domain.reco.Rewinds.SAME_BIT_MS }) return
+        dev.pfeed.player.Moments.add(item.key, bit)
+        offer("Marked the bit you keep going back to · ${dev.pfeed.ui.common.formatDuration((bit / 1000).toInt())}", "Undo") {
+            dev.pfeed.player.Moments.remove(item.key, bit)
+        }
+    }
+
     /** "Save this moment": marks [atMs] in the video and keeps it in Saved → Moments. */
     fun saveMoment(item: MediaItem, atMs: Long) {
         dev.pfeed.player.Moments.add(item.key, atMs)
