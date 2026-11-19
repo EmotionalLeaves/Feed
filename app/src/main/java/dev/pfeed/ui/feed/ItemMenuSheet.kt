@@ -39,6 +39,7 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.BookmarkAdd
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Speed
@@ -273,6 +274,9 @@ fun ItemMenuSheet(
                 )
             }
             if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
+                if ((item.durationSec ?: 0) * 1000L >= SceneFinder.MIN_DURATION_MS) {
+                    MenuRow("Next scene", Icons.Filled.SkipNext, "Skips to where the video cuts to something new") { SceneSkip.request.value = item.key; onDismiss() }
+                }
                 MenuRow("Save this moment", Icons.Filled.BookmarkAdd, "Marks where you are: it shows on the scrub bar, and Saved → Moments plays the video from there") { MomentGrab.request.value = item.key; onDismiss() }
                 MenuRow("Save this frame", Icons.Filled.PhotoCamera, "Keep this exact moment as a picture, in Saved → Frames") { FrameGrab.request.value = item.key; onDismiss() }
                 MenuRow("Loop a part", Icons.Filled.Repeat, "Starts here; tap when it reaches the end you want") { LoopPart.request.value = item.key; onDismiss() }

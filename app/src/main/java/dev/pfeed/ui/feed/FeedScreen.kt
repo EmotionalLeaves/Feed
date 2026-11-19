@@ -84,6 +84,7 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
@@ -1606,6 +1607,10 @@ private fun FeedPage(
                 onPause = { paused = !paused; controlsTouched = System.currentTimeMillis() },
                 onTouched = { controlsTouched = System.currentTimeMillis() },
                 onMoment = { MomentGrab.request.value = item.key },
+                scenes = run {
+                    val v by dev.pfeed.domain.reco.Scenes.changes.collectAsStateWithLifecycle()
+                    remember(item.key, v, player) { vm.sceneCuts(item) }
+                },
             )
             IconButton(
                 onClick = { onLandscape(false) },
@@ -1649,6 +1654,10 @@ private fun FeedPage(
                 moments = run {
                     val v by dev.pfeed.player.Moments.changes.collectAsStateWithLifecycle()
                     remember(item.key, v) { dev.pfeed.player.Moments.of(item.key) }
+                },
+                scenes = run {
+                    val v by dev.pfeed.domain.reco.Scenes.changes.collectAsStateWithLifecycle()
+                    remember(item.key, v, player) { vm.sceneCuts(item) }
                 },
             )
         }
@@ -2242,6 +2251,7 @@ private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
     onPause: () -> Unit,
     onTouched: () -> Unit,
     onMoment: () -> Unit,
+    scenes: List<Long> = emptyList(),
 ) {
     androidx.compose.animation.AnimatedVisibility(
         visible = visible && player != null,
@@ -2286,6 +2296,18 @@ private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
                 IconButton(onClick = { p.seekTo((p.currentPosition + SKIP_MS).coerceAtMost(p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE)); onTouched() }, modifier = Modifier.size(56.dp)) {
                     Icon(Icons.Filled.FastForward, contentDescription = "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(36.dp))
                 }
+            }
+            // Next scene: on the right, where your thumb is.
+            if (scenes.isNotEmpty()) Row(
+                Modifier.align(Alignment.CenterEnd).padding(end = 28.dp).clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable { dev.pfeed.domain.reco.Scenes.next(scenes, p.currentPosition)?.let { p.seekTo(it) }; onTouched() }
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Next scene", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Filled.SkipNext, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
             Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 34.dp)) {
                 if (acts.size >= 2) androidx.compose.foundation.lazy.LazyRow(

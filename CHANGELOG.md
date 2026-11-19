@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.18.0 — 2026-11-19
+
+Next scene
+
+- **Next scene**: in long videos the app now finds where the video cuts to a new scene, by comparing the site's preview frames (Pornhub family and XVideos), or uses the acts the site names. Jump straight to the next one from the long-press menu, or with the **Next scene** button in the sideways player.
+- Scene cuts show as thin marks on the scrub bar while you drag.
+
 ## 5.17.0 — 2026-11-19
 
 A real player when you turn sideways

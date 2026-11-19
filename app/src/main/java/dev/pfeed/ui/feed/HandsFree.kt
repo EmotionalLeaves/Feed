@@ -106,6 +106,11 @@ object FrameGrab {
     val request = MutableStateFlow<String?>(null)
 }
 
+/** "Next scene" asked for the video with this key: the page playing it jumps to its next cut. */
+object SceneSkip {
+    val request = MutableStateFlow<String?>(null)
+}
+
 /** "Save this moment" asked for the video with this key: the page playing it marks where it is. */
 object MomentGrab {
     val request = MutableStateFlow<String?>(null)

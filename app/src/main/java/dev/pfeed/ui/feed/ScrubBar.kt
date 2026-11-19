@@ -58,6 +58,8 @@ fun ScrubBar(
     extras: dev.pfeed.domain.reco.VideoExtras.Info? = null,
     /** Moments you saved in this video: always marked on the bar. */
     moments: List<Long> = emptyList(),
+    /** Where its scenes cut: thin marks while scrubbing. */
+    scenes: List<Long> = emptyList(),
 ) {
     if (player == null) return
     var duration by remember(player) { mutableLongStateOf(0L) }
@@ -184,6 +186,12 @@ fun ScrubBar(
             Box(
                 Modifier.align(Alignment.BottomStart).offset(x = width * (ms.toFloat() / duration).coerceIn(0f, 1f) - 1.dp, y = (-1).dp)
                     .size(2.dp, 10.dp).background(Color(0xFFFFB547)),
+            )
+        }
+        if (dragging) scenes.forEach { ms ->
+            Box(
+                Modifier.align(Alignment.BottomStart).offset(x = width * (ms.toFloat() / duration).coerceIn(0f, 1f) - 1.dp, y = (-1).dp)
+                    .size(2.dp, 7.dp).background(Color.White.copy(alpha = 0.75f)),
             )
         }
         // Your saved moments: small amber dots just above the bar.

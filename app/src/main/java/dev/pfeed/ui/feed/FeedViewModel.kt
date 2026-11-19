@@ -888,6 +888,15 @@ class FeedViewModel @Inject constructor(
      * Keeps a still from a video: written as a JPEG in the app's own storage (encrypted along with
      * the rest of the app's data by the phone), saved, and put in the "Frames" collection.
      */
+    /**
+     * Where [item]'s scenes start, for "Next scene": the acts its site names if it names them,
+     * else the cuts found in its preview frames ([dev.pfeed.domain.reco.Scenes]); empty if neither yet.
+     */
+    fun sceneCuts(item: MediaItem): List<Long> {
+        val acts = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty().map { it.second }.filter { it > 0 }.distinct().sorted()
+        return if (acts.size >= 2) acts else dev.pfeed.domain.reco.Scenes.of(item.key).orEmpty()
+    }
+
     /** "Save this moment": marks [atMs] in the video and keeps it in Saved → Moments. */
     fun saveMoment(item: MediaItem, atMs: Long) {
         dev.pfeed.player.Moments.add(item.key, atMs)

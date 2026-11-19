@@ -380,6 +380,26 @@ fun VideoPage(
         val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
         vm.saveMoment(item, p.currentPosition)
     }
+    // Scene cuts from the site's preview frames, once you've stayed a few seconds on a long video.
+    val sceneContext = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(item.key, stream, firstFrame, play) {
+        if (!firstFrame || !play) return@LaunchedEffect
+        val tl = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.timeline ?: return@LaunchedEffect
+        if (dev.pfeed.domain.reco.Scenes.of(item.key) != null) return@LaunchedEffect
+        kotlinx.coroutines.delay(SCENES_AFTER_MS)
+        val d = player?.duration?.takeIf { it > 0 } ?: ((item.durationSec ?: 0) * 1000L)
+        runCatching { SceneFinder.find(sceneContext, item.key, tl, d) }
+    }
+    // "Next scene": jump to the next cut (or act).
+    val sceneAsk by SceneSkip.request.collectAsState()
+    LaunchedEffect(sceneAsk) {
+        if (sceneAsk != item.key) return@LaunchedEffect
+        SceneSkip.request.value = null
+        val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
+        val next = dev.pfeed.domain.reco.Scenes.next(vm.sceneCuts(item), p.currentPosition)
+        if (next != null) p.seekTo(next)
+        else vm.offer(if (vm.sceneCuts(item).isEmpty()) "Scenes aren't known for this video yet" else "That was the last scene", "Skip 30 s") { p.seekTo(p.currentPosition + 30_000) }
+    }
     // "Save this frame": copy what's on the video surface right now into Saved (a "Frames" collection).
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val grab by FrameGrab.request.collectAsState()
@@ -587,6 +607,7 @@ fun VideoPage(
 private const val BEST_OFFER_MS = 9_000L
 private const val HIGHLIGHT_TICK_MS = 250L
 private const val ACT_TICK_MS = 500L
+private const val SCENES_AFTER_MS = 6_000L
 private const val CHAPTERS_MS = 12_000L
 
 /**
