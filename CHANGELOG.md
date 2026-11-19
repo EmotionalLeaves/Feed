@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.10.0 — 2026-11-18
+
+Comments and instant previews
+
+- **Comments under Pornhub videos**: the long-press menu now shows "Comments (N)" read straight from the video page you already loaded, no extra request.
+- **Instant tile previews**: PerfectGirls, OK.XXX, PornGo and Porndig cards now play the site's own few-second preview clip in grids instead of opening the full video, a fraction of the data and much faster to start.
+- Videos found as "related" no longer get a stray "related" tag that skewed your taste profile.
+
 ## 5.9.0 — 2026-11-18
 
 For You learns what you actually watched

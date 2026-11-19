@@ -105,7 +105,7 @@ fun ItemMenuSheet(
             }
             if (mode == "comments") {
                 ListItem(
-                    headlineContent = { Text("Comments on Reddit", fontWeight = FontWeight.Bold) },
+                    headlineContent = { Text(if (item.sourceId == dev.pfeed.source.parse.RedditParser.SOURCE_ID) "Comments on Reddit" else "Comments", fontWeight = FontWeight.Bold) },
                     leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
                     colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     modifier = Modifier.clickable { pickTag = null },
@@ -119,10 +119,13 @@ fun ItemMenuSheet(
                     else -> list.forEach { c ->
                         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("u/${c.author}", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
-                                Spacer(Modifier.width(8.dp))
-                                Icon(Icons.Filled.ArrowUpward, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                                Text("${c.score}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                val reddit = item.sourceId == dev.pfeed.source.parse.RedditParser.SOURCE_ID
+                                Text(if (reddit) "u/${c.author}" else c.author, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1)
+                                if (reddit) {
+                                    Spacer(Modifier.width(8.dp))
+                                    Icon(Icons.Filled.ArrowUpward, contentDescription = null, modifier = Modifier.size(12.dp), tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                    Text("${c.score}", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                }
                             }
                             Spacer(Modifier.height(3.dp))
                             Text(c.body, style = MaterialTheme.typography.bodyMedium, maxLines = 8, overflow = TextOverflow.Ellipsis)
@@ -264,8 +267,11 @@ fun ItemMenuSheet(
                 ) { FeelTheSound.set(!feel); onDismiss() }
             }
             if (onForTheRoad != null) MenuRow("Take 20 for the road", Icons.Filled.FlightTakeoff, "This and the next posts, downloaded to watch offline") { onForTheRoad(); onDismiss() }
+            val siteComments = remember(item.key) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.comments?.size ?: 0 }
             if (item.sourceId == dev.pfeed.source.parse.RedditParser.SOURCE_ID && "/comments/" in item.pageUrl) {
                 MenuRow("Comments", Icons.Filled.ChatBubbleOutline, "What people said under it on Reddit") { pickTag = "comments" }
+            } else if (siteComments > 0) {
+                MenuRow("Comments ($siteComments)", Icons.Filled.ChatBubbleOutline, "What people said under it on its site") { pickTag = "comments" }
             }
             val dim by Dimmer.level.collectAsStateWithLifecycle()
             MenuRow(

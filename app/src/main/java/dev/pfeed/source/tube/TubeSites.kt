@@ -24,6 +24,8 @@ data class TubeVideo(
     val tags: List<String> = emptyList(),
     val published: java.time.Instant? = null,
     val creator: String? = null,
+    /** A few seconds' muted preview clip the site offers (for live grids), if any. */
+    val preview: String? = null,
 )
 
 /** What a video page gave us: a stream the player can open, or nothing (the embed is used then). */
@@ -75,6 +77,9 @@ sealed class TubeSite(val host: String, val label: String) {
 
     /** How much each stretch of the video is watched, where the page says (see [dev.pfeed.domain.reco.BestPart]). */
     open fun hotspots(pageHtml: String): List<Int>? = null
+
+    /** The comments under the video, where the page carries them: (who, what), top first. */
+    open fun comments(pageHtml: String): List<Pair<String, String>> = emptyList()
 
     /** Scrub previews and chapters, where the page has them (the Pornhub family's player setup). */
     open fun timeline(pageHtml: String): dev.pfeed.domain.reco.VideoExtras.Timeline? = phTimeline(pageHtml)
@@ -290,6 +295,19 @@ sealed class TubeSite(val host: String, val label: String) {
         }.distinctBy { it.id }.toList()
 
         override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let { fromMediaDefinitions(it, host) }
+        private val COMMENT_TEXT = Regex("""<div class="commentMessage">\s*<span>(.*?)</span>""", RegexOption.DOT_MATCHES_ALL)
+        private val COMMENT_AUTHOR = Regex("""class="[^"]*usernameLink[^"]*"[^>]*>([^<]+)<""")
+        /** Each comment's text, with the last commenter's name between it and the comment before it. */
+        override fun comments(pageHtml: String): List<Pair<String, String>> {
+            var from = 0
+            return COMMENT_TEXT.findAll(pageHtml).mapNotNull { m ->
+                val author = COMMENT_AUTHOR.findAll(pageHtml.substring(maxOf(from, m.range.first - 4000), m.range.first)).lastOrNull()
+                from = m.range.last
+                val text = unescape(m.groupValues[1].replace(Regex("<[^>]+>"), "")).trim()
+                author?.let { it.groupValues[1].trim() to text }?.takeIf { text.isNotBlank() }
+            }.take(25).toList()
+        }
+
         /** `'categories_in_video' : 'Amateur,Babe,MILF,…'` in the player setup. */
         override fun pageTags(pageHtml: String): List<String> =
             Regex("""'categories_in_video'\s*:\s*'([^']+)'""").find(pageHtml)?.groupValues?.get(1)?.split(',')
@@ -726,6 +744,7 @@ sealed class TubeSite(val host: String, val label: String) {
                 pageUrl = "https://www.porndig.com" + link.groupValues[1],
                 thumb = IMG.find(c)?.groupValues?.get(1),
                 durationSec = MARK.find(c)?.groupValues?.get(2)?.toIntOrNull(),
+                preview = Regex("""data-vid='(https://[^']+\.mp4)'""").find(c)?.groupValues?.get(1),
             )
         }.distinctBy { it.id }
 
@@ -752,6 +771,7 @@ sealed class TubeSite(val host: String, val label: String) {
             "top" -> "https://www.perfectgirls.xxx/top-rated/${if (page == 0) "" else "${page + 1}/"}"
             else -> "https://www.perfectgirls.xxx/search/${enc(section.lowercase()).replace("+", "-")}/${if (page == 0) "" else "${page + 1}/"}"
         }
+        private val PREVIEW_CLIP = Regex("""data-preview-custom="(https://[^"]+\.mp4/?)"""")
         private val MARK = Regex("""class="\s*item thumb-bl thumb-bl-video[^"]*"""")
         private val HREF = Regex("""href="(/video/(\d+)/)"\s+title="([^"]*)"""")
         private val IMG = Regex("""data-original="(https://[^"]+\.jpg)"""")
@@ -776,6 +796,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     thumb = IMG.find(c)?.groupValues?.get(1),
                     durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
                     creator = (MODEL.find(c) ?: STUDIO.find(c))?.groupValues?.get(1)?.let(::unescape),
+                    preview = PREVIEW_CLIP.find(c)?.groupValues?.get(1),
                 )
             }.distinctBy { it.id }
         }
@@ -795,6 +816,7 @@ sealed class TubeSite(val host: String, val label: String) {
             "top" -> "https://ok.xxx/top-rated/${if (page == 0) "" else "${page + 1}/"}"
             else -> "https://ok.xxx/search/${enc(section.lowercase()).replace("+", "-")}/${if (page == 0) "" else "${page + 1}/"}"
         }
+        private val PREVIEW_CLIP = Regex("""data-preview-custom="(https://[^"]+\.mp4/?)"""")
         private val MARK = Regex("""class="\s*item thumb-bl thumb-bl-video[^"]*"""")
         private val HREF = Regex("""href="(/video/(\d+)/)"\s+title="([^"]*)"""")
         private val IMG = Regex("""data-original="(https://[^"]+\.jpg)"""")
@@ -819,6 +841,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     thumb = IMG.find(c)?.groupValues?.get(1),
                     durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
                     creator = (MODEL.find(c) ?: STUDIO.find(c))?.groupValues?.get(1)?.let(::unescape),
+                    preview = PREVIEW_CLIP.find(c)?.groupValues?.get(1),
                 )
             }.distinctBy { it.id }
         }
@@ -858,6 +881,7 @@ sealed class TubeSite(val host: String, val label: String) {
                 thumb = img?.groupValues?.get(1),
                 durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
                 creator = MODEL.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(),
+                preview = Regex("""data-preview="(https://[^"]+\.mp4)"""").find(c)?.groupValues?.get(1),
             )
         }.distinctBy { it.id }
 
@@ -1147,5 +1171,8 @@ private fun TubeSite.item(v: TubeVideo, section: String, published: java.time.In
         thumbnailUrl = v.thumb,
         pageUrl = v.pageUrl,
         publishedAt = published,
-        extras = mapOf("resolve" to "tube", "vid" to v.id),
+        extras = buildMap { put("resolve", "tube"); put("vid", v.id); v.preview?.let { put(PREVIEW, it) } },
     )
+
+/** In a tube post's extras: its site's short preview clip. */
+const val PREVIEW = "preview"

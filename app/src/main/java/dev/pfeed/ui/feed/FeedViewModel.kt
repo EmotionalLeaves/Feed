@@ -895,6 +895,10 @@ class FeedViewModel @Inject constructor(
 
     /** What people said under a Reddit post (empty for anything else, or if Reddit won't say). */
     suspend fun comments(item: MediaItem): List<dev.pfeed.source.reddit.RedditAdapter.Comment> {
+        // A tube video whose page carried its comments (read when it was opened).
+        dev.pfeed.domain.reco.VideoExtras.of(item.key)?.comments?.takeIf { it.isNotEmpty() }?.let { list ->
+            return list.map { (who, what) -> dev.pfeed.source.reddit.RedditAdapter.Comment(who, what, 0) }
+        }
         if (item.sourceId != dev.pfeed.source.parse.RedditParser.SOURCE_ID) return emptyList()
         val reddit = registry.byId(item.sourceId) as? dev.pfeed.source.reddit.RedditAdapter ?: return emptyList()
         return try { reddit.comments(item) } catch (e: CancellationException) { throw e } catch (e: Exception) { emptyList() }

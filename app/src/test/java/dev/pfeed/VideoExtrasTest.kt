@@ -3,6 +3,7 @@ package dev.pfeed
 import dev.pfeed.domain.reco.VideoExtras
 import dev.pfeed.source.tube.TubeSite
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class VideoExtrasTest {
@@ -29,4 +30,46 @@ class VideoExtrasTest {
         val xv = """"video_tags":["blonde","babe","milf","big-butt"],"""
         assertEquals(listOf("blonde", "babe", "milf", "big butt"), TubeSite.Xvideos.pageTags(xv))
     }
+
+    @Test
+    fun `reads pornhub comments`() {
+        val c = TubeSite.Pornhub.comments(PH_COMMENT)
+        assertEquals("bigdickaussie69696", c.first().first)
+        assertTrue(c.first().second.startsWith("Hands down"))
+    }
+
+    private val PH_COMMENT = """<a rel="nofollow"
+ data-event="watch_page" data-label="profile_view"
+ href="/users/bigdickaussie69696"
+ title="bigdickaussie69696"
+ class="gtm-event-watch-page usernameLink">bigdickaussie69696</a>
+ </span>
+
+ </a>
+ <span class="js-moreAction moreAction"></span>
+ <section id="profileBlockReport" class="displayNone">
+ <div class="sectionWrapper blockAndReportSubscribers spriteProfileIcons">
+ <div class="lblSubtitle ie7ReportWidth">
+ <a href="#" class="flagUserProfile" data-user-id="2130842841" data-mpp-cpp="" data-user="https://www.pornhub.com/api/v1/user/2130842841/flag?token=MTc5NTA1ODg3OWTDekJJkl0hd3xalW6qg4NdEnzpHe-fWGni2iTbQ5FfeE377mBF5ssKJV_tVzIYuK2oC9sUJDOnEWt2jzeMXxM.">
+ <span class="profileReportIcon"></span>
+ <p class="blockReportUserPara">Report User</p>
+ </a>
+ </div>
+ <div class="cancelBlockModal">
+ <a class="js-cancelBlockReportModal" href="#" onclick="blockReportModal.closeModal(); return false;">
+ <span class="cancelIcon"></span>
+ <p class="cancelPara blockReportUserPara">Cancel</p>
+ </a>
+ </div>
+ </div>
+ </section>
+</div>
+
+
+ 
+ <div class="date floatRight">1 month ago</div>
+ </div>
+ <div class="commentMessage">
+ <span>Hands down the hottest porn star I’ve seen in my life</span>
+"""
 }

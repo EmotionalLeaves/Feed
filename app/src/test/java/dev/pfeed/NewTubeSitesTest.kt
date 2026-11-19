@@ -23,6 +23,7 @@ class NewTubeSitesTest {
         val list = TubeSite.Porndig.parseList(PORNDIG_LIST)
         assertEquals("258176", list[0].id)
         assertEquals(600, list[0].durationSec)
+        assertEquals("https://image-cdn.porndig.com/previewclips/2026/08/571446/clips/571446_1.mp4", list[0].preview)
         val s = TubeSite.Porndig.stream(PORNDIG_PLAYER)!!
         assertTrue(s.url, s.url.contains("_h264_") && s.url.contains("_1080.mp4") && !s.url.contains("\\"))
     }
@@ -33,6 +34,7 @@ class NewTubeSitesTest {
         assertEquals("808821", list[0].id)
         assertEquals(16 * 60 + 42, list[0].durationSec)
         assertEquals("Stefanie Moon", list[0].creator)
+        assertTrue(list[0].preview!!.endsWith("808821_preview360p.mp4/"))
     }
 
     @Test
@@ -41,6 +43,7 @@ class NewTubeSitesTest {
         assertEquals("805943", list[0].id)
         assertEquals(10 * 60 + 17, list[0].durationSec)
         assertEquals("Pressure", list[0].creator)
+        assertTrue(list[0].preview!!.endsWith("805943_preview360p.mp4/"))
     }
 
     @Test
@@ -48,6 +51,7 @@ class NewTubeSitesTest {
         val list = TubeSite.PornGo.parseList(PORNGO_LIST)
         assertEquals("2024237", list[0].id)
         assertEquals(13 * 60 + 6, list[0].durationSec)
+        assertEquals("https://cast21.porngo.com/preview/2024237.mp4", list[0].preview)
         assertTrue(TubeSite.PornGo.stream(PORNGO_VIDEO)!!.url.contains("/get_file/"))
     }
 

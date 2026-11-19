@@ -33,6 +33,8 @@ class LivePreviews @Inject constructor(
 
     suspend fun resolve(item: MediaItem): StreamInfo? {
         found[item.key]?.let { return it }
+        // The site's own few-second preview clip: a fraction of the size, and no page to read first.
+        item.extras[dev.pfeed.source.tube.PREVIEW]?.takeIf { it.startsWith("https://") }?.let { return StreamInfo.Direct(it, "video/mp4") }
         val s = withContext(Dispatchers.IO) { offline.local(item.key) } ?: try {
             registry.byId(item.sourceId)?.resolveStream(item)
         } catch (e: CancellationException) {

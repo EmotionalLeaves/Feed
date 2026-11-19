@@ -18,7 +18,13 @@ object VideoExtras {
         }
     }
 
-    data class Info(val timeline: Timeline? = null, val chapters: List<Pair<String, Long>> = emptyList(), val heat: List<Int> = emptyList())
+    data class Info(
+        val timeline: Timeline? = null,
+        val chapters: List<Pair<String, Long>> = emptyList(),
+        val heat: List<Int> = emptyList(),
+        /** What people said under it on its site: (who, what). */
+        val comments: List<Pair<String, String>> = emptyList(),
+    )
 
     private val map = object : LinkedHashMap<String, Info>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Info>?) = size > 500

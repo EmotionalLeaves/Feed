@@ -166,7 +166,7 @@ class TubeAdapter @Inject constructor(
             // The page names the video's tags: kept for what For You learns from watching it.
             if (page == item.pageUrl) site.pageTags(html).takeIf { it.isNotEmpty() }?.let { dev.pfeed.domain.reco.PageTags.put(item.key, it) }
             // What the site shows beside it (its own viewers' "watched together"), when the page lists them as cards.
-            if (page == item.pageUrl) runCatching { site.items(site.parseList(html), "related").filter { it.key != item.key } }.getOrNull()
+            if (page == item.pageUrl) runCatching { site.items(site.parseList(html), "top").filter { it.key != item.key } }.getOrNull()
                 ?.filter(dev.pfeed.domain.filter.MinorsFilter::allows)
                 ?.takeIf { it.size >= 3 }?.let { dev.pfeed.domain.reco.Related.put(item.key, it) }
             // Where it gets good, if the site keeps count; its scrub previews and chapters, if it has them.
@@ -176,7 +176,9 @@ class TubeAdapter @Inject constructor(
             val chapters = site.chapters(html)
             // The positions it shows are what it's about, too: learned from like tags.
             if (chapters.isNotEmpty()) dev.pfeed.domain.reco.PageTags.put(item.key, (dev.pfeed.domain.reco.PageTags.of(item.key) + chapters.map { it.first.lowercase() }).distinct())
-            if (timeline != null || chapters.isNotEmpty() || heat.isNotEmpty()) dev.pfeed.domain.reco.VideoExtras.put(item.key, dev.pfeed.domain.reco.VideoExtras.Info(timeline, chapters, heat))
+            val comments = runCatching { site.comments(html) }.getOrDefault(emptyList())
+            if (timeline != null || chapters.isNotEmpty() || heat.isNotEmpty() || comments.isNotEmpty())
+                dev.pfeed.domain.reco.VideoExtras.put(item.key, dev.pfeed.domain.reco.VideoExtras.Info(timeline, chapters, heat, comments))
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.playerUrl(html)?.let { player ->
