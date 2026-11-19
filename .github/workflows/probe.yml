@@ -6,6 +6,9 @@ on:
       sites:
         description: "JSON: {name: {lists: [urls], video: regex}}"
         required: true
+      script:
+        description: "Python for chained requests (optional)"
+        required: false
 jobs:
   probe:
     runs-on: ubuntu-latest
@@ -14,6 +17,7 @@ jobs:
       - name: Fetch
         env:
           SITES_JSON: ${{ github.event.inputs.sites }}
+          SCRIPT: ${{ github.event.inputs.script }}
         run: python3 .github/probe/probe.py
       - uses: actions/upload-artifact@v4
         with:

@@ -38,5 +38,11 @@ for name, cfg in SITES.items():
                         report.append(f"{name} video{j} ERROR {e}")
         except Exception as e:
             report.append(f"{name} list{i} ERROR {e}")
+# Free-form chained requests: SCRIPT is Python run with get(), out and report in scope.
+if os.environ.get("SCRIPT"):
+    try:
+        exec(os.environ["SCRIPT"])
+    except Exception as e:
+        report.append(f"script ERROR {e}")
 open(f"{out}/REPORT.txt", "w").write("\n".join(report))
 print("\n".join(report))
