@@ -297,6 +297,7 @@ fun VideoPage(
     // over (seek, tap a chapter, or "Keep watching").
     val highlightsOn by Highlights.on.collectAsState()
     var highlightPlayed by remember(item.key) { mutableStateOf(0L) }
+    var highlightSpan by remember(item.key) { mutableStateOf(0L) }
     var highlightLeft by remember(item.key) { mutableStateOf<Long?>(null) }
     var keepWatching by remember(item.key) { mutableStateOf(false) }
     DisposableEffect(item.key, actTally) {
@@ -312,9 +313,15 @@ fun VideoPage(
         val d = item.durationSec ?: return@LaunchedEffect
         if (!highlightsOn || !play || !firstFrame || keepWatching || d < Highlights.MIN_SEC ||
             item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") return@LaunchedEffect
-        // Switched on with this one already lined up from the start: go to its good part now.
-        if (highlightPlayed == 0L && p.currentMediaItem?.mediaId == item.key && p.currentPosition < 3_000) {
-            vm.highlightStartMs(item)?.takeIf { it > 5_000 }?.let { p.seekTo(it) }
+        // Starting this one's highlight: be at its good part (a scene found since it was lined up can move it).
+        if (highlightPlayed == 0L && p.currentMediaItem?.mediaId == item.key) {
+            vm.highlightStartMs(item)?.takeIf { it > 5_000 && kotlin.math.abs(it - p.currentPosition) > 4_000 }?.let { p.seekTo(it) }
+        }
+        // One scene long, when the scenes are known (within reason); else the standard stretch.
+        if (highlightSpan == 0L) {
+            val from = p.currentPosition
+            highlightSpan = dev.pfeed.domain.reco.Scenes.next(vm.sceneCuts(item), from)
+                ?.let { (it - from).coerceIn(Highlights.MIN_SPAN_MS, Highlights.MAX_SPAN_MS) } ?: Highlights.SPAN_MS
         }
         var last = p.currentPosition
         while (true) {
@@ -326,8 +333,8 @@ fun VideoPage(
             // A jump the clock can't explain: you moved it yourself.
             if (step < -1_000 || step > HIGHLIGHT_TICK_MS * 4 + 1_000) { keepWatching = true; return@LaunchedEffect }
             if (p.isPlaying) highlightPlayed += HIGHLIGHT_TICK_MS
-            highlightLeft = (Highlights.SPAN_MS - highlightPlayed).coerceAtLeast(0L)
-            if (highlightPlayed >= Highlights.SPAN_MS) {
+            highlightLeft = (highlightSpan - highlightPlayed).coerceAtLeast(0L)
+            if (highlightPlayed >= highlightSpan) {
                 stats.autoAdvanced = true
                 ended()
                 return@LaunchedEffect
@@ -383,10 +390,12 @@ fun VideoPage(
     // Scene cuts from the site's preview frames, once you've stayed a few seconds on a long video.
     val sceneContext = androidx.compose.ui.platform.LocalContext.current
     LaunchedEffect(item.key, stream, firstFrame, play) {
-        if (!firstFrame || !play) return@LaunchedEffect
+        // Highlights wants them before the video starts (it opens on a scene), so the one lined up next gets them now.
+        val early = Highlights.on.value && !play && stream != null
+        if (!early && (!firstFrame || !play)) return@LaunchedEffect
         val tl = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.timeline ?: return@LaunchedEffect
         if (dev.pfeed.domain.reco.Scenes.of(item.key) != null) return@LaunchedEffect
-        kotlinx.coroutines.delay(SCENES_AFTER_MS)
+        if (!early) kotlinx.coroutines.delay(SCENES_AFTER_MS)
         val d = player?.duration?.takeIf { it > 0 } ?: ((item.durationSec ?: 0) * 1000L)
         runCatching { SceneFinder.find(sceneContext, item.key, tl, d) }
     }
@@ -596,7 +605,7 @@ fun VideoPage(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             androidx.compose.material3.CircularProgressIndicator(
-                progress = { 1f - left.toFloat() / Highlights.SPAN_MS },
+                progress = { 1f - left.toFloat() / highlightSpan.coerceAtLeast(1L) },
                 modifier = Modifier.size(16.dp),
                 color = androidx.compose.ui.graphics.Color(0xFFFF5C7A),
                 trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.25f),

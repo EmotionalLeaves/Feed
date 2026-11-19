@@ -39,6 +39,9 @@ object Highlights {
     fun set(value: Boolean) { _on.value = value }
 
     const val SPAN_MS = 45_000L
+    /** Played to the end of its scene, when the scenes are known, but no shorter or longer than these. */
+    const val MIN_SPAN_MS = 30_000L
+    const val MAX_SPAN_MS = 90_000L
     /** Shorter than this, a video is already a highlight: it plays as normal. */
     const val MIN_SEC = 150
 

@@ -1,3 +1,8 @@
+## 5.22.0 — 2026-11-19
+Highlights that follow scenes
+
+- **Highlights now work in scenes**: when a long video's scenes are known, Highlights opens it at the start of a scene, plays that scene through (30–90 seconds) and moves on. Scenes for the next video are found while the current one plays.
+
 ## 5.21.0 — 2026-11-19
 Flirt4Free in Live
 
@@ -7,8 +12,3 @@ Flirt4Free in Live
 Two new sites: 3Movs and AnySex
 
 - **3Movs** and **AnySex** join the tube sites (23 now). Both play their own MP4s directly (AnySex up to 720p), show preview clips in grids, and read their tags when you play a video. AnySex tiles carry the channel or model, so you can follow them. Both can be switched off in Sources like the others.
-
-## 5.19.0 — 2026-11-19
-Scenes as pictures
-
-- **Scene strip**: once a long video's scenes are known, the long-press menu shows them as a row of pictures with start times; tap one to go there. The sideways player shows the same strip, with the scene you're in outlined.

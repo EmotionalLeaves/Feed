@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.22.0 — 2026-11-19
+
+Highlights that follow scenes
+
+- **Highlights now work in scenes**: when a long video's scenes are known, Highlights opens it at the start of a scene, plays that scene through (30–90 seconds) and moves on. Scenes for the next video are found while the current one plays.
+
 ## 5.21.0 — 2026-11-19
 
 Flirt4Free in Live
