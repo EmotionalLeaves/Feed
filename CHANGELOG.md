@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.21.0 — 2026-11-19
+
+Flirt4Free in Live
+
+- **Flirt4Free joins the Live tab**: its open rooms (about 200 at a time) are woven in with CamSoda and Cam4. They have categories as tags, so the Live tab learns your taste there too, and play in HD where the performer streams it.
+
 ## 5.20.0 — 2026-11-19
 
 Two new sites: 3Movs and AnySex

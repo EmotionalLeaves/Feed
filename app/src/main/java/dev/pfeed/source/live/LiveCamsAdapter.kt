@@ -22,7 +22,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Live: people on cam right now (CamSoda's and Cam4's public rooms), playing in the feed like any video, as
+ * Live: people on cam right now (CamSoda's, Cam4's and Flirt4Free's public rooms), playing in the feed like any video, as
  * long as they're on. The list is the site's own "online" listing, busiest rooms first; a room's
  * stream address is asked for when it's played (it carries a short-lived token). Nothing is sent to
  * the site but those two public requests: no account, no chat.
@@ -58,8 +58,9 @@ class LiveCamsAdapter @Inject constructor(
             cam4 += rooms
             if (cam4.size >= MAX_ROOMS) break
         }
-        // Both sites woven together, busiest first within each.
-        val all = (0 until maxOf(soda.size, cam4.size)).flatMap { i -> listOfNotNull(soda.getOrNull(i), cam4.getOrNull(i)) }
+        val f4f = runCatching { parseFlirt4Free(http.getRaw(id, "https://www.flirt4free.com/?tpl=index2&model=json")) }.getOrDefault(emptyList())
+        // All three sites woven together, busiest first within each.
+        val all = (0 until maxOf(soda.size, cam4.size, f4f.size)).flatMap { i -> listOfNotNull(soda.getOrNull(i), cam4.getOrNull(i), f4f.getOrNull(i)) }
         if (all.isEmpty()) throw SourceException(id, "No one live right now (or the sites didn't answer)")
         val list = all.distinctBy { it.id }
         cached = System.currentTimeMillis() to list
@@ -83,6 +84,16 @@ class LiveCamsAdapter @Inject constructor(
 
     override suspend fun resolveStream(item: MediaItem): StreamInfo {
         val user = item.creator ?: throw SourceException(id, "Unknown room")
+        if (item.id.startsWith("f4f/")) {
+            // Flirt4Free: its open rooms' HLS addresses come from a public call (the CDN can vary).
+            val modelId = item.id.removePrefix("f4f/")
+            val j = runCatching { http.get(id, "https://www.flirt4free.com/ws/chat/get-stream-urls.php?model_id=$modelId", mapOf("Referer" to item.pageUrl)) as? JsonObject }.getOrNull()
+            val url = ((j?.get("data") as? JsonObject)?.get("hls") as? JsonArray)?.firstOrNull()
+                ?.let { (it as? JsonObject)?.get("url")?.jsonPrimitive?.contentOrNull }
+                ?.let { if (it.startsWith("//")) "https:$it" else it }
+                ?: "https://hls.vscdns.com/manifest.m3u8?key=nil&provider=cdn5&model_id=$modelId"
+            return StreamInfo.Direct(url, MediaTypes.HLS_MIME)
+        }
         if (item.id.startsWith("cam4/")) {
             // Cam4 hands out its HLS address openly (the CDN one, else the edge), fresh per play.
             val info = runCatching { http.get(id, "https://www.cam4.com/rest/v1.0/profile/$user/streamInfo", mapOf("Referer" to "https://www.cam4.com/")) as? JsonObject }.getOrNull()
@@ -110,6 +121,8 @@ class LiveCamsAdapter @Inject constructor(
         private const val PAGE_SIZE = 24
         private val HASHTAG = Regex("#([\\p{L}\\p{N}_]{2,30})")
         private val HTML = Regex("<[^>]+>")
+        /** The page's JavaScript leaves a comma before the closing bracket, which JSON doesn't allow. */
+        private val TRAILING_COMMA = Regex(",\\s*([\\]}])")
 
         /**
          * The online listing: `results` is a list of rooms, each a `tpl` either as an object keyed
@@ -187,6 +200,54 @@ class LiveCamsAdapter @Inject constructor(
                     },
                 )
             }.sortedByDescending { it.extras["viewers"]?.toIntOrNull() ?: 0 }
+        }
+
+        /**
+         * Flirt4Free's home page data (JavaScript, with the rooms as a JSON array under `'models'`):
+         * open rooms only (not in a private show, video not blocked), best-ranked first.
+         */
+        internal fun parseFlirt4Free(page: String): List<MediaItem> {
+            val start = page.indexOf("'models':").takeIf { it >= 0 }?.let { page.indexOf('[', it) } ?: return emptyList()
+            // The array runs to its matching bracket.
+            var depth = 0; var end = -1; var inString = false; var i = start
+            while (i < page.length) {
+                val c = page[i]
+                if (inString) { if (c == '\\') i++ else if (c == '"') inString = false }
+                else when (c) { '"' -> inString = true; '[' -> depth++; ']' -> { depth--; if (depth == 0) { end = i; break } } }
+                i++
+            }
+            if (end < 0) return emptyList()
+            val arr = runCatching { kotlinx.serialization.json.Json.parseToJsonElement(TRAILING_COMMA.replace(page.substring(start, end + 1), "$1")) as? JsonArray }.getOrNull() ?: return emptyList()
+            return arr.mapNotNull { m ->
+                val o = m as? JsonObject ?: return@mapNotNull null
+                fun text(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                val modelId = text("model_id")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                if (text("room_status") != "In Open" || text("video_blocked") == "1" || text("is_hls") != "1") return@mapNotNull null
+                val name = text("display") ?: text("model_name") ?: return@mapNotNull null
+                val seo = text("model_seo_name") ?: name.lowercase()
+                val who = when {
+                    text("service") == "trans" -> "trans"
+                    text("service") == "guys" -> "male"
+                    (text("num_perf")?.toIntOrNull() ?: 1) > 1 -> "couple"
+                    else -> "female"
+                }
+                val categories = listOfNotNull(text("category_name"), text("category_name_2"), text("category_name_3")).map { it.lowercase() }
+                val score = text("power_score_xvc")?.toLongOrNull() ?: 0L
+                MediaItem(
+                    id = "f4f/$modelId",
+                    sourceId = SOURCE_ID,
+                    type = MediaType.VIDEO,
+                    title = listOfNotNull(name, text("location")?.takeIf { it.isNotBlank() }).joinToString(" · "),
+                    creator = name,
+                    tags = (categories + who + "live cam").distinct(),
+                    durationSec = null,
+                    thumbnailUrl = text("sample_image_id")?.let { "https://cdn5.vscdns.com/images/models/samples-640x480/$it.jpg" },
+                    pageUrl = "https://www.flirt4free.com/videos/${text("service") ?: "girls"}/models/$seo/",
+                    publishedAt = Instant.now(),
+                    // No viewer counts here; its own ranking stands in.
+                    extras = mapOf(LIVE to "1", "score" to score.toString()),
+                )
+            }.sortedByDescending { it.extras["score"]?.toLongOrNull() ?: 0L }
         }
 
         /** Who's on cam, as the Live tab's chips offer it (the tag each room carries). */
