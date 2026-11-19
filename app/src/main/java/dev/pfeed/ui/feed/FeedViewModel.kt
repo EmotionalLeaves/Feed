@@ -164,6 +164,29 @@ class FeedViewModel @Inject constructor(
         else dev.pfeed.data.repo.SteerState.set(view.tags.take(3).map { dev.pfeed.domain.reco.Steer.Directive(dev.pfeed.domain.reco.Steer.Kind.MORE, it) })
     }
 
+    /** People you follow who are live on cam right now (by name), for the Following row. */
+    val liveFollowed = MutableStateFlow<Map<String, MediaItem>>(emptyMap())
+
+    init {
+        if (isMainFeed) viewModelScope.launch {
+            delay(3_000) // after construction (it reads properties declared further down)
+            while (true) {
+                if (_mode.value == FeedMode.FOLLOWING) runCatching {
+                    val names = follows.value.creators.map { it.lowercase() }.toSet()
+                    val live = registry.byId(dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID)
+                    if (names.isNotEmpty() && live != null && registry.enabledAdapters().any { it.id == live.id }) {
+                        val rooms = live.fetchFeed(null, dev.pfeed.domain.model.FeedPrefs(FeedMode.LIVE)).items
+                        liveFollowed.value = rooms.filter { it.creator?.lowercase() in names }.associateBy { it.creator!!.lowercase() }
+                    }
+                }
+                delay(LIVE_FOLLOW_CHECK_MS)
+            }
+        }
+    }
+
+    /** Opens a live room you follow as its own viewer. */
+    fun openLive(item: MediaItem): String = holder.put(listOf(item), 0, title = "Live")
+
     /** Ask the screen to open This or that. */
     val thisOrThatRequest = MutableStateFlow(false)
 
@@ -502,6 +525,8 @@ class FeedViewModel @Inject constructor(
      * "Skip intros" is on (videos of 5 minutes and more; 0 otherwise).
      */
     fun introSkipMs(item: MediaItem): Long {
+        // Straight to the best part, when asked and the site keeps count.
+        if (settings.value.startAtBest) dev.pfeed.domain.reco.BestPart.of(item.key)?.let { return it }
         val d = item.durationSec ?: return 0L
         if (!settings.value.skipIntros || d < INTRO_MIN_SEC) return 0L
         return minOf(INTRO_SKIP_MS, d * 1000L / 20)
@@ -1011,6 +1036,7 @@ class FeedViewModel @Inject constructor(
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
         private const val NOTICE_GAP_MS = 5 * 60_000L
+        private const val LIVE_FOLLOW_CHECK_MS = 2 * 60_000L
         private const val THIS_OR_THAT_AFTER = 25
         private const val NEW_USER_REACTIONS = 200
         private const val INTRO_MIN_SEC = 300

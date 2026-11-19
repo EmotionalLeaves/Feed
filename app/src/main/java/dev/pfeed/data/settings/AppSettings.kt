@@ -69,6 +69,8 @@ data class AppSettings(
     val flipToHide: Boolean = false,
     /** Long videos (5 min+) you've not watched before start 25 s in, past the studio intro. */
     val skipIntros: Boolean = false,
+    /** Long videos whose site keeps count of what people watch start at their best part. */
+    val startAtBest: Boolean = false,
     /** Even out loudness between videos (and within them). */
     val smartVolume: Boolean = true,
     /** The lock screen looks (and works) like a calculator; the PIN then = gets in. */

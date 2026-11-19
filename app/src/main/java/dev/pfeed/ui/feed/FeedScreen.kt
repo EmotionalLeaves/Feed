@@ -700,20 +700,26 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         // Following: the people you follow as a row of round avatars under the tabs, one tap from their page.
         val handsFreeNow by HandsFree.on.collectAsStateWithLifecycle()
+        val liveFollowedNow by vm.liveFollowed.collectAsStateWithLifecycle()
         if (mode == FeedMode.FOLLOWING && vm.isMainFeed && !landscape && !wallMode && !handsFreeNow && follows.creators.isNotEmpty()) {
             androidx.compose.foundation.lazy.LazyRow(
                 Modifier.align(Alignment.TopStart).statusBarsPadding().padding(top = 54.dp),
                 contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
-                items(follows.creators.sorted(), key = { it }) { name ->
+                // Live ones first, ringed in red: one tap into their room.
+                val liveNow = liveFollowedNow
+                items(follows.creators.sortedWith(compareBy<String> { it.lowercase() !in liveNow }.thenBy { it }), key = { it }) { name ->
+                    val room = liveNow[name.lowercase()]
                     Column(
-                        Modifier.width(52.dp).clip(RoundedCornerShape(10.dp)).clickable { nav.openTag("@$name") },
+                        Modifier.width(52.dp).clip(RoundedCornerShape(10.dp)).clickable {
+                            if (room != null) nav.navigate(Routes.viewer(vm.openLive(room))) else nav.openTag("@$name")
+                        },
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
-                        dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp, modifier = Modifier.border(1.5.dp, Color.White.copy(alpha = 0.8f), CircleShape))
+                        dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp, modifier = Modifier.border(if (room != null) 2.5.dp else 1.5.dp, if (room != null) Color(0xFFFF3B4E) else Color.White.copy(alpha = 0.8f), CircleShape))
                         Spacer(Modifier.height(3.dp))
-                        Text(name, color = Color.White, style = MaterialTheme.typography.labelSmall.shadowed(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(if (room != null) "LIVE" else name, color = if (room != null) Color(0xFFFF3B4E) else Color.White, style = MaterialTheme.typography.labelSmall.shadowed(), fontWeight = if (room != null) FontWeight.Bold else null, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }

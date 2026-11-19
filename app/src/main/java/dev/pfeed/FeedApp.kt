@@ -79,6 +79,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         dev.pfeed.data.repo.DataMeter.init(this)
         MaintenanceWorker.schedule(this)
         dev.pfeed.work.UpdateWorker.schedule(this)
+        dev.pfeed.work.WeeklyMixWorker.schedule(this)
         offline.start()
     }
 

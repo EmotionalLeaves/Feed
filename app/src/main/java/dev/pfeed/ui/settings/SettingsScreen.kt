@@ -51,6 +51,7 @@ import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PictureInPictureAlt
@@ -338,6 +339,14 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = "Videos of 5 minutes and more start 25 s in the first time, past the studio intro",
                     icon = Icons.Filled.FastForward,
                     onChange = vm::setSkipIntros,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Start at the best part",
+                    s.startAtBest,
+                    subtitle = "Long videos whose site counts what people rewatch (Pornhub) start at the most-watched stretch, the first time",
+                    icon = Icons.Filled.LocalFireDepartment,
+                    onChange = vm::setStartAtBest,
                 )
                 RowDivider()
                 SwitchSetting(
