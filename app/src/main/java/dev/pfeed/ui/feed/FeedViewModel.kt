@@ -524,6 +524,38 @@ class FeedViewModel @Inject constructor(
      * Where a long video starts when you've not watched it before: past the studio intro, if
      * "Skip intros" is on (videos of 5 minutes and more; 0 otherwise).
      */
+    /**
+     * In a long video whose site marks its acts ("Missionary · 11:19"), the one you'd like most, by
+     * what your taste makes of each act's name; null unless one clearly stands out from the rest.
+     */
+    suspend fun favouriteAct(item: MediaItem): Pair<String, Long>? {
+        val acts = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty()
+        if (acts.map { it.first.lowercase() }.distinct().size < 2) return null
+        val scored = runCatching {
+            signals.engine.use { e ->
+                acts.mapNotNull { a -> e.tagVector(a.first)?.let { v -> a to e.interestScore(v) - e.aversion(v) } }
+            }
+        }.getOrNull().orEmpty()
+        return dev.pfeed.domain.reco.VideoExtras.favourite(scored)
+    }
+
+    /** What you made of each act of a video you're leaving: a small lesson per act (not in private mode). */
+    fun actsWatched(item: MediaItem, tally: dev.pfeed.domain.reco.ActWatch.Tally, durationMs: Long) {
+        if (settings.value.privateMode) return
+        val v = tally.verdict(durationMs)
+        if (v.liked.isEmpty() && v.skipped.isEmpty()) return
+        viewModelScope.launch { runCatching { signals.recordActs(v.liked, v.skipped) } }
+    }
+
+    /** Where Highlights starts a long video: your favourite act, else the most-rewatched part, else a good way in. */
+    suspend fun highlightStartMs(item: MediaItem): Long? {
+        val d = item.durationSec ?: return null
+        if (d < Highlights.MIN_SEC) return null
+        favouriteAct(item)?.let { return it.second }
+        dev.pfeed.domain.reco.BestPart.of(item.key)?.let { return it }
+        return Highlights.fallbackMs(d)
+    }
+
     fun introSkipMs(item: MediaItem): Long {
         // Straight to the best part, when asked and the site keeps count.
         if (settings.value.startAtBest) dev.pfeed.domain.reco.BestPart.of(item.key)?.let { return it }

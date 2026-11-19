@@ -38,6 +38,18 @@ class VideoExtrasTest {
         assertTrue(c.first().second.startsWith("Hands down"))
     }
 
+    @Test
+    fun `picks the act you like most, only when it stands out`() {
+        val acts = listOf(("Handjob" to 255_000L) to 0.1, ("Missionary" to 679_000L) to 0.5, ("Handjob" to 1_173_000L) to 0.1, ("Missionary" to 1_400_000L) to 0.5)
+        assertEquals("Missionary" to 679_000L, VideoExtras.favourite(acts))
+        // Close call: no favourite.
+        assertEquals(null, VideoExtras.favourite(listOf(("A" to 1L) to 0.40, ("B" to 2L) to 0.36)))
+        // Nothing you like: no favourite.
+        assertEquals(null, VideoExtras.favourite(listOf(("A" to 1L) to 0.03, ("B" to 2L) to -0.4)))
+        // One act only: nothing to choose between.
+        assertEquals(null, VideoExtras.favourite(listOf(("A" to 1L) to 0.9, ("a" to 2L) to 0.9)))
+    }
+
     private val PH_COMMENT = """<a rel="nofollow"
  data-event="watch_page" data-label="profile_view"
  href="/users/bigdickaussie69696"

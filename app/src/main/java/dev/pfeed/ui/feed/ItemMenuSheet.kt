@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Speed
 import androidx.compose.material.icons.filled.Autorenew
@@ -243,6 +244,20 @@ fun ItemMenuSheet(
                 QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open site", modifier = Modifier.weight(1f)) { openExternal(context, item.pageUrl); onDismiss() }
             }
             HorizontalDivider()
+            if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
+                val highlights by Highlights.on.collectAsState()
+                ListItem(
+                    headlineContent = { Text(if (highlights) "Stop highlights" else "Highlights", fontWeight = FontWeight.Bold) },
+                    supportingContent = {
+                        Text(
+                            if (highlights) "Long videos play in full again"
+                            else "Long videos open at the act you like most (or the part people rewatch), play 45 seconds, then move on",
+                        )
+                    },
+                    leadingContent = { Icon(Icons.Filled.LocalFireDepartment, contentDescription = null, tint = if (highlights) androidx.compose.ui.graphics.Color(0xFFFF5C7A) else androidx.compose.material3.LocalContentColor.current) },
+                    modifier = Modifier.clickable { Highlights.set(!highlights); onDismiss() },
+                )
+            }
             if (onMoreLikeThis != null) {
                 ListItem(
                     headlineContent = { Text("More like this", fontWeight = FontWeight.Bold) },

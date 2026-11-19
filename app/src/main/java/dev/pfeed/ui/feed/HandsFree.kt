@@ -21,6 +21,24 @@ object HandsFree {
     const val SHORT_VIDEO_TOTAL_MS = 12_000L
 }
 
+/**
+ * Highlights: a long video opens at its best stretch (the act you like most, else the part people
+ * rewatch, else a good way in), plays for [SPAN_MS], and the feed moves on. Seeking yourself means
+ * you're into it: that video then plays on as normal. For the whole app until it restarts.
+ */
+object Highlights {
+    private val _on = MutableStateFlow(false)
+    val on: StateFlow<Boolean> = _on
+    fun set(value: Boolean) { _on.value = value }
+
+    const val SPAN_MS = 45_000L
+    /** Shorter than this, a video is already a highlight: it plays as normal. */
+    const val MIN_SEC = 150
+
+    /** No better clue: this far into the video, past the build-up. */
+    fun fallbackMs(durationSec: Int): Long = durationSec * 1000L * 2 / 5
+}
+
 /** Playback speed for videos, picked in the hold menu; for the whole app until it restarts. */
 object PlaybackSpeed {
     private val _value = MutableStateFlow(1f)

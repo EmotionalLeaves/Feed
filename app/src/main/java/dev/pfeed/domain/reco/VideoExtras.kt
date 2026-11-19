@@ -41,6 +41,23 @@ object VideoExtras {
             if (name.isEmpty() || sec == null) null else name to sec * 1000
         }.sortedBy { it.second }
 
+    /**
+     * Of a video's acts, each with how well it suits you, the first time the best-suited one starts,
+     * if it clearly stands out from the video's other acts (and suits you at all).
+     */
+    fun favourite(scored: List<Pair<Pair<String, Long>, Double>>): Pair<String, Long>? {
+        val byName = scored.groupBy { it.first.first.lowercase() }.mapValues { (_, v) -> v.maxOf { it.second } }
+        if (byName.size < 2) return null
+        val (name, score) = byName.maxByOrNull { it.value } ?: return null
+        val rest = byName.filterKeys { it != name }.values.average()
+        if (score < FAVOURITE_MIN || score - rest < FAVOURITE_MARGIN) return null
+        return scored.filter { it.first.first.lowercase() == name }.minByOrNull { it.first.second }?.first
+    }
+
+    private const val FAVOURITE_MIN = 0.05
+    /** How much more the favourite must suit you than the video's other acts, to be worth jumping to. */
+    private const val FAVOURITE_MARGIN = 0.08
+
     /** The chapter playing at [ms], if any. */
     fun chapterAt(chapters: List<Pair<String, Long>>, ms: Long): String? = chapters.lastOrNull { it.second <= ms }?.first
 }

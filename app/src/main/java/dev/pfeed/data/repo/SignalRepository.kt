@@ -97,10 +97,19 @@ class SignalRepository @Inject constructor(
     /** A topic picked on first run: a firm start for For You, about as strong as a like. */
     suspend fun recordInterest(topic: String) = nudge(topic, PICK_NUDGE)
 
-    private suspend fun nudge(query: String, target: Double) {
+    /**
+     * The acts of a long video you sat through and the ones you jumped over ([dev.pfeed.domain.reco.ActWatch]):
+     * each a small lesson about that act alone, apart from the verdict on the whole video.
+     */
+    suspend fun recordActs(liked: List<String>, skipped: List<String>) {
+        liked.forEach { nudge(it, ACT_SAT_THROUGH, whole = true) }
+        skipped.forEach { nudge(it, ACT_JUMPED_OVER, whole = true) }
+    }
+
+    private suspend fun nudge(query: String, target: Double, whole: Boolean = false) {
         if (dev.pfeed.domain.privacy.Incognito.active) return
         val q = query.trim().takeIf { it.length >= 2 } ?: return
-        val words = q.split(Regex("\\s+")).filter { it.length >= 2 }
+        val words = if (whole) emptyList() else q.split(Regex("\\s+")).filter { it.length >= 2 }
         val probe = MediaItem(
             id = "search/" + q.lowercase(), sourceId = "search", type = MediaType.IMAGE, title = null, creator = null,
             tags = (words + q.replace(' ', '_')).distinct(), durationSec = null, thumbnailUrl = null, pageUrl = "",
@@ -161,6 +170,9 @@ class SignalRepository @Inject constructor(
         private const val RELATED_AFTER = 0.8
         private const val SEARCH_NUDGE = 1.5
         private const val PICK_NUDGE = 3.0
+        /** Below a new interest's threshold: an act joins a taste you have rather than starting one. */
+        private const val ACT_SAT_THROUGH = 0.7
+        private const val ACT_JUMPED_OVER = -0.8
     }
 
     /** Strongest learned likes and dislikes, for the "what it has learned" screen. */

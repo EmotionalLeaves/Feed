@@ -203,8 +203,10 @@ fun VideoPage(
                     .build(),
                 // Carry on where you left a long video, if you did; else past the intro, if asked.
                 // Live: wherever the broadcast is now.
+                // Highlights: straight to the good part.
                 if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") androidx.media3.common.C.TIME_UNSET
-                else dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
+                else (if (Highlights.on.value) vm.highlightStartMs(item) else null)
+                    ?: dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
             )
             p.prepare()
         }
@@ -273,11 +275,68 @@ fun VideoPage(
     }
 
     LaunchedEffect(player, play) { player?.playWhenReady = play }
+
+    // Which of its named acts you sit through and which you jump over: learned per act when you leave.
+    val actTally = remember(item.key, stream) {
+        dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters?.takeIf { it.size >= 2 }?.let { dev.pfeed.domain.reco.ActWatch.Tally(it) }
+    }
+    LaunchedEffect(player, play, firstFrame, actTally) {
+        val p = player ?: return@LaunchedEffect
+        val t = actTally ?: return@LaunchedEffect
+        if (!play || !firstFrame) return@LaunchedEffect
+        while (true) {
+            kotlinx.coroutines.delay(ACT_TICK_MS)
+            if (p.currentMediaItem?.mediaId == item.key) t.tick(p.currentPosition, p.isPlaying, ACT_TICK_MS)
+        }
+    }
+
+    // Highlights: a long video plays for a short stretch, then the feed moves on, unless you take
+    // over (seek, tap a chapter, or "Keep watching").
+    val highlightsOn by Highlights.on.collectAsState()
+    var highlightPlayed by remember(item.key) { mutableStateOf(0L) }
+    var highlightLeft by remember(item.key) { mutableStateOf<Long?>(null) }
+    var keepWatching by remember(item.key) { mutableStateOf(false) }
+    DisposableEffect(item.key, actTally) {
+        onDispose {
+            // Highlights jumps over acts by design: that says nothing about them, unless you took over.
+            val t = actTally
+            if (t != null && (!Highlights.on.value || keepWatching)) vm.actsWatched(item, t, stats.durationMs.takeIf { it > 0 } ?: ((item.durationSec ?: 0) * 1000L))
+        }
+    }
+    LaunchedEffect(player, play, highlightsOn, firstFrame, keepWatching) {
+        highlightLeft = null
+        val p = player ?: return@LaunchedEffect
+        val d = item.durationSec ?: return@LaunchedEffect
+        if (!highlightsOn || !play || !firstFrame || keepWatching || d < Highlights.MIN_SEC ||
+            item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") return@LaunchedEffect
+        // Switched on with this one already lined up from the start: go to its good part now.
+        if (highlightPlayed == 0L && p.currentMediaItem?.mediaId == item.key && p.currentPosition < 3_000) {
+            vm.highlightStartMs(item)?.takeIf { it > 5_000 }?.let { p.seekTo(it) }
+        }
+        var last = p.currentPosition
+        while (true) {
+            kotlinx.coroutines.delay(HIGHLIGHT_TICK_MS)
+            if (p.currentMediaItem?.mediaId != item.key) continue
+            val pos = p.currentPosition
+            val step = pos - last
+            last = pos
+            // A jump the clock can't explain: you moved it yourself.
+            if (step < -1_000 || step > HIGHLIGHT_TICK_MS * 4 + 1_000) { keepWatching = true; return@LaunchedEffect }
+            if (p.isPlaying) highlightPlayed += HIGHLIGHT_TICK_MS
+            highlightLeft = (Highlights.SPAN_MS - highlightPlayed).coerceAtLeast(0L)
+            if (highlightPlayed >= Highlights.SPAN_MS) {
+                stats.autoAdvanced = true
+                ended()
+                return@LaunchedEffect
+            }
+        }
+    }
     // Reopened a long video partway: say where it carries on from, with a way back to the start.
     // Once, when it's actually on screen (the next post is prepared ahead, before you get to it).
     var offeredResume by remember(item.key) { mutableStateOf(false) }
     LaunchedEffect(player, play) {
         val p = player ?: return@LaunchedEffect
+        if (Highlights.on.value && (item.durationSec ?: 0) >= Highlights.MIN_SEC) return@LaunchedEffect
         val at = dev.pfeed.player.ResumePoints.get(item.key) ?: run {
             // Started past the intro: say so, with the way back.
             val skip = vm.introSkipMs(item)
@@ -407,7 +466,10 @@ fun VideoPage(
         }
         // A long video whose site keeps count of what people watch: offer to skip to the best part,
         // for the first few seconds (only while you're before it).
-        val best = remember(item.key, stream) { dev.pfeed.domain.reco.BestPart.of(item.key) }
+        val siteBest = remember(item.key, stream) { dev.pfeed.domain.reco.BestPart.of(item.key) }
+        // The act you like most, when the site names its acts: a better "best part" than the crowd's.
+        val favourite by produceState<Pair<String, Long>?>(null, item.key, stream) { value = vm.favouriteAct(item) }
+        val best = favourite?.second ?: siteBest
         var offerBest by remember(item.key) { mutableStateOf(true) }
         // Its chapters (positions, as the site marks them): a row to jump straight to one, for a while.
         val chapters = remember(item.key, stream) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty() }
@@ -421,12 +483,13 @@ fun VideoPage(
             ) {
                 items(chapters.size) { i ->
                     val (name, ms) = chapters[i]
+                    val yours = favourite?.first.equals(name, ignoreCase = true)
                     androidx.compose.material3.Text(
-                        name + " · " + dev.pfeed.ui.common.formatDuration((ms / 1000).toInt()),
+                        (if (yours) "♥ " else "") + name + " · " + dev.pfeed.ui.common.formatDuration((ms / 1000).toInt()),
                         color = androidx.compose.ui.graphics.Color.White,
                         style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
                         modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
-                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f))
+                            .background(if (yours) androidx.compose.ui.graphics.Color(0xCCE5395B) else androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f))
                             .clickable { player?.seekTo(ms); offerChapters = false; offerBest = false }
                             .padding(horizontal = 12.dp, vertical = 7.dp),
                     )
@@ -443,19 +506,52 @@ fun VideoPage(
                     .padding(horizontal = 16.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.LocalFireDepartment, contentDescription = null, tint = androidx.compose.ui.graphics.Color(0xFFFF7A45), modifier = Modifier.size(18.dp))
+                val fav = favourite
+                androidx.compose.material3.Icon(
+                    if (fav != null) androidx.compose.material.icons.Icons.Filled.Favorite else androidx.compose.material.icons.Icons.Filled.LocalFireDepartment,
+                    contentDescription = null,
+                    tint = if (fav != null) androidx.compose.ui.graphics.Color(0xFFFF5C7A) else androidx.compose.ui.graphics.Color(0xFFFF7A45),
+                    modifier = Modifier.size(18.dp),
+                )
                 androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
                 androidx.compose.material3.Text(
-                    "Skip to the best part · " + dev.pfeed.ui.common.formatDuration((best / 1000).toInt()),
+                    (if (fav != null) "Jump to ${fav.first.lowercase()}, your favourite · " else "Skip to the best part · ") +
+                        dev.pfeed.ui.common.formatDuration((best / 1000).toInt()),
                     color = androidx.compose.ui.graphics.Color.White,
                     style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
                 )
             }
         }
+        // Highlights: how long this one has left, with a way to stay on it.
+        val left = highlightLeft
+        if (left != null && !detached) androidx.compose.foundation.layout.Row(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 196.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f))
+                .clickable { keepWatching = true }
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.CircularProgressIndicator(
+                progress = { 1f - left.toFloat() / Highlights.SPAN_MS },
+                modifier = Modifier.size(16.dp),
+                color = androidx.compose.ui.graphics.Color(0xFFFF5C7A),
+                trackColor = androidx.compose.ui.graphics.Color.White.copy(alpha = 0.25f),
+                strokeWidth = 2.dp,
+            )
+            androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+            androidx.compose.material3.Text(
+                "Highlight · ${(left + 999) / 1000}s  ·  Keep watching",
+                color = androidx.compose.ui.graphics.Color.White,
+                style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+            )
+        }
     }
 }
 
 private const val BEST_OFFER_MS = 9_000L
+private const val HIGHLIGHT_TICK_MS = 250L
+private const val ACT_TICK_MS = 500L
 private const val CHAPTERS_MS = 12_000L
 
 /**
