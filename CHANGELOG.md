@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.15.0 — 2026-11-18
+
+Save this moment
+
+- **Save this moment** (long-press menu on a video): marks where you are. The moment shows as an amber dot on the scrub bar, and the video offers "Your moment · 12:31" next time.
+- **Saved → Moments** collects those videos (kept offline like any save) and plays each from its first moment.
+
 ## 5.14.0 — 2026-11-18
 
 Co-watched videos rank higher

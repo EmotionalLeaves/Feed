@@ -64,3 +64,46 @@ object ComicPages {
 
     fun clear() { prefs?.edit()?.clear()?.apply() }
 }
+
+/**
+ * Moments you marked in videos ("Save this moment"): where they are, per video, kept on the phone.
+ * They show on the scrub bar, the video offers to jump to them, and Saved → Moments plays each video
+ * from its first one. A few per video; oldest videos dropped past [MAX].
+ */
+object Moments {
+    private const val MAX = 400
+    private const val PER_VIDEO = 8
+    /** Marks this close together are one moment. */
+    private const val SAME_MS = 5_000L
+    @Volatile private var prefs: SharedPreferences? = null
+    private val _changes = kotlinx.coroutines.flow.MutableStateFlow(0)
+    /** Bumps whenever a moment is added or removed, for screens showing them. */
+    val changes: kotlinx.coroutines.flow.StateFlow<Int> = _changes
+
+    fun init(context: Context) {
+        prefs = context.getSharedPreferences("moments", Context.MODE_PRIVATE)
+    }
+
+    fun of(key: String): List<Long> =
+        prefs?.getString(key, null)?.split(',')?.mapNotNull { it.toLongOrNull() }?.sorted().orEmpty()
+
+    fun add(key: String, atMs: Long) {
+        val p = prefs ?: return
+        val now = of(key)
+        if (now.any { kotlin.math.abs(it - atMs) < SAME_MS }) return
+        val next = (now + atMs.coerceAtLeast(0L)).sorted().takeLast(PER_VIDEO)
+        val edit = p.edit().putString(key, next.joinToString(","))
+        if (!p.contains(key) && p.all.size >= MAX) p.all.keys.take(p.all.size - MAX + 1).forEach { edit.remove(it) }
+        edit.apply()
+        _changes.value++
+    }
+
+    fun remove(key: String, atMs: Long) {
+        val p = prefs ?: return
+        val next = of(key).filter { it != atMs }
+        if (next.isEmpty()) p.edit().remove(key).apply() else p.edit().putString(key, next.joinToString(",")).apply()
+        _changes.value++
+    }
+
+    fun clear() { prefs?.edit()?.clear()?.apply(); _changes.value++ }
+}

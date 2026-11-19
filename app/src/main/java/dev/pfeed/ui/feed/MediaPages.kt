@@ -40,6 +40,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -205,7 +206,8 @@ fun VideoPage(
                 // Live: wherever the broadcast is now.
                 // Highlights: straight to the good part.
                 if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") androidx.media3.common.C.TIME_UNSET
-                else (if (Highlights.on.value) vm.highlightStartMs(item) else null)
+                else (if (vm.fromMoments) dev.pfeed.player.Moments.of(item.key).firstOrNull() else null)
+                    ?: (if (Highlights.on.value) vm.highlightStartMs(item) else null)
                     ?: vm.tagMomentMs(item)?.second
                     ?: dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
             )
@@ -338,6 +340,7 @@ fun VideoPage(
     LaunchedEffect(player, play) {
         val p = player ?: return@LaunchedEffect
         if (Highlights.on.value && (item.durationSec ?: 0) >= Highlights.MIN_SEC) return@LaunchedEffect
+        if (vm.fromMoments && dev.pfeed.player.Moments.of(item.key).isNotEmpty()) return@LaunchedEffect
         // Opened from a search or tag page for an act it marks: started there; say so.
         vm.tagMomentMs(item)?.let { (act, _) ->
             if (play && !offeredResume) {
@@ -369,6 +372,14 @@ fun VideoPage(
     }
     LaunchedEffect(player, muted) { player?.let { dev.pfeed.player.PlayerPool.applyMute(it, muted) } }
 
+    // "Save this moment": mark where this video is now.
+    val momentAsk by MomentGrab.request.collectAsState()
+    LaunchedEffect(momentAsk) {
+        if (momentAsk != item.key) return@LaunchedEffect
+        MomentGrab.request.value = null
+        val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
+        vm.saveMoment(item, p.currentPosition)
+    }
     // "Save this frame": copy what's on the video surface right now into Saved (a "Frames" collection).
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val grab by FrameGrab.request.collectAsState()
@@ -478,7 +489,10 @@ fun VideoPage(
         val siteBest = remember(item.key, stream) { dev.pfeed.domain.reco.BestPart.of(item.key) }
         // The act you like most, when the site names its acts: a better "best part" than the crowd's.
         val favourite by produceState<Pair<String, Long>?>(null, item.key, stream) { value = vm.favouriteAct(item) }
-        val best = favourite?.second ?: siteBest
+        // A moment you saved in it beats both.
+        val momentsVersion by dev.pfeed.player.Moments.changes.collectAsState()
+        val moment = remember(item.key, momentsVersion) { dev.pfeed.player.Moments.of(item.key).firstOrNull() }
+        val best = moment ?: favourite?.second ?: siteBest
         var offerBest by remember(item.key) { mutableStateOf(true) }
         // Its chapters (positions, as the site marks them): a row to jump straight to one, for a while.
         val chapters = remember(item.key, stream) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty() }
@@ -515,16 +529,28 @@ fun VideoPage(
                     .padding(horizontal = 16.dp, vertical = 9.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                val fav = favourite
+                val fav = favourite.takeIf { moment == null }
                 androidx.compose.material3.Icon(
-                    if (fav != null) androidx.compose.material.icons.Icons.Filled.Favorite else androidx.compose.material.icons.Icons.Filled.LocalFireDepartment,
+                    when {
+                        moment != null -> androidx.compose.material.icons.Icons.Filled.Bookmark
+                        fav != null -> androidx.compose.material.icons.Icons.Filled.Favorite
+                        else -> androidx.compose.material.icons.Icons.Filled.LocalFireDepartment
+                    },
                     contentDescription = null,
-                    tint = if (fav != null) androidx.compose.ui.graphics.Color(0xFFFF5C7A) else androidx.compose.ui.graphics.Color(0xFFFF7A45),
+                    tint = when {
+                        moment != null -> androidx.compose.ui.graphics.Color(0xFFFFB547)
+                        fav != null -> androidx.compose.ui.graphics.Color(0xFFFF5C7A)
+                        else -> androidx.compose.ui.graphics.Color(0xFFFF7A45)
+                    },
                     modifier = Modifier.size(18.dp),
                 )
                 androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
                 androidx.compose.material3.Text(
-                    (if (fav != null) "Jump to ${fav.first.lowercase()}, your favourite · " else "Skip to the best part · ") +
+                    when {
+                        moment != null -> "Your moment · "
+                        fav != null -> "Jump to ${fav.first.lowercase()}, your favourite · "
+                        else -> "Skip to the best part · "
+                    } +
                         dev.pfeed.ui.common.formatDuration((best / 1000).toInt()),
                     color = androidx.compose.ui.graphics.Color.White,
                     style = androidx.compose.material3.MaterialTheme.typography.labelLarge,

@@ -888,6 +888,16 @@ class FeedViewModel @Inject constructor(
      * Keeps a still from a video: written as a JPEG in the app's own storage (encrypted along with
      * the rest of the app's data by the phone), saved, and put in the "Frames" collection.
      */
+    /** "Save this moment": marks [atMs] in the video and keeps it in Saved → Moments. */
+    fun saveMoment(item: MediaItem, atMs: Long) {
+        dev.pfeed.player.Moments.add(item.key, atMs)
+        viewModelScope.launch { runCatching { library.addToCollection(MOMENTS, item) } }
+        offer("Moment saved at ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}", "Undo") { dev.pfeed.player.Moments.remove(item.key, atMs) }
+    }
+
+    /** Opened from Saved → Moments: each video starts at its first moment. */
+    val fromMoments: Boolean get() = viewerTitle == MOMENTS
+
     fun saveFrame(context: android.content.Context, from: MediaItem, bitmap: android.graphics.Bitmap, atMs: Long) {
         viewModelScope.launch {
             val file = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
@@ -1078,6 +1088,7 @@ class FeedViewModel @Inject constructor(
         @Volatile private var carryOnOffered = false
         private const val CARRY_ON_MIN_MS = 60_000L
         const val FRAMES = "Frames"
+        const val MOMENTS = "Moments"
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L

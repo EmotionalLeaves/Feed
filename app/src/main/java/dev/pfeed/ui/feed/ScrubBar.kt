@@ -56,6 +56,8 @@ fun ScrubBar(
     onScrubbedBack: () -> Unit = {},
     /** The video's preview frames, chapters and watch counts, where its site gives them. */
     extras: dev.pfeed.domain.reco.VideoExtras.Info? = null,
+    /** Moments you saved in this video: always marked on the bar. */
+    moments: List<Long> = emptyList(),
 ) {
     if (player == null) return
     var duration by remember(player) { mutableLongStateOf(0L) }
@@ -182,6 +184,14 @@ fun ScrubBar(
             Box(
                 Modifier.align(Alignment.BottomStart).offset(x = width * (ms.toFloat() / duration).coerceIn(0f, 1f) - 1.dp, y = (-1).dp)
                     .size(2.dp, 10.dp).background(Color(0xFFFFB547)),
+            )
+        }
+        // Your saved moments: small amber dots just above the bar.
+        moments.forEach { ms ->
+            Box(
+                Modifier.align(Alignment.BottomStart)
+                    .offset(x = width * (ms.toFloat() / duration).coerceIn(0f, 1f) - 3.dp, y = -trackHeight - 2.dp)
+                    .size(6.dp).clip(CircleShape).background(Color(0xFFFFB547)),
             )
         }
         if (dragging) {

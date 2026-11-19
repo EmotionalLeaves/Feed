@@ -1,3 +1,9 @@
+## 5.15.0 — 2026-11-18
+Save this moment
+
+- **Save this moment** (long-press menu on a video): marks where you are. The moment shows as an amber dot on the scrub bar, and the video offers "Your moment · 12:31" next time.
+- **Saved → Moments** collects those videos (kept offline like any save) and plays each from its first moment.
+
 ## 5.14.0 — 2026-11-18
 Co-watched videos rank higher
 
@@ -10,10 +16,3 @@ Searches land on the moment
 - **Highlights reel from your library**: the flame button on Saved, Liked, History and collections plays their long videos as highlights.
 - **Highlights pill** at the top of the feed while the mode is on; tap it to turn it off.
 - **The Wall uses preview clips** where sites offer them: much lighter than several full videos at once.
-
-## 5.12.0 — 2026-11-18
-XVideos scrubbing and previews
-
-- Includes everything in 5.11 (Highlights mode, favourite act, per-act learning). That build didn't compile, so this is the first one to get it.
-- **Scrub previews on XVideos**: dragging the scrub bar now shows the frame under your finger, from XVideos' 100-frame sheet.
-- **XVideos tiles play preview clips**: grids and Discover rows use the site's 200 KB preview instead of opening the full video.

@@ -106,6 +106,11 @@ object FrameGrab {
     val request = MutableStateFlow<String?>(null)
 }
 
+/** "Save this moment" asked for the video with this key: the page playing it marks where it is. */
+object MomentGrab {
+    val request = MutableStateFlow<String?>(null)
+}
+
 /**
  * Dim: a dark veil over the whole app, darker than the phone's lowest brightness, for watching in
  * the dark. Steps through off, 30%, 50%, 70%; for this session.
