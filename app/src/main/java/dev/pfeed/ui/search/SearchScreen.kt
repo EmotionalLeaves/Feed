@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.border
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -197,6 +198,21 @@ class SearchViewModel @Inject constructor(
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun openList(items: List<MediaItem>, index: Int, title: String): String = holder.put(items, index, title = title)
+
+    /**
+     * Creators for you: the ones whose posts you keep staying for but don't follow yet, best first,
+     * each pictured by their latest post you saw.
+     */
+    val creatorsForYou: StateFlow<List<Pair<String, MediaItem>>> = combine(library.items(dev.pfeed.data.repo.LibraryKind.HISTORY), library.follows) { history, follows ->
+        val aff = runCatching { signals.affinities().creators }.getOrDefault(emptyMap())
+        val followedNow = follows.creators.map { dev.pfeed.domain.filter.Blocklist.normalize(it) }.toSet()
+        val latest = HashMap<String, MediaItem>()
+        history.forEach { item -> item.creator?.let { c -> latest.putIfAbsent(dev.pfeed.domain.filter.Blocklist.normalize(c), item) } }
+        aff.entries.filter { it.value >= CREATOR_FOR_YOU_MIN && it.key !in followedNow && latest.containsKey(it.key) }
+            .sortedByDescending { it.value }
+            .take(CREATORS_FOR_YOU)
+            .map { (key, _) -> val item = latest.getValue(key); (item.creator ?: key) to item }
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Creators and tags you follow, for typeahead. */
     val followed: StateFlow<List<String>> = library.follows
@@ -382,6 +398,9 @@ class SearchViewModel @Inject constructor(
 
     private companion object {
         const val TOPIC_ROWS = 3
+        private const val CREATORS_FOR_YOU = 12
+        /** How much a creator's posts must suit you to be suggested. */
+        private const val CREATOR_FOR_YOU_MIN = 0.3
     }
 
     /** Opens the results at [index]; past the last one it keeps going as an endless feed of the search. */
@@ -452,6 +471,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val followed by vm.followed.collectAsStateWithLifecycle()
+    val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
     val watchedKeys by vm.watched.collectAsStateWithLifecycle()
     val savedKeys by vm.savedKeys.collectAsStateWithLifecycle()
     // Press and hold a result: save it, or open it on its site, without leaving the results.
@@ -591,6 +611,8 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
                 typed = ui.query,
                 followed = followed,
+                creatorsForYou = creatorsForYou,
+                onCreator = { nav.openTag("@$it") },
                 recent = recent,
                 interests = interests,
                 onPick = run,
@@ -647,6 +669,8 @@ private fun SuggestionsPane(
     onContinue: (Int) -> Unit,
     typed: String,
     followed: List<String>,
+    creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
+    onCreator: (String) -> Unit = {},
     recent: List<String>,
     interests: List<String>,
     onPick: (String) -> Unit,
@@ -719,6 +743,33 @@ private fun SuggestionsPane(
                     .distinctBy { it.key }
                 "${rows[a].first} + ${rows[b].first}" to woven
             }
+        }
+        // Creators for you: people whose posts you keep staying for, not followed yet.
+        if (t.isEmpty() && creatorsForYou.size >= 3) {
+            SectionTitle("Creators for you")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(creatorsForYou.size, key = { "creator:" + creatorsForYou[it].first }) { i ->
+                    val (name, item) = creatorsForYou[i]
+                    Column(
+                        Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).clickable { onCreator(name) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(Modifier.size(64.dp).clip(androidx.compose.foundation.shape.CircleShape).border(2.dp, dev.pfeed.ui.theme.BrandGradient, androidx.compose.foundation.shape.CircleShape).padding(3.dp).clip(androidx.compose.foundation.shape.CircleShape)) {
+                            dev.pfeed.ui.common.InitialAvatar(name, size = 64.dp)
+                            coil.compose.AsyncImage(
+                                model = item.thumbnailUrl,
+                                contentDescription = null,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier.matchParentSize(),
+                            )
+                        }
+                        Spacer(Modifier.height(6.dp))
+                        Text(name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
         }
         if (t.isEmpty() && mixes.isNotEmpty()) {
             SectionTitle("Your mixes")

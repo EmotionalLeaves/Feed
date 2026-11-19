@@ -26,11 +26,13 @@ object SceneFinder {
         val cap = if (timeline.cols * timeline.rows == 1) MAX_SINGLE_FRAMES else MAX_FRAMES
         val step = maxOf(timeline.everyMs, durationMs / cap, 1L)
         val count = (durationMs / step).toInt().coerceIn(0, cap)
-        val sheets = HashMap<String, Bitmap?>()
+        // Frames come in order, sheet after sheet: hold only the sheet in use (they're a few MB each).
+        var sheetUrl: String? = null
+        var sheet: Bitmap? = null
         val frames = ArrayList<FloatArray>(count)
         for (i in 0 until count) {
             val (url, col, row) = timeline.at(i * step)
-            val sheet = if (sheets.containsKey(url)) sheets[url] else load(context, url).also { sheets[url] = it }
+            if (url != sheetUrl) { sheetUrl = url; sheet = load(context, url) }
             frames += sheet?.let { withContext(Dispatchers.Default) { colours(it, col, row, timeline.cols, timeline.rows) } } ?: break
         }
         // Frames from only part of the video would put the "cuts" in the wrong places: all or nothing.
