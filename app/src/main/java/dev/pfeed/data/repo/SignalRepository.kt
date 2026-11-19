@@ -67,6 +67,8 @@ class SignalRepository @Inject constructor(
         val now = System.currentTimeMillis()
         val model = AffinityModel(settings.get().halfLifeDays)
         val delta = SignalWeights.delta(signal)
+        // A video you clearly enjoyed: what its site shows beside it comes next in For You.
+        if (delta >= RELATED_AFTER) dev.pfeed.domain.reco.Related.enjoyed(item.key, item.title)
         // Learn from every tag on the item (plus title keywords where tags are thin), error-driven.
         val tags = Features.of(item)
         engine.learn(item, delta)
@@ -155,6 +157,8 @@ class SignalRepository @Inject constructor(
 
     companion object {
         const val TASTE_MODEL_VERSION = 3
+        /** A reaction this strong (a long watch, a replay, a like) brings in the video's related ones. */
+        private const val RELATED_AFTER = 0.8
         private const val SEARCH_NUDGE = 1.5
         private const val PICK_NUDGE = 3.0
     }

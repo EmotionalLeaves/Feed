@@ -115,6 +115,18 @@ class LibraryRepository @Inject constructor(
         }
     }
 
+    /**
+     * A collection the app fills itself (Your weekly mix): replaced wholesale, and NOT saved (so
+     * nothing is downloaded and Saved isn't filled with posts you never chose).
+     */
+    suspend fun replaceCollectionUnsaved(name: String, items: List<MediaItem>) {
+        val n = cleanName(name) ?: return
+        db.withTransaction {
+            libraryDao.deleteKind(COLLECTION + n)
+            items.forEach { addTo(COLLECTION + n, it) }
+        }
+    }
+
     suspend fun removeFromCollection(name: String, item: MediaItem) = libraryDao.delete(item.key, COLLECTION + name)
 
     suspend fun renameCollection(from: String, to: String) {

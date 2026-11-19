@@ -4,7 +4,8 @@
 
 Your weekly mix, live follows
 
-- New: Your weekly mix. Once a week on Wi-Fi, For You picks 30 posts it thinks you'll love and haven't seen, into a Library collection of that name (replacing last week's), to watch whenever.
+- New: Your weekly mix. Once a week on Wi-Fi, For You picks 30 posts it thinks you'll love and haven't seen, into a Library collection of that name (replacing last week's), to watch whenever. They aren't added to Saved or downloaded.
+- New: Because you liked …: Discover shows what the site itself puts beside videos you enjoyed lately (its own viewers' "watched together"); For You takes those in right after you enjoy one, and More like this starts from them.
 - New: Following shows who you follow that's live on cam right now: first in the row, ringed in red, marked LIVE. One tap into their room. (Follow someone from their live room to get this.)
 - New: Start at the best part (Settings → Playback). Long Pornhub videos start at their most-watched stretch the first time you open them.
 

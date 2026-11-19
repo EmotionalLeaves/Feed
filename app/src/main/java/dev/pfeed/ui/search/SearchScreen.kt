@@ -271,6 +271,11 @@ class SearchViewModel @Inject constructor(
             }.getOrDefault(emptyList()).map { it.replace('_', ' ') }
             loadTopicRows((tastes + _interests.value).distinct().ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
             loadLiveRow()
+            // Because you liked …: what the site showed beside videos you enjoyed lately.
+            dev.pfeed.domain.reco.Related.recentlyEnjoyed().take(2).forEach { (title, list) ->
+                val name = "Because you liked “" + title.take(36).trim() + (if (title.length > 36) "…" else "") + "”"
+                _topicRows.update { rows -> rows.filter { it.first != name } + (name to list) }
+            }
         }
     }
 
@@ -733,7 +738,13 @@ private fun SuggestionsPane(
                     Spacer(Modifier.width(8.dp))
                 }
                 SectionTitle(topic.replaceFirstChar { it.uppercase() }, Modifier.weight(1f))
-                TextButton(onClick = { if (topic == LIVE_ROW) onLive() else onPick(topic) }) { Text("See all") }
+                TextButton(onClick = {
+                    when {
+                        topic == LIVE_ROW -> onLive()
+                        topic.startsWith("Because you liked") -> onTopicItem(topic, 0)
+                        else -> onPick(topic)
+                    }
+                }) { Text(if (topic.startsWith("Because you liked")) "Play" else "See all") }
             }
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }

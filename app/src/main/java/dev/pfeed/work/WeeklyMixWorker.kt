@@ -36,16 +36,15 @@ class WeeklyMixWorker @AssistedInject constructor(
 ) : CoroutineWorker(context, params) {
 
     override suspend fun doWork(): Result {
+        // Tests run with the pool cache off; they don't want a background feed competing with them.
+        if (!dev.pfeed.data.repo.PoolCache.enabled) return Result.success()
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         try {
             val session = sessions.create(FeedSpec.Main(FeedMode.FOR_YOU), scope)
             withTimeoutOrNull(TIME_LIMIT_MS) { session.prepareForLater(rounds = 3) } ?: return Result.retry()
             val picks = session.firstKept(SIZE)
             if (picks.size < MIN) return Result.retry()
-            runCatching {
-                library.deleteCollection(NAME)
-                picks.forEach { library.addToCollection(NAME, it) }
-            }
+            runCatching { library.replaceCollectionUnsaved(NAME, picks) }
         } finally {
             scope.cancel()
         }
