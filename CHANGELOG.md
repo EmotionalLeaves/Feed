@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.6.0 — 2026-11-18
+
+Live: choose who
+
+- New: Tap Live while you're on it to choose who's on cam: Everyone, Women, Couples, Men or Trans.
+- README: the Live tab and the 21 tube sites.
+
 ## 5.5.0 — 2026-11-18
 
 Live, and three new sites

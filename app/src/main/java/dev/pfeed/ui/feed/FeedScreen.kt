@@ -503,7 +503,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             mode = mode,
             onMode = { m ->
                 // For You tapped while on it: your tastes as chips, to pick one (tap again to hide).
-                if (m == mode && m == FeedMode.FOR_YOU && vm.isMainFeed) { chipsOpen = !chipsOpen; if (chipsOpen) vm.loadTasteChips() }
+                // Live tapped while on it: who's on cam.
+                if (m == mode && (m == FeedMode.FOR_YOU || m == FeedMode.LIVE) && vm.isMainFeed) { chipsOpen = !chipsOpen; if (chipsOpen && m == FeedMode.FOR_YOU) vm.loadTasteChips() }
                 else { chipsOpen = false; vm.setMode(m) }
             },
             mood = vm.mood.collectAsStateWithLifecycle().value,
@@ -542,6 +543,20 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     val label = c.tags.take(2).joinToString(" · ") { it.replace('_', ' ') }
                     val on = steeringNow.isNotEmpty() && steeringNow.map { it.tag } == c.tags.take(3)
                     TasteChip(label, selected = on) { vm.playTaste(c); chipsOpen = false }
+                }
+            }
+        }
+        if (chipsOpen && vm.isMainFeed && mode == FeedMode.LIVE && !landscape && !wallMode && !cleanOn) {
+            LaunchedEffect(Unit) { kotlinx.coroutines.delay(8_000); chipsOpen = false }
+            val who by dev.pfeed.data.repo.LiveFilter.who.collectAsStateWithLifecycle()
+            androidx.compose.foundation.lazy.LazyRow(
+                Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item(key = "everyone") { TasteChip("Everyone", selected = who == null) { dev.pfeed.data.repo.LiveFilter.who.value = null; chipsOpen = false; vm.refresh() } }
+                for ((tag, label) in dev.pfeed.source.live.LiveCamsAdapter.WHO) item(key = tag) {
+                    TasteChip(label, selected = who == tag) { dev.pfeed.data.repo.LiveFilter.who.value = tag; chipsOpen = false; vm.refresh() }
                 }
             }
         }

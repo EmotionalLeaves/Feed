@@ -61,7 +61,7 @@ You can also run `adb install -r app/build/outputs/apk/release/app-release.apk`.
 
 Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 
-- **Feed** has three modes along the top: **For You** (learned from what you watch), **Following** (creators and tags you follow) and **Latest**. Swipe up for the next post; pull down on the first post to refresh.
+- **Feed** has four modes along the top: **For You** (learned from what you watch), **Following** (creators and tags you follow), **Live** (people on cam right now, from CamSoda and Cam4; tap Live again to choose who) and **Latest**. Swipe up for the next post; pull down on the first post to refresh.
 - **Gestures:** tap to pause, double-tap to like, hold the right side of a video for 2×, press and hold for the menu (why it's here, Not interested, hide a tag/creator/site, open or copy the link, report; hiding can be undone), three fingers anywhere to leave instantly. Swipe left on a post for everything by its creator. Pinch to zoom; zoomed in, one finger pans. Sideways, double-tap a video's edges to skip 10 s. Volume up unmutes.
 - **Hands-free:** from the hold menu. The feed moves on by itself: pictures after 6 s, galleries a page every 4 s, short clips after they've looped about 12 s, longer videos at their end. Tap to pause the countdown; tap the Hands-free pill to stop.
 - **First run** asks what you're into (skippable); add more any time in **Settings → Your taste**.
@@ -84,7 +84,8 @@ On by default, all filtered to porn only (non-porn posts are dropped) and throug
 
 | Source | What |
 |---|---|
-| **Tube sites** (15, each switchable) | XVideos, XNXX, Pornhub, YouPorn, Tube8, xHamster, RedTube, Eporner, TNAFlix, Porntrex, YouJizz, Erome, Rule34Video, ThisVid, PornOne. Plays each site's own files directly (HLS or MP4, up to 1080p; 480p with Data saver). |
+| **Tube sites** (21, each switchable) | XVideos, Pornhub, YouPorn, Tube8, xHamster, RedTube, Eporner, TNAFlix, Porntrex, YouJizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HQPorner, Porndig, PerfectGirls, OK.XXX, PornGo, XFreeHD. Plays each site's own files directly (HLS or MP4, up to 1080p, 4K with Best quality; 480p with Data saver); if one copy won't play, the same upload on another site does. |
+| **Live cams** | CamSoda and Cam4 public rooms, in the Live tab (and search). |
 | **RedGIFs** | Clips and GIFs. |
 | **Reddit** | Hundreds of NSFW subreddits (public RSS, paced to Reddit's limits). |
 | **Image boards** | Gelbooru, Rule34, e621, Danbooru-style boards and more. |

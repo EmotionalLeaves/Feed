@@ -21,3 +21,8 @@ object SteerState {
 
     const val LIFETIME_MS = 4L * 60 * 60 * 1000
 }
+
+/** The Live tab's choice of who's on cam ("female", "couple", "male", "trans"), or null for everyone. */
+object LiveFilter {
+    val who = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+}

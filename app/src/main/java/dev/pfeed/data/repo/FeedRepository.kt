@@ -520,14 +520,16 @@ class FeedSession(
             )
         } else if (mode == FeedMode.LIVE) {
             // Live: the rooms you'd most enjoy first (by everything For You knows), busy ones a little ahead.
+            val who = LiveFilter.who.value
+            val rooms = if (who == null) candidates else candidates.filter { who in it.tags }
             val personal = signals.engine.use { e ->
-                candidates.associate { item ->
+                rooms.associate { item ->
                     val v = e.vectorOf(item)
                     val viewers = item.extras["viewers"]?.toDoubleOrNull() ?: 0.0
                     item.key to ((v?.let { 0.9 * e.interestScore(it) - 0.8 * e.aversion(it) } ?: 0.0) + 0.5 * e.visualScore(item) + 0.12 * kotlin.math.ln(1.0 + viewers))
                 }
             }
-            Spread.order(candidates.sortedByDescending { personal[it.key] ?: 0.0 }, recentShown, BATCH, allowForcedRun = true)
+            Spread.order(rooms.sortedByDescending { personal[it.key] ?: 0.0 }, recentShown, BATCH, allowForcedRun = true)
         } else {
             // Latest / Following: newest first, but spaced so one busy source can't fill the screen.
             Spread.order(candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }, recentShown, BATCH, allowForcedRun = allowForcedRun)

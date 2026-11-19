@@ -135,7 +135,8 @@ class LiveCamsAdapter @Inject constructor(
                 if (text("status") in setOf("private", "limited", "offline")) return@mapNotNull null
                 val subject = text("subject_html").orEmpty().replace(HTML, " ").replace("&amp;", "&").replace(Regex("\\s+"), " ").trim()
                 val viewers = text("connections")?.toIntOrNull() ?: 0
-                val tags = HASHTAG.findAll(subject).map { it.groupValues[1].lowercase() }.toList() + "live cam"
+                val who = when (text("gender")) { "f" -> "female"; "m" -> "male"; "t" -> "trans"; "c" -> "couple"; else -> null }
+                val tags = HASHTAG.findAll(subject).map { it.groupValues[1].lowercase() }.toList() + listOfNotNull(who) + "live cam"
                 MediaItem(
                     id = "camsoda/$user",
                     sourceId = SOURCE_ID,
@@ -164,7 +165,11 @@ class LiveCamsAdapter @Inject constructor(
                 val viewers = text("viewers")?.toIntOrNull() ?: 0
                 val showTags = (o["showTags"] as? JsonArray)?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.substringBefore('|') }.orEmpty()
                 val status = text("statusMessage").orEmpty().trim()
-                val gender = text("gender")?.let { if (it == "shemale") "trans" else it }
+                val gender = when {
+                    text("broadcastType")?.contains("group") == true || text("broadcastType") == "male_female_group" -> "couple"
+                    text("gender") == "shemale" -> "trans"
+                    else -> text("gender")
+                }
                 MediaItem(
                     id = "cam4/$user",
                     sourceId = SOURCE_ID,
@@ -183,6 +188,9 @@ class LiveCamsAdapter @Inject constructor(
                 )
             }.sortedByDescending { it.extras["viewers"]?.toIntOrNull() ?: 0 }
         }
+
+        /** Who's on cam, as the Live tab's chips offer it (the tag each room carries). */
+        val WHO = listOf("female" to "Women", "couple" to "Couples", "male" to "Men", "trans" to "Trans")
 
         /** In extras: a live stream (no length, no seeking, no resume points). */
         const val LIVE = "live"
