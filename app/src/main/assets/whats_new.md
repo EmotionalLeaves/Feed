@@ -1,3 +1,10 @@
+## 5.5.0 — 2026-11-18
+Live, and three new sites
+
+- New: Live. A new tab beside For You: people on cam right now (CamSoda's public rooms), full screen and swipeable like everything else, the ones you'd most enjoy first (by everything For You knows about you), with how many are watching. Live rooms also turn up in search. Turn it off in Sources (Live cams).
+- New sites: HQPorner (HD and 4K studio scenes), Porndig (studio scenes, many in 4K) and PerfectGirls. Each read with its tags and performers, so For You knows what they are. Their parsers were written against the pages the sites serve today.
+- Better: the feed's tabs now fit four, and Live has a beating red dot.
+
 ## 5.4.0 — 2026-11-18
 Search by voice, results for you
 
@@ -13,12 +20,3 @@ Your tastes, one tap away
 - Better: Discover's rows are now one per taste For You knows (so two rows are never the same taste twice), and each row is ordered for you: what you like, near your tastes, nothing like what you've turned down.
 - Better: For You gives more room to the sources whose posts land for you, and less to the ones that keep missing, so fetching and slots go where your taste is.
 - New: When you paste someone's taste code you see how well you match ("You match 64%"), what you both like and what theirs would add.
-
-## 5.2.0 — 2026-11-18
-Fixes: notes that wouldn't go away, the feed tab marker
-
-- Fixed: notes along the bottom ("Loved: saved…", "For You: …", Undo and the like) stayed on screen until you tapped them. They now go by themselves after a few seconds, go as soon as you swipe on to another post, and a tap on the note puts it away.
-- Fixed: the update banner came back every time the app opened. Later now means a day without asking, and it steps aside by itself after a few seconds.
-- Fixed: the white marker under Following / For You / Latest sat in the wrong place; it now sits under the feed you're on and slides to the next.
-- New: Your taste over time (Settings → Interests): a bar a day showing how For You shared its slots between your interests.
-- New: For newcomers, a one-time nudge after the first posts to play This or that.

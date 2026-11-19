@@ -164,9 +164,11 @@ class FeedSession(
 
     private suspend fun loadMoreHere(): LoadResult {
         loads++
-        val adapters = registry.enabledAdapters()
+        // Live is its own tab: the live source feeds it alone, and no other feed shows it.
+        val liveTab = spec is FeedSpec.Main && spec.mode == FeedMode.LIVE
+        val adapters = registry.enabledAdapters().filter { (it.id == dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID) == liveTab }
         if (adapters.isEmpty()) {
-            return LoadResult(emptyList(), emptyList(), endReached = true, hint = "All sources are turned off. Turn some on in Sources.")
+            return LoadResult(emptyList(), emptyList(), endReached = true, hint = if (liveTab) "Live cams are turned off. Turn them on in Sources." else "All sources are turned off. Turn some on in Sources.")
         }
         val follows = library.followsOnce()
         val mode = (spec as? FeedSpec.Main)?.mode ?: FeedMode.LATEST
@@ -351,7 +353,8 @@ class FeedSession(
         if (incoming.isEmpty()) return errors
 
         val blocklist = blocks.current()
-        var items = incoming.filter { it.key !in shown && it.key !in candidateKeys && !seen.isSeen(it.key) && blocklist.allows(it) }
+        // Live rooms are never "seen": the person is still on, doing something else by now.
+        var items = incoming.filter { it.key !in shown && it.key !in candidateKeys && (isLive(it) || !seen.isSeen(it.key)) && blocklist.allows(it) }
         // Tag feeds come from per-source searches, which match on titles and related tags too; keep
         // those, but put exact tag matches first when ranking (see takeBatch).
         if (mode == FeedMode.FOLLOWING) {
@@ -429,7 +432,7 @@ class FeedSession(
         val dropped = candidates.filter {
             (hiddenTypes.isNotEmpty() && feedType(it) in hiddenTypes) ||
             (videoLength != "any" && !lengthAllowed(it, videoLength)) ||
-            !blocklist.allows(it) || seen.isSeen(it.key) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS ||
+            !blocklist.allows(it) || (!isLive(it) && seen.isSeen(it.key)) || loads - (pooledAt[it.key] ?: loads) > STALE_LOADS ||
                 // A site whose files aren't loading right now: don't hand out more of it.
                 mediaHealth.isResting(it)
         }
@@ -515,6 +518,16 @@ class FeedSession(
                 BATCH,
                 allowForcedRun = allowForcedRun,
             )
+        } else if (mode == FeedMode.LIVE) {
+            // Live: the rooms you'd most enjoy first (by everything For You knows), busy ones a little ahead.
+            val personal = signals.engine.use { e ->
+                candidates.associate { item ->
+                    val v = e.vectorOf(item)
+                    val viewers = item.extras["viewers"]?.toDoubleOrNull() ?: 0.0
+                    item.key to ((v?.let { 0.9 * e.interestScore(it) - 0.8 * e.aversion(it) } ?: 0.0) + 0.5 * e.visualScore(item) + 0.12 * kotlin.math.ln(1.0 + viewers))
+                }
+            }
+            Spread.order(candidates.sortedByDescending { personal[it.key] ?: 0.0 }, recentShown, BATCH, allowForcedRun = true)
         } else {
             // Latest / Following: newest first, but spaced so one busy source can't fill the screen.
             Spread.order(candidates.sortedByDescending { it.publishedAt ?: Instant.EPOCH }, recentShown, BATCH, allowForcedRun = allowForcedRun)
@@ -572,7 +585,9 @@ class FeedSession(
          * single site they made up about one post in eight. Each site is still held to
          * [PER_ORIGIN_POOL_CAP], and For You learns from there whether you want videos.
          */
-        private val SOURCE_POOL_CAPS = mapOf("tube" to 40)
+        private val SOURCE_POOL_CAPS = mapOf("tube" to 40, dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID to 150)
+
+        private fun isLive(item: MediaItem) = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"
         /** Most candidates one subreddit / board site / server may hold at once. */
         private const val PER_ORIGIN_POOL_CAP = 10
         /** Most images taken from one multi-image post per session. */

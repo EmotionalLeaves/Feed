@@ -176,7 +176,7 @@ fun VideoPage(
     DisposableEffect(item.key) {
         onDispose {
             // Leaving a long video part-way: remember where (not in private mode).
-            player?.takeIf { it.currentMediaItem?.mediaId == item.key && !vm.privateMode.value }?.let { p ->
+            player?.takeIf { it.currentMediaItem?.mediaId == item.key && !vm.privateMode.value && item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] != "1" }?.let { p ->
                 dev.pfeed.player.ResumePoints.save(item.key, p.currentPosition, p.duration)
             }
             pool.release(item.key)
@@ -201,7 +201,9 @@ fun VideoPage(
                     .apply { s.mimeType?.let { setMimeType(it) } }
                     .build(),
                 // Carry on where you left a long video, if you did; else past the intro, if asked.
-                dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
+                // Live: wherever the broadcast is now.
+                if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") androidx.media3.common.C.TIME_UNSET
+                else dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
             )
             p.prepare()
         }

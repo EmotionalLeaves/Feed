@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.5.0 — 2026-11-18
+
+Live, and three new sites
+
+- New: Live. A new tab beside For You: people on cam right now (CamSoda's public rooms), full screen and swipeable like everything else, the ones you'd most enjoy first (by everything For You knows about you), with how many are watching. Live rooms also turn up in search. Turn it off in Sources (Live cams).
+- New sites: HQPorner (HD and 4K studio scenes), Porndig (studio scenes, many in 4K) and PerfectGirls. Each read with its tags and performers, so For You knows what they are. Their parsers were written against the pages the sites serve today.
+- Better: the feed's tabs now fit four, and Live has a beating red dot.
+
 ## 5.4.0 — 2026-11-18
 
 Search by voice, results for you

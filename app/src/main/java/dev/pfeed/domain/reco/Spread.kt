@@ -105,6 +105,8 @@ class Spread(recent: List<MediaItem> = emptyList()) {
             "reddit" -> "r/" + (item.tags.firstOrNull()?.lowercase() ?: "")
             "booru", "philomena", "mastodon", "kemono", "tube", "comics" ->
                 item.sourceId + ":" + item.id.substringBefore('/', "").removePrefix("api.").lowercase()
+            // Each live room is its own place (they're all one site, but each a different person).
+            "live" -> "live:" + (item.creator ?: item.id)
             else -> item.sourceId
         }
 

@@ -960,8 +960,8 @@ private fun TopBar(
             }
             val barX = bar.value
             Box(Modifier.align(Alignment.Center)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LIVE to "Live", FeedMode.LATEST to "Latest").forEach { (m, label) ->
                         // Measured on this wrapper, whose parent is the row the bar slides along (the
                         // tab itself sits at 0 inside it, which put every tab's centre in the same place).
                         Box(Modifier.onGloballyPositioned { c -> centers[m] = c.positionInParent().x + c.size.width / 2f }) {
@@ -1077,12 +1077,22 @@ private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modif
         modifier.clip(RoundedCornerShape(8.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 17.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            label,
-            color = tint,
-            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            style = MaterialTheme.typography.titleSmall.shadowed(),
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            // Live gets a beating red dot, as everywhere else people stream.
+            if (label == "Live") {
+                val pulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "live").animateFloat(
+                    0.45f, 1f, androidx.compose.animation.core.infiniteRepeatable(tween(700), androidx.compose.animation.core.RepeatMode.Reverse), label = "dot",
+                )
+                Box(Modifier.size(7.dp).graphicsLayer { alpha = pulse }.clip(CircleShape).background(Color(0xFFFF3B4E)))
+                Spacer(Modifier.width(5.dp))
+            }
+            Text(
+                label,
+                color = tint,
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                style = MaterialTheme.typography.titleSmall.shadowed(),
+            )
+        }
     }
 }
 
@@ -1621,18 +1631,27 @@ private fun Overlay(
                 Modifier.background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box(Modifier.size(6.dp).background(Accent, CircleShape))
+                val live = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"
+                Box(Modifier.size(6.dp).background(if (live) Color(0xFFFF3B4E) else Accent, CircleShape))
                 Spacer(Modifier.width(6.dp))
                 Text(
-                    sourceLabel,
+                    if (live) "LIVE" else sourceLabel,
                     color = Color.White,
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                 )
-                // When it was posted, if the source said (useful in Latest).
-                remember(item.key) { Display.age(item) }?.let { age ->
-                    Text(" · $age", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                if (live) {
+                    // How many are watching, as the site counts them.
+                    item.extras["viewers"]?.toIntOrNull()?.takeIf { it > 0 }?.let { n ->
+                        val shown = if (n >= 1000) "%.1fK".format(n / 1000.0) else n.toString()
+                        Text(" · $shown watching", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    }
+                } else {
+                    // When it was posted, if the source said (useful in Latest).
+                    remember(item.key) { Display.age(item) }?.let { age ->
+                        Text(" · $age", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.labelMedium, maxLines = 1)
+                    }
                 }
             }
             if (creator != null) {

@@ -58,7 +58,8 @@ sealed interface StreamInfo {
     data class Embed(val url: String) : StreamInfo
 }
 
-enum class FeedMode { FOR_YOU, FOLLOWING, LATEST }
+/** [LIVE]: people on cam right now (only the live source; it's in no other feed). */
+enum class FeedMode { FOR_YOU, FOLLOWING, LATEST, LIVE }
 
 data class FeedPrefs(
     val mode: FeedMode,

@@ -165,6 +165,8 @@ class TubeAdapter @Inject constructor(
             val html = http.getRaw(id, page)
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
+            } ?: site.playerUrl(html)?.let { player ->
+                attempt { site.stream(http.getRaw(id, player)) }.getOrNull()
             } ?: site.embedUrl(vid).takeIf { it != page }?.let { embed ->
                 // Some pages (a region notice, a "processing" placeholder) lack the player setup that
                 // the embed page still carries; read the stream from there before giving up.
