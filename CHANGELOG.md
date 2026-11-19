@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.2.0 — 2026-11-18
+
+Fixes: notes that wouldn't go away, the feed tab marker
+
+- Fixed: notes along the bottom ("Loved: saved…", "For You: …", Undo and the like) stayed on screen until you tapped them. They now go by themselves after a few seconds, go as soon as you swipe on to another post, and a tap on the note puts it away.
+- Fixed: the update banner came back every time the app opened. Later now means a day without asking, and it steps aside by itself after a few seconds.
+- Fixed: the white marker under Following / For You / Latest sat in the wrong place; it now sits under the feed you're on and slides to the next.
+- New: Your taste over time (Settings → Interests): a bar a day showing how For You shared its slots between your interests.
+- New: For newcomers, a one-time nudge after the first posts to play This or that.
+
 ## 5.1.0 — 2026-11-18
 
 Looking for your second taste

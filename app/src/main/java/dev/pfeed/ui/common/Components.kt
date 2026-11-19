@@ -343,6 +343,8 @@ fun AppSnackbarHost(state: androidx.compose.material3.SnackbarHostState, modifie
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
                 .background(Color(0xF01C1C21))
                 .border(1.dp, Color.White.copy(alpha = 0.08f), androidx.compose.foundation.shape.RoundedCornerShape(50))
+                // Tap the note itself to put it away.
+                .clickable { data.dismiss() }
                 .padding(horizontal = 18.dp, vertical = 11.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

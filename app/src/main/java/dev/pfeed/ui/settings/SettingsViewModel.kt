@@ -308,7 +308,16 @@ class SettingsViewModel @Inject constructor(
         _tasteMap.value = signals.engine.use { it.tasteMap(aff) }
         _eye.value = signals.engine.use { it.visual.describe() }
         _landing.value = signals.engine.use { it.landing(14) }
+        _taste.value = signals.engine.use { e ->
+            e.snapshot(aff)
+            TasteHistory(e.history.entries.toList().takeLast(30).map { it.key to it.value }, HashMap(e.historyNames))
+        }
     }
+
+    /** Each day's shares of For You by interest id, and the interests' names. */
+    data class TasteHistory(val days: List<Pair<Int, List<Pair<Int, Float>>>>, val names: Map<Int, List<String>>)
+    private val _taste = MutableStateFlow(TasteHistory(emptyList(), emptyMap()))
+    val tasteHistory: StateFlow<TasteHistory> = _taste
 
     private val _landing = MutableStateFlow<List<Double?>>(emptyList())
     /** Share of For You's picks that landed, day by day, last 14 days (null: nothing watched). */

@@ -262,12 +262,13 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     LaunchedEffect(Unit) { vm.messages.collect { snackbar.showSnackbar(it) } }
     LaunchedEffect(Unit) {
         vm.offers.collect { (text, action, run) ->
-            if (snackbar.showSnackbar(text, actionLabel = action) == androidx.compose.material3.SnackbarResult.ActionPerformed) run()
+            // With an action, a snackbar defaults to staying until tapped: these go by themselves.
+            if (snackbar.showSnackbar(text, actionLabel = action, withDismissAction = false, duration = androidx.compose.material3.SnackbarDuration.Long) == androidx.compose.material3.SnackbarResult.ActionPerformed) run()
         }
     }
     LaunchedEffect(Unit) {
         vm.undoables.collect { (text, undo) ->
-            if (snackbar.showSnackbar(text, actionLabel = "Undo") == androidx.compose.material3.SnackbarResult.ActionPerformed) undo()
+            if (snackbar.showSnackbar(text, actionLabel = "Undo", duration = androidx.compose.material3.SnackbarDuration.Long) == androidx.compose.material3.SnackbarResult.ActionPerformed) undo()
         }
     }
     LaunchedEffect(Unit) {
@@ -278,6 +279,15 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
         }
     }
     LaunchedEffect(pagerState.settledPage) { vm.refreshLikedTags() }
+    // Swiped on to another post: whatever note was up is about the one before; let it go.
+    var notePage by remember { mutableStateOf(-1) }
+    LaunchedEffect(snackbar.currentSnackbarData) { notePage = pagerState.settledPage }
+    LaunchedEffect(pagerState.settledPage) {
+        if (snackbar.currentSnackbarData != null && pagerState.settledPage != notePage) {
+            kotlinx.coroutines.delay(1_500)
+            if (pagerState.settledPage != notePage) snackbar.currentSnackbarData?.dismiss()
+        }
+    }
     // Chameleon colour: the app takes the hue of the post you settle on.
     val chameleonContext = LocalContext.current
     LaunchedEffect(pagerState.settledPage, items.size) {
@@ -519,6 +529,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp, start = 48.dp, end = 48.dp),
             )
         }
+        val asked by vm.thisOrThatRequest.collectAsStateWithLifecycle()
+        LaunchedEffect(asked) { if (asked) { vm.thisOrThatRequest.value = false; thisOrThat = true } }
         if (thisOrThat) ThisOrThat(vm) { n ->
             thisOrThat = false
             if (n > 0) { vm.setMode(FeedMode.FOR_YOU); vm.refresh() }
@@ -926,11 +938,12 @@ private fun TopBar(
             Box(Modifier.align(Alignment.Center)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
                     listOf(FeedMode.FOLLOWING to "Following", FeedMode.FOR_YOU to "For You", FeedMode.LATEST to "Latest").forEach { (m, label) ->
-                        Box {
+                        // Measured on this wrapper, whose parent is the row the bar slides along (the
+                        // tab itself sits at 0 inside it, which put every tab's centre in the same place).
+                        Box(Modifier.onGloballyPositioned { c -> centers[m] = c.positionInParent().x + c.size.width / 2f }) {
                             ModeTab(
                                 label,
                                 selected = m == mode,
-                                modifier = Modifier.onGloballyPositioned { c -> centers[m] = c.positionInParent().x + c.size.width / 2f },
                                 // Hold For You: choose its mood.
                                 onLongClick = if (m == FeedMode.FOR_YOU && onMood != null) ({ moodOpen = true }) else null,
                             ) { onMode(m) }

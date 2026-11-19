@@ -51,6 +51,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val current: Double get() = if (lately.isNaN() || lately >= mean) mean else mean + LATELY_PULL * (lately - mean)
         /** Whether you've been told about it (see [confirmations]). */
         var announced = false
+        /** Stays the same for the interest's life, so its history can be drawn. */
+        var id = 0
         /** Stride-scheduling position: the interest with the lowest pass serves the next slot. */
         var pass: Double = 0.0
         /** Reactions by time of day (4-hour stretches, faded): some tastes are for late at night. */
@@ -255,6 +257,27 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     val days = java.util.TreeMap<Int, IntArray>()
     var today: () -> Int = { java.time.LocalDate.now().toEpochDay().toInt() }
 
+    private var nextId = 1
+    /** Day → each interest's share of For You that day (by [Interest.id]). */
+    val history = java.util.TreeMap<Int, List<Pair<Int, Float>>>()
+    /** What each interest (by id) was last called. */
+    val historyNames = HashMap<Int, List<String>>()
+
+    /** Note today's shares, once a day (for "your taste over time"). */
+    fun snapshot(affinity: Map<String, Double>) {
+        val d = today()
+        if (history.containsKey(d)) return
+        val views = describe(affinity).filter { !it.sour && it.share >= 0.02 }
+        if (views.isEmpty()) return
+        history[d] = views.mapNotNull { v -> interests.getOrNull(v.index)?.let { it.id to v.share.toFloat() } }
+        views.forEach { v -> interests.getOrNull(v.index)?.let { historyNames[it.id] = v.tags.take(2) } }
+        while (history.size > KEEP_DAYS) history.remove(history.firstKey())
+        historyNames.keys.retainAll(history.values.flatMap { l -> l.map { it.first } }.toSet())
+    }
+
+    /** How many of For You's picks you've reacted to, over the days kept. */
+    fun reactions(): Int = days.values.sumOf { it[0] }
+
     /** The share of posts that landed, per day, for the last [n] days (null where nothing was watched). */
     fun landing(n: Int = 14): List<Double?> {
         val t = today()
@@ -294,7 +317,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
                 // Something new you clearly liked: a tentative interest, which has to prove itself
                 // (one lingering view while the phone was down shouldn't take over the feed).
                 if (interests.size >= MAX_INTERESTS) interests.remove(interests.minBy { it.mean * it.confidence })
-                interests += Interest(x.copyOf(), alpha = NEW_ALPHA + 0.25 * target, beta = NEW_BETA).also { it.sum = target * NEW_WEIGHT; it.count = NEW_WEIGHT }
+                interests += Interest(x.copyOf(), alpha = NEW_ALPHA + 0.25 * target, beta = NEW_BETA).also { it.sum = target * NEW_WEIGHT; it.count = NEW_WEIGHT; it.id = nextId++ }
             }
             // The mood moves toward this post.
             val s = session
@@ -576,11 +599,17 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val keep = creators.entries.toList().takeLast(SAVED_CREATORS)
         out.writeInt(keep.size)
         for ((k, c) in keep) { out.writeUTF(k); out.writeUTF(c.name.take(200)); out.writeInt(c.posts); writeVec(out, c.sum) }
+        out.writeInt(nextId)
+        interests.forEach { out.writeInt(it.id) }
+        out.writeInt(history.size)
+        history.forEach { (d, l) -> out.writeInt(d); out.writeInt(l.size); l.forEach { (id, sh) -> out.writeInt(id); out.writeFloat(sh) } }
+        out.writeInt(historyNames.size)
+        historyNames.forEach { (id, names) -> out.writeInt(id); out.writeInt(names.size); names.forEach { out.writeUTF(it.take(80)) } }
     }
 
     fun readFrom(input: java.io.DataInputStream) {
         val format = input.readInt()
-        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators, 5 (4.95–4.98) a full-size map.
+        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators, 5 (4.95–4.98) a full-size map, 6 (4.99–5.1) no history.
         if (format !in 2..FORMAT) return
         space.readFrom(input, quantized = format >= 6)
         interests.clear()
@@ -604,10 +633,19 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             val k = input.readUTF(); val n = input.readUTF(); val posts = input.readInt(); val v = readVec(input)
             creators[k] = Creator(n, v, posts)
         }
+        history.clear(); historyNames.clear()
+        if (format >= 7) {
+            nextId = input.readInt()
+            interests.forEach { it.id = input.readInt() }
+            repeat(input.readInt()) { val d = input.readInt(); history[d] = List(input.readInt()) { input.readInt() to input.readFloat() } }
+            repeat(input.readInt()) { val id = input.readInt(); historyNames[id] = List(input.readInt()) { input.readUTF() } }
+        } else {
+            interests.forEach { it.id = nextId++ }
+        }
     }
 
     companion object {
-        private const val FORMAT = 6
+        private const val FORMAT = 7
 
         /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
         const val PARTS = 8

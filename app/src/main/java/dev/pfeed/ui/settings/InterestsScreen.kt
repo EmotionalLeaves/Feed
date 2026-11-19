@@ -111,6 +111,12 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                 LandingCard(landing)
             }
         }
+        val over by vm.tasteHistory.collectAsStateWithLifecycle()
+        if (over.days.size >= 3) {
+            Section("Your taste over time", footer = "Each day's share of For You for each of your interests, the last ${over.days.size} days you watched.") {
+                TasteOverTime(over)
+            }
+        }
         val sky by vm.tasteMap.collectAsStateWithLifecycle()
         sky?.takeIf { it.stars.size >= 5 }?.let { m ->
             Section("Your taste map", footer = "Tags that keep company sit together. Bigger means you like it more; each colour is one of your interests below, glowing by its share of For You. Tap a star to open it, or the glow at a colour's centre to play that taste.") {
@@ -492,3 +498,47 @@ private fun LandingCard(days: List<Double?>) {
         }
     }
 }
+
+/** One stacked bar per day: how For You's slots were shared between your interests. */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@Composable
+private fun TasteOverTime(h: SettingsViewModel.TasteHistory) {
+    val colors = TasteColors
+    val ids = h.days.flatMap { d -> d.second.map { it.first } }.distinct()
+    fun color(id: Int) = colors[ids.indexOf(id).coerceAtLeast(0) % colors.size]
+    Column(Modifier.fillMaxWidth().padding(16.dp)) {
+        androidx.compose.foundation.layout.Row(
+            Modifier.fillMaxWidth().height(96.dp),
+            horizontalArrangement = Arrangement.spacedBy(3.dp),
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            h.days.forEach { (_, shares) ->
+                Column(Modifier.weight(1f).fillMaxHeight().clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp))) {
+                    val total = shares.sumOf { it.second.toDouble() }.toFloat().coerceAtLeast(1e-6f)
+                    shares.sortedBy { ids.indexOf(it.first) }.forEach { (id, share) ->
+                        Box(Modifier.fillMaxWidth().weight((share / total).coerceAtLeast(0.001f)).background(color(id)))
+                    }
+                }
+            }
+        }
+        androidx.compose.foundation.layout.Spacer(Modifier.height(12.dp))
+        // The ones in the latest day, named.
+        val latest = h.days.lastOrNull()?.second.orEmpty().sortedByDescending { it.second }
+        androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            latest.forEach { (id, _) ->
+                val name = h.names[id]?.joinToString(" · ") { "#" + it.replace('_', ' ') } ?: return@forEach
+                androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(color(id)))
+                    androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+                    Text(name, style = MaterialTheme.typography.labelMedium, color = TextMid)
+                }
+            }
+        }
+    }
+}
+
+private val TasteColors = listOf(
+    androidx.compose.ui.graphics.Color(0xFFFF5C8A), androidx.compose.ui.graphics.Color(0xFF8C7CFF), androidx.compose.ui.graphics.Color(0xFF3FC6FF),
+    androidx.compose.ui.graphics.Color(0xFF39D98A), androidx.compose.ui.graphics.Color(0xFFFFB547), androidx.compose.ui.graphics.Color(0xFFFF7A45),
+    androidx.compose.ui.graphics.Color(0xFFE36BFF), androidx.compose.ui.graphics.Color(0xFF7FE0D4),
+)

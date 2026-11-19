@@ -24,8 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,10 +69,19 @@ fun Updater.installFromUi(context: android.content.Context) {
 fun UpdateBanner(modifier: Modifier = Modifier) {
     val updater = rememberUpdater()
     val state by updater.state.collectAsStateWithLifecycle()
-    var dismissed by rememberSaveable { mutableStateOf<String?>(null) }
-    val ready = state as? Updater.State.Ready
     val context = LocalContext.current
-    val show = ready != null && dismissed != ready.release.version && !updater.canInstallQuietly()
+    // "Later" means a day without asking (whatever new version comes out meanwhile), remembered
+    // across restarts; before, it came back every time the app opened.
+    val prefs = remember { context.getSharedPreferences("update_banner", android.content.Context.MODE_PRIVATE) }
+    var snoozedUntil by remember { mutableStateOf(prefs.getLong("snoozed_until", 0L)) }
+    val ready = state as? Updater.State.Ready
+    val show = ready != null && System.currentTimeMillis() >= snoozedUntil && !updater.canInstallQuietly()
+    fun later() {
+        snoozedUntil = System.currentTimeMillis() + SNOOZE_MS
+        prefs.edit().putLong("snoozed_until", snoozedUntil).apply()
+    }
+    // Not left up forever either: it steps aside after a while (Settings → About still has it).
+    LaunchedEffect(show) { if (show) { kotlinx.coroutines.delay(AUTO_HIDE_MS); later() } }
     AnimatedVisibility(
         visible = show,
         enter = slideInVertically { it } + fadeIn(),
@@ -94,8 +104,11 @@ fun UpdateBanner(modifier: Modifier = Modifier) {
                 Text("Version ${r.release.version} is ready", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold, color = Color.White)
                 Text("Downloaded from GitHub", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.6f))
             }
-            TextButton(onClick = { dismissed = r.release.version }) { Text("Later", color = Color.White.copy(alpha = 0.7f)) }
+            TextButton(onClick = { later() }) { Text("Later", color = Color.White.copy(alpha = 0.7f)) }
             TextButton(onClick = { updater.installFromUi(context) }) { Text("Install", fontWeight = FontWeight.Bold) }
         }
     }
 }
+
+private const val SNOOZE_MS = 24 * 60 * 60 * 1000L
+private const val AUTO_HIDE_MS = 15_000L

@@ -141,7 +141,25 @@ class FeedViewModel @Inject constructor(
     fun markShown(item: MediaItem) {
         // A comic's pages each draw (and the next ones preload); the post counts once.
         val post = item.key.substringBefore('#')
-        if (shownPosts.add(post)) mediaHealth.shown(item)
+        if (shownPosts.add(post)) {
+            mediaHealth.shown(item)
+            if (shownPosts.size == THIS_OR_THAT_AFTER && isMainFeed) offerThisOrThat()
+        }
+    }
+
+    /** Ask the screen to open This or that. */
+    val thisOrThatRequest = MutableStateFlow(false)
+
+    /** New here: once, after the first few dozen posts, suggest This or that (it teaches For You fastest). */
+    private fun offerThisOrThat() {
+        val prefs = app.getSharedPreferences("hints", android.content.Context.MODE_PRIVATE)
+        if (prefs.getBoolean("this_or_that", false)) return
+        viewModelScope.launch {
+            val reacted = runCatching { signals.engine.use { it.reactions() } }.getOrDefault(Int.MAX_VALUE)
+            if (reacted > NEW_USER_REACTIONS || _mode.value != FeedMode.FOR_YOU) return@launch
+            prefs.edit().putBoolean("this_or_that", true).apply()
+            offer("Teach For You faster: ten quick picks between two posts", "This or that") { thisOrThatRequest.value = true }
+        }
     }
 
     private val shownPosts = java.util.Collections.newSetFromMap(java.util.concurrent.ConcurrentHashMap<String, Boolean>())
@@ -585,7 +603,7 @@ class FeedViewModel @Inject constructor(
         val now = SystemClock.elapsedRealtime()
         if (now - lastNotice < NOTICE_GAP_MS) return
         val aff = runCatching { signals.affinities().tags }.getOrNull() ?: return
-        val found = runCatching { signals.engine.use { it.confirmations(aff) } }.getOrNull()?.firstOrNull() ?: return
+        val found = runCatching { signals.engine.use { it.snapshot(aff); it.confirmations(aff) } }.getOrNull()?.firstOrNull() ?: return
         lastNotice = now
         val name = found.tags.take(2).joinToString(" · ") { "#" + it.replace('_', ' ') }
         offer("For You noticed a new taste: $name", "Not really") {
@@ -970,6 +988,8 @@ class FeedViewModel @Inject constructor(
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
         private const val NOTICE_GAP_MS = 5 * 60_000L
+        private const val THIS_OR_THAT_AFTER = 25
+        private const val NEW_USER_REACTIONS = 200
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L
         private const val LOAD_AHEAD = 10
