@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.19.0 — 2026-11-19
+
+Scenes as pictures
+
+- **Scene strip**: once a long video's scenes are known, the long-press menu shows them as a row of pictures with start times; tap one to go there. The sideways player shows the same strip, with the scene you're in outlined.
+
 ## 5.18.0 — 2026-11-19
 
 Next scene

@@ -2310,6 +2310,10 @@ private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
                 Icon(Icons.Filled.SkipNext, contentDescription = null, tint = Color.White, modifier = Modifier.size(22.dp))
             }
             Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 34.dp)) {
+                val timeline = remember(item.key) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.timeline }
+                if (acts.size < 2 && timeline != null && scenes.size >= 2) {
+                    SceneStrip(timeline, scenes, current = position, modifier = Modifier.padding(bottom = 10.dp)) { at -> p.seekTo(at); onTouched() }
+                }
                 if (acts.size >= 2) androidx.compose.foundation.lazy.LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.padding(bottom = 10.dp),

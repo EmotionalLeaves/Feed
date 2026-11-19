@@ -390,6 +390,14 @@ fun VideoPage(
         val d = player?.duration?.takeIf { it > 0 } ?: ((item.durationSec ?: 0) * 1000L)
         runCatching { SceneFinder.find(sceneContext, item.key, tl, d) }
     }
+    // A moment picked from outside the page (the menu's scenes strip).
+    val seekAsk by SeekRequest.request.collectAsState()
+    LaunchedEffect(seekAsk) {
+        val (key, at) = seekAsk ?: return@LaunchedEffect
+        if (key != item.key) return@LaunchedEffect
+        SeekRequest.request.value = null
+        player?.takeIf { it.currentMediaItem?.mediaId == item.key }?.seekTo(at)
+    }
     // "Next scene": jump to the next cut (or act).
     val sceneAsk by SceneSkip.request.collectAsState()
     LaunchedEffect(sceneAsk) {

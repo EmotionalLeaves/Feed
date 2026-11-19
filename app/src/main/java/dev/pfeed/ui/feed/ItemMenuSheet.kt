@@ -246,6 +246,22 @@ fun ItemMenuSheet(
                 QuickAction(Icons.AutoMirrored.Filled.OpenInNew, "Open site", modifier = Modifier.weight(1f)) { openExternal(context, item.pageUrl); onDismiss() }
             }
             HorizontalDivider()
+            // The video's scenes as pictures, when they're known: tap one to go there.
+            val sceneTimeline = remember(item.key) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.timeline }
+            val sceneCuts = remember(item.key) { dev.pfeed.domain.reco.Scenes.of(item.key).orEmpty() }
+            if (sceneTimeline != null && sceneCuts.size >= 2) {
+                Text(
+                    "Scenes",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 8.dp),
+                )
+                SceneStrip(sceneTimeline, sceneCuts, modifier = Modifier.padding(start = 16.dp, bottom = 12.dp)) { at ->
+                    SeekRequest.request.value = item.key to at
+                    onDismiss()
+                }
+                HorizontalDivider()
+            }
             if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
                 val highlights by Highlights.on.collectAsState()
                 ListItem(

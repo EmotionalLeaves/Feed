@@ -1,6 +1,13 @@
 package dev.pfeed.ui.feed
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -106,6 +113,11 @@ object FrameGrab {
     val request = MutableStateFlow<String?>(null)
 }
 
+/** Go to a moment in a video (key, ms), from outside its page (the scenes strip in the menu). */
+object SeekRequest {
+    val request = MutableStateFlow<Pair<String, Long>?>(null)
+}
+
 /** "Next scene" asked for the video with this key: the page playing it jumps to its next cut. */
 object SceneSkip {
     val request = MutableStateFlow<String?>(null)
@@ -140,4 +152,46 @@ object Pip {
     private val _active = MutableStateFlow(false)
     val active: StateFlow<Boolean> = _active
     fun set(value: Boolean) { _active.value = value }
+}
+
+/**
+ * A row of a video's scenes as pictures (from its site's preview frames), each with its start
+ * time: tap one to go there.
+ */
+@androidx.compose.runtime.Composable
+fun SceneStrip(
+    timeline: dev.pfeed.domain.reco.VideoExtras.Timeline,
+    cuts: List<Long>,
+    current: Long? = null,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    onPick: (Long) -> Unit,
+) {
+    // The opening counts as a scene too.
+    val starts = androidx.compose.runtime.remember(cuts) { (listOf(0L) + cuts).distinct() }
+    androidx.compose.foundation.lazy.LazyRow(
+        modifier,
+        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp),
+    ) {
+        items(starts.size) { i ->
+            val at = starts[i]
+            val playing = current != null && current >= at && current < (starts.getOrNull(i + 1) ?: Long.MAX_VALUE)
+            androidx.compose.foundation.layout.Box(
+                androidx.compose.ui.Modifier.size(112.dp, 63.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                    .then(if (playing) androidx.compose.ui.Modifier.border(2.dp, androidx.compose.ui.graphics.Color.White, androidx.compose.foundation.shape.RoundedCornerShape(8.dp)) else androidx.compose.ui.Modifier)
+                    .clickable { onPick(at) },
+            ) {
+                // A moment in: the cut itself is often a blend of both scenes.
+                ScrubPreview(timeline.at(at + 2_000), timeline, androidx.compose.ui.Modifier.matchParentSize())
+                androidx.compose.material3.Text(
+                    formatTime(at),
+                    color = androidx.compose.ui.graphics.Color.White,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelSmall,
+                    modifier = androidx.compose.ui.Modifier.align(androidx.compose.ui.Alignment.BottomEnd).padding(4.dp)
+                        .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                        .padding(horizontal = 4.dp, vertical = 1.dp),
+                )
+            }
+        }
+    }
 }

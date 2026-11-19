@@ -230,7 +230,7 @@ internal fun formatTime(ms: Long): String {
 
 /** One frame cut out of a site's preview sheet (a grid of small frames). */
 @Composable
-private fun ScrubPreview(sheet: Triple<String, Int, Int>, timeline: dev.pfeed.domain.reco.VideoExtras.Timeline, modifier: Modifier) {
+internal fun ScrubPreview(sheet: Triple<String, Int, Int>, timeline: dev.pfeed.domain.reco.VideoExtras.Timeline, modifier: Modifier) {
     val context = androidx.compose.ui.platform.LocalContext.current
     var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var loaded by remember { mutableStateOf<String?>(null) }
