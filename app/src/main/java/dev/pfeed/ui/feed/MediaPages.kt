@@ -412,6 +412,8 @@ fun VideoPage(
         // Highlights wants them before the video starts (it opens on a scene), so the one lined up next gets them now.
         val early = Highlights.on.value && !play && stream != null
         if (!early && (!firstFrame || !play)) return@LaunchedEffect
+        // On mobile data, only when asked for ("Next scene", Highlights).
+        if (vm.onMeteredNetwork && !Highlights.on.value) return@LaunchedEffect
         val tl = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.timeline ?: return@LaunchedEffect
         if (dev.pfeed.domain.reco.Scenes.of(item.key) != null) return@LaunchedEffect
         if (!early) kotlinx.coroutines.delay(SCENES_AFTER_MS)
@@ -432,6 +434,11 @@ fun VideoPage(
         if (sceneAsk != item.key) return@LaunchedEffect
         SceneSkip.request.value = null
         val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
+        // Not found yet (on mobile data they wait to be asked for): find them now.
+        val tl = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.timeline
+        if (vm.sceneCuts(item).isEmpty() && tl != null && dev.pfeed.domain.reco.Scenes.of(item.key) == null) {
+            runCatching { SceneFinder.find(sceneContext, item.key, tl, p.duration.takeIf { it > 0 } ?: ((item.durationSec ?: 0) * 1000L)) }
+        }
         val next = dev.pfeed.domain.reco.Scenes.next(vm.sceneCuts(item), p.currentPosition)
         if (next != null) p.seekTo(next)
         else vm.offer(if (vm.sceneCuts(item).isEmpty()) "Scenes aren't known for this video yet" else "That was the last scene", "Skip 30 s") { p.seekTo(p.currentPosition + 30_000) }

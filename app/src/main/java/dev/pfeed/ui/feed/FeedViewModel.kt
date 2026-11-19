@@ -937,6 +937,9 @@ class FeedViewModel @Inject constructor(
         offer("Moment saved at ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}", "Undo") { dev.pfeed.player.Moments.remove(item.key, atMs) }
     }
 
+    /** On mobile data: extras that cost data (finding scenes) wait until they're asked for. */
+    val onMeteredNetwork: Boolean get() = network.isMetered
+
     /** Opened from Saved → Moments: each video starts at its first moment. */
     val fromMoments: Boolean get() = viewerTitle == MOMENTS
 

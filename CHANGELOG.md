@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.28.0 — 2026-11-19
+
+Scenes respect mobile data
+
+- On mobile data, scenes are only found when you ask for them (**Next scene**) or when Highlights needs them. On Wi-Fi they're still found in the background as you watch.
+- **Next scene** now finds the scenes on the spot if they aren't known yet, instead of saying it doesn't know.
+
 ## 5.27.0 — 2026-11-19
 
 Up next
