@@ -99,7 +99,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -994,6 +994,47 @@ sealed class TubeSite(val host: String, val label: String) {
             TAG.findAll(pageHtml).map { it.groupValues[1] }.filterNot { it in setOf("porn", "sex", "xxx", "hd") }
                 .map { it.replace('-', ' ') }.distinct().take(30).toList()
         override fun embedUrl(id: String) = "https://anysex.com/embed/$id/"
+    }
+
+    /** ZB Porn: a KVS tube; preview clips on every tile, a few MP4s on the video page (the best by bitrate wins). */
+    object ZbPorn : TubeSite("zbporn.com", "ZB Porn") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://zbporn.com/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "https://zbporn.com/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "https://zbporn.com/search/${enc(section.lowercase()).replace("+", "-")}/${if (page == 0) "" else "${page + 1}/"}"
+        }
+        private val MARK = Regex("""<a class="th-image-link" href="(https://zbporn\.com/videos/(\d+)/[^"]*)" title="([^"]*)"""")
+        private val CLIP = Regex("""data-preview="(https://[^"]+\.mp4)"""")
+        private val IMG = Regex("""<img src="(https://[^"]+\.jpg)"""")
+        private val DUR = Regex("""<span class="th-duration">(\d{1,2}:\d{2}(?::\d{2})?)</span>""")
+        private val FILE = Regex("""video(?:_alt)?_url\d*: '(https://[^']+)'""")
+        private val BITRATE = Regex("""[?&]br=(\d+)""")
+        private val TAG = Regex("""href="https://zbporn\.com/(?:tags|categories)/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList()
+            return hits.mapIndexed { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 4000))
+                TubeVideo(
+                    id = m.groupValues[2],
+                    title = unescape(m.groupValues[3]).trim().ifEmpty { null },
+                    pageUrl = m.groupValues[1],
+                    thumb = IMG.find(c)?.groupValues?.get(1),
+                    durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    preview = CLIP.find(m.value + c.take(600))?.groupValues?.get(1),
+                )
+            }.distinctBy { it.id }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? =
+            FILE.findAll(pageHtml).map { it.groupValues[1] }.distinct()
+                .maxByOrNull { BITRATE.find(it)?.groupValues?.get(1)?.toIntOrNull() ?: 0 }
+                ?.let { TubeStream(it, "video/mp4") }
+        override fun pageTags(pageHtml: String): List<String> =
+            TAG.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') }.distinct().take(30).toList()
+        override fun embedUrl(id: String) = "https://zbporn.com/embed/$id/"
     }
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */

@@ -114,7 +114,7 @@ object Features {
         "pornhub.com" to "Pornhub", "xvideos.com" to "XVideos", "xnxx.com" to "XNXX", "xhamster.com" to "xHamster",
         "youporn.com" to "YouPorn", "redtube.com" to "RedTube", "eporner.com" to "Eporner", "tnaflix.com" to "TNAFlix",
         "hqporner.com" to "HQPorner", "porndig.com" to "Porndig", "perfectgirls.xxx" to "PerfectGirls", "ok.xxx" to "OK.XXX", "porngo.com" to "PornGo", "xfreehd.com" to "XFreeHD",
-        "3movs.com" to "3Movs", "anysex.com" to "AnySex",
+        "3movs.com" to "3Movs", "anysex.com" to "AnySex", "zbporn.com" to "ZB Porn",
     )
 
     fun label(feature: String): String = when {
