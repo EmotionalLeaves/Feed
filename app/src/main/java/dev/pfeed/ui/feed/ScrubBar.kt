@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -37,6 +38,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.SeekParameters
 import kotlinx.coroutines.delay
+import coil.imageLoader
 
 /**
  * Shorts-style progress bar along the bottom of a video. Normally a thin line; drag anywhere along
@@ -48,7 +50,13 @@ import kotlinx.coroutines.delay
  */
 @OptIn(UnstableApi::class)
 @Composable
-fun ScrubBar(player: ExoPlayer?, modifier: Modifier = Modifier, onScrubbedBack: () -> Unit = {}) {
+fun ScrubBar(
+    player: ExoPlayer?,
+    modifier: Modifier = Modifier,
+    onScrubbedBack: () -> Unit = {},
+    /** The video's preview frames, chapters and watch counts, where its site gives them. */
+    extras: dev.pfeed.domain.reco.VideoExtras.Info? = null,
+) {
     if (player == null) return
     var duration by remember(player) { mutableLongStateOf(0L) }
     var position by remember(player) { mutableLongStateOf(0L) }
@@ -121,9 +129,31 @@ fun ScrubBar(player: ExoPlayer?, modifier: Modifier = Modifier, onScrubbedBack: 
         contentAlignment = Alignment.BottomStart,
     ) {
         val width = maxWidth
+        val at = (dragFraction * duration).toLong()
+        val chapter = extras?.chapters?.let { dev.pfeed.domain.reco.VideoExtras.chapterAt(it, at) }
+        // The frame at the finger, from the site's preview sheets, above the time.
+        val tl = extras?.timeline
+        val sheet = tl?.takeIf { dragging }?.at(at)
+        if (sheet != null && tl != null) {
+            val previewW = 160.dp; val previewH = 90.dp
+            val x = (width * dragFraction - previewW / 2).coerceIn(0.dp, (width - previewW).coerceAtLeast(0.dp))
+            ScrubPreview(sheet, tl, Modifier.align(Alignment.TopStart).offset(x = x, y = (-36).dp - previewH - 8.dp).size(previewW, previewH))
+        }
+        // How much each stretch is watched, as a soft wave above the bar while scrubbing.
+        val heat = extras?.heat.orEmpty()
+        if (dragging && heat.size >= 10) {
+            val peak = heat.drop(1).maxOrNull()?.coerceAtLeast(1) ?: 1
+            androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(22.dp).align(Alignment.BottomStart).offset(y = (-8).dp)) {
+                val step = size.width / heat.size
+                heat.forEachIndexed { i, h ->
+                    val v = (h.toFloat() / peak).coerceIn(0f, 1f)
+                    drawRect(Color.White.copy(alpha = 0.18f + 0.3f * v), topLeft = androidx.compose.ui.geometry.Offset(i * step, size.height * (1 - v)), size = androidx.compose.ui.geometry.Size(step * 0.8f, size.height * v))
+                }
+            }
+        }
         if (dragging) {
             Text(
-                "${formatTime((dragFraction * duration).toLong())} / ${formatTime(duration)}",
+                (chapter?.let { "$it · " } ?: "") + "${formatTime(at)} / ${formatTime(duration)}",
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
@@ -145,6 +175,13 @@ fun ScrubBar(player: ExoPlayer?, modifier: Modifier = Modifier, onScrubbedBack: 
             Box(
                 Modifier.fillMaxHeight().fillMaxWidth(fraction)
                     .then(if (dragging) Modifier.background(dev.pfeed.ui.theme.BrandGradient) else Modifier.background(Color.White)),
+            )
+        }
+        // Where each chapter starts: small marks on the bar (tap one to go there).
+        extras?.chapters?.takeIf { it.isNotEmpty() && dragging }?.forEach { (_, ms) ->
+            Box(
+                Modifier.align(Alignment.BottomStart).offset(x = width * (ms.toFloat() / duration).coerceIn(0f, 1f) - 1.dp, y = (-1).dp)
+                    .size(2.dp, 10.dp).background(Color(0xFFFFB547)),
             )
         }
         if (dragging) {
@@ -171,4 +208,28 @@ internal fun formatTime(ms: Long): String {
     val m = (total % 3600) / 60
     val s = total % 60
     return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
+/** One frame cut out of a site's preview sheet (a grid of small frames). */
+@Composable
+private fun ScrubPreview(sheet: Triple<String, Int, Int>, timeline: dev.pfeed.domain.reco.VideoExtras.Timeline, modifier: Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var image by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
+    var loaded by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(sheet.first) {
+        if (loaded == sheet.first) return@LaunchedEffect
+        val result = context.imageLoader.execute(coil.request.ImageRequest.Builder(context).data(sheet.first).allowHardware(false).build())
+        val bmp = (result as? coil.request.SuccessResult)?.drawable?.let { (it as? android.graphics.drawable.BitmapDrawable)?.bitmap }
+        if (bmp != null) { image = bmp.asImageBitmap(); loaded = sheet.first }
+    }
+    val img = image ?: return
+    androidx.compose.foundation.Canvas(modifier.clip(RoundedCornerShape(8.dp)).background(Color.Black)) {
+        val cw = img.width / timeline.cols; val ch = img.height / timeline.rows
+        drawImage(
+            img,
+            srcOffset = androidx.compose.ui.unit.IntOffset(sheet.second * cw, sheet.third * ch),
+            srcSize = androidx.compose.ui.unit.IntSize(cw, ch),
+            dstSize = androidx.compose.ui.unit.IntSize(size.width.toInt(), size.height.toInt()),
+        )
+    }
 }

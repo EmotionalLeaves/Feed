@@ -73,6 +73,24 @@ sealed class TubeSite(val host: String, val label: String) {
      */
     open fun playerUrl(pageHtml: String): String? = null
 
+    /** How much each stretch of the video is watched, where the page says (see [dev.pfeed.domain.reco.BestPart]). */
+    open fun hotspots(pageHtml: String): List<Int>? = null
+
+    /** Scrub previews and chapters, where the page has them (the Pornhub family's player setup). */
+    open fun timeline(pageHtml: String): dev.pfeed.domain.reco.VideoExtras.Timeline? = phTimeline(pageHtml)
+    open fun chapters(pageHtml: String): List<Pair<String, Long>> =
+        dev.pfeed.domain.reco.VideoExtras.chapters(Regex("""\"actionTags\":\"([^\"]*)\"""").find(pageHtml)?.groupValues?.get(1))
+
+    /** `"thumbs":{"samplingFrequency":4,…,"urlPattern":"…S{5}.jpg"}` → a [dev.pfeed.domain.reco.VideoExtras.Timeline]. */
+    protected fun phTimeline(html: String): dev.pfeed.domain.reco.VideoExtras.Timeline? {
+        val i = html.indexOf("\"thumbs\":{")
+        if (i < 0) return null
+        val block = html.substring(i, minOf(html.length, i + 1500))
+        val every = Regex("""\"samplingFrequency\":\"?(\d+)""").find(block)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+        val pattern = Regex("""\"urlPattern\":\"(https:[^\"]+\{\d+\}[^\"]*)\"""").find(block)?.groupValues?.get(1)?.let(::unescape) ?: return null
+        return dev.pfeed.domain.reco.VideoExtras.Timeline(pattern.replace(Regex("\\{\\d+\\}"), "{n}"), every)
+    }
+
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
@@ -268,6 +286,8 @@ sealed class TubeSite(val host: String, val label: String) {
         }.distinctBy { it.id }.toList()
 
         override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let { fromMediaDefinitions(it, host) }
+        override fun hotspots(pageHtml: String): List<Int>? =
+            Regex("""\"hotspots\":\[([0-9,]+)\]""").find(pageHtml)?.groupValues?.get(1)?.split(',')?.mapNotNull { it.toIntOrNull() }
         override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.let { indexUrl(it, host) }
         override fun streamFromIndex(indexJson: JsonElement): TubeStream? = (indexJson as? JsonArray)?.let { bestOf(it, host) }
         override fun embedUrl(id: String) = "https://www.pornhub.com/embed/$id"

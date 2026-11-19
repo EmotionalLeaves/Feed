@@ -165,6 +165,12 @@ class TubeAdapter @Inject constructor(
             val html = http.getRaw(id, page)
             // The page names the video's tags: kept for what For You learns from watching it.
             if (page == item.pageUrl) site.pageTags(html).takeIf { it.isNotEmpty() }?.let { dev.pfeed.domain.reco.PageTags.put(item.key, it) }
+            // Where it gets good, if the site keeps count; its scrub previews and chapters, if it has them.
+            val heat = site.hotspots(html).orEmpty()
+            item.durationSec?.let { d -> dev.pfeed.domain.reco.BestPart.from(heat, d)?.let { dev.pfeed.domain.reco.BestPart.put(item.key, it) } }
+            val timeline = site.timeline(html)
+            val chapters = site.chapters(html)
+            if (timeline != null || chapters.isNotEmpty() || heat.isNotEmpty()) dev.pfeed.domain.reco.VideoExtras.put(item.key, dev.pfeed.domain.reco.VideoExtras.Info(timeline, chapters, heat))
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.playerUrl(html)?.let { player ->

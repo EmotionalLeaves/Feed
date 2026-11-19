@@ -4,6 +4,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.draw.clip
 import kotlinx.coroutines.launch
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Row
@@ -404,8 +405,58 @@ fun VideoPage(
             stream is StreamInfo.Embed -> EmbedPage(item, active = play, vm = vm)
             !firstFrame && play -> dev.pfeed.ui.common.BrandSpinner()
         }
+        // A long video whose site keeps count of what people watch: offer to skip to the best part,
+        // for the first few seconds (only while you're before it).
+        val best = remember(item.key, stream) { dev.pfeed.domain.reco.BestPart.of(item.key) }
+        var offerBest by remember(item.key) { mutableStateOf(true) }
+        // Its chapters (positions, as the site marks them): a row to jump straight to one, for a while.
+        val chapters = remember(item.key, stream) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty() }
+        var offerChapters by remember(item.key) { mutableStateOf(true) }
+        if (chapters.size >= 2 && firstFrame && play && offerChapters && !detached) {
+            LaunchedEffect(Unit) { kotlinx.coroutines.delay(CHAPTERS_MS); offerChapters = false }
+            androidx.compose.foundation.lazy.LazyRow(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 104.dp).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 14.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp),
+            ) {
+                items(chapters.size) { i ->
+                    val (name, ms) = chapters[i]
+                    androidx.compose.material3.Text(
+                        name + " · " + dev.pfeed.ui.common.formatDuration((ms / 1000).toInt()),
+                        color = androidx.compose.ui.graphics.Color.White,
+                        style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+                        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                            .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f))
+                            .clickable { player?.seekTo(ms); offerChapters = false; offerBest = false }
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
+        }
+        if (best != null && firstFrame && play && offerBest && !detached) {
+            LaunchedEffect(Unit) { kotlinx.coroutines.delay(BEST_OFFER_MS); offerBest = false }
+            if ((player?.currentPosition ?: 0L) < best - 5_000) androidx.compose.foundation.layout.Row(
+                Modifier.align(Alignment.BottomCenter).padding(bottom = 150.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                    .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.55f))
+                    .clickable { player?.seekTo(best); offerBest = false }
+                    .padding(horizontal = 16.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.LocalFireDepartment, contentDescription = null, tint = androidx.compose.ui.graphics.Color(0xFFFF7A45), modifier = Modifier.size(18.dp))
+                androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+                androidx.compose.material3.Text(
+                    "Skip to the best part · " + dev.pfeed.ui.common.formatDuration((best / 1000).toInt()),
+                    color = androidx.compose.ui.graphics.Color.White,
+                    style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
+                )
+            }
+        }
     }
 }
+
+private const val BEST_OFFER_MS = 9_000L
+private const val CHAPTERS_MS = 12_000L
 
 /**
  * Image viewer that adapts to the aspect ratio, with pinch-to-zoom.
