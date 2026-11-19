@@ -17,8 +17,10 @@ def get(url, referer=None):
 
 for name, cfg in SITES.items():
     for i, url in enumerate(cfg["lists"]):
+        ref = None
+        if isinstance(url, list): url, ref = url
         try:
-            st, final, body = get(url)
+            st, final, body = get(url, referer=ref)
             open(f"{out}/{name}-list{i}.html", "w").write(body)
             report.append(f"{name} list{i} {st} {final} {len(body)}")
             if i == 0:
