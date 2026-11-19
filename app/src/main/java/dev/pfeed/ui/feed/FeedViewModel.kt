@@ -642,7 +642,9 @@ class FeedViewModel @Inject constructor(
                 val s = resolve(item) as? StreamInfo.Direct ?: return@launch
                 val type = Display.effectiveType(item, s)
                 when {
-                    type == MediaType.VIDEO -> if (autoplay && i < 2) preloader.video(item.key, s.url)
+                    // On Wi-Fi the next three get their opening seconds (more of each); on mobile data, two.
+                    type == MediaType.VIDEO -> if (autoplay && i < (if (network.isMetered) 2 else 3))
+                        preloader.video(item.key, s.url, if (network.isMetered) 2_500_000L else 4_000_000L)
                     else -> preloader.image(s.url)
                 }
             }

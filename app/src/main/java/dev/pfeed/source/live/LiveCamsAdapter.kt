@@ -22,7 +22,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * Live: people on cam right now (CamSoda's public rooms), playing in the feed like any video, as
+ * Live: people on cam right now (CamSoda's and Cam4's public rooms), playing in the feed like any video, as
  * long as they're on. The list is the site's own "online" listing, busiest rooms first; a room's
  * stream address is asked for when it's played (it carries a short-lived token). Nothing is sent to
  * the site but those two public requests: no account, no chat.
@@ -42,15 +42,25 @@ class LiveCamsAdapter @Inject constructor(
 
     private suspend fun online(): List<MediaItem> {
         cached?.let { (at, list) -> if (System.currentTimeMillis() - at < LIST_TTL_MS) return list }
-        val all = ArrayList<MediaItem>()
+        val soda = ArrayList<MediaItem>()
         for (page in 1..PAGES) {
             val body = runCatching { http.get(id, "https://www.camsoda.com/api/v1/browse/online?p=$page") }.getOrNull() ?: break
             val rooms = parseOnline(body)
             if (rooms.isEmpty()) break
-            all += rooms
-            if (all.size >= MAX_ROOMS) break
+            soda += rooms
+            if (soda.size >= MAX_ROOMS) break
         }
-        if (all.isEmpty()) throw SourceException(id, "No one live right now (or the site didn't answer)")
+        val cam4 = ArrayList<MediaItem>()
+        for (page in 1..PAGES) {
+            val body = runCatching { http.get(id, "https://www.cam4.com/api/directoryCams?directoryJson=true&online=true&url=true&page=$page&resultsPerPage=60") }.getOrNull() ?: break
+            val rooms = parseCam4(body)
+            if (rooms.isEmpty()) break
+            cam4 += rooms
+            if (cam4.size >= MAX_ROOMS) break
+        }
+        // Both sites woven together, busiest first within each.
+        val all = (0 until maxOf(soda.size, cam4.size)).flatMap { i -> listOfNotNull(soda.getOrNull(i), cam4.getOrNull(i)) }
+        if (all.isEmpty()) throw SourceException(id, "No one live right now (or the sites didn't answer)")
         val list = all.distinctBy { it.id }
         cached = System.currentTimeMillis() to list
         return list
@@ -73,6 +83,14 @@ class LiveCamsAdapter @Inject constructor(
 
     override suspend fun resolveStream(item: MediaItem): StreamInfo {
         val user = item.creator ?: throw SourceException(id, "Unknown room")
+        if (item.id.startsWith("cam4/")) {
+            // Cam4 hands out its HLS address openly (the CDN one, else the edge), fresh per play.
+            val info = runCatching { http.get(id, "https://www.cam4.com/rest/v1.0/profile/$user/streamInfo", mapOf("Referer" to "https://www.cam4.com/")) as? JsonObject }.getOrNull()
+            val url = info?.let { (it["cdnURL"] ?: it["edgeURL"])?.jsonPrimitive?.contentOrNull }?.takeIf { it.startsWith("https://") }
+                ?: item.extras["hls"]?.takeIf { it.startsWith("https://") }
+                ?: throw SourceException(id, "${item.title ?: user} isn't live any more")
+            return StreamInfo.Direct(url, MediaTypes.HLS_MIME)
+        }
         val j = http.get(id, "https://www.camsoda.com/api/v1/video/vtoken/$user?username=guest_${(1000..99999).random()}",
             mapOf("Referer" to "https://www.camsoda.com/")) as? JsonObject ?: throw SourceException(id, "No stream")
         val edge = (j["edge_servers"] as? JsonArray)?.firstOrNull()?.jsonPrimitive?.contentOrNull
@@ -130,6 +148,38 @@ class LiveCamsAdapter @Inject constructor(
                     pageUrl = "https://www.camsoda.com/$user",
                     publishedAt = Instant.now(),
                     extras = mapOf(LIVE to "1", "viewers" to viewers.toString(), "score" to viewers.toString()),
+                )
+            }.sortedByDescending { it.extras["viewers"]?.toIntOrNull() ?: 0 }
+        }
+
+        /** Cam4's directory: `users`, each with a snapshot, viewers, show tags and an HLS preview address. */
+        internal fun parseCam4(body: JsonElement): List<MediaItem> {
+            val users = ((body as? JsonObject)?.get("users") as? JsonArray) ?: return emptyList()
+            return users.mapNotNull { u ->
+                val o = u as? JsonObject ?: return@mapNotNull null
+                fun text(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull
+                val user = text("username")?.takeIf { it.isNotBlank() } ?: return@mapNotNull null
+                if (text("showType") != null && text("showType") != "NORMAL") return@mapNotNull null
+                if (text("privateRoom") == "true") return@mapNotNull null
+                val viewers = text("viewers")?.toIntOrNull() ?: 0
+                val showTags = (o["showTags"] as? JsonArray)?.mapNotNull { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull?.substringBefore('|') }.orEmpty()
+                val status = text("statusMessage").orEmpty().trim()
+                val gender = text("gender")?.let { if (it == "shemale") "trans" else it }
+                MediaItem(
+                    id = "cam4/$user",
+                    sourceId = SOURCE_ID,
+                    type = MediaType.VIDEO,
+                    title = listOf(user, status.takeIf { it.isNotBlank() }).filterNotNull().joinToString(" · ").take(160),
+                    creator = user,
+                    tags = (showTags + listOfNotNull(gender) + "live cam").map { it.lowercase() }.distinct(),
+                    durationSec = null,
+                    thumbnailUrl = text("snapshotImageLink") ?: text("profileImageLink"),
+                    pageUrl = "https://www.cam4.com/$user",
+                    publishedAt = Instant.now(),
+                    extras = buildMap {
+                        put(LIVE, "1"); put("viewers", viewers.toString()); put("score", viewers.toString())
+                        text("hlsPreviewUrl")?.let { put("hls", it) }
+                    },
                 )
             }.sortedByDescending { it.extras["viewers"]?.toIntOrNull() ?: 0 }
         }
