@@ -24,12 +24,14 @@ for name, cfg in SITES.items():
             open(f"{out}/{name}-list{i}.html", "w").write(body)
             report.append(f"{name} list{i} {st} {final} {len(body)}")
             if i == 0:
-                links = [m if m.startswith("http") else urllib.parse.urljoin(final, m) for m in re.findall(cfg["video"], body)]
+                found = re.findall(cfg["video"], body)
+                if "template" in cfg: found = [cfg["template"].format(m) for m in found]
+                links = [m if m.startswith("http") else urllib.parse.urljoin(final, m) for m in found]
                 links = list(dict.fromkeys(links))
                 report.append(f"{name} video links found: {len(links)} e.g. {links[:3]}")
                 for j, v in enumerate(links[:2]):
                     try:
-                        st2, f2, b2 = get(v, referer=final)
+                        st2, f2, b2 = get(v, referer=cfg.get("referer", final))
                         open(f"{out}/{name}-video{j}.html", "w").write(b2)
                         report.append(f"{name} video{j} {st2} {f2} {len(b2)}")
                     except Exception as e:
