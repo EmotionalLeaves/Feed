@@ -83,6 +83,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
@@ -1208,6 +1209,13 @@ private fun FeedPage(
     onEnded: () -> Unit = {},
 ) {
     var paused by remember(item.key) { mutableStateOf(!vm.autoplayAllowed()) }
+    // Sideways, a tap shows the player's controls instead of pausing (they hide again by themselves).
+    var controls by remember(item.key) { mutableStateOf(false) }
+    var controlsTouched by remember(item.key) { mutableStateOf(0L) }
+    LaunchedEffect(controls, paused, controlsTouched, landscape) {
+        if (!landscape) { controls = false; return@LaunchedEffect }
+        if (controls && !paused) { kotlinx.coroutines.delay(CONTROLS_HIDE_MS); controls = false }
+    }
     val haptic = LocalHapticFeedback.current
     var heartAt by remember { mutableStateOf<Offset?>(null) }
     var loveTick by remember(item.key) { mutableIntStateOf(0) }
@@ -1293,7 +1301,9 @@ private fun FeedPage(
                             seekFlash = side to System.currentTimeMillis()
                             return@detectTapGestures
                         }
-                        if (item.isGallery && edge != 0 && !landscape) galleryTurn = edge to System.nanoTime() else paused = !paused
+                        if (item.isGallery && edge != 0 && !landscape) galleryTurn = edge to System.nanoTime()
+                        else if (landscape && isVideo) { controls = !controls; controlsTouched = System.currentTimeMillis() }
+                        else paused = !paused
                     },
                     onDoubleTap = { offset ->
                         // A long video (or any video sideways): double-tap the left or right edge to skip
@@ -1588,6 +1598,15 @@ private fun FeedPage(
             )
         }
         if (landscape) {
+            if (isVideo) LandscapeControls(
+                visible = controls,
+                item = item,
+                player = player,
+                paused = paused,
+                onPause = { paused = !paused; controlsTouched = System.currentTimeMillis() },
+                onTouched = { controlsTouched = System.currentTimeMillis() },
+                onMoment = { MomentGrab.request.value = item.key },
+            )
             IconButton(
                 onClick = { onLandscape(false) },
                 modifier = Modifier.align(Alignment.TopStart).padding(12.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.4f)),
@@ -2208,3 +2227,116 @@ private fun TasteChip(label: String, selected: Boolean, onClick: () -> Unit) {
             .padding(horizontal = 14.dp, vertical = 8.dp),
     )
 }
+
+/**
+ * A video player's controls, sideways: tap to show them. Play/pause and 10-second skips in the
+ * middle; the title along the top; along the bottom the time, the video's acts (tap one to go
+ * there), speed, and "save this moment". They fade after a few seconds of playing.
+ */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
+    visible: Boolean,
+    item: MediaItem,
+    player: androidx.media3.exoplayer.ExoPlayer?,
+    paused: Boolean,
+    onPause: () -> Unit,
+    onTouched: () -> Unit,
+    onMoment: () -> Unit,
+) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible && player != null,
+        enter = androidx.compose.animation.fadeIn(),
+        exit = androidx.compose.animation.fadeOut(),
+        modifier = Modifier.matchParentSize(),
+    ) {
+        val p = player ?: return@AnimatedVisibility
+        var position by remember { mutableStateOf(p.currentPosition) }
+        var duration by remember { mutableStateOf(p.duration) }
+        LaunchedEffect(p) {
+            while (true) {
+                position = p.currentPosition.coerceAtLeast(0L)
+                duration = p.duration.takeIf { it > 0 } ?: 0L
+                kotlinx.coroutines.delay(250)
+            }
+        }
+        val acts = remember(item.key) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty() }
+        val speed by PlaybackSpeed.value.collectAsStateWithLifecycle()
+        Box(Modifier.fillMaxSize()) {
+            // Shade top and bottom so white text reads over any picture.
+            Box(Modifier.fillMaxWidth().height(110.dp).align(Alignment.TopCenter).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.6f), Color.Transparent))))
+            Box(Modifier.fillMaxWidth().height(150.dp).align(Alignment.BottomCenter).background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f)))))
+            Text(
+                item.title.orEmpty(),
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 72.dp, end = 24.dp, top = 22.dp),
+            )
+            Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(40.dp)) {
+                IconButton(onClick = { p.seekTo((p.currentPosition - SKIP_MS).coerceAtLeast(0L)); onTouched() }, modifier = Modifier.size(56.dp)) {
+                    Icon(Icons.Filled.FastRewind, contentDescription = "Back 10 seconds", tint = Color.White, modifier = Modifier.size(36.dp))
+                }
+                IconButton(
+                    onClick = onPause,
+                    modifier = Modifier.size(76.dp).clip(CircleShape).background(Color.Black.copy(alpha = 0.35f)),
+                ) {
+                    Icon(if (paused) Icons.Filled.PlayArrow else Icons.Filled.Pause, contentDescription = if (paused) "Play" else "Pause", tint = Color.White, modifier = Modifier.size(48.dp))
+                }
+                IconButton(onClick = { p.seekTo((p.currentPosition + SKIP_MS).coerceAtMost(p.duration.takeIf { it > 0 } ?: Long.MAX_VALUE)); onTouched() }, modifier = Modifier.size(56.dp)) {
+                    Icon(Icons.Filled.FastForward, contentDescription = "Forward 10 seconds", tint = Color.White, modifier = Modifier.size(36.dp))
+                }
+            }
+            Column(Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(start = 20.dp, end = 20.dp, bottom = 34.dp)) {
+                if (acts.size >= 2) androidx.compose.foundation.lazy.LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 10.dp),
+                ) {
+                    items(acts.size) { i ->
+                        val (name, ms) = acts[i]
+                        val now = dev.pfeed.domain.reco.VideoExtras.chapterAt(acts, position) == name && (acts.getOrNull(i + 1)?.second ?: Long.MAX_VALUE) > position && ms <= position
+                        Text(
+                            name + " · " + dev.pfeed.ui.common.formatDuration((ms / 1000).toInt()),
+                            color = Color.White,
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.clip(RoundedCornerShape(50))
+                                .background(if (now) Color.White.copy(alpha = 0.3f) else Color.Black.copy(alpha = 0.45f))
+                                .clickable { p.seekTo(ms); onTouched() }
+                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                        )
+                    }
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        formatTime(position) + " / " + formatTime(duration),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(
+                        PlaybackSpeed.label(speed),
+                        color = Color.White,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
+                            .clickable { PlaybackSpeed.next(); onTouched() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
+                            .clickable { onMoment(); onTouched() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.Bookmark, contentDescription = null, tint = Color(0xFFFFB547), modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Save moment", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private const val CONTROLS_HIDE_MS = 3_500L
+private const val SKIP_MS = 10_000L

@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.17.0 — 2026-11-19
+
+A real player when you turn sideways
+
+- **Landscape player controls**: sideways, tap the video to bring up proper controls. You get play/pause, 10-second skips, the title, the time, the video's acts as chips (the current one lit), a speed button and **Save moment**. They fade after a few seconds of playing.
+- **Saving a moment teaches For You** as strongly as saving the video.
+
 ## 5.16.0 — 2026-11-19
 
 One copy of each video, real faces in Following

@@ -1,3 +1,9 @@
+## 5.17.0 — 2026-11-19
+A real player when you turn sideways
+
+- **Landscape player controls**: sideways, tap the video to bring up proper controls. You get play/pause, 10-second skips, the title, the time, the video's acts as chips (the current one lit), a speed button and **Save moment**. They fade after a few seconds of playing.
+- **Saving a moment teaches For You** as strongly as saving the video.
+
 ## 5.16.0 — 2026-11-19
 One copy of each video, real faces in Following
 
@@ -9,8 +15,3 @@ Save this moment
 
 - **Save this moment** (long-press menu on a video): marks where you are. The moment shows as an amber dot on the scrub bar, and the video offers "Your moment · 12:31" next time.
 - **Saved → Moments** collects those videos (kept offline like any save) and plays each from its first moment.
-
-## 5.14.0 — 2026-11-18
-Co-watched videos rank higher
-
-- **Co-watching**: when the same video sits beside several videos you enjoyed on their sites, the sites' own viewers keep pairing it with your kind of thing. For You now ranks it higher, more so the more of your favourites it's beside.

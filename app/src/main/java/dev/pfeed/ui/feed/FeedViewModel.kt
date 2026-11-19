@@ -891,7 +891,15 @@ class FeedViewModel @Inject constructor(
     /** "Save this moment": marks [atMs] in the video and keeps it in Saved → Moments. */
     fun saveMoment(item: MediaItem, atMs: Long) {
         dev.pfeed.player.Moments.add(item.key, atMs)
-        viewModelScope.launch { runCatching { library.addToCollection(MOMENTS, item) } }
+        val wasSaved = item.key in saved.value
+        viewModelScope.launch {
+            runCatching { library.addToCollection(MOMENTS, item) }
+            // Marking a moment is keeping the video: as strong a "yes" as saving it.
+            if (!wasSaved && !settings.value.privateMode) {
+                statsFor(item.key).explicit = true
+                runCatching { signals.record(item, Signal(SignalType.SAVE)) }
+            }
+        }
         offer("Moment saved at ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}", "Undo") { dev.pfeed.player.Moments.remove(item.key, atMs) }
     }
 
