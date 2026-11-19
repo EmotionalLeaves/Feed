@@ -46,6 +46,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -229,6 +230,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     var gridView by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(profilePage) }
     var steerOpen by remember { mutableStateOf(false) }
     var thisOrThat by remember { mutableStateOf(false) }
+    var chipsOpen by remember { mutableStateOf(false) }
     var wallMode by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     val pinchHaptic = LocalHapticFeedback.current
     LaunchedEffect(Unit) { HeadphonesOnly.openSettings.collect { nav.navigate(dev.pfeed.ui.Routes.SETTINGS) } }
@@ -499,7 +501,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
             showModes = vm.isMainFeed,
             mode = mode,
-            onMode = vm::setMode,
+            onMode = { m ->
+                // For You tapped while on it: your tastes as chips, to pick one (tap again to hide).
+                if (m == mode && m == FeedMode.FOR_YOU && vm.isMainFeed) { chipsOpen = !chipsOpen; if (chipsOpen) vm.loadTasteChips() }
+                else { chipsOpen = false; vm.setMode(m) }
+            },
             mood = vm.mood.collectAsStateWithLifecycle().value,
             onMood = if (vm.isMainFeed) vm::setMood else null,
             showing = vm.showing.collectAsStateWithLifecycle().value,
@@ -521,9 +527,27 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             }) else null,
         )
 
+        // Your tastes as chips under the tabs (tap For You again): All, then each taste.
+        val chips by vm.tasteChips.collectAsStateWithLifecycle()
+        val steeringNow by vm.steering.collectAsStateWithLifecycle()
+        if (chipsOpen && vm.isMainFeed && mode == FeedMode.FOR_YOU && !landscape && !wallMode && !cleanOn) {
+            LaunchedEffect(Unit) { kotlinx.coroutines.delay(8_000); chipsOpen = false }
+            androidx.compose.foundation.lazy.LazyRow(
+                Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                item(key = "all") { TasteChip("All", selected = steeringNow.isEmpty()) { vm.playTaste(null); chipsOpen = false } }
+                for (c in chips) item(key = c.index) {
+                    val label = c.tags.take(2).joinToString(" · ") { it.replace('_', ' ') }
+                    val on = steeringNow.isNotEmpty() && steeringNow.map { it.tag } == c.tags.take(3)
+                    TasteChip(label, selected = on) { vm.playTaste(c); chipsOpen = false }
+                }
+            }
+        }
         // For You being steered in words: say so under the tabs, with a way out.
         val steering by vm.steering.collectAsStateWithLifecycle()
-        if (vm.isMainFeed && mode == FeedMode.FOR_YOU && steering.isNotEmpty() && !landscape && !wallMode && !cleanOn) {
+        if (!chipsOpen && vm.isMainFeed && mode == FeedMode.FOR_YOU && steering.isNotEmpty() && !landscape && !wallMode && !cleanOn) {
             SteerChip(
                 steering, onEdit = { steerOpen = true }, onClear = vm::clearSteer,
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp, start = 48.dp, end = 48.dp),
@@ -2083,4 +2107,20 @@ private suspend fun dominantHue(context: android.content.Context, url: String): 
     }
     if (weight < 1.0) return null
     return ((Math.toDegrees(kotlin.math.atan2(y, x)) + 360) % 360).toFloat()
+}
+
+/** A pill over the feed: one of your tastes (or All). */
+@Composable
+private fun TasteChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Text(
+        label,
+        color = if (selected) Color.Black else Color.White,
+        style = MaterialTheme.typography.labelLarge,
+        fontWeight = FontWeight.SemiBold,
+        maxLines = 1,
+        modifier = Modifier.clip(RoundedCornerShape(50))
+            .background(if (selected) Color.White else Color.Black.copy(alpha = 0.45f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+    )
 }

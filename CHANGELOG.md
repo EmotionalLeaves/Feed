@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.3.0 — 2026-11-18
+
+Your tastes, one tap away
+
+- New: Tap For You while you're on it: your tastes appear as chips under the tabs (All, then each taste). Tap one to play just that taste for a while, or All to go back.
+- Better: Discover's rows are now one per taste For You knows (so two rows are never the same taste twice), and each row is ordered for you: what you like, near your tastes, nothing like what you've turned down.
+- Better: For You gives more room to the sources whose posts land for you, and less to the ones that keep missing, so fetching and slots go where your taste is.
+- New: When you paste someone's taste code you see how well you match ("You match 64%"), what you both like and what theirs would add.
+
 ## 5.2.0 — 2026-11-18
 
 Fixes: notes that wouldn't go away, the feed tab marker

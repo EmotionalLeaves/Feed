@@ -207,10 +207,26 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
                             placeholder = { Text("PF1.…") }, maxLines = 3,
                         )
                         if (preview != null) {
+                            val match by androidx.compose.runtime.produceState<dev.pfeed.domain.reco.TasteCode.Match?>(null, text) { value = vm.compareTaste(text) }
+                            match?.let { m ->
+                                Text(
+                                    "You match ${m.percent}%",
+                                    style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                                    fontWeight = androidx.compose.ui.text.font.FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(top = 12.dp),
+                                )
+                                if (m.shared.isNotEmpty()) Text(
+                                    "You both like " + m.shared.take(5).joinToString(", ") { Features.label(it).removePrefix("#") },
+                                    style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
                             Text(
-                                "Their favourites: " + preview.take(8).joinToString(", ") { Features.label(it.first).removePrefix("#") },
+                                match?.theirs?.takeIf { it.isNotEmpty() }
+                                    ?.let { add -> "Theirs would add: " + add.take(6).joinToString(", ") { Features.label(it).removePrefix("#") } }
+                                    ?: ("Their favourites: " + preview.take(8).joinToString(", ") { Features.label(it.first).removePrefix("#") }),
                                 style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
-                                modifier = Modifier.padding(top = 10.dp),
+                                modifier = Modifier.padding(top = 6.dp),
                             )
                         } else if (text.isNotBlank()) {
                             Text("That isn't a taste code.", style = androidx.compose.material3.MaterialTheme.typography.bodySmall, color = Bad, modifier = Modifier.padding(top = 10.dp))

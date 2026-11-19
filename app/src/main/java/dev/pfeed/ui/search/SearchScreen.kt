@@ -239,8 +239,14 @@ class SearchViewModel @Inject constructor(
                 .filter { it.length in 2..24 }
                 .distinct()
                 .take(10)
-            // Nothing learned yet: popular topics instead, so a new install still has pictures to tap.
-            loadTopicRows(_interests.value.ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
+            // One row per taste For You knows (named from the map, so two rows aren't the same
+            // taste twice), then your strongest tags. Nothing learned yet: popular topics instead,
+            // so a new install still has pictures to tap.
+            val tastes = runCatching {
+                val aff = signals.affinities().tags
+                signals.engine.use { it.searchTags(aff, TOPIC_ROWS) }
+            }.getOrDefault(emptyList()).map { it.replace('_', ' ') }
+            loadTopicRows((tastes + _interests.value).distinct().ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
         }
     }
 
@@ -249,10 +255,22 @@ class SearchViewModel @Inject constructor(
         topics.forEach { topic ->
             viewModelScope.launch {
                 val blocklist = runCatching { blocks.current() }.getOrNull()
-                val items = runCatching { tube.search(topic, null).items }.getOrDefault(emptyList())
+                val found = runCatching { tube.search(topic, null).items }.getOrDefault(emptyList())
                     .filter { it.thumbnailUrl != null && (blocklist?.allows(it) != false) }
                     .distinctBy { it.title?.lowercase() ?: it.key }
-                    .take(12)
+                // Best for you first: what you like, near your tastes, nothing like what you turned down.
+                val items = runCatching {
+                    val aff = signals.affinities()
+                    val ranker = dev.pfeed.domain.reco.Ranker(dev.pfeed.domain.reco.RankWeights())
+                    val now = java.time.Instant.now()
+                    signals.engine.use { e ->
+                        found.sortedByDescending { item ->
+                            val v = e.vectorOf(item)
+                            ranker.baseScore(item, aff.tags, aff.creators, now) +
+                                (v?.let { 0.9 * e.interestScore(it) - 0.8 * e.aversion(it) } ?: 0.0) + 0.3 * e.visualScore(item)
+                        }
+                    }
+                }.getOrDefault(found).take(12)
                 if (items.size >= 4) _topicRows.update { rows -> (rows + (topic to items)).sortedBy { topics.indexOf(it.first) } }
             }
         }

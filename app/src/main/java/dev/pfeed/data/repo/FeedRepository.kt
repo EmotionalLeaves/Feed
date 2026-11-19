@@ -376,11 +376,14 @@ class FeedSession(
         // gallery post (30 images on Coomer) contributes a few images, not all of them.
         // Everything admitted also teaches the taste engine's map which tags go together.
         val admitted = ArrayList<MediaItem>()
+        // For You: room for each source by how often its posts land for you.
+        val sourceRoom: Map<String, Double> = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU)
+            signals.engine.use { e -> items.map { it.sourceId }.distinct().associateWith(e::sourceWeight) } else emptyMap()
         val perSource = candidates.groupingBy { it.sourceId }.eachCount().toMutableMap()
         val perOrigin = candidates.groupingBy { Spread.origin(it) }.eachCount().toMutableMap()
         items.shuffled().forEach { item ->
             val n = perSource[item.sourceId] ?: 0
-            if (n >= (SOURCE_POOL_CAPS[item.sourceId] ?: PER_SOURCE_POOL_CAP)) return@forEach
+            if (n >= ((SOURCE_POOL_CAPS[item.sourceId] ?: PER_SOURCE_POOL_CAP) * (sourceRoom[item.sourceId] ?: 1.0)).toInt()) return@forEach
             val origin = Spread.origin(item)
             val o = perOrigin[origin] ?: 0
             if (o >= PER_ORIGIN_POOL_CAP) return@forEach

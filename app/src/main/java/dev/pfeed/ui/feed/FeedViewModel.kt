@@ -147,6 +147,23 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Your tastes as chips over For You (tap For You again to see them): tap one to play it. */
+    val tasteChips = MutableStateFlow<List<dev.pfeed.domain.reco.TasteEngine.View>>(emptyList())
+
+    fun loadTasteChips() {
+        viewModelScope.launch {
+            val aff = runCatching { signals.affinities().tags }.getOrNull() ?: return@launch
+            tasteChips.value = runCatching { signals.engine.use { it.describe(aff) } }.getOrDefault(emptyList())
+                .filter { !it.sour && it.share >= 0.03 }.take(8)
+        }
+    }
+
+    /** Play one taste (a mix), or with null, back to all of them. */
+    fun playTaste(view: dev.pfeed.domain.reco.TasteEngine.View?) {
+        if (view == null) dev.pfeed.data.repo.SteerState.clear()
+        else dev.pfeed.data.repo.SteerState.set(view.tags.take(3).map { dev.pfeed.domain.reco.Steer.Directive(dev.pfeed.domain.reco.Steer.Kind.MORE, it) })
+    }
+
     /** Ask the screen to open This or that. */
     val thisOrThatRequest = MutableStateFlow(false)
 

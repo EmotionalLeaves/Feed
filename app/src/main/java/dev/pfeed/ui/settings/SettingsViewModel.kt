@@ -338,6 +338,18 @@ class SettingsViewModel @Inject constructor(
     /** Your taste as a code to give someone (see [dev.pfeed.domain.reco.TasteCode]). */
     suspend fun tasteCode(): String? = dev.pfeed.domain.reco.TasteCode.encode(signals.affinities().tags)
 
+    /** How someone's taste code lines up with yours (see [dev.pfeed.domain.reco.TasteCode.match]). */
+    suspend fun compareTaste(text: String): dev.pfeed.domain.reco.TasteCode.Match? {
+        val theirs = dev.pfeed.domain.reco.TasteCode.decode(text) ?: return null
+        val mine = signals.affinities().tags
+        return signals.engine.use { e ->
+            dev.pfeed.domain.reco.TasteCode.match(mine, theirs) { a, b ->
+                val va = e.tagVector(a); val vb = e.tagVector(b)
+                if (va != null && vb != null) dev.pfeed.domain.reco.TasteEngine.cos(va, vb) else 0.0
+            }
+        }
+    }
+
     /** Blend someone's taste code into For You for this sitting. False if it isn't a code. */
     fun blendWith(text: String): Boolean {
         val tags = dev.pfeed.domain.reco.TasteCode.decode(text) ?: return false

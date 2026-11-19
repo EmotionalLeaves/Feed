@@ -275,6 +275,22 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         historyNames.keys.retainAll(history.values.flatMap { l -> l.map { it.first } }.toSet())
     }
 
+    /** Per source: (picks reacted to, ones that landed), faded. */
+    private val sourceYield = HashMap<String, DoubleArray>()
+
+    /**
+     * How much room [sourceId] deserves in For You's pool, from how often its posts land for you
+     * (0.5–1.5, 1 until there's evidence): sources that keep missing get fewer candidates, so the
+     * fetching and the slots go where your taste is.
+     */
+    fun sourceWeight(sourceId: String): Double {
+        if (sourceYield.size < 2) return 1.0
+        fun rate(y: DoubleArray) = (y[1] + 1.0) / (y[0] + 2.0)
+        val mine = sourceYield[sourceId]?.let(::rate) ?: return 1.0
+        val avg = sourceYield.values.map(::rate).average().coerceAtLeast(1e-6)
+        return (mine / avg).coerceIn(0.5, 1.5)
+    }
+
     /** How many of For You's picks you've reacted to, over the days kept. */
     fun reactions(): Int = days.values.sumOf { it[0] }
 
@@ -290,6 +306,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             val day = days.getOrPut(today()) { IntArray(2) }
             day[0]++; if (target > POSITIVE) day[1]++
             while (days.size > KEEP_DAYS) days.remove(days.firstKey())
+            val y = sourceYield.getOrPut(item.sourceId) { DoubleArray(2) }
+            y[0] = y[0] * SOURCE_FADE + 1; y[1] = y[1] * SOURCE_FADE + (if (target > POSITIVE) 1.0 else 0.0)
         }
         tuneFrom(item.key, target)
         Visual.decode(item.extras[Visual.EXTRA])?.let { visual.learn(it, target) }
@@ -599,6 +617,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         val keep = creators.entries.toList().takeLast(SAVED_CREATORS)
         out.writeInt(keep.size)
         for ((k, c) in keep) { out.writeUTF(k); out.writeUTF(c.name.take(200)); out.writeInt(c.posts); writeVec(out, c.sum) }
+        out.writeInt(sourceYield.size); sourceYield.forEach { (k, y) -> out.writeUTF(k); out.writeDouble(y[0]); out.writeDouble(y[1]) }
         out.writeInt(nextId)
         interests.forEach { out.writeInt(it.id) }
         out.writeInt(history.size)
@@ -609,7 +628,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
 
     fun readFrom(input: java.io.DataInputStream) {
         val format = input.readInt()
-        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators, 5 (4.95–4.98) a full-size map, 6 (4.99–5.1) no history.
+        // Older formats read fine: 2 (4.89–4.92) had no time of day, 3 (4.93) no visual taste, 4 (4.94) no creators, 5 (4.95–4.98) a full-size map, 6 (4.99–5.1) no history, 7 (5.2) no source yields.
         if (format !in 2..FORMAT) return
         space.readFrom(input, quantized = format >= 6)
         interests.clear()
@@ -633,7 +652,8 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
             val k = input.readUTF(); val n = input.readUTF(); val posts = input.readInt(); val v = readVec(input)
             creators[k] = Creator(n, v, posts)
         }
-        history.clear(); historyNames.clear()
+        history.clear(); historyNames.clear(); sourceYield.clear()
+        if (format >= 8) repeat(input.readInt()) { sourceYield[input.readUTF()] = doubleArrayOf(input.readDouble(), input.readDouble()) }
         if (format >= 7) {
             nextId = input.readInt()
             interests.forEach { it.id = input.readInt() }
@@ -645,7 +665,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
     }
 
     companion object {
-        private const val FORMAT = 7
+        private const val FORMAT = 8
 
         /** Parts of a score, in order: tags, creator, votes, freshness, interest fit, mood, aversion. */
         const val PARTS = 8
@@ -660,6 +680,7 @@ class TasteEngine(val space: TagSpace = TagSpace()) {
         const val LANDING_MIN = 5
         const val KEEP_DAYS = 60
         const val MAX_CREATORS = 1500
+        const val SOURCE_FADE = 0.995
         const val ANNOUNCE_MEAN = 0.4
         const val ANNOUNCE_CONFIDENCE = 0.7
         const val ANNOUNCE_HITS = 5

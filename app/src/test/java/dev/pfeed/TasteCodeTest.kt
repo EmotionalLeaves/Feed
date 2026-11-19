@@ -15,4 +15,12 @@ class TasteCodeTest {
         assertNull(TasteCode.decode("no code here"))
         assertEquals(2, TasteCode.blend(back).size)
     }
+
+    @Test
+    fun `two tastes are compared`() {
+        val m = TasteCode.match(mapOf("redhead" to 1.0, "pov" to 0.8), listOf("redhead" to 9, "ginger" to 5, "feet" to 4)) { a, b -> if (a == "redhead" && b == "ginger") 0.8 else 0.0 }
+        assertEquals(listOf("redhead", "ginger"), m.shared)
+        assertEquals(listOf("feet"), m.theirs)
+        assertEquals((100 * (9 + 2.5) / 18).toInt(), m.percent)
+    }
 }
