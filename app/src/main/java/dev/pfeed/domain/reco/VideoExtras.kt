@@ -7,11 +7,20 @@ package dev.pfeed.domain.reco
  */
 object VideoExtras {
     /** Sprite sheets of [cols]×[rows] frames, one every [everySec] seconds; [pattern] has {n} for the sheet number. */
-    data class Timeline(val pattern: String, val everySec: Int, val cols: Int = 5, val rows: Int = 5) {
+    data class Timeline(
+        val pattern: String,
+        val everySec: Int,
+        val cols: Int = 5,
+        val rows: Int = 5,
+        /** Finer than [everySec], for a single sheet spread over the whole video (XVideos: 100 frames). */
+        val everyMs: Long = everySec * 1000L,
+    ) {
         /** The sheet URL and the cell (column, row) showing the moment [ms]. */
         fun at(ms: Long): Triple<String, Int, Int> {
-            val frame = (ms / 1000 / everySec.coerceAtLeast(1)).toInt()
             val perSheet = cols * rows
+            var frame = (ms / everyMs.coerceAtLeast(1)).toInt()
+            // One sheet for the whole video: its last frame covers the very end.
+            if ("{n}" !in pattern) frame = frame.coerceAtMost(perSheet - 1)
             val sheet = frame / perSheet
             val cell = frame % perSheet
             return Triple(pattern.replace("{n}", sheet.toString()), cell % cols, cell / cols)
@@ -29,6 +38,10 @@ object VideoExtras {
     private val map = object : LinkedHashMap<String, Info>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Info>?) = size > 500
     }
+
+    /** A single [cols]×[rows] sheet of frames spread evenly over a [durationSec]-long video. */
+    fun spread(url: String, durationSec: Int, cols: Int, rows: Int): Timeline? =
+        if (durationSec <= 0) null else Timeline(url, everySec = 0, cols = cols, rows = rows, everyMs = durationSec * 1000L / (cols * rows))
 
     @Synchronized fun put(key: String, info: Info) { map[key] = info }
     @Synchronized fun of(key: String): Info? = map[key]

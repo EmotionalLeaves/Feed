@@ -19,6 +19,15 @@ import org.junit.Test
 class TubeSitesTest {
 
     @Test
+    fun `xvideos tiles carry their preview clip`() {
+        val list = TubeSite.Xvideos.parseList(XV_TILE)
+        assertEquals("https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/preview.mp4", list[0].preview)
+        // Without data-pvv: worked out from the thumbnail, which sits beside it.
+        val bare = TubeSite.Xvideos.parseList(XV_TILE.replace(Regex("data-pvv=\"[^\"]+\""), ""))
+        assertEquals("https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/preview.mp4", bare[0].preview)
+    }
+
+    @Test
     fun `xvideos listing and player`() {
         val html = """
             <div id="video_81234567" data-id="81234567" class="frame-block thumb-block "><div class="thumb-inside"><div class="thumb"><a href="/video.ukfhdck1234/hot_title_here"><img src="https://static-cdn77.xvideos-cdn.com/v3/img/skins/default/lightbox/lightbox-blk.gif" data-src="https://img-hw.xvideos-cdn.com/videos/thumbs169lll/5c/1f/5c1f/1.jpg" data-pvv="https://cdn77-pic.xvideos-cdn.com/p.mp4" /></a></div></div>
@@ -334,4 +343,15 @@ class TubeSitesTest {
         org.junit.Assert.assertTrue(st.url.endsWith("_720p.mp4/"))
         org.junit.Assert.assertEquals(dev.pfeed.source.parse.MediaTypes.HLS_MIME, st.mime)
     }
+
+    private val XV_TILE = """<div id="video_olulicae7ff" data-id="92570314" data-eid="olulicae7ff"  data-is-channel="1" class="frame-block thumb-block  " id="anc-tst-first_video-btn"><div class="thumb-inside"><div class="thumb"><a href="/video.olulicae7ff/hot_stepdaughter_fucks_her_stepbrother_when_she_s_home_alone"><img src="https://assets-cdn77.xvideos-cdn.com/img/lightbox/lightbox-blank.gif"
+data-src="https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/xv_24_t.jpg"
+data-src-avif="https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/xv_24_t.avif"
+data-idcdn="21"
+data-videoid="92570314"
+data-mzl="https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/mozaique_listing.jpg" 						  data-pvv="https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/preview.mp4" 						 
+data-sfwthumb="https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/xv_12_t.jpg"
+data-sfwthumb-avif="https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/xv_12_t.avif"						 id="pic_92570314"
+/><span class="top-right-tags has-cc"><span class="video-hd-mark">720p</span><span class="video-cc-mark">CC</span></span></a></div></div><div class="thumb-under"><p class="title"><a href="/video.olulicae7ff/hot_stepdaughter_fucks_her_stepbrother_when_she_s_home_alone" title="Hot stepdaughter fucks her stepbrother when she&#039;s home alone">Hot stepdaughter fucks her stepbrother when she&#039;s home alone <span class="duration">10 min</span></a></p><p class="metadata"><span class="bg"><span class="duration">10 min</span><span><a href="/explosive23"><span class="name">Explosive23</span></a><span><span class="sprfluous"> - </span> 226.3k <span class="sprfluous">Views</span></span><span class="sprfluous"> - </span></span></span></p></div><script>xv.thumbs.prepareVideo('olulicae7ff');</script></div>																
+<div id="video_end">"""
 }

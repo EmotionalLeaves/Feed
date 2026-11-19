@@ -1,5 +1,13 @@
 # Changelog
 
+## 5.12.0 — 2026-11-18
+
+XVideos scrubbing and previews
+
+- Includes everything in 5.11 (Highlights mode, favourite act, per-act learning). That build didn't compile, so this is the first one to get it.
+- **Scrub previews on XVideos**: dragging the scrub bar now shows the frame under your finger, from XVideos' 100-frame sheet.
+- **XVideos tiles play preview clips**: grids and Discover rows use the site's 200 KB preview instead of opening the full video.
+
 ## 5.11.0 — 2026-11-18
 
 Highlights, and your favourite act

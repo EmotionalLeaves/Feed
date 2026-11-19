@@ -50,6 +50,18 @@ class VideoExtrasTest {
         assertEquals(null, VideoExtras.favourite(listOf(("A" to 1L) to 0.9, ("a" to 2L) to 0.9)))
     }
 
+    @Test
+    fun `xvideos scrub frames span the whole video`() {
+        val html = """html5player.setThumbSlideBig('https://thumb-cdn77.xvideos-cdn.com/03160cda/6/mozaique_full.jpg');
+<meta property="og:duration" content="614" />"""
+        val tl = TubeSite.Xvideos.timeline(html)!!
+        assertEquals(Triple("https://thumb-cdn77.xvideos-cdn.com/03160cda/6/mozaique_full.jpg", 0, 0), tl.at(0))
+        // Halfway: frame 50 of 100, row 5 column 0.
+        assertEquals(0 to 5, tl.at(307_000).let { it.second to it.third })
+        // The very end stays on the last frame.
+        assertEquals(9 to 9, tl.at(614_000).let { it.second to it.third })
+    }
+
     private val PH_COMMENT = """<a rel="nofollow"
  data-event="watch_page" data-label="profile_view"
  href="/users/bigdickaussie69696"

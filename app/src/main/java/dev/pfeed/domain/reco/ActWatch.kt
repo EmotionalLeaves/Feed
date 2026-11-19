@@ -40,8 +40,8 @@ object ActWatch {
             val w = watchedMs[i]
             val key = name.trim().lowercase()
             when {
-                w >= minOf(length * SAT_THROUGH, SAT_THROUGH_CAP_MS) -> liked += key
-                start >= startedAtMs && furthestMs >= end && w <= minOf(length * PASSED_OVER, PASSED_OVER_CAP_MS) -> skipped += key
+                w >= minOf((length * SAT_THROUGH).toLong(), SAT_THROUGH_CAP_MS) -> liked += key
+                start >= startedAtMs && furthestMs >= end && w <= minOf((length * PASSED_OVER).toLong(), PASSED_OVER_CAP_MS) -> skipped += key
             }
         }
         // An act both sat through and jumped over (it comes twice): no verdict on it.

@@ -216,6 +216,12 @@ sealed class TubeSite(val host: String, val label: String) {
 
     sealed class XvEngine(host: String, label: String) : TubeSite(host, label) {
         /** `"video_tags":["blonde","milf",…]` in the player setup (XVideos and XNXX). */
+        /** "mozaique_full.jpg": 100 frames (10×10) spread over the whole video, for scrubbing. */
+        override fun timeline(pageHtml: String): dev.pfeed.domain.reco.VideoExtras.Timeline? {
+            val sheet = Regex("""setThumbSlideBig\('(https://[^']+\.jpg)'""").find(pageHtml)?.groupValues?.get(1) ?: return null
+            val sec = Regex("""og:duration" content="(\d+)"""").find(pageHtml)?.groupValues?.get(1)?.toIntOrNull() ?: return null
+            return dev.pfeed.domain.reco.VideoExtras.spread(sheet, sec, cols = 10, rows = 10)
+        }
         override fun pageTags(pageHtml: String): List<String> =
             Regex("""\"video_tags\"\s*:\s*\[([^\]]*)\]""").find(pageHtml)?.groupValues?.get(1)
                 ?.split(',')?.map { it.trim().trim('"').replace('-', ' ') }?.filter { it.isNotEmpty() }?.take(30).orEmpty()
@@ -249,9 +255,14 @@ sealed class TubeSite(val host: String, val label: String) {
                 durationSec = lengthOf(under),
                 // The uploader, channel or pornstar under the tile: followable like any creator.
                 creator = NAME.find(under)?.groupValues?.get(1)?.let(::unescape)?.trim()?.takeIf { it.isNotEmpty() },
+                // Beside each thumbnail on the CDN: a short silent preview clip (about 200 KB).
+                preview = PVV.find(thumbPart)?.groupValues?.get(1)
+                    ?: IMG.find(thumbPart)?.groupValues?.get(1)?.let { PREVIEW_BASE.find(it) }?.let { it.groupValues[1] + "preview.mp4" },
             )
         }.toList()
 
+        private val PVV = Regex("""data-pvv="(https://[^"]+\.mp4)"""")
+        private val PREVIEW_BASE = Regex("""^(https://[a-z0-9-]+\.xvideos-cdn\.com/[0-9a-f-]{36}/\d+/)xv_\d+_t\.jpg$""")
         private val NAME = Regex("""<span class="name">([^<]+)</span>""")
 
         private val HLS = Regex("""setVideoHLS\(\s*['"]([^'"]+)['"]""")
