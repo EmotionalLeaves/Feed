@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import dev.pfeed.ui.openTag
 import kotlinx.coroutines.flow.flowOn
 import androidx.compose.material.icons.filled.Shuffle
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.PlayArrow
@@ -550,6 +551,11 @@ private fun Grid(items: List<MediaItem>, icon: ImageVector, title: String, hint:
             )
             if (onMoreLike != null && items.size >= 3) androidx.compose.material3.IconButton(onClick = onMoreLike) {
                 androidx.compose.material3.Icon(Icons.Filled.AutoAwesome, contentDescription = "More like these, in For You", tint = Color.White.copy(alpha = 0.8f))
+            }
+            // A reel of the good parts: the long videos here, each from its best stretch for 45 seconds.
+            val longOnes = remember(items) { items.count { (it.durationSec ?: 0) >= dev.pfeed.ui.feed.Highlights.MIN_SEC } }
+            if (longOnes >= 2) androidx.compose.material3.IconButton(onClick = { dev.pfeed.ui.feed.Highlights.set(true); onOpen(0) }) {
+                androidx.compose.material3.Icon(Icons.Filled.LocalFireDepartment, contentDescription = "Play as highlights", tint = Color(0xFFFF7A6B))
             }
             if (onShuffle != null && items.size > 2) androidx.compose.material3.IconButton(onClick = onShuffle) {
                 androidx.compose.material3.Icon(Icons.Filled.Shuffle, contentDescription = "Shuffle", tint = Color.White.copy(alpha = 0.8f))

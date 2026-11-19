@@ -72,6 +72,7 @@ import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocalFireDepartment
 import androidx.compose.material.icons.filled.Autorenew
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Bookmark
@@ -745,12 +746,33 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             }
         }
 
+        // Highlights is on: say so (below hands-free), with a quick way to stop it.
+        val highlightsOn by Highlights.on.collectAsStateWithLifecycle()
+        val showHighlights = highlightsOn && !landscape && !gridView && !wallMode && items.isNotEmpty() && !CleanScreen.on.collectAsStateWithLifecycle().value
+        if (showHighlights) {
+            Row(
+                Modifier.align(Alignment.TopStart).statusBarsPadding()
+                    .padding(start = 12.dp, top = (if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp) + if (handsFreeOn) 32.dp else 0.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xFFE5395B).copy(alpha = 0.75f))
+                    .clickable { Highlights.set(false); vm.offer("Highlights off: long videos play in full", "Turn back on") { Highlights.set(true) } }
+                    .padding(start = 10.dp, end = 8.dp, top = 5.dp, bottom = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(Icons.Filled.LocalFireDepartment, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Highlights", color = Color.White, style = MaterialTheme.typography.labelMedium)
+                Spacer(Modifier.width(6.dp))
+                Icon(Icons.Filled.Close, contentDescription = "Stop highlights", tint = Color.White.copy(alpha = 0.8f), modifier = Modifier.size(14.dp))
+            }
+        }
+
         // Incognito: say so for as long as it's on (below the hands-free pill if that's showing too).
         val incognito by dev.pfeed.domain.privacy.Incognito.on.collectAsStateWithLifecycle()
         if (incognito && !landscape && !gridView && !wallMode && !CleanScreen.on.collectAsStateWithLifecycle().value) {
             Row(
                 Modifier.align(Alignment.TopStart).statusBarsPadding()
-                    .padding(start = 12.dp, top = (if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp) + if (handsFreeOn) 32.dp else 0.dp)
+                    .padding(start = 12.dp, top = (if (vm.tag?.startsWith("@") == false) 92.dp else 56.dp) + (if (handsFreeOn) 32.dp else 0.dp) + (if (showHighlights) 32.dp else 0.dp))
                     .clip(RoundedCornerShape(50))
                     .background(Color(0xFF2A2A35).copy(alpha = 0.85f))
                     .clickable { dev.pfeed.domain.privacy.Incognito.set(false); vm.offer("Incognito off: watching is remembered again", "Undo") { dev.pfeed.domain.privacy.Incognito.set(true) } }

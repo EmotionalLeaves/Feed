@@ -1,5 +1,14 @@
 # Changelog
 
+## 5.13.0 — 2026-11-18
+
+Searches land on the moment
+
+- **Search lands on the moment**: search or open a tag for an act (cowgirl, blowjob, doggystyle…) and videos that mark that act start right at it, with a "From the start" undo.
+- **Highlights reel from your library**: the flame button on Saved, Liked, History and collections plays their long videos as highlights.
+- **Highlights pill** at the top of the feed while the mode is on; tap it to turn it off.
+- **The Wall uses preview clips** where sites offer them: much lighter than several full videos at once.
+
 ## 5.12.0 — 2026-11-18
 
 XVideos scrubbing and previews

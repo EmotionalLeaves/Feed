@@ -206,6 +206,7 @@ fun VideoPage(
                 // Highlights: straight to the good part.
                 if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1") androidx.media3.common.C.TIME_UNSET
                 else (if (Highlights.on.value) vm.highlightStartMs(item) else null)
+                    ?: vm.tagMomentMs(item)?.second
                     ?: dev.pfeed.player.ResumePoints.get(item.key) ?: vm.introSkipMs(item),
             )
             p.prepare()
@@ -337,6 +338,14 @@ fun VideoPage(
     LaunchedEffect(player, play) {
         val p = player ?: return@LaunchedEffect
         if (Highlights.on.value && (item.durationSec ?: 0) >= Highlights.MIN_SEC) return@LaunchedEffect
+        // Opened from a search or tag page for an act it marks: started there; say so.
+        vm.tagMomentMs(item)?.let { (act, _) ->
+            if (play && !offeredResume) {
+                offeredResume = true
+                vm.offer("Started at the ${act.lowercase()}", "From the start") { p.seekTo(0) }
+            }
+            return@LaunchedEffect
+        }
         val at = dev.pfeed.player.ResumePoints.get(item.key) ?: run {
             // Started past the intro: say so, with the way back.
             val skip = vm.introSkipMs(item)

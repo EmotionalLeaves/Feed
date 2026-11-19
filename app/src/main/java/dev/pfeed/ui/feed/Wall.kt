@@ -96,7 +96,8 @@ fun Wall(items: List<MediaItem>, vm: FeedViewModel, active: Boolean, onPick: (In
 @Composable
 private fun WallTile(item: MediaItem, vm: FeedViewModel, playing: Boolean, onClick: () -> Unit) {
     Box(Modifier.fillMaxSize().clickable(onClick = onClick)) {
-        MutedLoop(item, vm.playerPool, vm::resolve, playing, WALL_MAX_HEIGHT, Modifier.fillMaxSize())
+        // A tube video's own short preview clip when it has one: lighter than several full videos at once.
+        MutedLoop(item, vm.playerPool, { it.extras[dev.pfeed.source.tube.PREVIEW]?.let { u -> StreamInfo.Direct(u, "video/mp4") } ?: vm.resolve(it) }, playing, WALL_MAX_HEIGHT, Modifier.fillMaxSize())
         dev.pfeed.ui.common.MediaMask()
         // Who and how long, quietly along the bottom.
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(0.3f).background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.6f)))))

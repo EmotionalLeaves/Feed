@@ -547,6 +547,16 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch { runCatching { signals.recordActs(v.liked, v.skipped) } }
     }
 
+    /**
+     * On a tag page or a search for an act ("cowgirl"), a long video that marks that act starts right
+     * at it: the search lands on the moment, not the start of the video.
+     */
+    fun tagMomentMs(item: MediaItem): Pair<String, Long>? {
+        val t = tag?.takeIf { !it.startsWith("@") }?.let(dev.pfeed.domain.reco.Features::normalizeTag) ?: return null
+        val acts = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty()
+        return acts.firstOrNull { dev.pfeed.domain.reco.Features.normalizeTag(it.first) == t && it.second > 0 }
+    }
+
     /** Where Highlights starts a long video: your favourite act, else the most-rewatched part, else a good way in. */
     suspend fun highlightStartMs(item: MediaItem): Long? {
         val d = item.durationSec ?: return null
