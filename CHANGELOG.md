@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.24.0 — 2026-11-19
+
+Scrub previews and scenes on more sites
+
+- Includes 5.23's **ZB Porn** (that build failed a test).
+- **Scrub previews, Next scene and the scene strip** now work on Porntrex, 3Movs and ZB Porn too, from their players' timeline pictures.
+
 ## 5.23.0 — 2026-11-19
 
 ZB Porn

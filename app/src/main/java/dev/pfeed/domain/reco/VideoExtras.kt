@@ -14,14 +14,18 @@ object VideoExtras {
         val rows: Int = 5,
         /** Finer than [everySec], for a single sheet spread over the whole video (XVideos: 100 frames). */
         val everyMs: Long = everySec * 1000L,
+        /** The number of the first sheet (KVS numbers its pictures from 1). */
+        val firstSheet: Int = 0,
+        /** How many frames there are in all, when the site says (past the last, the last is shown). */
+        val frames: Int = Int.MAX_VALUE,
     ) {
         /** The sheet URL and the cell (column, row) showing the moment [ms]. */
         fun at(ms: Long): Triple<String, Int, Int> {
             val perSheet = cols * rows
-            var frame = (ms / everyMs.coerceAtLeast(1)).toInt()
+            var frame = (ms / everyMs.coerceAtLeast(1)).toInt().coerceIn(0, frames - 1)
             // One sheet for the whole video: its last frame covers the very end.
             if ("{n}" !in pattern) frame = frame.coerceAtMost(perSheet - 1)
-            val sheet = frame / perSheet
+            val sheet = frame / perSheet + firstSheet
             val cell = frame % perSheet
             return Triple(pattern.replace("{n}", sheet.toString()), cell % cols, cell / cols)
         }

@@ -82,11 +82,24 @@ sealed class TubeSite(val host: String, val label: String) {
     open fun comments(pageHtml: String): List<Pair<String, String>> = emptyList()
 
     /** Scrub previews and chapters, where the page has them (the Pornhub family's player setup). */
-    open fun timeline(pageHtml: String): dev.pfeed.domain.reco.VideoExtras.Timeline? = phTimeline(pageHtml)
+    open fun timeline(pageHtml: String): dev.pfeed.domain.reco.VideoExtras.Timeline? = phTimeline(pageHtml) ?: kvsTimeline(pageHtml)
     open fun chapters(pageHtml: String): List<Pair<String, Long>> =
         dev.pfeed.domain.reco.VideoExtras.chapters(Regex("""\"actionTags\":\"([^\"]*)\"""").find(pageHtml)?.groupValues?.get(1))
 
     /** `"thumbs":{"samplingFrequency":4,…,"urlPattern":"…S{5}.jpg"}` → a [dev.pfeed.domain.reco.VideoExtras.Timeline]. */
+    /**
+     * KVS sites' player: one small picture every `timeline_screens_interval` seconds, numbered from 1
+     * in `timeline_screens_url`'s {time} (each is a "sheet" of one frame).
+     */
+    protected fun kvsTimeline(html: String): dev.pfeed.domain.reco.VideoExtras.Timeline? {
+        val url = KVS_SCREENS.find(html)?.groupValues?.get(1) ?: return null
+        val every = KVS_INTERVAL.find(html)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        val count = KVS_COUNT.find(html)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it > 0 } ?: return null
+        val full = if (url.startsWith("//")) "https:$url" else url
+        if (!full.startsWith("https://")) return null
+        return dev.pfeed.domain.reco.VideoExtras.Timeline(full.replace("{time}", "{n}"), every, cols = 1, rows = 1, firstSheet = 1, frames = count)
+    }
+
     protected fun phTimeline(html: String): dev.pfeed.domain.reco.VideoExtras.Timeline? {
         val i = html.indexOf("\"thumbs\":{")
         if (i < 0) return null
@@ -105,6 +118,9 @@ sealed class TubeSite(val host: String, val label: String) {
          * [ALL] only so posts already saved from them can still play.
          */
         val RETIRED: Set<String> = setOf("xnxx.com")
+        private val KVS_SCREENS = Regex("""timeline_screens_url: '([^']+\{time\}[^']*)'""")
+        private val KVS_INTERVAL = Regex("""timeline_screens_interval: '(\d+)'""")
+        private val KVS_COUNT = Regex("""timeline_screens_count: '(\d+)'""")
         /** The sites the app actually uses. */
         val ACTIVE: List<TubeSite> by lazy { ALL.filter { it.host !in RETIRED } }
 

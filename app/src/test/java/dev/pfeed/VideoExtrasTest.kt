@@ -62,6 +62,19 @@ class VideoExtrasTest {
         assertEquals(9 to 9, tl.at(614_000).let { it.second to it.third })
     }
 
+    @Test
+    fun `kvs sites' timeline pictures`() {
+        val html = """timeline_screens_url: '//ptx.cdntrex.com/contents/videos_screenshots/3410000/3410304/timelines/timeline_mp4/200x116/{time}.jpg',
+            timeline_screens_interval: '10',
+            timeline_screens_count: '108',"""
+        val tl = TubeSite.Porntrex.timeline(html)!!
+        val base = "https://ptx.cdntrex.com/contents/videos_screenshots/3410000/3410304/timelines/timeline_mp4/200x116/"
+        assertEquals(Triple(base + "1.jpg", 0, 0), tl.at(0))
+        assertEquals(Triple(base + "3.jpg", 0, 0), tl.at(25_000))
+        // Past the last picture: the last one.
+        assertEquals(base + "108.jpg", tl.at(5_000_000).first)
+    }
+
     private val PH_COMMENT = """<a rel="nofollow"
  data-event="watch_page" data-label="profile_view"
  href="/users/bigdickaussie69696"

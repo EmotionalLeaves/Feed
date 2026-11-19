@@ -1,3 +1,9 @@
+## 5.24.0 — 2026-11-19
+Scrub previews and scenes on more sites
+
+- Includes 5.23's **ZB Porn** (that build failed a test).
+- **Scrub previews, Next scene and the scene strip** now work on Porntrex, 3Movs and ZB Porn too, from their players' timeline pictures.
+
 ## 5.23.0 — 2026-11-19
 ZB Porn
 
@@ -7,8 +13,3 @@ ZB Porn
 Highlights that follow scenes
 
 - **Highlights now work in scenes**: when a long video's scenes are known, Highlights opens it at the start of a scene, plays that scene through (30–90 seconds) and moves on. Scenes for the next video are found while the current one plays.
-
-## 5.21.0 — 2026-11-19
-Flirt4Free in Live
-
-- **Flirt4Free joins the Live tab**: its open rooms (about 200 at a time) are woven in with CamSoda and Cam4. They have categories as tags, so the Live tab learns your taste there too, and play in HD where the performer streams it.

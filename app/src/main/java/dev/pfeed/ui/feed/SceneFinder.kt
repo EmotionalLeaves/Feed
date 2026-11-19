@@ -17,12 +17,15 @@ object SceneFinder {
     /** Longer videos only: in a short clip there's nothing to skip to. */
     const val MIN_DURATION_MS = 4 * 60_000L
     private const val MAX_FRAMES = 400
+    private const val MAX_SINGLE_FRAMES = 120
 
     suspend fun find(context: Context, key: String, timeline: VideoExtras.Timeline, durationMs: Long): List<Long> {
         Scenes.of(key)?.let { return it }
         if (durationMs < MIN_DURATION_MS) return emptyList()
-        val step = maxOf(timeline.everyMs, 1L)
-        val count = (durationMs / step).toInt().coerceIn(0, MAX_FRAMES)
+        // One picture per request (KVS): fewer of them, spread over the whole video.
+        val cap = if (timeline.cols * timeline.rows == 1) MAX_SINGLE_FRAMES else MAX_FRAMES
+        val step = maxOf(timeline.everyMs, durationMs / cap, 1L)
+        val count = (durationMs / step).toInt().coerceIn(0, cap)
         val sheets = HashMap<String, Bitmap?>()
         val frames = ArrayList<FloatArray>(count)
         for (i in 0 until count) {
