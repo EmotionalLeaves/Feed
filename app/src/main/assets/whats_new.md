@@ -1,3 +1,8 @@
+## 5.25.0 — 2026-11-19
+For You notices when nothing's landing
+
+- **Skip-run shake-up**: skip six For You posts at a glance in a row and the feed takes the hint. The queued posts make way, and the next batch steers away from what you just skipped and explores further than usual.
+
 ## 5.24.0 — 2026-11-19
 Scrub previews and scenes on more sites
 
@@ -8,8 +13,3 @@ Scrub previews and scenes on more sites
 ZB Porn
 
 - **ZB Porn** joins the tube sites (24 now): preview clips on every tile, the full-bitrate MP4 on play, and tags read as you watch.
-
-## 5.22.0 — 2026-11-19
-Highlights that follow scenes
-
-- **Highlights now work in scenes**: when a long video's scenes are known, Highlights opens it at the start of a scene, plays that scene through (30–90 seconds) and moves on. Scenes for the next video are found while the current one plays.

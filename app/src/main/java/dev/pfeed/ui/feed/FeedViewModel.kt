@@ -644,6 +644,28 @@ class FeedViewModel @Inject constructor(
         if (isVisible) enteredAt = SystemClock.elapsedRealtime() else finishCurrent()
     }
 
+    /** For You posts skipped at a glance, one after another (cleared by anything you stay on). */
+    private val skipRun = ArrayList<MediaItem>()
+
+    /**
+     * Skip after skip after skip: what's queued isn't landing. Shake it up: the next batch steers
+     * away from what was just skipped and explores further, and the rest of the queue (bar the next
+     * one, already loading) makes way for it.
+     */
+    private fun noteSkipRun(item: MediaItem, dwell: Long, deliberate: Boolean) {
+        if (!isMainFeed || _mode.value != FeedMode.FOR_YOU || deliberate) { skipRun.clear(); return }
+        if (dwell >= SKIP_RUN_DWELL_MS) { skipRun.clear(); return }
+        skipRun += item
+        if (skipRun.size < SKIP_RUN_LENGTH) return
+        val s = session ?: return
+        s.shakeUp(skipRun.toList())
+        skipRun.clear()
+        val here = raw.value.indexOfFirst { it.key == currentItem?.key }
+        if (here >= 0 && raw.value.size > here + 2) raw.update { it.take(here + 2) }
+        endReached = false
+        loadMore()
+    }
+
     private fun finishCurrent() {
         val item = currentItem ?: return
         if (enteredAt == 0L) return
@@ -652,6 +674,7 @@ class FeedViewModel @Inject constructor(
         // It never worked, so the time on it says nothing about taste: don't learn from it.
         if (item.key in broken.value) return
         val st = stats[item.key]
+        noteSkipRun(item, dwell, deliberate = st?.explicit == true || st?.autoAdvanced == true)
         viewModelScope.launch {
             // A post listed as an image can turn out to be a clip (see Display.effectiveType); if the
             // player reported a duration, judge the dwell against typical video viewing, not images.
@@ -1117,6 +1140,9 @@ class FeedViewModel @Inject constructor(
         private const val NEW_USER_REACTIONS = 200
         private const val INTRO_MIN_SEC = 300
         private const val INTRO_SKIP_MS = 25_000L
+        /** Shorter than this on a post is a skip at a glance; this many in a row shakes the feed up. */
+        private const val SKIP_RUN_DWELL_MS = 1_500L
+        private const val SKIP_RUN_LENGTH = 6
         private const val LOAD_AHEAD = 10
         const val SIMILAR_PREFIX = "~like:"
         private const val LIKED_TAGS_REFRESH_MS = 60_000L

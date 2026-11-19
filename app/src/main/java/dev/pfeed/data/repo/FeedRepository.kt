@@ -454,10 +454,16 @@ class FeedSession(
         Spread.openNiches = if (spec is FeedSpec.Tag) setOf(dev.pfeed.domain.reco.Niche.MLP) else openNiches(library.followsOnce())
         val batch = if (spec is FeedSpec.Main && mode == FeedMode.FOR_YOU) {
             val aff = signals.affinities()
-            val ranker = Ranker(settings.get().weights)
+            // After a run of quick skips (see shakeUp): this one batch keeps well away from what was
+            // skipped and explores further than usual.
+            val skipped = shaken.also { shaken = emptyList() }
+            val weights = settings.get().weights.let { w ->
+                if (skipped.isEmpty()) w else w.copy(exploration = maxOf(w.exploration, SHAKE_EXPLORATION), similarity = w.similarity * SHAKE_SIMILARITY)
+            }
+            val ranker = Ranker(weights)
             // With the taste engine: slots take turns between your interests, scored on the map of meaning.
             val picked = signals.engine.use { engine ->
-                ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins, engine = engine, steer = SteerState.current())
+                ranker.rank(candidates, aff.tags, aff.creators, now, recentSources, limit = BATCH, recent = recentShown + skipped, allowForcedRun = allowForcedRun, recentOrigins = recentOrigins, engine = engine, steer = SteerState.current())
             }
             // Keep the pool bounded by dropping the weakest candidates.
             if (candidates.size - picked.size > POOL_MAX) {
@@ -597,7 +603,12 @@ class FeedSession(
          */
         private val SOURCE_POOL_CAPS = mapOf("tube" to 40, dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID to 150)
 
-        /** Videos taken in this feed so far, by length in seconds, to spot the same one from another site. */
+        @Volatile private var shaken: List<MediaItem> = emptyList()
+
+    /** A run of posts skipped at a glance: the next For You batch steers away from them. */
+    fun shakeUp(skipped: List<MediaItem>) { shaken = skipped }
+
+    /** Videos taken in this feed so far, by length in seconds, to spot the same one from another site. */
     private val byLength = HashMap<Int, ArrayList<MediaItem>>()
     private var lengthIndexed = 0
 
@@ -634,6 +645,8 @@ class FeedSession(
         private const val FIRST_HASH_BUDGET_MS = 400L
         /** A candidate passed over for this many loads (~12 items each) is dropped. */
         private const val STALE_LOADS = 8
+        private const val SHAKE_EXPLORATION = 0.35
+        private const val SHAKE_SIMILARITY = 2.5
         /** Shorter clips are too often trimmed differently to call the same by title and length. */
         private const val SAME_VIDEO_MIN_SEC = 60
         private const val SAME_VIDEO_INDEX_MAX = 4000
