@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.26.0 — 2026-11-19
+
+Skip-run shake-up, and a dedupe fix
+
+- Includes 5.25's **skip-run shake-up** (that build didn't compile): skip six For You posts at a glance in a row and the next batch steers away from them and explores further.
+- **Fix**: the same-video check (one copy of each reupload) is now kept per feed. Before, a video you'd scrolled past in For You could be missing from a tag or creator page.
+
 ## 5.25.0 — 2026-11-19
 
 For You notices when nothing's landing

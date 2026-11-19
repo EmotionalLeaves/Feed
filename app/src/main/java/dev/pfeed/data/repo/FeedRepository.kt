@@ -583,27 +583,7 @@ class FeedSession(
         else -> "image"
     }
 
-    companion object {
-        private const val LONG_VIDEO_SEC = 180
-        /** Items handed to the screen per call; small so ranking reacts quickly to new signals. */
-        const val BATCH = 12
-        /**
-         * Candidates to keep on hand. Enough that ranking has real choice (~4 batches), but small so
-         * the newest signals reshape the next batch quickly — a big backlog means the ranker keeps
-         * serving posts it scored before your recent likes/skips, which feels like it isn't learning.
-         */
-        private const val POOL_TARGET = 50
-        private const val POOL_MAX = 120
-        /** Most candidates one source may hold at once (~40% of POOL_TARGET), to keep the feed mixed. */
-        private const val PER_SOURCE_POOL_CAP = 20
-        /**
-         * Tube sites are eleven sites behind one source and the app's main video supply; capped like a
-         * single site they made up about one post in eight. Each site is still held to
-         * [PER_ORIGIN_POOL_CAP], and For You learns from there whether you want videos.
-         */
-        private val SOURCE_POOL_CAPS = mapOf("tube" to 40, dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID to 150)
-
-        @Volatile private var shaken: List<MediaItem> = emptyList()
+    @Volatile private var shaken: List<MediaItem> = emptyList()
 
     /** A run of posts skipped at a glance: the next For You batch steers away from them. */
     fun shakeUp(skipped: List<MediaItem>) { shaken = skipped }
@@ -630,7 +610,27 @@ class FeedSession(
         byLength.getOrPut(d) { ArrayList() } += item
     }
 
-    private fun isLive(item: MediaItem) = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"
+    companion object {
+        private const val LONG_VIDEO_SEC = 180
+        /** Items handed to the screen per call; small so ranking reacts quickly to new signals. */
+        const val BATCH = 12
+        /**
+         * Candidates to keep on hand. Enough that ranking has real choice (~4 batches), but small so
+         * the newest signals reshape the next batch quickly — a big backlog means the ranker keeps
+         * serving posts it scored before your recent likes/skips, which feels like it isn't learning.
+         */
+        private const val POOL_TARGET = 50
+        private const val POOL_MAX = 120
+        /** Most candidates one source may hold at once (~40% of POOL_TARGET), to keep the feed mixed. */
+        private const val PER_SOURCE_POOL_CAP = 20
+        /**
+         * Tube sites are eleven sites behind one source and the app's main video supply; capped like a
+         * single site they made up about one post in eight. Each site is still held to
+         * [PER_ORIGIN_POOL_CAP], and For You learns from there whether you want videos.
+         */
+        private val SOURCE_POOL_CAPS = mapOf("tube" to 40, dev.pfeed.source.live.LiveCamsAdapter.SOURCE_ID to 150)
+
+        private fun isLive(item: MediaItem) = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"
         /** Most candidates one subreddit / board site / server may hold at once. */
         private const val PER_ORIGIN_POOL_CAP = 10
         /** Most images taken from one multi-image post per session. */
