@@ -210,6 +210,10 @@ sealed class TubeSite(val host: String, val label: String) {
     }
 
     sealed class XvEngine(host: String, label: String) : TubeSite(host, label) {
+        /** `"video_tags":["blonde","milf",…]` in the player setup (XVideos and XNXX). */
+        override fun pageTags(pageHtml: String): List<String> =
+            Regex("""\"video_tags\"\s*:\s*\[([^\]]*)\]""").find(pageHtml)?.groupValues?.get(1)
+                ?.split(',')?.map { it.trim().trim('"').replace('-', ' ') }?.filter { it.isNotEmpty() }?.take(30).orEmpty()
 
         // Attribute order varies (data-id before or after class), hence the lookahead.
         private val BLOCK = Regex("""<div\b(?=[^>]*\bthumb-block)[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
@@ -286,6 +290,10 @@ sealed class TubeSite(val host: String, val label: String) {
         }.distinctBy { it.id }.toList()
 
         override fun stream(pageHtml: String): TubeStream? = mediaDefinitions(pageHtml)?.let { fromMediaDefinitions(it, host) }
+        /** `'categories_in_video' : 'Amateur,Babe,MILF,…'` in the player setup. */
+        override fun pageTags(pageHtml: String): List<String> =
+            Regex("""'categories_in_video'\s*:\s*'([^']+)'""").find(pageHtml)?.groupValues?.get(1)?.split(',')
+                ?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() && it != "hd" && it != "exclusive" && !it.startsWith("verified") }.orEmpty()
         override fun hotspots(pageHtml: String): List<Int>? =
             Regex("""\"hotspots\":\[([0-9,]+)\]""").find(pageHtml)?.groupValues?.get(1)?.split(',')?.mapNotNull { it.toIntOrNull() }
         override fun streamIndexUrl(pageHtml: String): String? = mediaDefinitions(pageHtml)?.let { indexUrl(it, host) }

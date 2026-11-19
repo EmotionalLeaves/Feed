@@ -174,6 +174,8 @@ class TubeAdapter @Inject constructor(
             item.durationSec?.let { d -> dev.pfeed.domain.reco.BestPart.from(heat, d)?.let { dev.pfeed.domain.reco.BestPart.put(item.key, it) } }
             val timeline = site.timeline(html)
             val chapters = site.chapters(html)
+            // The positions it shows are what it's about, too: learned from like tags.
+            if (chapters.isNotEmpty()) dev.pfeed.domain.reco.PageTags.put(item.key, (dev.pfeed.domain.reco.PageTags.of(item.key) + chapters.map { it.first.lowercase() }).distinct())
             if (timeline != null || chapters.isNotEmpty() || heat.isNotEmpty()) dev.pfeed.domain.reco.VideoExtras.put(item.key, dev.pfeed.domain.reco.VideoExtras.Info(timeline, chapters, heat))
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()

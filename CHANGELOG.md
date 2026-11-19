@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.9.0 — 2026-11-18
+
+For You learns what you actually watched
+
+- Better: When you open a Pornhub or XVideos video (and the new sites), the tags its own page gives (categories, positions, performers) are what For You learns from watching it, not just its title. Chapters (positions) count too.
+
 ## 5.8.0 — 2026-11-18
 
 Your weekly mix, live follows

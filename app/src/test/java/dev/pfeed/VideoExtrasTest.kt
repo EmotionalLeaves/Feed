@@ -21,4 +21,12 @@ class VideoExtrasTest {
         assertEquals(listOf("Handjob" to 255_000L, "Missionary" to 679_000L, "Handjob" to 1_173_000L), ch)
         assertEquals("Missionary", VideoExtras.chapterAt(ch, 700_000))
     }
+
+    @Test
+    fun `reads tags off pornhub and xvideos pages`() {
+        val ph = """'categories_in_video' : 'Amateur,Babe,Big Dick,Big Tits,Blonde,MILF,Exclusive,Verified Amateurs,Step Fantasy,HD',"""
+        assertEquals(listOf("amateur", "babe", "big dick", "big tits", "blonde", "milf", "step fantasy"), TubeSite.Pornhub.pageTags(ph))
+        val xv = """"video_tags":["blonde","babe","milf","big-butt"],"""
+        assertEquals(listOf("blonde", "babe", "milf", "big butt"), TubeSite.Xvideos.pageTags(xv))
+    }
 }
