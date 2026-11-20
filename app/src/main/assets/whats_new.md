@@ -1,3 +1,8 @@
+## 5.37.0 — 2026-11-19
+Live badge
+
+- **Live rooms say they're live**: a small red-dot badge shows "LIVE · 1.2k watching · CamSoda" (or Cam4 / Flirt4Free) on every room in the feed.
+
 ## 5.36.0 — 2026-11-19
 Next video, sideways
 
@@ -7,8 +12,3 @@ Next video, sideways
 Co-watching remembers
 
 - **What the sites showed beside videos you enjoyed is now kept between launches**, encrypted with the app's own key. So the co-watching boost in For You and Discover's **Watched with your favourites** row don't start from nothing every time you open the app. Clearing history clears it too.
-
-## 5.34.0 — 2026-11-19
-A favourite act that remembers
-
-- **Your favourite act learns from you directly**: the app now keeps a small tally of each act you sit through or jump over, so the "Jump to …, your favourite" pill gets sharper every time, even for acts For You has never seen as tags. Resetting your taste clears it.

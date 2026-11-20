@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.37.0 — 2026-11-19
+
+Live badge
+
+- **Live rooms say they're live**: a small red-dot badge shows "LIVE · 1.2k watching · CamSoda" (or Cam4 / Flirt4Free) on every room in the feed.
+
 ## 5.36.0 — 2026-11-19
 
 Next video, sideways

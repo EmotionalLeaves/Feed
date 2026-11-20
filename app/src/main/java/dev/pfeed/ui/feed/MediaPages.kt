@@ -32,6 +32,7 @@ import androidx.compose.foundation.gestures.awaitFirstDown
 import kotlinx.coroutines.withTimeoutOrNull
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -619,6 +620,28 @@ fun VideoPage(
                     style = androidx.compose.material3.MaterialTheme.typography.labelLarge,
                 )
             }
+        }
+        // A live room: say so, with how many are watching and where.
+        if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1" && !detached) androidx.compose.foundation.layout.Row(
+            Modifier.align(Alignment.TopEnd).statusBarsPadding().padding(top = 96.dp, end = 12.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.5f))
+                .padding(horizontal = 10.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(7.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color(0xFFFF3B4E)))
+            androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+            val viewers = item.extras["viewers"]?.toIntOrNull()?.takeIf { it > 0 }
+            val site = when {
+                item.id.startsWith("cam4/") -> "Cam4"
+                item.id.startsWith("f4f/") -> "Flirt4Free"
+                else -> "CamSoda"
+            }
+            androidx.compose.material3.Text(
+                "LIVE" + (viewers?.let { " · ${if (it >= 1000) "%.1fk".format(it / 1000.0) else it.toString()} watching" } ?: "") + " · " + site,
+                color = androidx.compose.ui.graphics.Color.White,
+                style = androidx.compose.material3.MaterialTheme.typography.labelMedium,
+            )
         }
         // Up next: the last seconds of a full scene say what comes after it (or let you stay).
         val next = upNext
