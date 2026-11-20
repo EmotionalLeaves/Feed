@@ -118,7 +118,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, DrTuber, Nuvid, IcePorn) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -1390,6 +1390,62 @@ sealed class TubeSite(val host: String, val label: String) {
 
     object FreePorn8 : KvsDefault("freeporn8.com", "FreePorn8")
     object BigTitsLust : KvsDefault("bigtitslust.com", "BigTitsLust")
+
+    /**
+     * DrTuber, Nuvid and IcePorn: one company's tubes. Their mobile listings carry title, length,
+     * thumbnail and a preview clip; the files come from the player's own JSON (low and high quality).
+     */
+    abstract class DrNet(host: String, label: String) : TubeSite(host, label) {
+        private val m = "https://m.$host"
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "$m/videos" + if (page == 0) "" else "/${page + 1}"
+            // No separate top list on the mobile site: a few pages further in, so it isn't the same videos.
+            "top" -> "$m/videos/${page + 4}"
+            else -> "$m/search/videos/${enc(section.lowercase().trim())}" + if (page == 0) "" else "/${page + 1}"
+        }
+        private val HREF = Regex("""href="/video/(\d+)/([^"]+)"""")
+        private val IMG = Regex("""<img [^>]*\bsrc="(https://[^"]+/320_240/\d+\.jpg)"""")
+        private val ALT = Regex("""\balt="([^"]*)"""")
+        private val WEBM = Regex("""data-webm="(https://[^"]+\.mp4)"""")
+        private val DUR = Regex(""">\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*<""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = HREF.findAll(body).toList().distinctBy { it.groupValues[1] }
+            return hits.mapIndexed { i, h ->
+                val c = body.substring(h.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, h.range.first + 3000))
+                val img = IMG.find(c)
+                TubeVideo(
+                    id = h.groupValues[1],
+                    title = img?.let { ALT.find(c.substring(it.range.first))?.groupValues?.get(1) }?.let(::unescape)?.trim()?.ifEmpty { null },
+                    pageUrl = "https://www.$host/video/${h.groupValues[1]}/${h.groupValues[2]}",
+                    thumb = img?.groupValues?.get(1),
+                    durationSec = duration(img?.let { DUR.find(c, it.range.last)?.groupValues?.get(1) }),
+                    preview = WEBM.find(c)?.groupValues?.get(1),
+                )
+            }.filter { it.thumb != null }
+        }
+
+        /** The player's JSON holds the files. */
+        override fun streamPageUrl(pageUrl: String, id: String) =
+            "https://www.$host/player_config_json/?vid=$id&aid=0&domain_id=0&embed=0&ref=null&check_speed=0"
+
+        override fun stream(pageHtml: String): TubeStream? {
+            val files = runCatching { json.parseToJsonElement(pageHtml).jsonObject["files"] as? JsonObject }.getOrNull() ?: return null
+            val options = listOf("4k" to 2160, "hq" to 720, "lq" to 360).mapNotNull { (k, h) ->
+                (files[k] as? JsonPrimitive)?.contentOrNull?.takeIf { it.startsWith("http") }?.let { h to it }
+            }
+            return (options.filter { it.first <= maxHeight }.maxByOrNull { it.first } ?: options.minByOrNull { it.first })
+                ?.let { TubeStream(it.second, "video/mp4") }
+        }
+
+        override fun embedUrl(id: String) = "https://www.$host/embed/$id"
+    }
+
+    object DrTuber : DrNet("drtuber.com", "DrTuber")
+    object Nuvid : DrNet("nuvid.com", "Nuvid")
+    object IcePorn : DrNet("iceporn.com", "IcePorn")
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */
     object XFreeHd : TubeSite("xfreehd.com", "XFreeHD") {

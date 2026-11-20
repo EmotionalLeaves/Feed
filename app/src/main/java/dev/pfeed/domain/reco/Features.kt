@@ -136,7 +136,7 @@ object Features {
         "pornhub.com" to "Pornhub", "xvideos.com" to "XVideos", "xnxx.com" to "XNXX", "xhamster.com" to "xHamster",
         "youporn.com" to "YouPorn", "redtube.com" to "RedTube", "eporner.com" to "Eporner", "tnaflix.com" to "TNAFlix",
         "hqporner.com" to "HQPorner", "porndig.com" to "Porndig", "perfectgirls.xxx" to "PerfectGirls", "ok.xxx" to "OK.XXX", "porngo.com" to "PornGo", "xfreehd.com" to "XFreeHD",
-        "3movs.com" to "3Movs", "anysex.com" to "AnySex", "zbporn.com" to "ZB Porn", "analdin.com" to "Analdin", "katestube.com" to "KatesTube", "txxx.com" to "TXXX", "hclips.com" to "HClips", "upornia.com" to "Upornia", "tubepornclassic.com" to "TubePornClassic", "vxxx.com" to "VXXX", "hdzog.com" to "HDZog", "manysex.com" to "ManySex", "empflix.com" to "EMPFlix", "pornwhite.com" to "PornWhite", "sleazyneasy.com" to "SleazyNeasy", "vikiporn.com" to "VikiPorn", "alotporn.com" to "AlotPorn", "freeporn8.com" to "FreePorn8", "bigtitslust.com" to "BigTitsLust",
+        "3movs.com" to "3Movs", "anysex.com" to "AnySex", "zbporn.com" to "ZB Porn", "analdin.com" to "Analdin", "katestube.com" to "KatesTube", "txxx.com" to "TXXX", "hclips.com" to "HClips", "upornia.com" to "Upornia", "tubepornclassic.com" to "TubePornClassic", "vxxx.com" to "VXXX", "hdzog.com" to "HDZog", "manysex.com" to "ManySex", "empflix.com" to "EMPFlix", "pornwhite.com" to "PornWhite", "sleazyneasy.com" to "SleazyNeasy", "vikiporn.com" to "VikiPorn", "alotporn.com" to "AlotPorn", "freeporn8.com" to "FreePorn8", "bigtitslust.com" to "BigTitsLust", "drtuber.com" to "DrTuber", "nuvid.com" to "Nuvid", "iceporn.com" to "IcePorn",
     )
 
     fun label(feature: String): String = when {

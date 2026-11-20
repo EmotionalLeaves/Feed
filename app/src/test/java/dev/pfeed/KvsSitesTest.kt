@@ -706,4 +706,21 @@ ecodeURIComponent(a[0])] = decodeURIComponent(a[1]);
  </div></span>
  <div class="item ">
  """
+
+    @Test
+    fun `drtuber network listing and player files`() {
+        val list = TubeSite.DrTuber.parseList(DR_LIST)
+        assertEquals(2, list.size)
+        assertEquals("4324013", list[0].id)
+        assertEquals("CUTE WIFE IN ECSTASY WITH HER FIRST BBC", list[0].title)
+        assertEquals(10 * 60 + 20, list[0].durationSec)
+        assertEquals("https://www.drtuber.com/video/4324013/cute-wife-in-ecstasy-with-her-first-bbc", list[0].pageUrl)
+        assertTrue(list[0].preview!!.endsWith("4324013.mp4"))
+        // High quality over low.
+        assertTrue(TubeSite.Nuvid.stream(NUVID_FILES)!!.url.contains("/mp4_hq/"))
+        assertTrue(TubeSite.Nuvid.streamPageUrl("x", "6138764").startsWith("https://www.nuvid.com/player_config_json/?vid=6138764"))
+    }
+
+    private val DR_LIST = """<a href="/video/4324013/cute-wife-in-ecstasy-with-her-first-bbc" title="CUTE WIFE IN ECSTASY WITH HER FIRST BBC" data-mobile_adv_pop class="th wrap-better-content" data-video_id="4324013"> <img class="b-lazy" src="https://g1.drtst.com/media/videos/tmb/4324013/320_240/18.jpg" width="320" height="240" alt="CUTE WIFE IN ECSTASY WITH HER FIRST BBC" id="rotate_4324013_" rotator="off" _server="g1.drtst.com" _url_scheme="https" data-webm="https://g3.drtst.com/media/videos/tmb/4324013/4324013.mp4" /> <strong class="toolbar"> <em class="rate_thumb"><i class="ico_rate_like"></i><em>92%</em></em> <em class="time_thumb"> <em>10:20</em> </em> </strong> <span class="description_thumb"> <em> CUTE WIFE IN ECSTASY WITH HER FIRST BBC </em> </span> </a> </li> <li> <a href="/video/547636/horny-black-granny-loves-young-man" title="Horny Black Granny loves young man" data-mobile_adv_pop class="th wrap-better-content" data-video_id="547636"> <img class="b-lazy" src="https://g2.drtst.com/media/videos/tmb/547636/320_240/3.jpg" width="320" height="240" alt="Horny Black Granny loves young man" id="rotate_547636_" rotator="off" _server="g2.drtst.com" _url_scheme="https" data-webm="https://g3.drtst.com/media/videos/tmb/547636/547636.mp4" /> <strong class="toolbar"> <em class="rate_thumb"><i class="ico_rate_like"></i><em>81%</em></em> <em class="time_thumb"> <em>38:41</em> </em> </strong> <span class="description_thumb"> <em> Horny Black Granny loves young man </em> </span> </a> </li> </ul> <ul> <li> """
+    private val NUVID_FILES = """{"title": "Hot damn homemade brunette babe fucked thoroughly", "duration": "936", "files": {"lq": "https://gcdn.nuvid.com/mp4_lq/4972e6847eb48b93098b19de7d20b995.mp4?md5=wZoV49zldeehlCp0-sjLlQ&expire=1795222290&speed=77k&buffer=1017k&tip=1", "hq": "https://gcdn.nuvid.com/mp4_hq/4972e6847eb48b93098b19de7d20b995.mp4?md5=bwBRtCivaP1fKo76WgQyMw&expire=1795222290&speed=263k&buffer=1557k&tip=1", "4k": ""}}"""
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.94.0 — 2026-11-20
+
+DrTuber, Nuvid and IcePorn
+
+- **Three more big tube sites: DrTuber, Nuvid and IcePorn**, with preview clips in the grids and high quality where they have it. 43 tube sites in all.
+
 ## 5.93.0 — 2026-11-20
 
 Her photo sets too
