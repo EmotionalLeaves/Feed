@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.75.0 — 2026-11-20
+
+Three more tube sites
+
+- **PornWhite, SleazyNeasy and VikiPorn** join (KatesTube's sister sites): uploaders, dates, preview clips in the grids, up to 1080p. 37 tube sites in all.
+
 ## 5.74.0 — 2026-11-20
 
 For You learns performers

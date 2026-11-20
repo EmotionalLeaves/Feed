@@ -116,7 +116,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -1151,21 +1151,26 @@ sealed class TubeSite(val host: String, val label: String) {
     /** Analdin: studio scenes, KVS stock theme, with a scrub-preview timeline. */
     object Analdin : KvsStock("analdin.com", "Analdin")
 
-    /** KatesTube: amateur and studio uploads; listing with length, date, uploader and preview clip. */
-    object KatesTube : TubeSite("katestube.com", "KatesTube") {
+    /**
+     * One family of tubes (KatesTube, PornWhite, SleazyNeasy, VikiPorn): listing with length, date,
+     * uploader and preview clip; KVS files with their quality, and the video's own categories.
+     */
+    abstract class MjNet(host: String, label: String) : TubeSite(host, label) {
+        private val base = "https://www.$host"
         override fun listUrl(section: String, page: Int): String = when (section) {
-            "new" -> "https://www.katestube.com/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
-            "top" -> "https://www.katestube.com/top-rated/${if (page == 0) "" else "${page + 1}/"}"
-            else -> "https://www.katestube.com/search/?q=${enc(section)}" + if (page > 0) "&from_videos=${page + 1}" else ""
+            "new" -> "$base/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "$base/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "$base/search/?q=${enc(section)}" + if (page > 0) "&from_videos=${page + 1}" else ""
         }
-        private val MARK = Regex("""<a class="ponn" href="(https://www\.katestube\.com/videos/(\d+)/[^"]*)" itemprop="url">""")
+        private val esc = Regex.escape(host)
+        private val MARK = Regex("""<a (?:class="ponn" )?href="(https://www\.$esc/videos/(\d+)/[^"]*)" itemprop="url">""")
         private val CLIP = Regex("""data-src="(https://[^"]+_preview\.mp4)"""")
         private val POSTER = Regex("""data-poster="(https://[^"]+)"""")
         private val NAME = Regex("""<meta itemprop="name" content="([^"]*)"""")
         private val DATE = Regex("""<meta itemprop="uploadDate" content="([^"]+)"""")
-        private val LEN = Regex("""<span class="length">([\d:]+)</span>""")
-        private val BY = Regex("""thumb-submitter"><a [^>]*>([^<]+)</a>""")
-        private val TAG = Regex("""href="https://www\.katestube\.com/(?:tags|categories)/([a-z0-9-]+)/"""")
+        private val LEN = Regex("""<span class="length">\s*(?:<i>)?\s*([\d:]+)""")
+        private val BY = Regex("""thumb-submitter">\s*<a [^>]*>\s*([^<]+?)\s*</a>""")
+        private val TAG = Regex("""href="https://www\.$esc/(?:tags|categories)/([a-z0-9-]+)/"""")
 
         override val checkTagsFirst = false
 
@@ -1188,8 +1193,14 @@ sealed class TubeSite(val host: String, val label: String) {
 
         override fun stream(pageHtml: String): TubeStream? = kvsBest(pageHtml)
         override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG)
-        override fun embedUrl(id: String) = "https://www.katestube.com/embed/$id"
+        override fun embedUrl(id: String) = "$base/embed/$id"
     }
+
+    /** KatesTube: amateur and studio uploads. */
+    object KatesTube : MjNet("katestube.com", "KatesTube")
+    object PornWhite : MjNet("pornwhite.com", "PornWhite")
+    object SleazyNeasy : MjNet("sleazyneasy.com", "SleazyNeasy")
+    object VikiPorn : MjNet("vikiporn.com", "VikiPorn")
 
     /**
      * One network of tube sites (TXXX, HClips, Upornia…) behind the same JSON API: listings and

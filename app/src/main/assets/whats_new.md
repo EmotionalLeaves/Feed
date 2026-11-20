@@ -1,3 +1,8 @@
+## 5.75.0 — 2026-11-20
+Three more tube sites
+
+- **PornWhite, SleazyNeasy and VikiPorn** join (KatesTube's sister sites): uploaders, dates, preview clips in the grids, up to 1080p. 37 tube sites in all.
+
 ## 5.74.0 — 2026-11-20
 For You learns performers
 
@@ -8,8 +13,3 @@ For You learns performers
 Who's in it
 
 - **In this video**: the long-press menu now names the performers a studio upload's title credits ("Lena Paul & Abella Danger – …", "…, Anna Bell Peaks"), each with a one-tap Follow. Following then brings their videos from every site.
-
-## 5.72.0 — 2026-11-20
-Pick the sites in search
-
-- **Tube sites filter in search**: with results from several tube sites, Filters lists them with how many each found ("Pornhub · 42", "TXXX · 38"…). Pick one or a few to see only theirs.

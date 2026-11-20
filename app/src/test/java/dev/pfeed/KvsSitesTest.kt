@@ -419,4 +419,120 @@ ecodeURIComponent(a[0])] = decodeURIComponent(a[1]);
  </div>
  
  """
+
+    @Test
+    fun `sleazyneasy shares katestube's template`() {
+        val list = TubeSite.SleazyNeasy.parseList(SLEAZY_LIST)
+        assertEquals(2, list.size)
+        assertEquals("3293871", list[0].id)
+        assertEquals("She really did let me see her panties and lick her pussy", list[0].title)
+        assertEquals(8 * 60, list[0].durationSec)
+        assertEquals("gody80", list[0].creator)
+        assertTrue(list[0].preview!!.endsWith("3293871_preview.mp4"))
+        assertTrue(TubeSite.VikiPorn.listUrl("milf", 0).startsWith("https://www.vikiporn.com/search/?q=milf"))
+    }
+
+    private val SLEAZY_LIST = """<a href="https://www.sleazyneasy.com/videos/3293871/she-really-did-let-me-see-her-panties-and-lick-her-pussy/" itemprop="url">
+ <span class="img" data-id="3293871" data-poster="https://c8c116ce62.mjedge.net/contents/videos_screenshots/3293000/3293871/343x257/2.jpg?ver=3" data-src="https://cdn.sleazyneasy.com/3293000/3293871/3293871_preview.mp4">
+ 
+ <img fetchpriority="high" class="lazy" src="https://c8c116ce62.mjedge.net/images_new/placeholder.gif?ver=3" data-original="https://c8c116ce62.mjedge.net/contents/videos_screenshots/3293000/3293871/343x257/2.jpg?ver=3" width="343" height="257" alt="She really did let me see her panties and lick her pussy" >
+ <meta itemprop="name" content="She really did let me see her panties and lick her pussy">
+ <meta itemprop="thumbnailUrl" content="https://c8c116ce62.mjedge.net/contents/videos_screenshots/3293000/3293871/343x257/2.jpg?ver=3">
+ <meta itemprop="uploadDate" content="2026-11-10T03:21:29+02:00">
+ <meta itemprop="duration" content="PT8M00S">
+ <meta itemprop="description" content="Kirsten Lee is flirting with her roommate Alison Rey asking her if she wanna let her sniff her panties.Alison takes her to bed,shes rubbing her clit while sucking her small tits.Kirsten is licking her shaved pussy then gets on top facesitting her.">
+ <span class="length">
+ <i>8:00</i>
+ </span>
+ <span class="icon-new">New</span>
+ </span>
+ </a>
+ <div class="thumb-info">
+ <div class="avatar">
+ <a class="color_g" href="https://www.sleazyneasy.com/members/732/"><img width="36" height="36" loading="lazy" src="https://www.sleazyneasy.com/contents/avatars/0/732.jpg?rand=20261119122757" alt="gody80"></a>
+ </div>
+ <div class="info-inner">
+ <span class="title"><a href="https://www.sleazyneasy.com/videos/3293871/she-really-did-let-me-see-her-panties-and-lick-her-pussy/">She really did let me see her panties and lick her pussy</a></span>
+ <span class="thumb-members">
+ <span class="thumb-submitter">
+ <a href="https://www.sleazyneasy.com/members/732/">gody80</a>
+ </span>
+ <span class="views">36 </span>
+ </span>
+ </div>
+ </div>
+ <div class="dots">
+ <b></b>
+ <div class="drop">
+ <span class="block-fav">
+ <button title="Favorite" data-id="3293871">Add To Favorite</button>
+ <span class="success">Video Added</span>
+ <span class="fail">You have to <a href="https://www.sleazyneasy.com/login.php">Login</a></span>
+ </span>
+ <span class="subs">
+ <button title="Subscribe to gody80" data-id="732">Subscribe to gody80</button>
+ <span class="success">Subscribed</span>
+ <span class="fail">You have to <a href="https://www.sleazyneasy.com/login.php">Login</a></span>
+ </span>
+ <a href="/" data-page="https://www.sleazyneasy.com/videos/3293871/she-really-did-let-me-see-her-panties-and-lick-her-pussy/" class="btn-share">Share</a>
+ <span class="btn-date">1 hour ago</span>
+ <span class="btn-quality">720p</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="thumb" itemscope itemtype="https://schema.org/VideoObject">
+ <div class="thumb-inner">
+ <a href="https://www.sleazyneasy.com/videos/3293051/we-pick-up-pretty-young-things-like-you-and-fuck-em-at-home/" itemprop="url">
+ <span class="img" data-id="3293051" data-poster="https://c8c116ce62.mjedge.net/contents/videos_screenshots/3293000/3293051/343x257/2.jpg?ver=3" data-src="https://cdn.sleazyneasy.com/3293000/3293051/3293051_preview.mp4">
+ 
+ <img fetchpriority="high" class="lazy" src="https://c8c116ce62.mjedge.net/images_new/placeholder.gif?ver=3" data-original="https://c8c116ce62.mjedge.net/contents/videos_screenshots/3293000/3293051/343x257/2.jpg?ver=3" width="343" height="257" alt="We pick up pretty young things like you and fuck em at home" >
+ <meta itemprop="name" content="We pick up pretty young things like you and fuck em at home">
+ <meta itemprop="thumbnailUrl" content="https://c8c116ce62.mjedge.net/contents/videos_screenshots/3293000/3293051/343x257/2.jpg?ver=3">
+ <meta itemprop="uploadDate" content="2026-11-08T23:34:17+02:00">
+ <meta itemprop="duration" content="PT8M00S">
+ <meta itemprop="description" content="Petite Gracie May Green is picked up by couple and taken home.Milf Kissa Sins offers her their car if she fucks them.The small tits babe is deepthroat facefucked and banged rough while licking pussy.She tastes the brunette cougars squirt">
+ <span class="length">
+ <i>8:00</i>
+ </span>
+ <span class="icon-new">New</span>
+ </span>
+ </a>
+ <div class="thumb-info">
+ <div class="avatar">
+ <a class="color_d" href="https://www.sleazyneasy.com/members/605/"><img width="36" height="36" loading="lazy" src="https://www.sleazyneasy.com/contents/avatars/0/605.jpg?rand=20261119122757" alt="desomore"></a>
+ </div>
+ <div class="info-inner">
+ <span class="title"><a href="https://www.sleazyneasy.com/videos/3293051/we-pick-up-pretty-young-things-like-you-and-fuck-em-at-home/">We pick up pretty young things like you and fuck em at home</a></span>
+ <span class="thumb-members">
+ <span class="thumb-submitter">
+ <a href="https://www.sleazyneasy.com/members/605/">desomore</a>
+ </span>
+ <span class="views">29 </span>
+ </span>
+ </div>
+ </div>
+ <div class="dots">
+ <b></b>
+ <div class="drop">
+ <span class="block-fav">
+ <button title="Favorite" data-id="3293051">Add To Favorite</button>
+ <span class="success">Video Added</span>
+ <span class="fail">You have to <a href="https://www.sleazyneasy.com/login.php">Login</a></span>
+ </span>
+ <span class="subs">
+ <button title="Subscribe to desomore" data-id="605">Subscribe to desomore</button>
+ <span class="success">Subscribed</span>
+ <span class="fail">You have to <a href="https://www.sleazyneasy.com/login.php">Login</a></span>
+ </span>
+ <a href="/" data-page="https://www.sleazyneasy.com/videos/3293051/we-pick-up-pretty-young-things-like-you-and-fuck-em-at-home/" class="btn-share">Share</a>
+ <span class="btn-date">1 hour ago</span>
+ <span class="btn-quality">720p</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="thumb" itemscope itemtype="https://schema.org/VideoObject">
+ <div class="thumb-inner">
+ """
 }
