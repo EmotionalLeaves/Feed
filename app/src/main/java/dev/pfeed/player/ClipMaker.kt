@@ -72,6 +72,43 @@ class ClipMaker @Inject constructor(
         }
     }
 
+    /**
+     * One video of [parts] (files this app made) played one after another: "Make a reel". Each is
+     * scaled to the same height so they join, and a part without sound gets silence.
+     */
+    suspend fun reel(parts: List<File>, height: Int = REEL_HEIGHT): File? = withContext(Dispatchers.Main) {
+        if (parts.isEmpty()) return@withContext null
+        val dir = File(context.filesDir, "clips").apply { mkdirs() }
+        val out = File(dir, "reel-${System.currentTimeMillis()}.mp4")
+        val items = parts.map { f ->
+            EditedMediaItem.Builder(MediaItem.fromUri(android.net.Uri.fromFile(f)))
+                .setEffects(androidx.media3.transformer.Effects(emptyList(), listOf(androidx.media3.effect.Presentation.createForHeight(height))))
+                .build()
+        }
+        val composition = Composition.Builder(androidx.media3.transformer.EditedMediaItemSequence(items))
+            .experimentalSetForceAudioTrack(true)
+            .build()
+        suspendCancellableCoroutine { cont ->
+            val transformer = Transformer.Builder(context)
+                .addListener(object : Transformer.Listener {
+                    override fun onCompleted(composition: Composition, exportResult: ExportResult) {
+                        if (cont.isActive) cont.resume(out)
+                    }
+                    override fun onError(composition: Composition, exportResult: ExportResult, exportException: ExportException) {
+                        lastError = exportException.errorCodeName
+                        out.delete()
+                        if (cont.isActive) cont.resume(null)
+                    }
+                })
+                .build()
+            cont.invokeOnCancellation { runCatching { transformer.cancel() }; out.delete() }
+            runCatching { transformer.start(composition, out.absolutePath) }
+                .onFailure { lastError = it.message; if (cont.isActive) cont.resume(null) }
+        }
+    }
+
     @Volatile var lastError: String? = null
         private set
+
+    private companion object { const val REEL_HEIGHT = 720 }
 }

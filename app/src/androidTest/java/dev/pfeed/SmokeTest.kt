@@ -690,6 +690,16 @@ class SmokeTest {
             val file = kotlinx.coroutines.withTimeoutOrNull(90_000) { a.clipMaker.clip(url, "video/mp4", 1_000, 4_000) }
             android.util.Log.i("PFHEALTH", "clip: ${file?.length() ?: 0} bytes in ${System.currentTimeMillis() - t0} ms from $url; error=${a.clipMaker.lastError}")
             assertTrue("no clip made: ${a.clipMaker.lastError}", file != null && file.length() > 10_000)
+            // Two clips joined into one reel.
+            val second = list.mapNotNull { it.preview }.drop(1).firstOrNull()?.let { a.clipMaker.clip(it, "video/mp4", 1_000, 3_000) }
+            if (file != null && second != null) {
+                val t1 = System.currentTimeMillis()
+                val reel = kotlinx.coroutines.withTimeoutOrNull(120_000) { a.clipMaker.reel(listOf(file, second)) }
+                android.util.Log.i("PFHEALTH", "reel: ${reel?.length() ?: 0} bytes in ${System.currentTimeMillis() - t1} ms; error=${a.clipMaker.lastError}")
+                assertTrue("no reel made: ${a.clipMaker.lastError}", reel != null && reel.length() > file.length())
+                reel?.delete()
+            }
+            second?.delete()
             file?.delete()
         }
     }

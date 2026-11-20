@@ -40,6 +40,34 @@ class ClipLibrary @Inject constructor(
         return clip
     }
 
+    /**
+     * "Make a reel": [parts] (clips in Saved → Clips) joined into one video, kept there too.
+     * Null if there's nothing to join or it couldn't be made.
+     */
+    suspend fun reel(parts: List<MediaItem>): MediaItem? {
+        val files = parts.mapNotNull { p -> p.extras["media"]?.takeIf { it.startsWith("file:") }?.let { android.net.Uri.parse(it).path }?.let { java.io.File(it) }?.takeIf { it.exists() } }
+        if (files.size < 2) return null
+        val file = clips.reel(files) ?: return null
+        val reel = MediaItem(
+            id = "clip/" + file.nameWithoutExtension,
+            sourceId = "direct",
+            type = MediaType.VIDEO,
+            title = "Your reel · ${files.size} clips",
+            creator = null,
+            tags = parts.flatMap { it.tags }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(12).map { it.key },
+            durationSec = parts.sumOf { it.durationSec ?: 0 }.takeIf { it > 0 },
+            thumbnailUrl = parts.first().thumbnailUrl,
+            pageUrl = "",
+            publishedAt = java.time.Instant.now(),
+            extras = mapOf("media" to android.net.Uri.fromFile(file).toString(), "mime" to "video/mp4"),
+        )
+        runCatching {
+            library.add(LibraryKind.SAVED, reel)
+            library.addToCollection(CLIPS, reel)
+        }
+        return reel
+    }
+
     companion object {
         const val CLIPS = "Clips"
         const val CLIP_MS = 30_000L

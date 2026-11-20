@@ -103,7 +103,23 @@ class LibraryViewModel @Inject constructor(
     private val holder: TransientFeedHolder,
     private val offline: dev.pfeed.data.repo.OfflineStore,
     val livePreviews: dev.pfeed.ui.common.LivePreviews,
+    private val clipLibrary: dev.pfeed.data.repo.ClipLibrary,
 ) : ViewModel() {
+    /** Making a reel of your clips right now. */
+    val makingReel = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val reelMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
+
+    /** "Make a reel": the clips (oldest first, up to [REEL_MAX]) joined into one video in Clips. */
+    fun makeReel(clips: List<MediaItem>) {
+        if (makingReel.value) return
+        val parts = clips.filter { !it.id.startsWith("clip/reel-") }.reversed().take(REEL_MAX)
+        viewModelScope.launch {
+            makingReel.value = true
+            val reel = runCatching { clipLibrary.reel(parts) }.getOrNull()
+            makingReel.value = false
+            reelMessage.value = if (reel != null) "Your reel is in Clips" else "Couldn't make a reel (${clipLibrary.lastError ?: "need two clips or more"})"
+        }
+    }
     /** Saved posts, with thumbnails from the kept copies once they're downloaded (so Saved works offline). */
     /**
      * Secret collections: a collection whose name starts with a dot (".mine") is hidden, chip and
@@ -322,7 +338,8 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                 } else if (open == null) {
                     saved.found().let { l -> if (saved.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.BookmarkBorder, "Nothing saved yet", "Tap Save on any post to keep it here. Saved posts are kept on your phone and play offline. Hold a post → Add to collection to sort them into folders.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Saved" }, onMoreLike = { moreLikeThese(l); toFeed() }) }
                 } else {
-                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to open }, onMoreLike = { moreLikeThese(l); toFeed() }) }
+                    collectionItems.found().let { l -> if (collectionItems.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.Folder, "Nothing in $open", "Hold a post → Add to collection to put it here.", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to open }, onMoreLike = { moreLikeThese(l); toFeed() },
+                        header = if (open == dev.pfeed.data.repo.ClipLibrary.CLIPS && l.size >= 2) ({ ReelBar(vm, l) }) else null) }
                 }
             }
             1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Liked" }, onMoreLike = { moreLikeThese(l); toFeed() }) }
@@ -723,4 +740,20 @@ private fun moreLikeThese(items: List<MediaItem>) {
         .flatMap { dev.pfeed.domain.reco.Features.of(it).filterNot { f -> dev.pfeed.domain.reco.Features.isMeta(f) || f.startsWith("w:") } }
         .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(3).map { it.key }
     if (tags.isNotEmpty()) dev.pfeed.data.repo.SteerState.set(tags.map { dev.pfeed.domain.reco.Steer.Directive(dev.pfeed.domain.reco.Steer.Kind.MORE, it) })
+}
+
+private const val REEL_MAX = 20
+
+/** In Saved → Clips: join them all into one video. */
+@Composable
+private fun ReelBar(vm: LibraryViewModel, clips: List<MediaItem>) {
+    val making by vm.makingReel.collectAsStateWithLifecycle()
+    val message by vm.reelMessage.collectAsStateWithLifecycle()
+    Column(Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 8.dp)) {
+        dev.pfeed.ui.common.BrandButton(
+            if (making) "Making your reel…" else "Make a reel of these ${minOf(clips.size, REEL_MAX)} clips",
+            onClick = { if (!making) vm.makeReel(clips) },
+        )
+        message?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.7f), modifier = Modifier.padding(top = 6.dp)) }
+    }
 }
