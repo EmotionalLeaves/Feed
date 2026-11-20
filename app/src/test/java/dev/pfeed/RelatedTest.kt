@@ -33,4 +33,24 @@ class RelatedTest {
         assertEquals(1, Related.support(v("cw-y").key))
         assertEquals(0, Related.support(v("cw-nothing").key))
     }
+
+    @Test
+    fun `kept between launches, co-watching included`() {
+        val a = v("sv-a"); val b = v("sv-b")
+        Related.put(a.key, listOf(v("sv-x"), v("sv-y")))
+        Related.put(b.key, listOf(v("sv-x")))
+        Related.enjoyed(a.key, "A"); Related.enjoyed(b.key, "B")
+        Related.drain()
+        val snap = Related.export()
+        // Round trip through JSON, as it's stored.
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val back = json.decodeFromString(Related.Snapshot.serializer(), json.encodeToString(Related.Snapshot.serializer(), snap))
+        Related.clear()
+        assertEquals(0, Related.support(v("sv-x").key))
+        Related.restore(back)
+        assertEquals(2, Related.support(v("sv-x").key))
+        assertEquals(listOf("sv-x"), Related.cowatched().map { it.id })
+        // Restoring doesn't queue them for For You again.
+        assertEquals(emptyList<MediaItem>(), Related.drain())
+    }
 }

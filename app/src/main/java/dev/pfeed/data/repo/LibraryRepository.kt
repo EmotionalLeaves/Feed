@@ -146,6 +146,7 @@ class LibraryRepository @Inject constructor(
         libraryDao.clearHistory()
         dev.pfeed.player.ResumePoints.clear() // where you left videos is history too
         dev.pfeed.player.ComicPages.clear()
+        dev.pfeed.domain.reco.Related.clear() // what you enjoyed and what sat beside it, too (saved over on leaving)
         itemDao.deleteOrphans()
     }
 

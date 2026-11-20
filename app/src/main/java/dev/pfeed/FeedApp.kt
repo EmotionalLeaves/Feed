@@ -26,6 +26,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     @Inject lateinit var offline: dev.pfeed.data.repo.OfflineStore
     @Inject lateinit var updater: dev.pfeed.update.Updater
     @Inject lateinit var tasteEngine: dev.pfeed.data.repo.TasteEngineStore
+    @Inject lateinit var relatedStore: dev.pfeed.data.repo.RelatedStore
 
     override val workManagerConfiguration: Configuration
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
@@ -74,11 +75,13 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
             override fun onStart(owner: androidx.lifecycle.LifecycleOwner) = updater.auto()
             override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
                 tasteEngine.flush()
+                Thread { relatedStore.save() }.start()
                 dev.pfeed.data.repo.DataMeter.month()
                 updater.install(quiet = true)
             }
         })
         dev.pfeed.data.repo.DataMeter.init(this)
+        Thread { relatedStore.load() }.start()
         MaintenanceWorker.schedule(this)
         dev.pfeed.work.UpdateWorker.schedule(this)
         dev.pfeed.work.WeeklyMixWorker.schedule(this)

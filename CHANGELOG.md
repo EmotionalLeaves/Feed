@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.35.0 — 2026-11-19
+
+Co-watching remembers
+
+- **What the sites showed beside videos you enjoyed is now kept between launches**, encrypted with the app's own key. So the co-watching boost in For You and Discover's **Watched with your favourites** row don't start from nothing every time you open the app. Clearing history clears it too.
+
 ## 5.34.0 — 2026-11-19
 
 A favourite act that remembers

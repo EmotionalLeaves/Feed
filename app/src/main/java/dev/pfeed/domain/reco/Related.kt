@@ -1,6 +1,7 @@
 package dev.pfeed.domain.reco
 
 import dev.pfeed.domain.model.MediaItem
+import kotlinx.serialization.Serializable
 
 /**
  * What a site itself shows beside a video ("related", "up next"): built from what its own viewers
@@ -33,11 +34,42 @@ object Related {
         }
         r.forEach { queue.addLast(it) }
         // Shown beside several videos you enjoyed: the sites' viewers keep pairing it with your kind of thing.
-        if (enjoyedKeys.add(key)) r.forEach { support[it.key] = (support[it.key] ?: 0) + 1 }
+        if (enjoyedKeys.add(key)) {
+            r.forEach { support[it.key] = (support[it.key] ?: 0) + 1 }
+            enjoyedOrder.addLast(key to title)
+            while (enjoyedOrder.size > KEEP * 2) enjoyedOrder.removeFirst()
+        }
         while (queue.size > MAX_QUEUED) queue.removeFirst()
     }
 
     private val enjoyedKeys = HashSet<String>()
+    /** The videos you enjoyed, oldest first (title if known): what's kept between launches. */
+    private val enjoyedOrder = ArrayDeque<Pair<String, String?>>()
+
+    @Serializable data class Entry(val key: String, val title: String? = null, val related: List<MediaItem> = emptyList())
+    @Serializable data class Snapshot(val enjoyed: List<Entry> = emptyList())
+
+    /** The latest videos you enjoyed and what their sites showed beside them, to keep. */
+    @Synchronized fun export(): Snapshot =
+        Snapshot(enjoyedOrder.toList().takeLast(KEEP).mapNotNull { (k, t) -> map[k]?.let { Entry(k, t, it.take(KEEP_PER_VIDEO)) } })
+
+    /** Back from a previous launch: as if those videos had just been enjoyed (without queueing them again). */
+    @Synchronized fun restore(s: Snapshot) {
+        s.enjoyed.forEach { e ->
+            if (e.related.isEmpty() || e.key in enjoyedKeys) return@forEach
+            map[e.key] = e.related
+            enjoyedKeys += e.key
+            enjoyedOrder.addLast(e.key to e.title)
+            e.related.forEach { support[it.key] = (support[it.key] ?: 0) + 1 }
+            if (e.title != null) { recent.removeAll { it.second == e.key }; recent.addFirst(e.title to e.key) }
+        }
+        while (recent.size > 5) recent.removeLast()
+    }
+
+    /** Forget all of it (history cleared). */
+    @Synchronized fun clear() {
+        map.clear(); queue.clear(); recent.clear(); enjoyedKeys.clear(); enjoyedOrder.clear(); support.clear()
+    }
     private val support = object : LinkedHashMap<String, Int>(64, 0.75f, true) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Int>?) = size > 800
     }
@@ -60,4 +92,6 @@ object Related {
 
     private const val MAX_PER_VIDEO = 12
     private const val MAX_QUEUED = 60
+    private const val KEEP = 20
+    private const val KEEP_PER_VIDEO = 8
 }
