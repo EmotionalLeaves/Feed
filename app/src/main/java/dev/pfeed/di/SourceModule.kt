@@ -62,6 +62,9 @@ abstract class SourceModule {
     abstract fun comics(adapter: dev.pfeed.source.comics.ComicAdapter): SourceAdapter
 
     @Binds @IntoSet
+    abstract fun photos(adapter: dev.pfeed.source.photos.PhotoSetsAdapter): SourceAdapter
+
+    @Binds @IntoSet
     abstract fun live(adapter: dev.pfeed.source.live.LiveCamsAdapter): SourceAdapter
 
     @Binds @IntoSet

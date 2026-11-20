@@ -71,6 +71,7 @@ object Display {
             "reddit" -> item.tags.firstOrNull()?.takeIf { it.isNotBlank() }?.let { "r/$it" } ?: "Reddit"
             "redgifs" -> "RedGIFs"
             "nhentai" -> "nhentai"
+            "photos" -> "BabeSource"
             "tube" -> dev.pfeed.source.tube.TubeSite.byHost(host)?.label ?: host
             "comics" -> dev.pfeed.source.comics.ComicSite.byHost(host)?.label ?: host
             "kemono" -> when {
