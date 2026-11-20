@@ -1,3 +1,8 @@
+## 5.56.0 — 2026-11-20
+A reel of your moments
+
+- **Clip them all + reel** on Discover's Your moments: after clipping each moment, the app also joins them into one reel, so all your favourite bits play back to back from a single video, offline.
+
 ## 5.55.0 — 2026-11-20
 Your clips on Discover
 
@@ -8,8 +13,3 @@ Your clips on Discover
 Make a reel
 
 - **Make a reel** in Saved → Clips: joins your clips (up to 20, oldest first) into one video, kept in Clips. It's your own highlight reel, offline. Clips of different sizes are matched to 720p, and ones without sound get silence so the reel plays smoothly.
-
-## 5.53.0 — 2026-11-20
-Loop this scene
-
-- **Loop this scene · 11:19–14:02** in the long-press menu: when a video's scenes or acts are known, one tap loops the scene that's on screen, start to cut, until you clear the loop.

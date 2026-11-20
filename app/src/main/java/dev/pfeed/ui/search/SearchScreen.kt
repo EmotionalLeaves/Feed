@@ -204,12 +204,15 @@ class SearchViewModel @Inject constructor(
         if (list.isEmpty()) return
         viewModelScope.launch {
             clippingMoments.value = 0 to list.size
+            val made = ArrayList<MediaItem>()
             list.forEachIndexed { i, item ->
                 val at = dev.pfeed.player.Moments.of(item.key).firstOrNull()
                 val stream = runCatching { registry.byId(item.sourceId)?.resolveStream(item) }.getOrNull() as? dev.pfeed.domain.model.StreamInfo.Direct
-                if (at != null && stream != null) runCatching { clipLibrary.save(item, stream, (at - 6_000L).coerceAtLeast(0L)) }
+                if (at != null && stream != null) runCatching { clipLibrary.save(item, stream, (at - 6_000L).coerceAtLeast(0L)) }.getOrNull()?.let { made += it }
                 clippingMoments.value = (i + 1) to list.size
             }
+            // And all of them as one reel: your moments, back to back.
+            if (made.size >= 2) runCatching { clipLibrary.reel(made) }
             clippingMoments.value = null
         }
     }
@@ -810,7 +813,7 @@ private fun SuggestionsPane(
                 SectionTitle("Your moments", Modifier.weight(1f))
                 // Each moment as a clip kept on the phone (Saved → Clips).
                 TextButton(onClick = onClipAll, enabled = clipping == null) {
-                    Text(clipping?.let { (d, n) -> "Clipping $d of $n…" } ?: "Clip them all")
+                    Text(clipping?.let { (d, n) -> "Clipping $d of $n…" } ?: "Clip them all + reel")
                 }
             }
             Spacer(Modifier.height(10.dp))

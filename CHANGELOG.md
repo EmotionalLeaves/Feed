@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.56.0 — 2026-11-20
+
+A reel of your moments
+
+- **Clip them all + reel** on Discover's Your moments: after clipping each moment, the app also joins them into one reel, so all your favourite bits play back to back from a single video, offline.
+
 ## 5.55.0 — 2026-11-20
 
 Your clips on Discover
