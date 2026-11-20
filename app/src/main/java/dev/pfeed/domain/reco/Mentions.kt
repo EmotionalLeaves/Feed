@@ -43,6 +43,29 @@ object Mentions {
         return tail?.let(::names)?.take(1).orEmpty()
     }
 
+    /**
+     * Names the app has learned are people (ones you follow, ones titles have named before), so a
+     * title that names one anywhere ("Lena Paul gets…") is recognised, not only the "Name - Title" form.
+     */
+    @Volatile private var known: Map<String, String> = emptyMap()
+
+    /** Adds [names] (as they should be shown) to the people [inTitle] looks for. */
+    fun learn(names: Collection<String>) {
+        val add = names.mapNotNull { n -> personName(n)?.let { it to n.substringBefore('@').trim() } }.filter { it.first !in known }
+        if (add.isNotEmpty()) known = (known + add).let { if (it.size > MAX_KNOWN) it.entries.toList().takeLast(MAX_KNOWN).associate { e -> e.key to e.value } else it }
+    }
+
+    /** The performers [item]'s title credits, plus any known person it names anywhere in its title or tags. */
+    fun inTitle(item: MediaItem): List<String> {
+        val credited = performers(item.title)
+        val k = known
+        if (k.isEmpty()) return credited
+        val more = named(item, k.keys).mapNotNull { k[it] }
+        return (credited + more).distinctBy { it.lowercase() }
+    }
+
+    private const val MAX_KNOWN = 2000
+
     private fun names(part: String): List<String>? {
         val list = part.split(JOIN).map { it.trim() }.filter { it.isNotEmpty() }
         if (list.isEmpty() || list.size > MAX_NAMES) return null

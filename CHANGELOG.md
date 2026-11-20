@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.87.0 — 2026-11-20
+
+Performers wherever the title names them
+
+- **Performers recognised anywhere in a title**: once the app knows a name is a person (you follow her, or titles have credited her before), it spots her in any title, not just the "Name – Title" form, for the chips on the post and the long-press menu.
+
 ## 5.86.0 — 2026-11-20
 
 Top on the sites

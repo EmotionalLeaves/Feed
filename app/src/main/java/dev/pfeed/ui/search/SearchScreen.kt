@@ -309,6 +309,8 @@ class SearchViewModel @Inject constructor(
             val count = HashMap<String, Int>(); val shown = HashMap<String, String>()
             history.forEach { item -> dev.pfeed.domain.reco.Mentions.performers(item.title).forEach { n -> val k = n.lowercase(); count[k] = (count[k] ?: 0) + 1; shown.putIfAbsent(k, n) } }
             count.entries.sortedByDescending { it.value }.take(PEOPLE_TYPEAHEAD).map { shown.getValue(it.key) }
+                // Named again elsewhere, in any form of title, they're recognised (see Mentions.inTitle).
+                .also { dev.pfeed.domain.reco.Mentions.learn(it) }
         }
         .flowOn(kotlinx.coroutines.Dispatchers.Default)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())

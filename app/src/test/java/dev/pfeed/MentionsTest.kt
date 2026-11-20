@@ -46,4 +46,11 @@ class MentionsTest {
         assertEquals(true, dev.pfeed.domain.reco.Features.normalizeTag("Lena Paul") in f)
         assertEquals(true, dev.pfeed.domain.reco.Features.normalizeTag("abella_danger") in f)
     }
+
+    @Test
+    fun `known people are found anywhere in a title`() {
+        Mentions.learn(listOf("Zelda Quartz@onlyfans", "solo"))
+        assertEquals(listOf("Zelda Quartz"), Mentions.inTitle(v("zelda quartz gets a surprise at the gym")))
+        assertEquals(emptyList<String>(), Mentions.inTitle(v("A quiet afternoon")))
+    }
 }

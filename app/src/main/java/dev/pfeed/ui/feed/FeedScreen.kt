@@ -1863,7 +1863,7 @@ private fun Overlay(
                 )
             }
             // Performers the title names: tap one for everything with her, from every site.
-            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.performers(item.title).filter { !it.equals(creator, true) } }
+            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.inTitle(item).filter { !it.equals(creator, true) }.take(4) }
             if (tags.isNotEmpty() || people.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     people.forEach { name ->

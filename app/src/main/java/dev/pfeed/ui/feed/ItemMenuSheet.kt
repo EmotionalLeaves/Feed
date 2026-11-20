@@ -277,7 +277,7 @@ fun ItemMenuSheet(
             }
             // Performers the title names (studio uploads credit the uploader, not them): follow one and
             // Following brings her videos from every site.
-            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.performers(item.title).filter { !it.equals(creator, true) } }
+            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.inTitle(item).filter { !it.equals(creator, true) } }
             if (people.isNotEmpty()) {
                 val followsNow by vm.follows.collectAsState()
                 Text(

@@ -1,3 +1,8 @@
+## 5.87.0 — 2026-11-20
+Performers wherever the title names them
+
+- **Performers recognised anywhere in a title**: once the app knows a name is a person (you follow her, or titles have credited her before), it spots her in any title, not just the "Name – Title" form, for the chips on the post and the long-press menu.
+
 ## 5.86.0 — 2026-11-20
 Top on the sites
 
@@ -7,8 +12,3 @@ Top on the sites
 Your sites first
 
 - **Sources → Tube sites puts the sites you watch first**, each with how many of its videos you've watched; the rest follow by name. With 40 sites, the ones you'd switch off or check are easy to find.
-
-## 5.84.0 — 2026-11-20
-Lighter warm-up
-
-- **Pictures ahead are warmed at screen size**: the next posts' pictures are loaded ahead at the size they're shown, not as full originals. Same instant swipes, a fraction of the memory. (After 5.83, a search session on the test phone went from 880 MB to under 400 MB.)
