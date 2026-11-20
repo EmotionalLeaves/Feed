@@ -35,6 +35,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.NorthWest
@@ -214,6 +215,13 @@ class SearchViewModel @Inject constructor(
             // And all of them as one reel: your moments, back to back.
             if (made.size >= 2) runCatching { clipLibrary.reel(made) }
             clippingMoments.value = null
+        }
+    }
+
+    fun toggleWatchLater(item: MediaItem) {
+        viewModelScope.launch {
+            if (watchLater.value.any { it.key == item.key }) library.removeFromCollection(dev.pfeed.ui.feed.FeedViewModel.WATCH_LATER, item)
+            else library.addToCollectionOnly(dev.pfeed.ui.feed.FeedViewModel.WATCH_LATER, item)
         }
     }
 
@@ -553,6 +561,12 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                     if (saved) "Remove from Saved" else "Save",
                     icon = if (saved) Icons.Filled.Bookmark else Icons.Filled.BookmarkBorder,
                     onClick = { vm.toggleSave(item); holding = null },
+                )
+                val later = item.key in watchLater.map { it.key }
+                dev.pfeed.ui.common.SettingRow(
+                    if (later) "Remove from Watch later" else "Watch later",
+                    icon = Icons.Filled.WatchLater,
+                    onClick = { vm.toggleWatchLater(item); holding = null },
                 )
                 if (item.pageUrl.isNotBlank()) dev.pfeed.ui.common.SettingRow(
                     "Open on the site",

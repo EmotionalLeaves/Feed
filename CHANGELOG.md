@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.59.0 — 2026-11-20
+
+Watch later from search
+
+- **Watch later from Search and Discover**: hold any result or tile to put it on Watch later, next to Save.
+
 ## 5.58.0 — 2026-11-20
 
 Watch later, finished
