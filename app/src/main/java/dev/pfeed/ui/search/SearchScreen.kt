@@ -148,9 +148,11 @@ data class SearchFilters(
     val sort: SortOrder = SortOrder.BEST,
     /** Tube sites to keep (by host); empty = every site. */
     val sites: Set<String> = emptySet(),
+    /** Leave out what you've watched before. */
+    val hideWatched: Boolean = false,
 ) {
     /** How many of the filters hidden in the sheet are active (shown as a badge). */
-    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0) + (if (sites.isNotEmpty()) 1 else 0)
+    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0) + (if (sites.isNotEmpty()) 1 else 0) + (if (hideWatched) 1 else 0)
 
     /** Any filter on: the endless continuation can't honour them, so it isn't offered. */
     val active: Boolean get() = sheetCount > 0 || type != TypeFilter.ALL
@@ -349,8 +351,8 @@ class SearchViewModel @Inject constructor(
         .map { list -> list.filter { it.enabled }.map { it.adapter.id to it.adapter.displayName } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    val visible: StateFlow<List<MediaItem>> = combine(_ui, _filters) { ui, f ->
-        val kept = ui.results.filter(f::matches)
+    val visible: StateFlow<List<MediaItem>> = combine(_ui, _filters, watched) { ui, f, seen ->
+        val kept = ui.results.filter { f.matches(it) && !(f.hideWatched && it.key in seen) }
         // Unknown lengths go last either way.
         when (f.sort) {
             SortOrder.BEST -> kept
@@ -577,7 +579,8 @@ class SearchViewModel @Inject constructor(
     fun setType(t: TypeFilter) = _filters.update { it.copy(type = t) }
     fun setDuration(d: DurationFilter) = _filters.update { it.copy(duration = d) }
     fun setSort(o: SortOrder) = _filters.update { it.copy(sort = o) }
-    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST, sites = emptySet()) }
+    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST, sites = emptySet(), hideWatched = false) }
+    fun setHideWatched(on: Boolean) = _filters.update { it.copy(hideWatched = on) }
     fun toggleSite(host: String) = _filters.update { f -> f.copy(sites = if (host in f.sites) f.sites - host else f.sites + host) }
 
     private companion object {
@@ -869,6 +872,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                         .map { (host, n) -> host to "${dev.pfeed.source.tube.TubeSite.byHost(host)?.label ?: host} · $n" }
                 },
                 onToggleSite = vm::toggleSite,
+                onHideWatched = vm::setHideWatched,
                 onDuration = vm::setDuration,
                 onSort = vm::setSort,
                 onReset = vm::resetSheetFilters,
@@ -1536,6 +1540,7 @@ private fun FiltersSheet(
     onToggleSource: (String) -> Unit,
     sites: List<Pair<String, String>> = emptyList(),
     onToggleSite: (String) -> Unit = {},
+    onHideWatched: (Boolean) -> Unit = {},
     onDuration: (DurationFilter) -> Unit,
     onSort: (SortOrder) -> Unit,
     onReset: () -> Unit,
@@ -1553,6 +1558,10 @@ private fun FiltersSheet(
                     colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
                 )
             }
+        }
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("Hide what I've watched", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            androidx.compose.material3.Switch(checked = filters.hideWatched, onCheckedChange = onHideWatched)
         }
         SectionTitle("Length")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

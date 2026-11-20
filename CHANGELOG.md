@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.90.0 — 2026-11-20
+
+Only what you haven't seen
+
+- **Hide what I've watched** in search Filters: leave out everything you've watched before, so a big search only shows what's new to you.
+
 ## 5.89.0 — 2026-11-20
 
 New with people you watch
