@@ -1,3 +1,9 @@
+## 5.55.0 — 2026-11-20
+Your clips on Discover
+
+- **Your reel works**: the CI phone test now cuts two clips from a live site and joins them into a reel every build (1.6 MB in about 3 seconds).
+- **Your clips** on Discover: the clips and reels you made, one tap to play them.
+
 ## 5.54.0 — 2026-11-20
 Make a reel
 
@@ -7,8 +13,3 @@ Make a reel
 Loop this scene
 
 - **Loop this scene · 11:19–14:02** in the long-press menu: when a video's scenes or acts are known, one tap loops the scene that's on screen, start to cut, until you clear the loop.
-
-## 5.52.0 — 2026-11-20
-Clips your length
-
-- **Save a clip** now asks how much: 15 s, 30 s, 1 min or 2 min, from just before where you are.

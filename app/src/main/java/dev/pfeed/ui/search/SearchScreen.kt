@@ -214,6 +214,11 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    /** Your clips and reels (Saved → Clips), newest first. */
+    val yourClips: StateFlow<List<MediaItem>> = library.collectionItems(dev.pfeed.data.repo.ClipLibrary.CLIPS)
+        .map { it.take(16) }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Videos you marked moments in (saved or auto), newest watched first: they play from the moment. */
     val yourMoments: StateFlow<List<MediaItem>> = combine(library.items(dev.pfeed.data.repo.LibraryKind.HISTORY), dev.pfeed.player.Moments.changes) { history, _ ->
         val keys = dev.pfeed.player.Moments.keys()
@@ -513,6 +518,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
     val yourMoments by vm.yourMoments.collectAsStateWithLifecycle()
     val clipping by vm.clippingMoments.collectAsStateWithLifecycle()
+    val yourClips by vm.yourClips.collectAsStateWithLifecycle()
     val watchedKeys by vm.watched.collectAsStateWithLifecycle()
     val savedKeys by vm.savedKeys.collectAsStateWithLifecycle()
     // Press and hold a result: save it, or open it on its site, without leaving the results.
@@ -653,6 +659,8 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 yourMoments = yourMoments,
                 clipping = clipping,
                 onClipAll = vm::clipAllMoments,
+                yourClips = yourClips,
+                onClip = { index -> nav.navigate(Routes.viewer(vm.openList(yourClips, index, dev.pfeed.data.repo.ClipLibrary.CLIPS))) },
                 // Titled "Moments", the viewer starts each one at its first moment.
                 onMoment = { index -> nav.navigate(Routes.viewer(vm.openList(yourMoments, index, dev.pfeed.ui.feed.FeedViewModel.MOMENTS))) },
                 typed = ui.query,
@@ -717,6 +725,8 @@ private fun SuggestionsPane(
     onMoment: (Int) -> Unit = {},
     clipping: Pair<Int, Int>? = null,
     onClipAll: () -> Unit = {},
+    yourClips: List<MediaItem> = emptyList(),
+    onClip: (Int) -> Unit = {},
     typed: String,
     followed: List<String>,
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
@@ -808,6 +818,15 @@ private fun SuggestionsPane(
                 items(yourMoments.size, key = { "moment:" + yourMoments[it].key }) { i ->
                     ContinueCard(yourMoments[i], momentMs = remember(yourMoments[i].key) { dev.pfeed.player.Moments.of(yourMoments[i].key).firstOrNull() }) { onMoment(i) }
                 }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+        // Your clips: the bits you cut, kept on the phone.
+        if (t.isEmpty() && yourClips.isNotEmpty()) {
+            SectionTitle("Your clips")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(yourClips.size, key = { "clip:" + yourClips[it].key }) { i -> TopicTile(yourClips[i]) { onClip(i) } }
             }
             Spacer(Modifier.height(20.dp))
         }

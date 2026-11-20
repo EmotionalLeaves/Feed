@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.55.0 — 2026-11-20
+
+Your clips on Discover
+
+- **Your reel works**: the CI phone test now cuts two clips from a live site and joins them into a reel every build (1.6 MB in about 3 seconds).
+- **Your clips** on Discover: the clips and reels you made, one tap to play them.
+
 ## 5.54.0 — 2026-11-20
 
 Make a reel
