@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.45.0 — 2026-11-19
+
+Save a clip
+
+- **Save a clip** (long-press menu on a video): cuts the next 30 seconds from where you are into a small file on your phone, kept in **Saved → Clips** as a clip of its own. It plays offline and loops, and only that stretch is fetched, so a clip of a long scene is a few MB, not the whole video.
+
 ## 5.44.0 — 2026-11-19
 
 Scrubbing that knows where to stop

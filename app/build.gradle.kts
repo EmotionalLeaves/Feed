@@ -27,7 +27,7 @@ android {
         targetSdk = 36
         // Always higher than the last CI build, so Android accepts every new APK as an update.
         versionCode = 100 + (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0)
-        versionName = "5.44.0"
+        versionName = "5.45.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API source adapter configuration (see SOURCES.md). Empty = adapter stays disabled.
@@ -147,6 +147,7 @@ dependencies {
     implementation(libs.media3.exoplayer.hls)
     implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.ui)
+    implementation(libs.media3.transformer)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

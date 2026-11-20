@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.QueueMusic
 import androidx.compose.material.icons.filled.LocalFireDepartment
@@ -303,6 +304,9 @@ fun ItemMenuSheet(
                 }
                 if (actNow != null && onOpenPage != null) MenuRow("More ${actNow.lowercase()}", Icons.Filled.Search, "Videos of what's on screen now, as their sites name it") {
                     onOpenPage(actNow.lowercase()); onDismiss()
+                }
+                if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] != "1" && (item.durationSec ?: 0) > 45) {
+                    MenuRow("Save a clip", Icons.Filled.ContentCut, "The next 30 seconds from here, kept on your phone as a clip of its own (Saved → Clips)") { ClipGrab.request.value = item.key; onDismiss() }
                 }
                 MenuRow("Save this moment", Icons.Filled.BookmarkAdd, "Marks where you are: it shows on the scrub bar, and Saved → Moments plays the video from there") { MomentGrab.request.value = item.key; onDismiss() }
                 MenuRow("Save this frame", Icons.Filled.PhotoCamera, "Keep this exact moment as a picture, in Saved → Frames") { FrameGrab.request.value = item.key; onDismiss() }

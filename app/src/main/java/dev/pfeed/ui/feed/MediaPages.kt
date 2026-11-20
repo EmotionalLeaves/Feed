@@ -446,6 +446,15 @@ fun VideoPage(
         if (next != null) p.seekTo(next)
         else vm.offer(if (vm.sceneCuts(item).isEmpty()) "Scenes aren't known for this video yet" else "That was the last scene", "Skip 30 s") { p.seekTo(p.currentPosition + 30_000) }
     }
+    // "Save a clip": the next 30 s from here, cut into a file.
+    val clipAsk by ClipGrab.request.collectAsState()
+    LaunchedEffect(clipAsk) {
+        if (clipAsk != item.key) return@LaunchedEffect
+        ClipGrab.request.value = null
+        val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
+        val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
+        vm.saveClip(item, s, p.currentPosition)
+    }
     // "Save this frame": copy what's on the video surface right now into Saved (a "Frames" collection).
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
     val grab by FrameGrab.request.collectAsState()

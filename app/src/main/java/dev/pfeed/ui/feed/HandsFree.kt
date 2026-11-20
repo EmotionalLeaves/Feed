@@ -127,6 +127,11 @@ object SeekRequest {
     val request = MutableStateFlow<Pair<String, Long>?>(null)
 }
 
+/** "Save a clip" asked for the video with this key: its page cuts the next 30 s from where it is. */
+object ClipGrab {
+    val request = MutableStateFlow<String?>(null)
+}
+
 /** "Next scene" asked for the video with this key: the page playing it jumps to its next cut. */
 object SceneSkip {
     val request = MutableStateFlow<String?>(null)
