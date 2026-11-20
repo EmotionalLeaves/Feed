@@ -1,3 +1,8 @@
+## 5.49.0 — 2026-11-19
+Times in comments you can tap
+
+- **Tap a time in a comment**: in a video's Comments, any time someone wrote ("12:31") shows as a ▶ chip. Tap it and the video goes straight there.
+
 ## 5.48.0 — 2026-11-19
 Clip the best part
 
@@ -9,9 +14,3 @@ Clips leave with you
 
 - **Export clips and frames**: the long-press menu's **Export to Downloads** now works on the clips and frames you made, so you can take one outside the app.
 - Unsaving a clip or frame deletes its file too, so they don't pile up on your phone.
-
-## 5.46.0 — 2026-11-19
-Clip it sideways
-
-- **Clip 30 s** button in the sideways player, next to Save moment.
-- The phone test in CI now cuts a real clip from a live site every build, so Save a clip keeps working.

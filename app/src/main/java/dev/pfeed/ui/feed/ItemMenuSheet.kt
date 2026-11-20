@@ -136,6 +136,21 @@ fun ItemMenuSheet(
                             }
                             Spacer(Modifier.height(3.dp))
                             Text(c.body, style = MaterialTheme.typography.bodyMedium, maxLines = 8, overflow = TextOverflow.Ellipsis)
+                            // Times in it ("12:31"): tap one to go there.
+                            val times = remember(c.body) { dev.pfeed.domain.reco.CommentMoments.of(listOf(c.author to c.body), item.durationSec) }
+                            if (times.isNotEmpty() && item.type == dev.pfeed.domain.model.MediaType.VIDEO) Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                times.take(4).forEach { at ->
+                                    Text(
+                                        "▶ " + dev.pfeed.ui.common.formatDuration((at / 1000).toInt()),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        color = androidx.compose.ui.graphics.Color.White,
+                                        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                                            .background(androidx.compose.ui.graphics.Color.White.copy(alpha = 0.14f))
+                                            .clickable { SeekRequest.request.value = item.key to at; onDismiss() }
+                                            .padding(horizontal = 10.dp, vertical = 4.dp),
+                                    )
+                                }
+                            }
                         }
                     }
                 }

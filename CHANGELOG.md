@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.49.0 — 2026-11-19
+
+Times in comments you can tap
+
+- **Tap a time in a comment**: in a video's Comments, any time someone wrote ("12:31") shows as a ▶ chip. Tap it and the video goes straight there.
+
 ## 5.48.0 — 2026-11-19
 
 Clip the best part
