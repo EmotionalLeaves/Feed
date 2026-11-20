@@ -107,3 +107,36 @@ object Moments {
 
     fun clear() { prefs?.edit()?.clear()?.apply(); _changes.value++ }
 }
+
+/**
+ * How each named act has gone for you ("missionary", "cowgirl"…): +1 each time you sat through it,
+ * -1 each time you jumped over it, fading a little with every new verdict. Kept on the phone; feeds
+ * "your favourite" act alongside what For You makes of the act's name.
+ */
+object ActPrefs {
+    private const val MAX = 200
+    private const val FADE = 0.97f
+    @Volatile private var prefs: SharedPreferences? = null
+
+    fun init(context: Context) {
+        prefs = context.getSharedPreferences("act_prefs", Context.MODE_PRIVATE)
+    }
+
+    private fun keyOf(act: String) = act.trim().lowercase()
+
+    fun score(act: String): Double = prefs?.getFloat(keyOf(act), 0f)?.toDouble() ?: 0.0
+
+    fun record(liked: List<String>, skipped: List<String>) {
+        if (dev.pfeed.domain.privacy.Incognito.active) return
+        val p = prefs ?: return
+        val edit = p.edit()
+        // Older verdicts count a little less each time something new is learned.
+        p.all.forEach { (k, v) -> (v as? Float)?.let { edit.putFloat(k, it * FADE) } }
+        liked.forEach { a -> edit.putFloat(keyOf(a), (p.getFloat(keyOf(a), 0f) * FADE) + 1f) }
+        skipped.forEach { a -> edit.putFloat(keyOf(a), (p.getFloat(keyOf(a), 0f) * FADE) - 1f) }
+        if (p.all.size > MAX) p.all.entries.sortedBy { kotlin.math.abs((it.value as? Float) ?: 0f) }.take(p.all.size - MAX).forEach { edit.remove(it.key) }
+        edit.apply()
+    }
+
+    fun clear() { prefs?.edit()?.clear()?.apply() }
+}

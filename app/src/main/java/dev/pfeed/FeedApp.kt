@@ -46,6 +46,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         super.onCreate()
         dev.pfeed.player.ResumePoints.init(this)
         dev.pfeed.player.Moments.init(this)
+        dev.pfeed.player.ActPrefs.init(this)
         dev.pfeed.player.ComicPages.init(this)
         dev.pfeed.source.net.GeoBlock.init(this)
         CrashLog.install(this)

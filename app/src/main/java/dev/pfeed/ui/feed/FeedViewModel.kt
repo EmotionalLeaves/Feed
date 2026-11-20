@@ -551,9 +551,13 @@ class FeedViewModel @Inject constructor(
     suspend fun favouriteAct(item: MediaItem): Pair<String, Long>? {
         val acts = dev.pfeed.domain.reco.VideoExtras.of(item.key)?.chapters.orEmpty()
         if (acts.map { it.first.lowercase() }.distinct().size < 2) return null
+        // What For You makes of the act's name, plus how that act has actually gone for you.
         val scored = runCatching {
             signals.engine.use { e ->
-                acts.mapNotNull { a -> e.tagVector(a.first)?.let { v -> a to e.interestScore(v) - e.aversion(v) } }
+                acts.map { a ->
+                    val taste = e.tagVector(a.first)?.let { v -> e.interestScore(v) - e.aversion(v) } ?: 0.0
+                    a to taste + ACT_HISTORY_WEIGHT * kotlin.math.tanh(dev.pfeed.player.ActPrefs.score(a.first) / 3.0)
+                }
             }
         }.getOrNull().orEmpty()
         return dev.pfeed.domain.reco.VideoExtras.favourite(scored)
@@ -564,6 +568,7 @@ class FeedViewModel @Inject constructor(
         if (settings.value.privateMode) return
         val v = tally.verdict(durationMs)
         if (v.liked.isEmpty() && v.skipped.isEmpty()) return
+        dev.pfeed.player.ActPrefs.record(v.liked, v.skipped)
         viewModelScope.launch { runCatching { signals.recordActs(v.liked, v.skipped) } }
     }
 
@@ -1183,6 +1188,8 @@ class FeedViewModel @Inject constructor(
         /** Shorter than this on a post is a skip at a glance; this many in a row shakes the feed up. */
         private const val SKIP_RUN_DWELL_MS = 1_500L
         private const val SKIP_RUN_LENGTH = 6
+        /** How much your own history with an act counts toward "your favourite", at most. */
+        private const val ACT_HISTORY_WEIGHT = 0.4
         private const val LOAD_AHEAD = 10
         const val SIMILAR_PREFIX = "~like:"
         private const val LIKED_TAGS_REFRESH_MS = 60_000L

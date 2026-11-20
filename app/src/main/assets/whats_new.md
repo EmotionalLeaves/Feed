@@ -1,3 +1,8 @@
+## 5.34.0 — 2026-11-19
+A favourite act that remembers
+
+- **Your favourite act learns from you directly**: the app now keeps a small tally of each act you sit through or jump over, so the "Jump to …, your favourite" pill gets sharper every time, even for acts For You has never seen as tags. Resetting your taste clears it.
+
 ## 5.33.0 — 2026-11-19
 Watched with your favourites
 
@@ -9,8 +14,3 @@ Following, live
 
 - **Following chip in the Live tab**: shows only the rooms of people you follow who are on now.
 - In Discover's **Live now** row, people you follow come first.
-
-## 5.31.0 — 2026-11-19
-Know when they go live
-
-- **Live alerts inside the app**: while you're in For You on Wi-Fi, the app looks every ten minutes for people you follow who've just come on cam. When one has, you get a quiet banner, "<name> is live now · Watch", which opens their room. No system notifications, as always.

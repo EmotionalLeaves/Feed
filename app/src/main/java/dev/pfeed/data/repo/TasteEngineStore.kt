@@ -52,6 +52,7 @@ class TasteEngineStore @Inject constructor(@ApplicationContext private val conte
 
     suspend fun reset() {
         use { it.resetTaste() }
+        dev.pfeed.player.ActPrefs.clear() // which acts you like is taste too
         scheduleSave()
     }
 
