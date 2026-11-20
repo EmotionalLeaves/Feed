@@ -268,6 +268,37 @@ fun ItemMenuSheet(
                     }
                 }
             }
+            // Performers the title names (studio uploads credit the uploader, not them): follow one and
+            // Following brings her videos from every site.
+            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.performers(item.title).filter { !it.equals(creator, true) } }
+            if (people.isNotEmpty()) {
+                val followsNow by vm.follows.collectAsState()
+                Text(
+                    "IN THIS VIDEO",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp),
+                )
+                FlowRow(
+                    Modifier.padding(start = 12.dp, end = 12.dp, bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    people.forEach { name ->
+                        val on = dev.pfeed.domain.filter.Blocklist.normalize(name) in followsNow.creators
+                        Text(
+                            (if (on) "✓ " else "+ ") + name,
+                            style = MaterialTheme.typography.labelLarge,
+                            color = if (on) androidx.compose.ui.graphics.Color.White else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f),
+                            maxLines = 1,
+                            modifier = Modifier.clip(RoundedCornerShape(50))
+                                .background(if (on) dev.pfeed.ui.theme.BrandGradient else androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)))
+                                .clickable { vm.toggleFollowTag("@$name") }
+                                .padding(horizontal = 12.dp, vertical = 7.dp),
+                        )
+                    }
+                }
+            }
             HorizontalDivider()
 
             // The everyday actions as one row of round buttons; the "less of this" ones as a list below.

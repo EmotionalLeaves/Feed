@@ -28,4 +28,15 @@ class MentionsTest {
         assertNull(Mentions.personName("a b"))
         assertEquals("lena paul", Mentions.personName("Lena  Paul@onlyfans"))
     }
+
+    @Test
+    fun `performers named before or after a studio title`() {
+        assertEquals(listOf("Auhneesh Nicole", "Taysha Sativa"), Mentions.performers("Auhneesh Nicole, Taysha Sativa - Two Baddies Maids Have Threeway Sex"))
+        assertEquals(listOf("Lena Paul", "Abella Danger"), Mentions.performers("Lena Paul & Abella Danger - Lesbian Fun"))
+        assertEquals(listOf("Anna Bell Peaks"), Mentions.performers("Tatted ginger gets plumbed by a monster trunk, Anna Bell Peaks"))
+        // Series names and everyday words aren't people.
+        assertEquals(emptyList<String>(), Mentions.performers("Pervs On Patrol - Roller Dirty 2"))
+        assertEquals(emptyList<String>(), Mentions.performers("Big Tits At Work - Office Fun"))
+        assertEquals(emptyList<String>(), Mentions.performers("Hot Milf - fucked hard"))
+    }
 }
