@@ -1,3 +1,8 @@
+## 5.62.0 — 2026-11-20
+Later, from the queue
+
+- **Coming up** has a clock button: send a queued post to Watch later instead of watching it now, without it counting as a skip.
+
 ## 5.61.0 — 2026-11-20
 One word for one thing
 
@@ -7,8 +12,3 @@ One word for one thing
 From clip to full video
 
 - **Watch the full video** on any clip (long-press menu): opens the video it came from, starting where the clip starts.
-
-## 5.59.0 — 2026-11-20
-Watch later from search
-
-- **Watch later from Search and Discover**: hold any result or tile to put it on Watch later, next to Save.

@@ -1091,6 +1091,12 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch { runCatching { signals.record(item, Signal(SignalType.VIEW, dev.pfeed.domain.reco.Engagement.SKIP_TARGET * AHEAD_SKIP)) } }
     }
 
+    /** "Later" in Coming up: out of the queue and onto Watch later (no skip learned). */
+    fun laterFromQueue(item: MediaItem) {
+        raw.update { list -> list.filter { it.key != item.key } }
+        if (item.key !in watchLater.value) toggleWatchLater(item)
+    }
+
     /** Jump to a post further down the queue (by key): the screen scrolls there. */
     val jumpRequest = MutableStateFlow<String?>(null)
 

@@ -85,6 +85,7 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
@@ -899,7 +900,7 @@ private fun ComingUpSheet(vm: FeedViewModel, onDismiss: () -> Unit) {
         Column(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
             Text("Coming up", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 4.dp))
             Text(
-                "Tap one to jump to it. Pass over what you don't fancy: For You takes it as a skip.",
+                "Tap one to jump to it. The clock puts it on Watch later; × passes it over (For You takes that as a skip).",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.White.copy(alpha = 0.6f),
                 modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
@@ -926,6 +927,9 @@ private fun ComingUpSheet(vm: FeedViewModel, onDismiss: () -> Unit) {
                                 maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f),
                             )
+                        }
+                        IconButton(onClick = { vm.laterFromQueue(item); list = list.filter { it.key != item.key } }) {
+                            Icon(Icons.Filled.WatchLater, contentDescription = "Watch later instead", tint = Color.White.copy(alpha = 0.7f))
                         }
                         IconButton(onClick = { vm.skipAhead(item); list = list.filter { it.key != item.key } }) {
                             Icon(Icons.Filled.Close, contentDescription = "Pass this one over", tint = Color.White.copy(alpha = 0.7f))

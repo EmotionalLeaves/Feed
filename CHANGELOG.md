@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.62.0 — 2026-11-20
+
+Later, from the queue
+
+- **Coming up** has a clock button: send a queued post to Watch later instead of watching it now, without it counting as a skip.
+
 ## 5.61.0 — 2026-11-20
 
 One word for one thing
