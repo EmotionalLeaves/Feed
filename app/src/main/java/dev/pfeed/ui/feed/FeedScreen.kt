@@ -111,6 +111,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -227,6 +228,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
     val pagerScope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     var menuFor by remember { mutableStateOf<MediaItem?>(null) }
+    var comingUp by remember { mutableStateOf(false) }
     // A creator's or a tag's page opens as a profile: a header and a grid of everything in it.
     val creatorPage = vm.tag?.startsWith("@") == true
     val profilePage = vm.tag != null
@@ -575,6 +577,13 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 modifier = Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp, start = 48.dp, end = 48.dp),
             )
         }
+        val jumpAsked by vm.jumpRequest.collectAsStateWithLifecycle()
+        LaunchedEffect(jumpAsked) {
+            val key = jumpAsked ?: return@LaunchedEffect
+            vm.jumpRequest.value = null
+            val at = items.indexOfFirst { it.key == key }
+            if (at >= 0) pagerState.scrollToPage(at)
+        }
         val viewerAsked by vm.openViewerRequest.collectAsStateWithLifecycle()
         LaunchedEffect(viewerAsked) { viewerAsked?.let { vm.openViewerRequest.value = null; nav.navigate(Routes.viewer(it)) } }
         val asked by vm.thisOrThatRequest.collectAsStateWithLifecycle()
@@ -874,7 +883,56 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onMoreLikeThis = { nav.openTag(vm.similarRoute(item)) },
             onOpenPage = { nav.openTag(it) },
             onForTheRoad = { vm.takeForTheRoad(items.indexOfFirst { it.key == item.key }.coerceAtLeast(0)) },
+            onComingUp = if (vm.isMainFeed) ({ comingUp = true }) else null,
         )
+    }
+    if (comingUp) ComingUpSheet(vm, onDismiss = { comingUp = false })
+}
+
+/** "Coming up": the next posts in the queue; tap one to go there, or pass it over before it comes. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ComingUpSheet(vm: FeedViewModel, onDismiss: () -> Unit) {
+    var list by remember { mutableStateOf(vm.upcoming()) }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(Modifier.navigationBarsPadding().padding(bottom = 12.dp)) {
+            Text("Coming up", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 20.dp, bottom = 4.dp))
+            Text(
+                "Tap one to jump to it. Pass over what you don't fancy: For You takes it as a skip.",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.White.copy(alpha = 0.6f),
+                modifier = Modifier.padding(start = 20.dp, end = 20.dp, bottom = 12.dp),
+            )
+            if (list.isEmpty()) Text("Nothing queued yet: keep scrolling.", modifier = Modifier.padding(20.dp))
+            androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 520.dp)) {
+                items(list.size, key = { list[it].key }) { i ->
+                    val item = list[i]
+                    Row(
+                        Modifier.fillMaxWidth().clickable { vm.jumpRequest.value = item.key; onDismiss() }.padding(horizontal = 16.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        coil.compose.AsyncImage(
+                            model = item.thumbnailUrl,
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.size(88.dp, 50.dp).clip(RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = 0.08f)),
+                        )
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(item.title ?: Display.source(item, vm.sourceName(item.sourceId)), maxLines = 2, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                listOfNotNull(Display.creator(item)?.let { "@$it" }, item.durationSec?.let { dev.pfeed.ui.common.formatDuration(it) }, Display.source(item, vm.sourceName(item.sourceId))).joinToString(" · "),
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.55f),
+                            )
+                        }
+                        IconButton(onClick = { vm.skipAhead(item); list = list.filter { it.key != item.key } }) {
+                            Icon(Icons.Filled.Close, contentDescription = "Pass this one over", tint = Color.White.copy(alpha = 0.7f))
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

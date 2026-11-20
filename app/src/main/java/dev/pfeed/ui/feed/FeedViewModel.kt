@@ -979,6 +979,23 @@ class FeedViewModel @Inject constructor(
         offer("Moment saved at ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}", "Undo") { dev.pfeed.player.Moments.remove(item.key, atMs) }
     }
 
+    /** What's queued after the post you're on (for "Coming up"). */
+    fun upcoming(n: Int = COMING_UP): List<MediaItem> = items.value.drop(lastSettled + 1).take(n)
+
+    /**
+     * Passed over in "Coming up" before it was shown: out of the queue, and taken as a skip (a
+     * small "not this", not a block).
+     */
+    fun skipAhead(item: MediaItem) {
+        raw.update { list -> list.filter { it.key != item.key } }
+        seen.mark(item.key)
+        if (settings.value.privateMode) return
+        viewModelScope.launch { runCatching { signals.record(item, Signal(SignalType.VIEW, dev.pfeed.domain.reco.Engagement.SKIP_TARGET * AHEAD_SKIP)) } }
+    }
+
+    /** Jump to a post further down the queue (by key): the screen scrolls there. */
+    val jumpRequest = MutableStateFlow<String?>(null)
+
     /** Settings → Up next card. */
     val upNextCardOn: Boolean get() = settings.value.upNextCard
 
@@ -1193,6 +1210,9 @@ class FeedViewModel @Inject constructor(
         /** Shorter than this on a post is a skip at a glance; this many in a row shakes the feed up. */
         private const val SKIP_RUN_DWELL_MS = 1_500L
         private const val SKIP_RUN_LENGTH = 6
+        private const val COMING_UP = 12
+        /** Passing one over before it's shown says less than skipping it on screen. */
+        private const val AHEAD_SKIP = 0.6
         /** How much your own history with an act counts toward "your favourite", at most. */
         private const val ACT_HISTORY_WEIGHT = 0.4
         private const val LOAD_AHEAD = 10

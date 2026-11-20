@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.42.0 — 2026-11-19
+
+Coming up
+
+- **Coming up** (long-press menu): see the next dozen posts queued in your feed. Tap one to jump straight to it, or pass over the ones you don't fancy before they arrive. For You takes those as a skip.
+
 ## 5.41.0 — 2026-11-19
 
 XVideos comments

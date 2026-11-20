@@ -1,3 +1,8 @@
+## 5.42.0 — 2026-11-19
+Coming up
+
+- **Coming up** (long-press menu): see the next dozen posts queued in your feed. Tap one to jump straight to it, or pass over the ones you don't fancy before they arrive. For You takes those as a skip.
+
 ## 5.41.0 — 2026-11-19
 XVideos comments
 
@@ -7,8 +12,3 @@ XVideos comments
 Your call
 
 - **Settings → Playback** has two new switches: **Up next card** and **Mark the bits I go back to** (auto-moments). Both are on by default; turn either off if you'd rather not have it.
-
-## 5.39.0 — 2026-11-19
-Commenters point the way
-
-- **Commenters point to…**: times written in a video's comments ("12:31 omg") are people's own bookmarks. When the site keeps no heatmap, the time most commenters point to becomes the video's best part: the pill says "Commenters point to 12:31", and Highlights starts there.
