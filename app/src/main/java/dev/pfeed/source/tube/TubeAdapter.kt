@@ -63,6 +63,24 @@ class TubeAdapter @Inject constructor(
         return EntryPage(items, next)
     }
 
+    /**
+     * What's at the top of each of [hosts]' own "top rated" lists right now (first page each, 15 s
+     * at most per site), for Discover. Sites you've switched off are skipped.
+     */
+    suspend fun topOf(hosts: List<String>): List<MediaItem> = coroutineScope {
+        val on = activeSites().map { it.host }.toSet()
+        hosts.filter { it in on }.mapNotNull { TubeSite.byHost(it) }.map { site ->
+            async {
+                withTimeoutOrNull(TOP_TIMEOUT_MS) {
+                    attempt {
+                        val listed = site.items(listWithMirrors(site, site.listUrl("top", 0)), "top")
+                        if (site.checkTagsFirst) checked(site, listed.take(TAG_CHECK_SEARCH)) else listed
+                    }.getOrNull()
+                }.orEmpty()
+            }
+        }.awaitAll().flatten()
+    }
+
     private val tagGate = kotlinx.coroutines.sync.Semaphore(4)
 
     /**
@@ -245,6 +263,7 @@ class TubeAdapter @Inject constructor(
 
         private const val RESOLVED_TTL_MS = 20 * 60_000L
         private const val TAG_CHECK_LIMIT = 16
+        private const val TOP_TIMEOUT_MS = 15_000L
         private const val TAG_CHECK_SEARCH = 8
         const val SOURCE_ID = "tube"
         private const val MAX_PAGES = 30

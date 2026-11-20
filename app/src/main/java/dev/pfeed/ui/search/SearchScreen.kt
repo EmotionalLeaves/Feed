@@ -390,6 +390,7 @@ class SearchViewModel @Inject constructor(
             }.getOrDefault(emptyList()).map { it.replace('_', ' ') }
             loadTopicRows((tastes + _interests.value).distinct().ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
             loadLiveRow()
+            loadTopRow()
             // Because you liked …: what the site showed beside videos you enjoyed lately.
             // Watched with your favourites: beside two or more of the videos you enjoyed, on their sites.
             dev.pfeed.domain.reco.Related.cowatched().takeIf { it.size >= 4 }?.let { list ->
@@ -398,6 +399,34 @@ class SearchViewModel @Inject constructor(
             dev.pfeed.domain.reco.Related.recentlyEnjoyed().take(2).forEach { (title, list) ->
                 val name = "Because you liked “" + title.take(36).trim() + (if (title.length > 36) "…" else "") + "”"
                 _topicRows.update { rows -> rows.filter { it.first != name } + (name to list) }
+            }
+        }
+    }
+
+    /**
+     * Top on the sites: what's at the top of the sites' own "top rated" lists, from the sites you
+     * watch most plus a few others (a different few each day), best for you first.
+     */
+    private fun loadTopRow() {
+        val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) as? dev.pfeed.source.tube.TubeAdapter ?: return
+        viewModelScope.launch {
+            val history = runCatching { library.items(dev.pfeed.data.repo.LibraryKind.HISTORY).first() }.getOrDefault(emptyList())
+            val yours = history.filter { it.sourceId == tube.id }.groupingBy { it.id.substringBefore('/') }.eachCount()
+                .entries.sortedByDescending { it.value }.map { it.key }.take(TOP_ROW_SITES / 2)
+            val others = dev.pfeed.source.tube.TubeSite.ACTIVE.map { it.host }.filter { it !in yours }
+                .shuffled(kotlin.random.Random(System.currentTimeMillis() / 86_400_000L))
+            val hosts = (yours + others).take(TOP_ROW_SITES)
+            val blocklist = runCatching { blocks.current() }.getOrNull()
+            val seen = runCatching { library.keys(dev.pfeed.data.repo.LibraryKind.HISTORY).first() }.getOrDefault(emptySet())
+            val found = runCatching { tube.topOf(hosts) }.getOrDefault(emptyList())
+                .filter { it.thumbnailUrl != null && it.key !in seen && blocklist?.allows(it) != false }
+                .distinctBy { dev.pfeed.domain.reco.SameVideo.query(it) ?: it.key }
+            if (found.size < 4) return@launch
+            val ranked = forYouOrder(found).take(12)
+            _topicRows.update { rows ->
+                val rest = rows.filter { it.first != TOP_ROW }
+                val live = rest.filter { it.first == LIVE_ROW }
+                live + (TOP_ROW to ranked) + rest.filter { it.first != LIVE_ROW }
             }
         }
     }
@@ -989,10 +1018,10 @@ private fun SuggestionsPane(
                 TextButton(onClick = {
                     when {
                         topic == LIVE_ROW -> onLive()
-                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW -> onTopicItem(topic, 0)
+                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW -> onTopicItem(topic, 0)
                         else -> onPick(topic)
                     }
-                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW) "Play" else "See all") }
+                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW) "Play" else "See all") }
             }
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }
@@ -1498,6 +1527,10 @@ private fun FiltersSheet(
 /** Discover's row of people live right now. */
 private const val LIVE_ROW = "Live now"
 private const val COWATCHED_ROW = "Watched with your favourites"
+/** Discover's row of the sites' own top-rated videos. */
+private const val TOP_ROW = "Top on the sites"
+/** How many sites' top lists that row draws from. */
+private const val TOP_ROW_SITES = 8
 /** Not watched for this long: a saved post comes back round on Discover. */
 /** Named in this many videos you watched: suggested on Discover's "Creators for you". */
 private const val PERFORMER_FOR_YOU_MIN = 3

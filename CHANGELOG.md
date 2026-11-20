@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.86.0 — 2026-11-20
+
+Top on the sites
+
+- **Top on the sites** on Discover: what's at the top of the sites' own top-rated lists right now, from the sites you watch most plus a few others (a different few each day), best for you first and without what you've already watched. Tap Play for all of it.
+
 ## 5.85.0 — 2026-11-20
 
 Your sites first
