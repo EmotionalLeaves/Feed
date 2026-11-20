@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.84.0 — 2026-11-20
+
+Lighter warm-up
+
+- **Pictures ahead are warmed at screen size**: the next posts' pictures are loaded ahead at the size they're shown, not as full originals. Same instant swipes, a fraction of the memory. (After 5.83, a search session on the test phone went from 880 MB to under 400 MB.)
+
 ## 5.83.0 — 2026-11-20
 
 Lighter on memory with big pictures

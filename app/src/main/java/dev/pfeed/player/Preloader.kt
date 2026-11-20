@@ -37,7 +37,11 @@ class Preloader @Inject constructor(
         if (dev.pfeed.source.parse.MediaTypes.classify(url) == dev.pfeed.domain.model.MediaType.VIDEO) return
         if (!warmed.add(url)) return
         if (warmed.size > MAX_WARMED) warmed.clear()
-        context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).build())
+        // Warmed at the size it's shown at (the screen's width; tall pages up to three screens), not the
+        // original's: a few originals decoding ahead at once is how memory spiked at the feed's start.
+        val dm = context.resources.displayMetrics
+        val w = minOf(dm.widthPixels, dm.heightPixels).coerceAtLeast(720)
+        context.imageLoader.enqueue(ImageRequest.Builder(context).data(url).size(w, w * TALL_SCREENS).build())
     }
 
     /** URLs already handed to the image loader, so re-settling on a page doesn't re-enqueue them. */
@@ -75,5 +79,7 @@ class Preloader @Inject constructor(
     companion object {
         private const val DEFAULT_BYTES = 2_500_000L
         private const val MAX_WARMED = 500
+        /** How tall a warmed picture may be, in screen widths (comic pages and tall photos). */
+        private const val TALL_SCREENS = 4
     }
 }
