@@ -1,3 +1,8 @@
+## 5.79.0 — 2026-11-20
+Hide a word
+
+- **Hide a word from the title**: the long-press menu's Hide a tag… now also offers the title's words when a post has few tags (most tube videos). Pick one and posts whose titles say it are hidden from then on.
+
 ## 5.78.0 — 2026-11-20
 Hidden tags cover titles too
 
@@ -9,8 +14,3 @@ Two more sites; memory check
 
 - **BigTitsLust and Nudez** join (41 tube sites). AlotPorn plays directly on the test phone.
 - 5.76 didn't publish: on the test phone the app was closed for using too much memory late in a long test session. The device test now records memory after each step, to find what grows it (fix to follow).
-
-## 5.76.0 — 2026-11-20
-AlotPorn: full-length scenes
-
-- **AlotPorn** joins: mostly full-length scenes (30 minutes and more), with preview clips in the grids, genres as tags, and HD where the site has it. 38 tube sites.

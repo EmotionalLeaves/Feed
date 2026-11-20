@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.79.0 — 2026-11-20
+
+Hide a word
+
+- **Hide a word from the title**: the long-press menu's Hide a tag… now also offers the title's words when a post has few tags (most tube videos). Pick one and posts whose titles say it are hidden from then on.
+
 ## 5.78.0 — 2026-11-20
 
 Hidden tags cover titles too

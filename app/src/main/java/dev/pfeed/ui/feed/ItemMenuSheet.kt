@@ -98,7 +98,14 @@ fun ItemMenuSheet(
     val context = LocalContext.current
     var pickTag by remember { mutableStateOf<String?>(null) } // "block" while picking a tag to hide
     val creator = remember(item.key) { Display.creator(item) }
-    val tags = remember(item.key) { Display.tags(item, max = 24) }
+    val tags = remember(item.key) {
+        val own = Display.tags(item, max = 24)
+        // Tube videos rarely carry tags; a hidden word hides titles that say it, so offer the title's words too.
+        if (own.size >= 8) own
+        else own + dev.pfeed.domain.reco.Features.titleWords(item.title).map { it.removePrefix("w:") }
+            .filter { w -> w.length >= 4 && own.none { it.second.equals(w, true) || it.first.equals(w, true) } }
+            .take(12).map { it to it }
+    }
     val source = Display.source(item, vm.sourceName(item.sourceId))
 
     ModalBottomSheet(
@@ -201,7 +208,7 @@ fun ItemMenuSheet(
             }
             if (mode != null) {
                 ListItem(
-                    headlineContent = { Text("Hide posts tagged…", fontWeight = FontWeight.Bold) },
+                    headlineContent = { Text("Hide posts tagged or titled…", fontWeight = FontWeight.Bold) },
                     leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
                     colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
                     modifier = Modifier.clickable { pickTag = null },
@@ -443,7 +450,7 @@ fun ItemMenuSheet(
                 onDismiss()
             }
             MenuRow("Not interested", Icons.Filled.ThumbDown, "Show fewer posts like this") { vm.notInterested(item); onDismiss() }
-            if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag") { pickTag = "block" }
+            if (tags.isNotEmpty()) MenuRow("Hide a tag…", Icons.Filled.Block, "Never show posts with that tag or word in the title") { pickTag = "block" }
             if (creator != null) {
                 MenuRow("Block @$creator", Icons.Filled.PersonOff, "Never show their posts") { vm.blockCreator(item); onDismiss() }
             }
