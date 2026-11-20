@@ -306,7 +306,13 @@ fun ItemMenuSheet(
                     onOpenPage(actNow.lowercase()); onDismiss()
                 }
                 if (item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] != "1" && (item.durationSec ?: 0) > 45) {
-                    MenuRow("Save a clip", Icons.Filled.ContentCut, "The next 30 seconds from here, kept on your phone as a clip of its own (Saved → Clips)") { ClipGrab.request.value = item.key; onDismiss() }
+                    val bestAt by androidx.compose.runtime.produceState<Long?>(null, item.key) { value = vm.bestClipStartMs(item) }
+                    bestAt?.let { at ->
+                        MenuRow("Clip the best part · " + dev.pfeed.ui.common.formatDuration((at / 1000).toInt()), Icons.Filled.LocalFireDepartment, "30 seconds from there, saved without scrubbing to it") {
+                            ClipGrab.at.value = item.key to at; onDismiss()
+                        }
+                    }
+                    MenuRow("Save a clip", Icons.Filled.ContentCut, "30 seconds from just before now, kept on your phone as a clip of its own (Saved → Clips)") { ClipGrab.request.value = item.key; onDismiss() }
                 }
                 MenuRow("Save this moment", Icons.Filled.BookmarkAdd, "Marks where you are: it shows on the scrub bar, and Saved → Moments plays the video from there") { MomentGrab.request.value = item.key; onDismiss() }
                 MenuRow("Save this frame", Icons.Filled.PhotoCamera, "Keep this exact moment as a picture, in Saved → Frames") { FrameGrab.request.value = item.key; onDismiss() }

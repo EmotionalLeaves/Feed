@@ -453,7 +453,16 @@ fun VideoPage(
         ClipGrab.request.value = null
         val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
         val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
-        vm.saveClip(item, s, p.currentPosition)
+        // A few seconds before now too: you reach for the menu just after the good bit starts.
+        vm.saveClip(item, s, (p.currentPosition - CLIP_LEAD_MS).coerceAtLeast(0L))
+    }
+    val clipAtAsk by ClipGrab.at.collectAsState()
+    LaunchedEffect(clipAtAsk) {
+        val (key, at) = clipAtAsk ?: return@LaunchedEffect
+        if (key != item.key) return@LaunchedEffect
+        ClipGrab.at.value = null
+        val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
+        vm.saveClip(item, s, at)
     }
     // "Save this frame": copy what's on the video surface right now into Saved (a "Frames" collection).
     var playerView by remember { mutableStateOf<PlayerView?>(null) }
@@ -736,6 +745,7 @@ private const val BEST_OFFER_MS = 9_000L
 private const val HIGHLIGHT_TICK_MS = 250L
 private const val ACT_TICK_MS = 500L
 private const val SCENES_AFTER_MS = 6_000L
+private const val CLIP_LEAD_MS = 6_000L
 /** "Up next" shows this long before a full scene ends. */
 private const val UP_NEXT_MS = 8_000L
 private const val UP_NEXT_MIN_MS = 3 * 60_000L

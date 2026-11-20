@@ -1009,6 +1009,13 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** The best place in [item] to clip, by what's known: your moment, your favourite act, the site's heat, the comments. */
+    suspend fun bestClipStartMs(item: MediaItem): Long? =
+        dev.pfeed.player.Moments.of(item.key).firstOrNull()
+            ?: favouriteAct(item)?.second
+            ?: dev.pfeed.domain.reco.BestPart.of(item.key)
+            ?: dev.pfeed.domain.reco.VideoExtras.of(item.key)?.comments?.let { dev.pfeed.domain.reco.CommentMoments.of(it, item.durationSec) }?.firstOrNull()
+
     /** "Save this moment": marks [atMs] in the video and keeps it in Saved → Moments. */
     fun saveMoment(item: MediaItem, atMs: Long) {
         dev.pfeed.player.Moments.add(item.key, atMs)

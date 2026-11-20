@@ -1,3 +1,9 @@
+## 5.48.0 — 2026-11-19
+Clip the best part
+
+- **Clip the best part · 12:31** in the long-press menu: one tap saves 30 seconds from the best place the app knows (your moment, your favourite act, the site's most-rewatched stretch, or where commenters point), with no scrubbing.
+- **Save a clip** now starts a few seconds before where you are, since you usually reach for it just after the good bit begins.
+
 ## 5.47.0 — 2026-11-19
 Clips leave with you
 
@@ -9,8 +15,3 @@ Clip it sideways
 
 - **Clip 30 s** button in the sideways player, next to Save moment.
 - The phone test in CI now cuts a real clip from a live site every build, so Save a clip keeps working.
-
-## 5.45.0 — 2026-11-19
-Save a clip
-
-- **Save a clip** (long-press menu on a video): cuts the next 30 seconds from where you are into a small file on your phone, kept in **Saved → Clips** as a clip of its own. It plays offline and loops, and only that stretch is fetched, so a clip of a long scene is a few MB, not the whole video.
