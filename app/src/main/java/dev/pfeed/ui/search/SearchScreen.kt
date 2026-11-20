@@ -284,8 +284,10 @@ class SearchViewModel @Inject constructor(
                 .filterNot { it.startsWith("@") || it.startsWith("creator:") || dev.pfeed.domain.reco.Features.isMeta(it) }
                 .map { it.removePrefix("w:").replace('_', ' ').trim() }
                 .filter { it.length in 2..24 }
+                // The acts you sit through most (from the sites' own act names), too.
+                .let { dev.pfeed.player.ActPrefs.top(3) + it }
                 .distinct()
-                .take(10)
+                .take(12)
             // One row per taste For You knows (named from the map, so two rows aren't the same
             // taste twice), then your strongest tags. Nothing learned yet: popular topics instead,
             // so a new install still has pictures to tap.

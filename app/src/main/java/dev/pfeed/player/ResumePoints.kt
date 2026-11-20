@@ -129,6 +129,12 @@ object ActPrefs {
 
     fun score(act: String): Double = prefs?.getFloat(keyOf(act), 0f)?.toDouble() ?: 0.0
 
+    /** The acts that have gone best for you, best first (only ones clearly liked). */
+    fun top(n: Int): List<String> =
+        prefs?.all?.entries?.mapNotNull { (k, v) -> (v as? Float)?.takeIf { it >= TOP_MIN }?.let { k to it } }
+            ?.sortedByDescending { it.second }?.take(n)?.map { it.first }.orEmpty()
+    private const val TOP_MIN = 1.5f
+
     fun record(liked: List<String>, skipped: List<String>) {
         if (dev.pfeed.domain.privacy.Incognito.active) return
         val p = prefs ?: return

@@ -101,6 +101,13 @@ fun ScrubBar(
     val fraction = if (dragging) dragFraction else (position.toFloat() / duration).coerceIn(0f, 1f)
     val trackHeight by animateDpAsState(if (dragging) 6.dp else 2.dp, label = "scrubTrack")
 
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    var snappedTo by remember(player) { mutableStateOf<Float?>(null) }
+    val marks = remember(duration, scenes, moments, extras) {
+        if (duration <= 0) emptyList()
+        else (scenes + moments + extras?.chapters.orEmpty().map { it.second }).map { (it.toFloat() / duration).coerceIn(0f, 1f) }.distinct()
+    }
+    val marksNow by androidx.compose.runtime.rememberUpdatedState(marks)
     BoxWithConstraints(
         modifier
             .fillMaxWidth()
@@ -123,7 +130,12 @@ fun ScrubBar(
                     },
                     onHorizontalDrag = { change, _ ->
                         change.consume()
-                        dragFraction = (change.position.x / size.width).coerceIn(0f, 1f)
+                        val raw = (change.position.x / size.width).coerceIn(0f, 1f)
+                        // Near a mark (a scene cut, an act, a moment of yours), the thumb settles on it.
+                        val near = marksNow.minByOrNull { kotlin.math.abs(it - raw) }?.takeIf { kotlin.math.abs(it - raw) <= SNAP }
+                        if (near != null && near != snappedTo) haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.TextHandleMove)
+                        snappedTo = near
+                        dragFraction = near ?: raw
                         seekTo(dragFraction, final = false)
                     },
                     onDragEnd = { finish() },
@@ -218,6 +230,8 @@ fun ScrubBar(
 private val TOUCH_HEIGHT = 28.dp
 private val THUMB = 14.dp
 private const val SEEK_THROTTLE_MS = 60L
+/** How close (as a share of the bar) the finger must come to a mark to settle on it. */
+private const val SNAP = 0.012f
 private const val REWIND_THRESHOLD_MS = 1_000L
 
 internal fun formatTime(ms: Long): String {
