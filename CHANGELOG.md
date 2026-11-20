@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.50.0 — 2026-11-20
+
+All caught up
+
+- **Following knows where you left off**: going through Following, when you reach the first post from before your last visit, a note says you're all caught up, so you know everything above it is new to you.
+
 ## 5.49.0 — 2026-11-19
 
 Times in comments you can tap

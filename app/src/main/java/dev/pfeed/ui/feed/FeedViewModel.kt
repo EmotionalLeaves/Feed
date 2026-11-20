@@ -291,8 +291,32 @@ class FeedViewModel @Inject constructor(
 
     fun setMode(mode: FeedMode) {
         if (mode == _mode.value) return
+        // Leaving Following: everything up to now counts as seen there.
+        if (_mode.value == FeedMode.FOLLOWING) markFollowingSeen()
+        if (mode == FeedMode.FOLLOWING) { followingSeenAt = followingPrefs.getLong(FOLLOWING_SEEN, 0L); caughtUpSaid = false }
         _mode.value = mode
         restart()
+    }
+
+    private val followingPrefs by lazy { app.getSharedPreferences("following", android.content.Context.MODE_PRIVATE) }
+    /** When you last went through Following (posts older than this you'd seen come out). */
+    private var followingSeenAt = 0L
+    private var caughtUpSaid = false
+
+    private fun markFollowingSeen() {
+        if (settings.value.privateMode) return
+        followingPrefs.edit().putLong(FOLLOWING_SEEN, System.currentTimeMillis()).apply()
+    }
+
+    /** In Following: reaching the first post from before your last visit says you're caught up, once. */
+    private fun noticeCaughtUp(list: List<MediaItem>, index: Int) {
+        if (!isMainFeed || _mode.value != FeedMode.FOLLOWING || caughtUpSaid || followingSeenAt == 0L || index == 0) return
+        val here = list.getOrNull(index)?.publishedAt?.toEpochMilli() ?: return
+        val before = list.getOrNull(index - 1)?.publishedAt?.toEpochMilli() ?: return
+        if (here < followingSeenAt && before >= followingSeenAt) {
+            caughtUpSaid = true
+            offer("You're all caught up: from here on, posts you've had the chance to see", "OK") {}
+        }
     }
 
     fun refresh() = restart()
@@ -478,6 +502,7 @@ class FeedViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        if (isMainFeed && _mode.value == FeedMode.FOLLOWING) markFollowingSeen()
         session?.close()
         super.onCleared()
     }
@@ -663,6 +688,7 @@ class FeedViewModel @Inject constructor(
             if (!settings.value.privateMode) viewModelScope.launch { library.add(LibraryKind.HISTORY, item) }
         }
         if (index >= list.size - LOAD_AHEAD) loadMore()
+        noticeCaughtUp(list, index)
         preloadAround(list, index)
     }
 
@@ -670,6 +696,7 @@ class FeedViewModel @Inject constructor(
         if (isVisible == visible) return
         visible = isVisible
         if (isVisible) enteredAt = SystemClock.elapsedRealtime() else finishCurrent()
+        if (!isVisible && isMainFeed && _mode.value == FeedMode.FOLLOWING && caughtUpSaid) markFollowingSeen()
     }
 
     /** For You posts skipped at a glance, one after another (cleared by anything you stay on). */
@@ -1266,6 +1293,7 @@ class FeedViewModel @Inject constructor(
         private const val SKIP_RUN_DWELL_MS = 1_500L
         private const val SKIP_RUN_LENGTH = 6
         private const val COMING_UP = 12
+        private const val FOLLOWING_SEEN = "seen_at"
         /** Passing one over before it's shown says less than skipping it on screen. */
         private const val AHEAD_SKIP = 0.6
         /** How much your own history with an act counts toward "your favourite", at most. */
