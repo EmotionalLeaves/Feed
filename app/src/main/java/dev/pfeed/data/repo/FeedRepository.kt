@@ -364,7 +364,8 @@ class FeedSession(
         if (mode == FeedMode.FOLLOWING) {
             // Also a video that names someone you follow, whoever uploaded it: a performer you follow
             // turns up from every site, not only from the one account you followed her on.
-            val people = follows.creators.mapNotNull(dev.pfeed.domain.reco.Mentions::personName).toSet()
+            // (Followed tags of two words or more count in titles too: a "big tits" video is one.)
+            val people = (follows.creators + follows.tags).mapNotNull(dev.pfeed.domain.reco.Mentions::personName).toSet()
             items = items.filter { item ->
                 item.creator?.let { Blocklist.normalize(it) in follows.creators } == true ||
                     item.tags.any { Blocklist.normalize(it) in follows.tags } ||
