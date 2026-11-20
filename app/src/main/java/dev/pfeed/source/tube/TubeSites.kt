@@ -116,7 +116,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Xozilla, Analdin, KatesTube) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -183,6 +183,7 @@ sealed class TubeSite(val host: String, val label: String) {
         /** Highest "quality":"720" style pick from a list of {videoUrl, quality} objects. */
         /** Tallest MP4 picked (1080, or 480 with Data saver on); adaptive streams are capped by the player. */
         @Volatile var maxHeight: Int = 1080
+        private val KVS_FILE = Regex("""\b(video_(?:alt_)?url\d*)\s*:\s*'(https://[^']+)'""")
 
         internal fun bestOf(list: JsonArray, site: String = ""): TubeStream? = list.mapNotNull { it as? JsonObject }
             .mapNotNull { o ->
@@ -604,6 +605,26 @@ sealed class TubeSite(val host: String, val label: String) {
         return hits.mapIndexed { i, m ->
             m.groupValues[1] to body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 6000))
         }
+    }
+
+    /** KVS flashvars: video_url, video_alt_url, video_alt_url2… with their "720p" labels; the best up to [maxHeight]. */
+    protected fun kvsBest(html: String): TubeStream? {
+        val files = KVS_FILE.findAll(html).map { m ->
+            val key = m.groupValues[1]
+            val q = Regex(Regex.escape(key) + """_text\s*:\s*'(\d{3,4})p""").find(html)?.groupValues?.get(1)?.toIntOrNull() ?: 360
+            q to unescape(m.groupValues[2])
+        }.filter { it.second.startsWith("https://") }.toList()
+        if (files.isEmpty()) return null
+        val pick = files.filter { it.first <= maxHeight }.maxByOrNull { it.first } ?: files.minBy { it.first }
+        return TubeStream(pick.second, "video/mp4")
+    }
+
+    /** Category/tag links in the video's own block (from "Categories:" on), without hashes and stray words. */
+    protected fun kvsOwnTags(html: String, tag: Regex): List<String> {
+        val i = html.indexOf("Categories:").takeIf { it >= 0 } ?: html.indexOf("Tags:").takeIf { it >= 0 } ?: return emptyList()
+        return tag.findAll(html.substring(i, minOf(html.length, i + 3000))).map { it.groupValues[1] }
+            .filter { it.length > 2 && !it.matches(Regex("[0-9a-f]{20,}")) }
+            .map { it.replace('-', ' ') }.distinct().take(30).toList()
     }
 
     /** Best "quality → url" pick up to 1080p (4K is too heavy for a phone feed). */
@@ -1071,6 +1092,95 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun pageTags(pageHtml: String): List<String> =
             TAG.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') }.distinct().take(30).toList()
         override fun embedUrl(id: String) = "https://zbporn.com/embed/$id/"
+    }
+
+    /**
+     * KVS's stock theme (Xozilla, Analdin): each listing link carries its preview clip (vthumb), the
+     * thumbnail is lazy-loaded (data-original), the length sits in a comment; the video page has
+     * video_url / video_alt_url with their quality, and the video's own categories under "Categories:".
+     */
+    abstract class KvsStock(host: String, label: String) : TubeSite(host, label) {
+        private val base = "https://www.$host"
+        private fun pg(page: Int) = if (page == 0) "" else "${page + 1}/"
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "$base/latest-updates/${pg(page)}"
+            "top" -> "$base/top-rated/${pg(page)}"
+            else -> "$base/search/${enc(section.lowercase().trim()).replace("+", "-")}/${pg(page)}"
+        }
+        private val esc = Regex.escape(host)
+        private val MARK = Regex("""href="(https://www\.$esc/videos/(\d+)/[^"]*)"[^>]*?\svthumb="(https://[^"]+)"""")
+        private val IMG = Regex("""data-original="(https://[^"]+\.jpg)"""")
+        private val TITLE = Regex("""<strong class="title">\s*([^<]+?)\s*</strong>""")
+        private val ALT = Regex("""\balt="([^"]+)"""")
+        private val DUR = Regex("""class="duration">\s*([^<]+?)\s*<""")
+        private val TAG = Regex("""href="https://www\.$esc/(?:tags|categories)/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (_, c) ->
+            val m = MARK.find(c) ?: return@mapNotNull null
+            TubeVideo(
+                id = m.groupValues[2],
+                title = (ALT.find(c)?.groupValues?.get(1) ?: TITLE.find(c)?.groupValues?.get(1))?.let(::unescape)?.trim()?.removeSuffix("...")?.trim()?.ifEmpty { null },
+                pageUrl = m.groupValues[1],
+                thumb = IMG.find(c)?.groupValues?.get(1),
+                durationSec = duration(DUR.find(c)?.groupValues?.get(1)?.replace(Regex("""(\d+)m:(\d+)s"""), "$1:$2")),
+                preview = m.groupValues[3].trimEnd('/'),
+            )
+        }.distinctBy { it.id }
+
+        override fun stream(pageHtml: String): TubeStream? = kvsBest(pageHtml)
+
+        /** The video's own categories and tags (not the site menu further down). */
+        override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG)
+
+        override fun embedUrl(id: String) = "$base/embed/$id/"
+    }
+
+    /** Xozilla: big studio catalogue on KVS's stock theme. */
+    object Xozilla : KvsStock("xozilla.xxx", "Xozilla")
+
+    /** Analdin: studio scenes, KVS stock theme, with a scrub-preview timeline. */
+    object Analdin : KvsStock("analdin.com", "Analdin")
+
+    /** KatesTube: amateur and studio uploads; listing with length, date, uploader and preview clip. */
+    object KatesTube : TubeSite("katestube.com", "KatesTube") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.katestube.com/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "https://www.katestube.com/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "https://www.katestube.com/search/?q=${enc(section)}" + if (page > 0) "&from_videos=${page + 1}" else ""
+        }
+        private val MARK = Regex("""<a class="ponn" href="(https://www\.katestube\.com/videos/(\d+)/[^"]*)" itemprop="url">""")
+        private val CLIP = Regex("""data-src="(https://[^"]+_preview\.mp4)"""")
+        private val POSTER = Regex("""data-poster="(https://[^"]+)"""")
+        private val NAME = Regex("""<meta itemprop="name" content="([^"]*)"""")
+        private val DATE = Regex("""<meta itemprop="uploadDate" content="([^"]+)"""")
+        private val LEN = Regex("""<span class="length">([\d:]+)</span>""")
+        private val BY = Regex("""thumb-submitter"><a [^>]*>([^<]+)</a>""")
+        private val TAG = Regex("""href="https://www\.katestube\.com/(?:tags|categories)/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList().distinctBy { it.groupValues[2] }
+            return hits.mapIndexed { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 6000))
+                TubeVideo(
+                    id = m.groupValues[2],
+                    title = NAME.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
+                    pageUrl = m.groupValues[1],
+                    thumb = POSTER.find(c)?.groupValues?.get(1),
+                    durationSec = duration(LEN.find(c)?.groupValues?.get(1)),
+                    published = DATE.find(c)?.groupValues?.get(1)?.let { runCatching { java.time.OffsetDateTime.parse(it).toInstant() }.getOrNull() },
+                    creator = BY.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
+                    preview = CLIP.find(c)?.groupValues?.get(1),
+                )
+            }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? = kvsBest(pageHtml)
+        override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG)
+        override fun embedUrl(id: String) = "https://www.katestube.com/embed/$id"
     }
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */

@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.65.0 — 2026-11-20
+
+Three more tube sites
+
+- **Three more tube sites: Xozilla, Analdin and KatesTube.** Their videos join For You, search and tag pages, with live preview clips in the grids, the uploader on KatesTube and a scrub-preview strip on Analdin. 27 sites in all, each switchable in Sources.
+
 ## 5.64.0 — 2026-11-20
 
 From your Saved, a while back

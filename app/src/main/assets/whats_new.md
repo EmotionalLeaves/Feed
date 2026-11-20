@@ -1,3 +1,8 @@
+## 5.65.0 — 2026-11-20
+Three more tube sites
+
+- **Three more tube sites: Xozilla, Analdin and KatesTube.** Their videos join For You, search and tag pages, with live preview clips in the grids, the uploader on KatesTube and a scrub-preview strip on Analdin. 27 sites in all, each switchable in Sources.
+
 ## 5.64.0 — 2026-11-20
 From your Saved, a while back
 
@@ -8,8 +13,3 @@ From your Saved, a while back
 Saved, sorted for you
 
 - **Best for you right now**: a new order for Saved, Liked and collections. It puts first what suits your taste at this hour, the way For You would, so a big Saved list surfaces what you're in the mood for.
-
-## 5.62.0 — 2026-11-20
-Later, from the queue
-
-- **Coming up** has a clock button: send a queued post to Watch later instead of watching it now, without it counting as a skip.
