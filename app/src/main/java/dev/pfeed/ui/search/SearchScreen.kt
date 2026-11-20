@@ -315,6 +315,18 @@ class SearchViewModel @Inject constructor(
         .flowOn(kotlinx.coroutines.Dispatchers.Default)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Normalised names of the creators you follow (for the person card on results). */
+    val followedCreators: StateFlow<Set<String>> = library.follows.map { it.creators }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun toggleFollowPerson(name: String) {
+        viewModelScope.launch {
+            val key = dev.pfeed.domain.filter.Blocklist.normalize(name)
+            if (key in followedCreators.value) library.unfollow(dev.pfeed.data.repo.FollowKind.CREATOR, name)
+            else library.follow(dev.pfeed.data.repo.FollowKind.CREATOR, name)
+        }
+    }
+
     /** Creators and tags you follow, for typeahead. */
     val followed: StateFlow<List<String>> = library.follows
         .map { f -> (f.creators.map { it.substringBefore('@') } + f.tags.map { it.replace('_', ' ') }).distinct() }
@@ -795,7 +807,11 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 },
             )
         } else {
+            val followedNow by vm.followedCreators.collectAsStateWithLifecycle()
             ResultsPane(
+                followedCreators = followedNow,
+                onFollowPerson = vm::toggleFollowPerson,
+                onOpenPerson = { nav.openTag("@$it") },
                 watched = watchedKeys,
                 onLongPress = { holding = it },
                 ui = ui,
@@ -1375,8 +1391,31 @@ private fun ResultsPane(
     onOpen: (Int) -> Unit,
     onResetFilters: () -> Unit,
     onSearch: (String) -> Unit = {},
+    followedCreators: Set<String> = emptySet(),
+    onFollowPerson: (String) -> Unit = {},
+    onOpenPerson: (String) -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize()) {
+        // Searched a person: who it is, how many of the results name her, follow in one tap.
+        val person = remember(ui.searched, ui.results.size / 20) { personFor(ui.searched, ui.results) }
+        if (person != null) {
+            val (name, count) = person
+            val on = dev.pfeed.domain.filter.Blocklist.normalize(name) in followedCreators
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.06f)).clickable { onOpenPerson(name) }.padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                dev.pfeed.ui.common.InitialAvatar(name, size = 40.dp)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                    Text("Named in $count of these · every site", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                }
+                if (on) androidx.compose.material3.OutlinedButton(onClick = { onFollowPerson(name) }) { Text("Following") }
+                else dev.pfeed.ui.common.BrandButton("Follow", onClick = { onFollowPerson(name) }, compact = true)
+            }
+        }
         if (ui.alsoTry.isNotEmpty()) {
             androidx.compose.foundation.lazy.LazyRow(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -1524,6 +1563,26 @@ private fun FiltersSheet(
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+/**
+ * The person a search is for, if it's a name: when the query is two or three words and at least three
+ * results' titles say it, with how many do.
+ */
+internal fun personFor(query: String, results: List<MediaItem>): Pair<String, Int>? {
+    // Only a name of two or three words can be a person (one word matches half the site).
+    val q = dev.pfeed.domain.reco.Mentions.personName(query) ?: return null
+    if (q.count { it == ' ' } > 2) return null
+    var count = 0
+    var shown: String? = null
+    for (item in results) {
+        if (!dev.pfeed.domain.reco.Mentions.padded(item.title).contains(" $q ")) continue
+        count++
+        if (shown == null) shown = dev.pfeed.domain.reco.Mentions.performers(item.title).firstOrNull { it.lowercase() == q }
+    }
+    if (count < 3) return null
+    // As the titles write it; else the query in title case.
+    return (shown ?: q.split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }) to count
 }
 
 /** Discover's row of people live right now. */

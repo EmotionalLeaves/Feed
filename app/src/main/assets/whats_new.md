@@ -1,3 +1,8 @@
+## 5.88.0 — 2026-11-20
+Search a name, follow the person
+
+- **Searching a person's name shows her card**: when you search a name and at least three results name her, a card above the results says how many do, with a Follow button and a tap through to her page with everything from every site.
+
 ## 5.87.0 — 2026-11-20
 Performers wherever the title names them
 
@@ -7,8 +12,3 @@ Performers wherever the title names them
 Top on the sites
 
 - **Top on the sites** on Discover: what's at the top of the sites' own top-rated lists right now, from the sites you watch most plus a few others (a different few each day), best for you first and without what you've already watched. Tap Play for all of it.
-
-## 5.85.0 — 2026-11-20
-Your sites first
-
-- **Sources → Tube sites puts the sites you watch first**, each with how many of its videos you've watched; the rest follow by name. With 40 sites, the ones you'd switch off or check are easy to find.

@@ -53,4 +53,12 @@ class MentionsTest {
         assertEquals(listOf("Zelda Quartz"), Mentions.inTitle(v("zelda quartz gets a surprise at the gym")))
         assertEquals(emptyList<String>(), Mentions.inTitle(v("A quiet afternoon")))
     }
+
+    @Test
+    fun `a search for a name finds the person`() {
+        val results = listOf(v("Lena Paul & Abella Danger - Lesbian Fun"), v("Busy day with lena paul"), v("LENA PAUL at work"), v("Other video"))
+        assertEquals("Lena Paul" to 3, dev.pfeed.ui.search.personFor("lena paul", results))
+        assertEquals(null, dev.pfeed.ui.search.personFor("lesbian", results))
+        assertEquals(null, dev.pfeed.ui.search.personFor("lena paul", results.take(2)))
+    }
 }

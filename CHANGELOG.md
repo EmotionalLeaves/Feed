@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.88.0 — 2026-11-20
+
+Search a name, follow the person
+
+- **Searching a person's name shows her card**: when you search a name and at least three results name her, a card above the results says how many do, with a Follow button and a tap through to her page with everything from every site.
+
 ## 5.87.0 — 2026-11-20
 
 Performers wherever the title names them
