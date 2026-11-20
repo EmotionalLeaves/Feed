@@ -1221,7 +1221,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     pageUrl = "https://$host/videos/$id/$dir/",
                     thumb = v.str("scr"),
                     durationSec = duration(v.str("duration")),
-                    tags = v.str("categories")?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() }.orEmpty().take(MAX_TAGS),
+                    tags = cleanTags(v.str("categories")?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() }.orEmpty()).take(MAX_TAGS),
                     published = v.str("post_date")?.let { runCatching { java.time.LocalDateTime.parse(it.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC) }.getOrNull() },
                     creator = v.str("display_name") ?: v.str("username"),
                     preview = v.str("pv")?.let { if (it.startsWith("http")) it else "https://$it" },
@@ -1249,6 +1249,24 @@ sealed class TubeSite(val host: String, val label: String) {
             private const val MAX_TAGS = 12
             private val FORMAT_HEIGHT = mapOf("_4k.mp4" to 2160, "_fhd.mp4" to 1080, "_hq.mp4" to 720, ".mp4" to 480, "_sd.mp4" to 480, "_lq.mp4" to 240)
             private val LOOKALIKES = mapOf('А' to 'A', 'В' to 'B', 'С' to 'C', 'Е' to 'E', 'М' to 'M', 'Н' to 'H', 'О' to 'O', 'Р' to 'P', 'Т' to 'T', 'Х' to 'X', 'К' to 'K', '.' to '+', ',' to '/', '~' to '=')
+
+            /**
+             * Uploaders here pile on nationalities for traffic ("Bangladeshi, Estonian, Greek, Swiss…"
+             * on one video). Three or more of them on a video say nothing about it: they're dropped,
+             * so your taste and the searches made for you aren't steered by them. One or two stay.
+             */
+            internal fun cleanTags(tags: List<String>): List<String> =
+                if (tags.count { it in NATIONALITIES } >= 3) tags.filter { it !in NATIONALITIES } else tags
+
+            private val NATIONALITIES = setOf(
+                "american", "argentinian", "australian", "austrian", "bangladeshi", "belgian", "brazilian", "british", "bulgarian",
+                "canadian", "chilean", "chinese", "colombian", "croatian", "cuban", "czech", "danish", "dutch", "egyptian", "english",
+                "estonian", "filipina", "filipino", "finnish", "french", "german", "greek", "hungarian", "indian", "indonesian",
+                "iranian", "irish", "israeli", "italian", "jamaican", "japanese", "korean", "latvian", "lithuanian", "malaysian",
+                "mexican", "moroccan", "nepali", "norwegian", "pakistani", "persian", "peruvian", "polish", "portuguese", "romanian",
+                "russian", "scottish", "serbian", "slovak", "slovenian", "spanish", "swedish", "swiss", "thai", "turkish",
+                "ukrainian", "venezuelan", "vietnamese", "welsh",
+            )
 
             /** "base164" → the text it stands for, or null if it isn't that. */
             internal fun base164(e: String): String? = runCatching {

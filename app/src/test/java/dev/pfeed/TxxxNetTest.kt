@@ -18,6 +18,8 @@ class TxxxNetTest {
         assertEquals(15 * 60 + 12, v.durationSec)
         assertEquals("davidfs21", v.creator)
         assertTrue(v.tags.toString(), "femdom" in v.tags && "big clit" in v.tags)
+        // American, Belgian, Swiss on one video: nationality spam, dropped.
+        assertTrue(v.tags.toString(), "belgian" !in v.tags && "swiss" !in v.tags)
         assertTrue(v.thumb!!.startsWith("https://tn.txxx.tube/"))
         assertTrue(v.preview!!.startsWith("https://") && v.preview!!.endsWith("_tr.mp4"))
         assertEquals(java.time.Instant.parse("2026-11-20T03:36:37Z"), v.published)
