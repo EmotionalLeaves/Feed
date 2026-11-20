@@ -535,4 +535,112 @@ ecodeURIComponent(a[0])] = decodeURIComponent(a[1]);
  <div class="thumb" itemscope itemtype="https://schema.org/VideoObject">
  <div class="thumb-inner">
  """
+
+    @Test
+    fun `alotporn listing, stream and genres`() {
+        val list = TubeSite.AlotPorn.parseList(ALOT_LIST)
+        assertEquals(2, list.size)
+        assertEquals("640149", list[0].id)
+        assertEquals("The teacher gave the student a reward for his work", list[0].title)
+        assertEquals(30 * 60 + 58, list[0].durationSec)
+        assertTrue(list[0].preview!!.contains("640149_preview.mp4"))
+        assertTrue(TubeSite.AlotPorn.stream(ALOT_VIDEO)!!.url.endsWith("640149_720p.mp4"))
+        val tags = TubeSite.AlotPorn.pageTags(ALOT_VIDEO)
+        assertTrue(tags.toString(), "teens" in tags && "big boobs" in tags && "teacher" in tags)
+    }
+
+    private val ALOT_LIST = """<a href="https://www.alotporn.com/video/640149/the-teacher-gave-the-student-a-reward-for-his-work/" title="The teacher gave the student a reward for his work" >
+ <div class="img-holder">
+ <img loading="lazy" src="https://bcdn.alotporn.com/contents/videos_screenshots/640000/640149/480x270/1.jpg" alt="The teacher gave the student a reward for his work" data-preview="https://www.alotporn.com/get_file/6/d2543c04040d503c14dbad7182f587e2/640000/640149/640149_preview.mp4/" width="480" height="270"/>
+ 
+ <div class="item-bottom">
+ <div class="time">30:58</div>
+ </div>
+ <div class="item-top">
+ 
+ <div class="item-heart " title="Add to Favorites" data-fav-video-id="640149" data-fav-type="0">
+ <svg class="svg-icon icon-heart"><use xlink:href="#icon-heart"></use></svg>
+ </div>
+ 
+ <div class="item-time " title="Watch Later" data-fav-video-id="640149" data-fav-type="1">
+ <svg class="svg-icon icon-oclock"><use xlink:href="#icon-oclock"></use></svg>
+ </div>
+ </div>
+ </div>
+ <div class="title">
+ The teacher gave the student a reward for his work
+ </div>
+ </a>
+ </div>
+ <div class="thumb thumb_rel item ">
+ <a href="https://www.alotporn.com/video/637231/a-latina-with-a-big-ass-fucks-her-stepfather-one-on-one/" title="A Latina with a big ass fucks her stepfather one on one" >
+ <div class="img-holder">
+ <img loading="lazy" src="https://bcdn.alotporn.com/contents/videos_screenshots/637000/637231/480x270/1.jpg" alt="A Latina with a big ass fucks her stepfather one on one" data-preview="https://www.alotporn.com/get_file/6/c3c791e68d9396753764cbb2c20d1dda/637000/637231/637231_preview.mp4/" width="480" height="270"/>
+ 
+ <div class="item-bottom">
+ <div class="time">8:01</div>
+ </div>
+ <div class="item-top">
+ 
+ <div class="item-heart " title="Add to Favorites" data-fav-video-id="637231" data-fav-type="0">
+ <svg class="svg-icon icon-heart"><use xlink:href="#icon-heart"></use></svg>
+ </div>
+ 
+ <div class="item-time " title="Watch Later" data-fav-video-id="637231" data-fav-type="1">
+ <svg class="svg-icon icon-oclock"><use xlink:href="#icon-oclock"></use></svg>
+ </div>
+ </div>
+ </div>
+ <div class="title">
+ A Latina with a big ass fucks her stepfather one on one
+ </div>
+ </a>
+ </div>
+ <div class="thumb thumb_rel item ">
+ """
+    private val ALOT_VIDEO = """ve-the-student-a-reward-for-his-work/", "name": "The teacher gave the student a reward for his work"}}
+ ]
+}
+</script>
+
+<script type="application/ld+json">
+{
+ "@context": "https://schema.org",
+ "@type": "VideoObject",
+ "@id": "#640149",
+ "mainEntityOfPage": "https://www.alotporn.com/video/640149/the-teacher-gave-the-student-a-reward-for-his-work/",
+ "name": "The teacher gave the student a reward for his work",
+ "description": "The Teacher Rewards The Student",
+ "thumbnailUrl": ["https://bcdn.alotporn.com/contents/videos_screenshots/640000/640149/preview_360p.mp4.jpg"],
+ "uploadDate": "2026-11-20T08:59:13Z",
+ "duration": "PT0H30M58S",
+ "contentUrl": "https://www.alotporn.com/get_file/6/e9bee96d296c92c4c1a3410c4f900724/640000/640149/640149_720p.mp4/"
+ ,
+ "genre": ["Teens +18","Amateur","Big Boobs","Teacher","Facial","Castings"]
+ ,
+ "publisher": {
+ "@type": "Organization", 
+ "name": "AlotPorn", 
+ "logo": {
+ "@type": "ImageObject",
+ "url": "https://bcdn.alotporn.com/contents/alp/theme/logo.png?v=1" 
+ }
+ },
+ "interactionStatistic": [
+ {"@type": "InteractionCounter", "interactionType": {"@type": "WatchAction"}, "userInteractionCount": 122},
+ {"@type": "InteractionCounter", "interactionType": {"@type": "LikeAction"}, "userInteractionCount": 1}
+ ],
+ "isFamilyFriendly": false,
+ "contentRating": "X18"
+}
+</script>
+
+ <link href="https://www.alotporn.com/video/640149/the-teacher-gave-the-student-a-reward-for-his-work/" rel="canonical"/>
+ <meta property="og:url" content="https://www.alotporn.com/video/640149/the-teacher-gave-the-student-a-reward-for-his-work/"/>
+ 
+ <meta property="og:title" content="The teacher gave the st
+<video id="my-video" poster="https://bcdn.alotporn.com/contents/videos_screenshots/640000/640149/preview_360p.mp4.jpg" fetchpriority="high" playsinline webkit-playsinline >
+<source src='https://www.alotporn.com/get_file/6/8e5c4c7222788f6202d0c36ac0eb9014/640000/640149/640149_360p.mp4' title="SD" type='video/mp4' />
+<source src='https://www.alotporn.com/get_file/6/e9bee96d296c92c4c1a3410c4f900724/640000/640149/640149_720p.mp4' title="HD" type='video/mp4' />
+</video>"""
 }

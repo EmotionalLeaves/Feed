@@ -116,7 +116,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -1296,6 +1296,50 @@ sealed class TubeSite(val host: String, val label: String) {
     /** HDZog: HD uploads. */
     object HdZog : TxxxNet("hdzog.com", "HDZog")
     object ManySex : TxxxNet("manysex.com", "ManySex")
+
+    /** AlotPorn: full-length scenes (often 30 min and more), with preview clips; SD/HD MP4s and genres on the video page. */
+    object AlotPorn : TubeSite("alotporn.com", "AlotPorn") {
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "https://www.alotporn.com/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "https://www.alotporn.com/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "https://www.alotporn.com/search/?q=${enc(section)}" + if (page > 0) "&from_videos=${page + 1}" else ""
+        }
+        private val MARK = Regex("""<a href="(https://www\.alotporn\.com/video/(\d+)/[^"]*)" title="([^"]*)"""")
+        private val IMG = Regex("""<img [^>]*\bsrc="(https://[^"]+\.jpg)"""")
+        private val CLIP = Regex("""data-preview="(https://[^"]+\.mp4/?)"""")
+        private val DUR = Regex("""<div class="time">\s*([\d:]+)\s*</div>""")
+        private val SOURCE = Regex("""<source src='(https://[^']+_(\d{3,4})p\.mp4)'""")
+        private val GENRE = Regex(""""genre":\s*\[([^\]]*)\]""")
+        private val QUOTED = Regex(""""([^"]+)"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList().distinctBy { it.groupValues[2] }
+            return hits.mapIndexed { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 4000))
+                TubeVideo(
+                    id = m.groupValues[2],
+                    title = unescape(m.groupValues[3]).trim().ifEmpty { null },
+                    pageUrl = m.groupValues[1],
+                    thumb = IMG.find(c)?.groupValues?.get(1),
+                    durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    preview = CLIP.find(c)?.groupValues?.get(1),
+                )
+            }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? {
+            val options = SOURCE.findAll(pageHtml).map { it.groupValues[2].toInt() to it.groupValues[1] }.toList()
+            return (options.filter { it.first <= maxHeight }.maxByOrNull { it.first } ?: options.minByOrNull { it.first })
+                ?.let { TubeStream(it.second, "video/mp4") }
+        }
+
+        override fun pageTags(pageHtml: String): List<String> =
+            GENRE.find(pageHtml)?.groupValues?.get(1)?.let { QUOTED.findAll(it).map { g -> unescape(g.groupValues[1]).lowercase().replace("+18", "").trim() }.filter { t -> t.isNotEmpty() }.toList() }.orEmpty()
+
+        override fun embedUrl(id: String) = "https://www.alotporn.com/embed/$id"
+    }
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */
     object XFreeHd : TubeSite("xfreehd.com", "XFreeHD") {

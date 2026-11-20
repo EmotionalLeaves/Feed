@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.76.0 — 2026-11-20
+
+AlotPorn: full-length scenes
+
+- **AlotPorn** joins: mostly full-length scenes (30 minutes and more), with preview clips in the grids, genres as tags, and HD where the site has it. 38 tube sites.
+
 ## 5.75.0 — 2026-11-20
 
 Three more tube sites
