@@ -31,7 +31,8 @@ class ClipLibrary @Inject constructor(
             thumbnailUrl = item.thumbnailUrl,
             pageUrl = item.pageUrl,
             publishedAt = java.time.Instant.now(),
-            extras = mapOf("media" to uri, "mime" to "video/mp4"),
+            // Where it came from, for "Watch the full video".
+            extras = mapOf("media" to uri, "mime" to "video/mp4", FROM to item.key, FROM_AT to atMs.toString()),
         )
         runCatching {
             library.add(LibraryKind.SAVED, clip)
@@ -69,6 +70,8 @@ class ClipLibrary @Inject constructor(
     }
 
     companion object {
+        const val FROM = "from"
+        const val FROM_AT = "fromAt"
         const val CLIPS = "Clips"
         const val CLIP_MS = 30_000L
     }

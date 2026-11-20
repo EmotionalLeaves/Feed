@@ -1064,6 +1064,19 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** A clip's whole video, opened where the clip starts (found in what you've watched or saved). */
+    fun openFullVideo(clip: MediaItem) {
+        val key = clip.extras[dev.pfeed.data.repo.ClipLibrary.FROM] ?: return
+        val at = clip.extras[dev.pfeed.data.repo.ClipLibrary.FROM_AT]?.toLongOrNull() ?: 0L
+        viewModelScope.launch {
+            val original = library.items(LibraryKind.HISTORY).first().firstOrNull { it.key == key }
+                ?: library.items(LibraryKind.SAVED).first().firstOrNull { it.key == key }
+            if (original == null) { _messages.tryEmit("The full video isn't in your history any more"); return@launch }
+            original.durationSec?.let { dev.pfeed.player.ResumePoints.save(original.key, at, it * 1000L) }
+            openViewerRequest.value = holder.put(listOf(original), 0, title = original.title ?: "Full video")
+        }
+    }
+
     /** What's queued after the post you're on (for "Coming up"). */
     fun upcoming(n: Int = COMING_UP): List<MediaItem> = items.value.drop(lastSettled + 1).take(n)
 

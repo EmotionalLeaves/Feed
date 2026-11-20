@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Search
@@ -373,6 +374,9 @@ fun ItemMenuSheet(
                     Icons.Filled.Vibration,
                     if (feel) "The phone stops vibrating with the audio" else "The phone vibrates with the audio, stronger as it gets louder, sound on or off",
                 ) { FeelTheSound.set(!feel); onDismiss() }
+            }
+            if (item.extras[dev.pfeed.data.repo.ClipLibrary.FROM] != null) {
+                MenuRow("Watch the full video", Icons.Filled.Movie, "The video this clip came from, from where the clip starts") { vm.openFullVideo(item); onDismiss() }
             }
             val later by vm.watchLater.collectAsState()
             val isLater = item.key in later

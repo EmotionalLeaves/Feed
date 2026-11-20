@@ -1,3 +1,8 @@
+## 5.60.0 — 2026-11-20
+From clip to full video
+
+- **Watch the full video** on any clip (long-press menu): opens the video it came from, starting where the clip starts.
+
 ## 5.59.0 — 2026-11-20
 Watch later from search
 
@@ -8,8 +13,3 @@ Watch later, finished
 
 - **Watch later on Discover**: a row of what you meant to come back to.
 - Watch most of something on Watch later and it comes off the list by itself.
-
-## 5.57.0 — 2026-11-20
-Watch later
-
-- **Watch later** (long-press menu): keep a video to come back to without downloading it. Saving downloads it to play offline; Watch later just keeps it in a list, under Saved → Watch later. It also counts as a quiet "yes" for For You.
