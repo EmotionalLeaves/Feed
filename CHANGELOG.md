@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.58.0 — 2026-11-20
+
+Watch later, finished
+
+- **Watch later on Discover**: a row of what you meant to come back to.
+- Watch most of something on Watch later and it comes off the list by itself.
+
 ## 5.57.0 — 2026-11-20
 
 Watch later

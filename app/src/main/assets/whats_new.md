@@ -1,3 +1,9 @@
+## 5.58.0 — 2026-11-20
+Watch later, finished
+
+- **Watch later on Discover**: a row of what you meant to come back to.
+- Watch most of something on Watch later and it comes off the list by itself.
+
 ## 5.57.0 — 2026-11-20
 Watch later
 
@@ -7,9 +13,3 @@ Watch later
 A reel of your moments
 
 - **Clip them all + reel** on Discover's Your moments: after clipping each moment, the app also joins them into one reel, so all your favourite bits play back to back from a single video, offline.
-
-## 5.55.0 — 2026-11-20
-Your clips on Discover
-
-- **Your reel works**: the CI phone test now cuts two clips from a live site and joins them into a reel every build (1.6 MB in about 3 seconds).
-- **Your clips** on Discover: the clips and reels you made, one tap to play them.

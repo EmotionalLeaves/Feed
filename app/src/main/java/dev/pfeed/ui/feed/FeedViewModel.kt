@@ -730,6 +730,11 @@ class FeedViewModel @Inject constructor(
         if (item.key in broken.value) return
         val st = stats[item.key]
         noteSkipRun(item, dwell, deliberate = st?.explicit == true || st?.autoAdvanced == true)
+        // Watched (most of) something on Watch later: it's done its job.
+        val length = st?.durationMs ?: 0L
+        if (item.key in watchLater.value && length > 0 && dwell >= length * WATCHED_SHARE) {
+            viewModelScope.launch { runCatching { library.removeFromCollection(WATCH_LATER, item) } }
+        }
         viewModelScope.launch {
             // A post listed as an image can turn out to be a clip (see Display.effectiveType); if the
             // player reported a duration, judge the dwell against typical video viewing, not images.
@@ -1042,7 +1047,7 @@ class FeedViewModel @Inject constructor(
     /** Watch later: a list to come back to, not downloaded like Saved. */
     val watchLater: StateFlow<Set<String>> = library.collectionItems(WATCH_LATER)
         .map { list -> list.mapTo(HashSet()) { it.key } }
-        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptySet())
 
     fun toggleWatchLater(item: MediaItem) {
         viewModelScope.launch {
@@ -1279,6 +1284,8 @@ class FeedViewModel @Inject constructor(
         const val CLIPS = dev.pfeed.data.repo.ClipLibrary.CLIPS
         const val WATCH_LATER = "Watch later"
         private const val WATCH_LATER_TARGET = 1.0
+        /** Watched this much of it: off Watch later. */
+        private const val WATCHED_SHARE = 0.8
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
