@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.68.0 — 2026-11-20
+
+Seven more tube sites
+
+- **Seven more tube sites, one network**: TXXX, HClips, Upornia, TubePornClassic (vintage and classics), VXXX, HDZog and ManySex. Millions of videos between them, with uploaders, categories, dates and preview clips in the grids; searchable like the rest. 33 tube sites in all, each switchable in Sources.
+
 ## 5.67.0 — 2026-11-20
 
 Follow a performer, see her everywhere

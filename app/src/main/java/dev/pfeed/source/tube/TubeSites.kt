@@ -116,7 +116,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -1179,6 +1179,83 @@ sealed class TubeSite(val host: String, val label: String) {
         override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG)
         override fun embedUrl(id: String) = "https://www.katestube.com/embed/$id"
     }
+
+    /**
+     * One network of tube sites (TXXX, HClips, Upornia…) behind the same JSON API: listings and
+     * search come as JSON with title, length, date, categories, thumbnail and preview clip; the file
+     * comes from videofile.php, its path written in "base164" (base64 with a few letters swapped for
+     * look-alike Cyrillic ones, "." for "+", "," for "/" and "~" for "=").
+     */
+    abstract class TxxxNet(host: String, label: String) : TubeSite(host, label) {
+        private fun api(sort: String, page: Int) = "https://$host/api/json/videos2/86400/str/$sort/60/..${page + 1}.all...json"
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> api("latest-updates", page)
+            "top" -> api("most-popular", page)
+            else -> "https://$host/api/videos2.php?params=86400/str/relevance/60/search..${page + 1}.all..&s=${enc(section)}"
+        }
+
+        override val checkTagsFirst = false
+
+        private fun JsonObject.str(key: String) = (this[key] as? JsonPrimitive)?.contentOrNull?.takeIf { it.isNotBlank() }
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val videos = runCatching { json.parseToJsonElement(body).jsonObject["videos"] as? JsonArray }.getOrNull() ?: return emptyList()
+            return videos.mapNotNull { it as? JsonObject }.mapNotNull { v ->
+                val id = v.str("video_id") ?: return@mapNotNull null
+                val dir = v.str("dir") ?: return@mapNotNull null
+                if (v.str("is_private") == "1") return@mapNotNull null
+                TubeVideo(
+                    id = id,
+                    title = v.str("title")?.let(::unescape)?.trim()?.ifEmpty { null },
+                    pageUrl = "https://$host/videos/$id/$dir/",
+                    thumb = v.str("scr"),
+                    durationSec = duration(v.str("duration")),
+                    tags = v.str("categories")?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() }.orEmpty().take(MAX_TAGS),
+                    published = v.str("post_date")?.let { runCatching { java.time.LocalDateTime.parse(it.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC) }.getOrNull() },
+                    creator = v.str("display_name") ?: v.str("username"),
+                    preview = v.str("pv")?.let { if (it.startsWith("http")) it else "https://$it" },
+                )
+            }
+        }
+
+        /** The file list, not the (script-built) video page. */
+        override fun streamPageUrl(pageUrl: String, id: String) = "https://$host/api/videofile.php?video_id=$id&lifetime=8640000"
+
+        override fun stream(pageHtml: String): TubeStream? {
+            val files = runCatching { json.parseToJsonElement(pageHtml).jsonArray }.getOrNull() ?: return null
+            val options = files.mapNotNull { it as? JsonObject }.mapNotNull { f ->
+                val path = f.str("video_url")?.let(::base164)?.takeIf { it.startsWith("/") || it.startsWith("http") } ?: return@mapNotNull null
+                (FORMAT_HEIGHT[f.str("format")] ?: 480) to (if (path.startsWith("http")) path else "https://$host$path")
+            }
+            // The best up to the quality setting; if every file is above it, the smallest there is.
+            return (options.filter { it.first <= maxHeight }.maxByOrNull { it.first } ?: options.minByOrNull { it.first })
+                ?.let { TubeStream(it.second, "video/mp4") }
+        }
+
+        override fun embedUrl(id: String) = "https://$host/embed/$id"
+
+        companion object {
+            private const val MAX_TAGS = 12
+            private val FORMAT_HEIGHT = mapOf("_4k.mp4" to 2160, "_fhd.mp4" to 1080, "_hq.mp4" to 720, ".mp4" to 480, "_sd.mp4" to 480, "_lq.mp4" to 240)
+            private val LOOKALIKES = mapOf('А' to 'A', 'В' to 'B', 'С' to 'C', 'Е' to 'E', 'М' to 'M', 'Н' to 'H', 'О' to 'O', 'Р' to 'P', 'Т' to 'T', 'Х' to 'X', 'К' to 'K', '.' to '+', ',' to '/', '~' to '=')
+
+            /** "base164" → the text it stands for, or null if it isn't that. */
+            internal fun base164(e: String): String? = runCatching {
+                String(java.util.Base64.getDecoder().decode(e.map { LOOKALIKES[it] ?: it }.joinToString("")), Charsets.UTF_8)
+            }.getOrNull()
+        }
+    }
+
+    /** TXXX: the network's biggest catalogue (millions of uploads). */
+    object Txxx : TxxxNet("txxx.com", "TXXX")
+    object HClips : TxxxNet("hclips.com", "HClips")
+    object Upornia : TxxxNet("upornia.com", "Upornia")
+    /** TubePornClassic: vintage and classic films. */
+    object TubePornClassic : TxxxNet("tubepornclassic.com", "TubePornClassic")
+    object Vxxx : TxxxNet("vxxx.com", "VXXX")
+    /** HDZog: HD uploads. */
+    object HdZog : TxxxNet("hdzog.com", "HDZog")
+    object ManySex : TxxxNet("manysex.com", "ManySex")
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */
     object XFreeHd : TubeSite("xfreehd.com", "XFreeHD") {
