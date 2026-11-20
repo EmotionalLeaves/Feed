@@ -1,3 +1,8 @@
+## 5.83.0 — 2026-11-20
+Lighter on memory with big pictures
+
+- **Big pictures use far less memory**: very large originals (board posts, photo sets) are now decoded to fit the app's size cap exactly, instead of up to four times its pixels. On the test phone a search session had climbed past 800 MB; a few of those pictures warming at once were the likely cause, and the app could be closed by the phone for it.
+
 ## 5.82.0 — 2026-11-20
 Performers as you type
 
@@ -7,8 +12,3 @@ Performers as you type
 Performers on the post
 
 - **Performers on the post**: in the feed, the performers a studio title names now show as chips above the tags. Tap one for everything with her, from every site (and follow her from there).
-
-## 5.80.0 — 2026-11-20
-Related videos on the TXXX sites
-
-- **Related videos for TXXX, HClips, Upornia and the rest of that network**: their videos now come with the site's own "related" list, like the other tube sites already did. More like this, Up next and Watched together use it.

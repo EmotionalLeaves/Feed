@@ -109,8 +109,8 @@ internal fun proxyConfig(s: dev.pfeed.data.settings.AppSettings): dev.pfeed.sour
 
 /**
  * Every image, however it's requested (feed, thumbnails, warming the cache), is asked for at most
- * 1280 × 4096 pixels. Decoding may come out up to twice that each way (it samples by powers of two),
- * so the largest possible bitmap stays near 80 MB, under the ~100 MB Android will draw. A huge
+ * 1280 × 4096 pixels, and decoded to fit within that (about 20 MB at most), well under the ~100 MB
+ * Android will draw. A huge
  * original asked for at 2048 × 8192 came out at 140 MB and crashed the feed.
  */
 private object MaxSizeInterceptor : coil.intercept.Interceptor {
@@ -124,6 +124,10 @@ private object MaxSizeInterceptor : coil.intercept.Interceptor {
             else -> coil.size.Dimension(max)
         }
         val capped = coil.size.Size(cap(s.width, MAX_W), cap(s.height, MAX_H))
-        return if (capped == s) chain.proceed(chain.request) else chain.withSize(capped).proceed(chain.request)
+        // Capped requests are decoded to fit the cap exactly: sampling by powers of two alone can leave
+        // a bitmap up to four times the cap's pixels (80 MB), and a few of those warming at once is
+        // how memory spiked past 800 MB in a search session on the test phone.
+        return if (capped == s) chain.proceed(chain.request)
+        else chain.withSize(capped).proceed(chain.request.newBuilder().precision(coil.size.Precision.EXACT).build())
     }
 }
