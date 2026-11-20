@@ -1,3 +1,8 @@
+## 5.63.0 — 2026-11-20
+Saved, sorted for you
+
+- **Best for you right now**: a new order for Saved, Liked and collections. It puts first what suits your taste at this hour, the way For You would, so a big Saved list surfaces what you're in the mood for.
+
 ## 5.62.0 — 2026-11-20
 Later, from the queue
 
@@ -7,8 +12,3 @@ Later, from the queue
 One word for one thing
 
 - **More sites' words understood as the same thing**: handjob/hand job, titjob/titty fuck, cunnilingus/pussy licking, squirt/squirting, facial/facials, rimming/rimjob, DP/double penetration, cowgirl/riding, reverse cowgirl, missionary, fingering, masturbation, cum in mouth, gangbang, and more. A taste learned on one site now carries to the others, and searching an act finds videos that call it by another name.
-
-## 5.60.0 — 2026-11-20
-From clip to full video
-
-- **Watch the full video** on any clip (long-press menu): opens the video it came from, starting where the clip starts.

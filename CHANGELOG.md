@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.63.0 — 2026-11-20
+
+Saved, sorted for you
+
+- **Best for you right now**: a new order for Saved, Liked and collections. It puts first what suits your taste at this hour, the way For You would, so a big Saved list surfaces what you're in the mood for.
+
 ## 5.62.0 — 2026-11-20
 
 Later, from the queue

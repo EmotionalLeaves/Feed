@@ -82,6 +82,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dev.pfeed.data.db.FollowEntity
 import dev.pfeed.data.repo.FollowKind
 import dev.pfeed.data.repo.LibraryKind
+import kotlinx.coroutines.flow.first
 import dev.pfeed.data.repo.LibraryRepository
 import dev.pfeed.data.repo.TransientFeedHolder
 import dev.pfeed.domain.model.MediaItem
@@ -104,7 +105,21 @@ class LibraryViewModel @Inject constructor(
     private val offline: dev.pfeed.data.repo.OfflineStore,
     val livePreviews: dev.pfeed.ui.common.LivePreviews,
     private val clipLibrary: dev.pfeed.data.repo.ClipLibrary,
+    private val signals: dev.pfeed.data.repo.SignalRepository,
 ) : ViewModel() {
+    /** How well each saved/liked post suits your taste right now (for "Best for you right now"). */
+    val tasteScores = kotlinx.coroutines.flow.MutableStateFlow<Map<String, Double>>(emptyMap())
+
+    fun scoreForYou() {
+        viewModelScope.launch {
+            val posts = (library.items(LibraryKind.SAVED).first() + library.items(LibraryKind.LIKED).first()).distinctBy { it.key }
+            tasteScores.value = runCatching {
+                signals.engine.use { e ->
+                    posts.associate { p -> p.key to ((e.vectorOf(p)?.let { v -> e.interestScore(v) - 0.8 * e.aversion(v) } ?: 0.0) + 0.3 * e.visualScore(p)) }
+                }
+            }.getOrDefault(emptyMap())
+        }
+    }
     /** Making a reel of your clips right now. */
     val makingReel = kotlinx.coroutines.flow.MutableStateFlow(false)
     val reelMessage = kotlinx.coroutines.flow.MutableStateFlow<String?>(null)
@@ -223,6 +238,8 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
     // Find in the current list: title, creator and tags.
     // Order for Saved, Liked and collections (History stays by when you watched).
     var order by rememberSaveable { mutableStateOf(LibOrder.NEWEST.name) }
+    val forYou by vm.tasteScores.collectAsStateWithLifecycle()
+    LaunchedEffect(order) { if (order == LibOrder.FOR_YOU.name) vm.scoreForYou() }
     var orderMenu by remember { mutableStateOf(false) }
     fun List<MediaItem>.found(): List<MediaItem> {
         val q = query.trim().lowercase()
@@ -235,6 +252,8 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
             LibOrder.OLDEST -> hit.asReversed()
             LibOrder.LONGEST -> hit.sortedByDescending { it.durationSec ?: -1 }
             LibOrder.SHORTEST -> hit.sortedBy { it.durationSec ?: Int.MAX_VALUE }
+            // How well each suits your taste at this hour (what For You would make of it now).
+            LibOrder.FOR_YOU -> hit.sortedByDescending { forYou[it.key] ?: 0.0 }
         }
     }
 
@@ -729,6 +748,7 @@ private val LocalPicking = androidx.compose.runtime.staticCompositionLocalOf<Pai
 
 private enum class LibOrder(val label: String) {
     NEWEST("Newest first"), OLDEST("Oldest first"), LONGEST("Longest first"), SHORTEST("Shortest first"),
+    FOR_YOU("Best for you right now"),
 }
 
 /**
