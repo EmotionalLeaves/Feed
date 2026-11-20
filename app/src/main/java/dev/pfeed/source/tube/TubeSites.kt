@@ -82,6 +82,8 @@ sealed class TubeSite(val host: String, val label: String) {
     open fun comments(pageHtml: String): List<Pair<String, String>> = emptyList()
     /** Where a site that loads its comments separately keeps them, from its video page; null if in the page or none. */
     open fun commentsUrl(pageHtml: String): String? = null
+    /** Where the site lists what's related to video [id], when that's a request of its own (TXXX's API); parsed with [parseList]. */
+    open fun relatedUrl(id: String): String? = null
     /** That answer, as (who, what). */
     open fun parseComments(body: kotlinx.serialization.json.JsonElement): List<Pair<String, String>> = emptyList()
 
@@ -1238,6 +1240,10 @@ sealed class TubeSite(val host: String, val label: String) {
                     preview = v.str("pv")?.let { if (it.startsWith("http")) it else "https://$it" },
                 )
             }
+        }
+
+        override fun relatedUrl(id: String): String? = id.toLongOrNull()?.let { n ->
+            "https://$host/api/json/videos_related2/432000/50/${n / 1_000_000 * 1_000_000}/${n / 1000 * 1000}/$id.all.1.json"
         }
 
         /** The file list, not the (script-built) video page. */

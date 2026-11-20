@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.80.0 — 2026-11-20
+
+Related videos on the TXXX sites
+
+- **Related videos for TXXX, HClips, Upornia and the rest of that network**: their videos now come with the site's own "related" list, like the other tube sites already did. More like this, Up next and Watched together use it.
+
 ## 5.79.0 — 2026-11-20
 
 Hide a word

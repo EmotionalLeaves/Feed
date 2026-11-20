@@ -192,6 +192,14 @@ class TubeAdapter @Inject constructor(
                     }
                 }
             }
+            // Sites that list related videos through a request of their own (TXXX's network).
+            site.relatedUrl(vid)?.let { url ->
+                background.launch {
+                    runCatching { site.items(site.parseList(http.getRaw(id, url)), "top").filter { it.key != item.key } }.getOrNull()
+                        ?.filter(dev.pfeed.domain.filter.MinorsFilter::allows)
+                        ?.takeIf { it.size >= 3 }?.let { dev.pfeed.domain.reco.Related.put(item.key, it) }
+                }
+            }
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.playerUrl(html)?.let { player ->
