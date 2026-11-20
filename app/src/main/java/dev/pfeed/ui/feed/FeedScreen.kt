@@ -1301,6 +1301,15 @@ private fun FeedPage(
             LoopPart.request.value = null
         }
     }
+    val loopRange by LoopPart.range.collectAsStateWithLifecycle()
+    LaunchedEffect(loopRange, player) {
+        val (key, a, b) = loopRange ?: return@LaunchedEffect
+        if (key != item.key || player == null) return@LaunchedEffect
+        LoopPart.range.value = null
+        loopA = a
+        loopB = b
+        player?.seekTo(a)
+    }
     LaunchedEffect(loopA, loopB, player) {
         val a = loopA ?: return@LaunchedEffect
         val b = loopB ?: return@LaunchedEffect

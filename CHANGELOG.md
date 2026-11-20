@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.53.0 — 2026-11-20
+
+Loop this scene
+
+- **Loop this scene · 11:19–14:02** in the long-press menu: when a video's scenes or acts are known, one tap loops the scene that's on screen, start to cut, until you clear the loop.
+
 ## 5.52.0 — 2026-11-20
 
 Clips your length

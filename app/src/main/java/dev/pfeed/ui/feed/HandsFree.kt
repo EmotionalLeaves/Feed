@@ -109,6 +109,8 @@ object FeelTheSound {
 /** "Loop a part" from the hold menu: the post (by key) that should start marking a loop. */
 object LoopPart {
     val request = MutableStateFlow<String?>(null)
+    /** Loop exactly this stretch (key, from, to): "Loop this scene". */
+    val range = MutableStateFlow<Triple<String, Long, Long>?>(null)
 }
 
 /** "Save this frame" from the hold menu: the post (by key) whose current frame should be kept. */

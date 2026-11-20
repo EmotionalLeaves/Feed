@@ -350,6 +350,21 @@ fun ItemMenuSheet(
                 }
                 MenuRow("Save this moment", Icons.Filled.BookmarkAdd, "Marks where you are: it shows on the scrub bar, and Saved → Moments plays the video from there") { MomentGrab.request.value = item.key; onDismiss() }
                 MenuRow("Save this frame", Icons.Filled.PhotoCamera, "Keep this exact moment as a picture, in Saved → Frames") { FrameGrab.request.value = item.key; onDismiss() }
+                // The scene playing now, start to cut, when the scenes (or acts) are known.
+                val sceneNow = remember(item.key) {
+                    val cuts = (listOf(0L) + vm.sceneCuts(item)).distinct().sorted()
+                    if (NowPlaying.key != item.key || cuts.size < 2) null
+                    else {
+                        val at = NowPlaying.positionMs
+                        val start = cuts.lastOrNull { it <= at } ?: 0L
+                        cuts.firstOrNull { it > at }?.let { end -> start to end }
+                    }
+                }
+                sceneNow?.let { (a, b) ->
+                    MenuRow("Loop this scene · " + dev.pfeed.ui.common.formatDuration((a / 1000).toInt()) + "–" + dev.pfeed.ui.common.formatDuration((b / 1000).toInt()), Icons.Filled.Repeat, "Plays the scene on screen over and over, until you clear the loop") {
+                        LoopPart.range.value = Triple(item.key, a, b); onDismiss()
+                    }
+                }
                 MenuRow("Loop a part", Icons.Filled.Repeat, "Starts here; tap when it reaches the end you want") { LoopPart.request.value = item.key; onDismiss() }
                 val feel by FeelTheSound.on.collectAsStateWithLifecycle()
                 MenuRow(
