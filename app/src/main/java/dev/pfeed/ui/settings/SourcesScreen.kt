@@ -514,21 +514,25 @@ private fun TubeSites(vm: SettingsViewModel) {
     val checking = report.isNotEmpty() && report.values.any { it == null }
     val blocked by vm.blockEntries.collectAsStateWithLifecycle()
     val hidden = blocked.filter { it.kind == dev.pfeed.data.repo.BlockKind.ORIGIN.name }.mapTo(HashSet()) { it.value }
+    val watched by vm.tubeWatched.collectAsStateWithLifecycle()
+    // The sites you watch most first, then the rest by name.
+    val ordered = remember(watched) { TubeSite.ACTIVE.sortedWith(compareByDescending<TubeSite> { watched[it.host] ?: 0 }.thenBy { it.label.lowercase() }) }
     Section(
         "Sites",
         footer = "Each site in ${SourceCatalog.tubeSections.size} sections: newest, top and ${SourceCatalog.tubeSections.size - 2} categories. " +
-            "Sites that hide their stream play in their own player.",
+            "Sites that hide their stream play in their own player. The ones you watch most are at the top.",
     ) {
-        TubeSite.ACTIVE.forEachIndexed { i, site ->
+        ordered.forEachIndexed { i, site ->
             if (i > 0) RowDivider(indent = false)
             val r = report[site.label]
             // Each site can be switched off on its own (the same as hiding it from a post's menu).
             val origin = "tube:${site.host}"
             val on = origin !in hidden
+            val n = watched[site.host] ?: 0
             SettingRow(
                 site.label,
                 below = when {
-                    report.isEmpty() -> null
+                    report.isEmpty() -> if (n > 0) ({ StatusLine("$n watched", TextLow) }) else null
                     r == null -> ({ StatusLine("Checking…", TextLow) })
                     else -> ({ StatusLine(r, if (r.contains("plays")) Good else Bad) })
                 },

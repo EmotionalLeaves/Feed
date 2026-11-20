@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.85.0 — 2026-11-20
+
+Your sites first
+
+- **Sources → Tube sites puts the sites you watch first**, each with how many of its videos you've watched; the rest follow by name. With 40 sites, the ones you'd switch off or check are easy to find.
+
 ## 5.84.0 — 2026-11-20
 
 Lighter warm-up

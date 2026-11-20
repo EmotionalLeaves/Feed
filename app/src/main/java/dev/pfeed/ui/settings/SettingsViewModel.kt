@@ -33,6 +33,7 @@ import dev.pfeed.source.discovery.DiscoveredSource
 import dev.pfeed.source.discovery.SourceDiscovery
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -80,6 +81,11 @@ class SettingsViewModel @Inject constructor(
         library.followRows,
     ) { saved, liked, follows -> Triple(saved, liked, follows.size) }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), Triple(0, 0, 0))
+
+    /** How many videos in your history came from each tube site (by host), for ordering Sources → Sites. */
+    val tubeWatched: StateFlow<Map<String, Int>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
+        .map { list -> list.filter { it.sourceId == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID }.groupingBy { it.id.substringBefore('/') }.eachCount() }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     /** Per-site result of checking the tube sites, by site label; null while checking. */
     private val _tubeReport = MutableStateFlow<Map<String, String?>>(emptyMap())
