@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.93.0 — 2026-11-20
+
+Her photo sets too
+
+- **New with people you watch** now also brings the performers' photo sets, not only their videos.
+- The long-press menu says **In this set** on photo sets.
+
 ## 5.92.0 — 2026-11-20
 
 Photo sets

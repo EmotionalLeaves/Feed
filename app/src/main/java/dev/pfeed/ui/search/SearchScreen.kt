@@ -463,7 +463,10 @@ class SearchViewModel @Inject constructor(
             val perName = names.map { name ->
                 async {
                     val q = dev.pfeed.domain.reco.Mentions.personName(name) ?: return@async emptyList()
-                    runCatching { tube.search(name, null).items }.getOrDefault(emptyList())
+                    // Her videos, and her photo sets too.
+                    val photos = registry.byId(dev.pfeed.source.photos.PhotoSetsAdapter.SOURCE_ID)
+                    (runCatching { tube.search(name, null).items }.getOrDefault(emptyList()) +
+                        (photos?.let { runCatching { it.search(name, null).items }.getOrDefault(emptyList()) }.orEmpty()))
                         .filter { it.key !in seen && it.thumbnailUrl != null && blocklist?.allows(it) != false && dev.pfeed.domain.reco.Mentions.padded(it.title).contains(" $q ") }
                         .sortedByDescending { it.publishedAt?.toEpochMilli() ?: 0L }
                 }

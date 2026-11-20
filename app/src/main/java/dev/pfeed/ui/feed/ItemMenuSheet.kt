@@ -281,7 +281,7 @@ fun ItemMenuSheet(
             if (people.isNotEmpty()) {
                 val followsNow by vm.follows.collectAsState()
                 Text(
-                    "IN THIS VIDEO",
+                    if (item.isGallery) "IN THIS SET" else "IN THIS VIDEO",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                     modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 6.dp),

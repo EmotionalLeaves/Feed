@@ -1,3 +1,9 @@
+## 5.93.0 — 2026-11-20
+Her photo sets too
+
+- **New with people you watch** now also brings the performers' photo sets, not only their videos.
+- The long-press menu says **In this set** on photo sets.
+
 ## 5.92.0 — 2026-11-20
 Photo sets
 
@@ -7,8 +13,3 @@ Photo sets
 Find by person in your Library
 
 - **People in your Library**: open Find in Saved, Liked, a collection or History and the performers its titles name most show as chips ("Lena Paul · 6"). Tap one to see just hers.
-
-## 5.90.0 — 2026-11-20
-Only what you haven't seen
-
-- **Hide what I've watched** in search Filters: leave out everything you've watched before, so a big search only shows what's new to you.
