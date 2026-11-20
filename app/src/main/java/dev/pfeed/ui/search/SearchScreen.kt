@@ -134,20 +134,27 @@ enum class TypeFilter(val label: String, val types: Set<MediaType>) {
     COMICS("Comics", setOf(MediaType.IMAGE)),
 }
 
+/** The tube site a result is from (its host), or null if it isn't a tube video. */
+fun tubeSite(item: MediaItem): String? =
+    item.id.substringBefore('/').takeIf { item.sourceId == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID && it.contains('.') }
+
 data class SearchFilters(
     val sources: Set<String> = emptySet(), // empty = all
     val type: TypeFilter = TypeFilter.ALL,
     val duration: DurationFilter = DurationFilter.ANY,
     val sort: SortOrder = SortOrder.BEST,
+    /** Tube sites to keep (by host); empty = every site. */
+    val sites: Set<String> = emptySet(),
 ) {
     /** How many of the filters hidden in the sheet are active (shown as a badge). */
-    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0)
+    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0) + (if (sites.isNotEmpty()) 1 else 0)
 
     /** Any filter on: the endless continuation can't honour them, so it isn't offered. */
     val active: Boolean get() = sheetCount > 0 || type != TypeFilter.ALL
 
     fun matches(item: MediaItem): Boolean {
         if (sources.isNotEmpty() && item.sourceId !in sources) return false
+        if (sites.isNotEmpty() && (item.sourceId != dev.pfeed.source.tube.TubeAdapter.SOURCE_ID || tubeSite(item) !in sites)) return false
         if (type.types.isNotEmpty() && item.type !in type.types) return false
         // Images means single pictures; Comics means the multi-page ones.
         if (type == TypeFilter.COMICS && !item.isGallery) return false
@@ -471,7 +478,8 @@ class SearchViewModel @Inject constructor(
     fun setType(t: TypeFilter) = _filters.update { it.copy(type = t) }
     fun setDuration(d: DurationFilter) = _filters.update { it.copy(duration = d) }
     fun setSort(o: SortOrder) = _filters.update { it.copy(sort = o) }
-    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST) }
+    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST, sites = emptySet()) }
+    fun toggleSite(host: String) = _filters.update { f -> f.copy(sites = if (host in f.sites) f.sites - host else f.sites + host) }
 
     private companion object {
         const val TOPIC_ROWS = 3
@@ -750,6 +758,12 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 filters = filters,
                 sources = sources,
                 onToggleSource = vm::toggleSource,
+                // The tube sites these results came from, most results first.
+                sites = remember(ui.results) {
+                    ui.results.mapNotNull(::tubeSite).groupingBy { it }.eachCount().entries.sortedByDescending { it.value }
+                        .map { (host, n) -> host to "${dev.pfeed.source.tube.TubeSite.byHost(host)?.label ?: host} · $n" }
+                },
+                onToggleSite = vm::toggleSite,
                 onDuration = vm::setDuration,
                 onSort = vm::setSort,
                 onReset = vm::resetSheetFilters,
@@ -1391,6 +1405,8 @@ private fun FiltersSheet(
     filters: SearchFilters,
     sources: List<Pair<String, String>>,
     onToggleSource: (String) -> Unit,
+    sites: List<Pair<String, String>> = emptyList(),
+    onToggleSite: (String) -> Unit = {},
     onDuration: (DurationFilter) -> Unit,
     onSort: (SortOrder) -> Unit,
     onReset: () -> Unit,
@@ -1431,6 +1447,18 @@ private fun FiltersSheet(
                     selected = id in filters.sources, onClick = { onToggleSource(id) }, label = { Text(name) },
                     colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
                 )
+            }
+        }
+        // Which tube sites, when the results come from several.
+        if (sites.size >= 2 || filters.sites.isNotEmpty()) {
+            SectionTitle("Tube sites")
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                (sites + filters.sites.filter { h -> sites.none { it.first == h } }.map { it to it }).forEach { (host, name) ->
+                    FilterChip(
+                        selected = host in filters.sites, onClick = { onToggleSite(host) }, label = { Text(name) },
+                        colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White),
+                    )
+                }
             }
         }
         Spacer(Modifier.height(24.dp))

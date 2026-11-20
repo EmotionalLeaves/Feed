@@ -144,7 +144,7 @@ class TubeAdapter @Inject constructor(
                         val first = items.first()
                         resolved.remove(first.key) // judge the site now, not an earlier answer
                         val how = when (val st = resolveStream(first)) {
-                            is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load"
+                            is StreamInfo.Direct -> if (http.reachable(st.url)) "plays directly" else "stream doesn't load (${st.url.take(90)})"
                             is StreamInfo.Embed -> {
                                 val page = attempt { http.getRaw(id, first.pageUrl) }.getOrNull()
                                 val hint = page?.let { p -> listOf("setVideoHLS", "mediaDefinitions", "<source", "flashvars").firstOrNull { p.contains(it) }?.let { k -> " has $k: " + p.substring(p.indexOf(k), minOf(p.length, p.indexOf(k) + 110)).replace(Regex("\\s+"), " ") } }

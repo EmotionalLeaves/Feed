@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.72.0 — 2026-11-20
+
+Pick the sites in search
+
+- **Tube sites filter in search**: with results from several tube sites, Filters lists them with how many each found ("Pornhub · 42", "TXXX · 38"…). Pick one or a few to see only theirs.
+
 ## 5.71.0 — 2026-11-20
 
 Cleaner tags from the TXXX sites
