@@ -52,6 +52,8 @@ import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.ScreenRotation
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PictureInPictureAlt
@@ -347,6 +349,22 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     subtitle = "Long videos whose site counts what people rewatch (Pornhub) start at the most-watched stretch, the first time",
                     icon = Icons.Filled.LocalFireDepartment,
                     onChange = vm::setStartAtBest,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Up next card",
+                    s.upNextCard,
+                    subtitle = "In a full scene's last seconds, show what's next, with Stay to start it over instead",
+                    icon = Icons.Filled.SkipNext,
+                    onChange = vm::setUpNextCard,
+                )
+                RowDivider()
+                SwitchSetting(
+                    "Mark the bits I go back to",
+                    s.autoMoments,
+                    subtitle = "Scrubbing back to the same part of a video twice marks it as a moment",
+                    icon = Icons.Filled.Bookmark,
+                    onChange = vm::setAutoMoments,
                 )
                 RowDivider()
                 SwitchSetting(

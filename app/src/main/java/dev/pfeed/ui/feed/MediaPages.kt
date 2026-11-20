@@ -653,7 +653,8 @@ fun VideoPage(
         val ending = endingIn
         val handsFreeNow by HandsFree.on.collectAsState()
         val sideways by vm.landscape.collectAsState()
-        if (next != null && ending != null && !detached && !handsFreeNow && !sideways && highlightLeft == null) androidx.compose.foundation.layout.Row(
+        val upNextOn = vm.upNextCardOn
+        if (next != null && ending != null && upNextOn && !detached && !handsFreeNow && !sideways && highlightLeft == null) androidx.compose.foundation.layout.Row(
             Modifier.align(Alignment.BottomCenter).padding(bottom = 150.dp, start = 24.dp, end = 24.dp)
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
                 .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f))

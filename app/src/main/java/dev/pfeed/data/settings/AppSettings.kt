@@ -71,6 +71,10 @@ data class AppSettings(
     val skipIntros: Boolean = false,
     /** Long videos whose site keeps count of what people watch start at their best part. */
     val startAtBest: Boolean = false,
+    /** A card naming the next post in a full scene's last seconds, with "Stay". */
+    val upNextCard: Boolean = true,
+    /** Going back to the same bit of a video twice marks it as a moment. */
+    val autoMoments: Boolean = true,
     /** Even out loudness between videos (and within them). */
     val smartVolume: Boolean = true,
     /** The lock screen looks (and works) like a calculator; the PIN then = gets in. */

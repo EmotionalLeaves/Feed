@@ -217,6 +217,8 @@ class SettingsViewModel @Inject constructor(
     fun setFlipToHide(v: Boolean) = update { it.copy(flipToHide = v) }
     fun setSkipIntros(v: Boolean) = update { it.copy(skipIntros = v) }
     fun setStartAtBest(v: Boolean) = update { it.copy(startAtBest = v) }
+    fun setUpNextCard(v: Boolean) = update { it.copy(upNextCard = v) }
+    fun setAutoMoments(v: Boolean) = update { it.copy(autoMoments = v) }
     fun setSmartVolume(v: Boolean) = update { it.copy(smartVolume = v) }
     fun setCalculatorLock(v: Boolean) = update { it.copy(calculatorLock = v) }
     fun setBatterySaver(v: Boolean) = update { it.copy(batterySaver = v) }

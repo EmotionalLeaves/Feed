@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.40.0 — 2026-11-19
+
+Your call
+
+- **Settings → Playback** has two new switches: **Up next card** and **Mark the bits I go back to** (auto-moments). Both are on by default; turn either off if you'd rather not have it.
+
 ## 5.39.0 — 2026-11-19
 
 Commenters point the way

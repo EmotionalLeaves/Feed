@@ -955,7 +955,7 @@ class FeedViewModel @Inject constructor(
      */
     fun scrubbedBack(item: MediaItem, atMs: Long) {
         statsFor(item.key).replays++
-        if (settings.value.privateMode || dev.pfeed.domain.privacy.Incognito.active) return
+        if (settings.value.privateMode || !settings.value.autoMoments || dev.pfeed.domain.privacy.Incognito.active) return
         val bit = dev.pfeed.domain.reco.Rewinds.note(item.key, atMs) ?: return
         if (dev.pfeed.player.Moments.of(item.key).any { kotlin.math.abs(it - bit) <= dev.pfeed.domain.reco.Rewinds.SAME_BIT_MS }) return
         dev.pfeed.player.Moments.add(item.key, bit)
@@ -978,6 +978,9 @@ class FeedViewModel @Inject constructor(
         }
         offer("Moment saved at ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}", "Undo") { dev.pfeed.player.Moments.remove(item.key, atMs) }
     }
+
+    /** Settings → Up next card. */
+    val upNextCardOn: Boolean get() = settings.value.upNextCard
 
     /** On mobile data: extras that cost data (finding scenes) wait until they're asked for. */
     val onMeteredNetwork: Boolean get() = network.isMetered
