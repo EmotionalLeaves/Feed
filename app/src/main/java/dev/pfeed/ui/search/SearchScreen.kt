@@ -181,6 +181,7 @@ class SearchViewModel @Inject constructor(
     private val library: dev.pfeed.data.repo.LibraryRepository,
     private val blocks: dev.pfeed.data.repo.BlockRepository,
     val livePreviews: dev.pfeed.ui.common.LivePreviews,
+    private val clipLibrary: dev.pfeed.data.repo.ClipLibrary,
 ) : ViewModel() {
     private val _topicRows = MutableStateFlow<List<Pair<String, List<MediaItem>>>>(emptyList())
     /**
@@ -192,6 +193,26 @@ class SearchViewModel @Inject constructor(
     /** Posts you've watched before (from history): marked in the results so you can skip them. */
     val watched: StateFlow<Set<String>> = library.keys(dev.pfeed.data.repo.LibraryKind.HISTORY)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    /** Clipping all your moments: (done, of) while it runs, else null. */
+    val clippingMoments = MutableStateFlow<Pair<Int, Int>?>(null)
+
+    /** "Clip them all": a 30-second clip from each video's first moment, one after another, into Saved → Clips. */
+    fun clipAllMoments() {
+        if (clippingMoments.value != null) return
+        val list = yourMoments.value.filter { it.type == dev.pfeed.domain.model.MediaType.VIDEO }
+        if (list.isEmpty()) return
+        viewModelScope.launch {
+            clippingMoments.value = 0 to list.size
+            list.forEachIndexed { i, item ->
+                val at = dev.pfeed.player.Moments.of(item.key).firstOrNull()
+                val stream = runCatching { registry.byId(item.sourceId)?.resolveStream(item) }.getOrNull() as? dev.pfeed.domain.model.StreamInfo.Direct
+                if (at != null && stream != null) runCatching { clipLibrary.save(item, stream, (at - 6_000L).coerceAtLeast(0L)) }
+                clippingMoments.value = (i + 1) to list.size
+            }
+            clippingMoments.value = null
+        }
+    }
 
     /** Videos you marked moments in (saved or auto), newest watched first: they play from the moment. */
     val yourMoments: StateFlow<List<MediaItem>> = combine(library.items(dev.pfeed.data.repo.LibraryKind.HISTORY), dev.pfeed.player.Moments.changes) { history, _ ->
@@ -491,6 +512,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val followed by vm.followed.collectAsStateWithLifecycle()
     val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
     val yourMoments by vm.yourMoments.collectAsStateWithLifecycle()
+    val clipping by vm.clippingMoments.collectAsStateWithLifecycle()
     val watchedKeys by vm.watched.collectAsStateWithLifecycle()
     val savedKeys by vm.savedKeys.collectAsStateWithLifecycle()
     // Press and hold a result: save it, or open it on its site, without leaving the results.
@@ -629,6 +651,8 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 onTopicItem = { topic, index -> nav.navigate(Routes.viewer(vm.openList(topicRows.first { it.first == topic }.second, index, topic))) },
                 onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
                 yourMoments = yourMoments,
+                clipping = clipping,
+                onClipAll = vm::clipAllMoments,
                 // Titled "Moments", the viewer starts each one at its first moment.
                 onMoment = { index -> nav.navigate(Routes.viewer(vm.openList(yourMoments, index, dev.pfeed.ui.feed.FeedViewModel.MOMENTS))) },
                 typed = ui.query,
@@ -691,6 +715,8 @@ private fun SuggestionsPane(
     onContinue: (Int) -> Unit,
     yourMoments: List<MediaItem> = emptyList(),
     onMoment: (Int) -> Unit = {},
+    clipping: Pair<Int, Int>? = null,
+    onClipAll: () -> Unit = {},
     typed: String,
     followed: List<String>,
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
@@ -770,7 +796,13 @@ private fun SuggestionsPane(
         }
         // Your moments: the bits you marked, one tap from playing again.
         if (t.isEmpty() && yourMoments.isNotEmpty()) {
-            SectionTitle("Your moments")
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionTitle("Your moments", Modifier.weight(1f))
+                // Each moment as a clip kept on the phone (Saved → Clips).
+                TextButton(onClick = onClipAll, enabled = clipping == null) {
+                    Text(clipping?.let { (d, n) -> "Clipping $d of $n…" } ?: "Clip them all")
+                }
+            }
             Spacer(Modifier.height(10.dp))
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 items(yourMoments.size, key = { "moment:" + yourMoments[it].key }) { i ->

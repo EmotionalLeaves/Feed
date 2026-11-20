@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.51.0 — 2026-11-20
+
+Clip them all
+
+- Includes 5.50's **All caught up** marker in Following (its phone test lost the emulator, so it never published).
+- **Clip them all** on Discover's Your moments row: every moment you've marked becomes a 30-second clip kept on your phone (Saved → Clips), one after another, with a count as it goes. It's an offline reel of your favourite bits.
+
 ## 5.50.0 — 2026-11-20
 
 All caught up

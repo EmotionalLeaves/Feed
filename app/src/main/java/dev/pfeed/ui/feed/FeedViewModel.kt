@@ -82,7 +82,7 @@ class FeedViewModel @Inject constructor(
     private val holder: TransientFeedHolder,
     val playerPool: PlayerPool,
     val livePreviews: dev.pfeed.ui.common.LivePreviews,
-    private val clips: dev.pfeed.player.ClipMaker,
+    private val clipLibrary: dev.pfeed.data.repo.ClipLibrary,
 ) : ViewModel() {
 
     private val rawTag: String? = savedState.get<String>("tag")
@@ -1001,35 +1001,16 @@ class FeedViewModel @Inject constructor(
     }
 
     /**
-     * "Save a clip": the [CLIP_MS] from [atMs] cut into a file on the phone, kept in Saved → Clips
+     * "Save a clip": 30 s from [atMs] cut into a file on the phone, kept in Saved → Clips
      * as a video of its own (it plays offline and loops like any clip).
      */
     fun saveClip(item: MediaItem, stream: StreamInfo.Direct, atMs: Long) {
         offer("Cutting a clip from ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}…", "OK") {}
         viewModelScope.launch {
-            val end = item.durationSec?.let { minOf(atMs + CLIP_MS, it * 1000L) } ?: (atMs + CLIP_MS)
-            val file = runCatching { clips.clip(stream.url, stream.mimeType, atMs, end) }.getOrNull()
-            if (file == null) {
-                offer("Couldn't cut a clip from this one (${clips.lastError ?: "the site's file wouldn't allow it"})", "OK") {}
+            val clip = clipLibrary.save(item, stream, atMs)
+            if (clip == null) {
+                offer("Couldn't cut a clip from this one (${clipLibrary.lastError ?: "the site's file wouldn't allow it"})", "OK") {}
                 return@launch
-            }
-            val uri = android.net.Uri.fromFile(file).toString()
-            val clip = MediaItem(
-                id = "clip/" + file.nameWithoutExtension,
-                sourceId = "direct",
-                type = MediaType.VIDEO,
-                title = (item.title?.let { "$it · " } ?: "") + "clip at " + dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt()),
-                creator = item.creator,
-                tags = item.tags,
-                durationSec = ((end - atMs) / 1000).toInt(),
-                thumbnailUrl = item.thumbnailUrl,
-                pageUrl = item.pageUrl,
-                publishedAt = java.time.Instant.now(),
-                extras = mapOf("media" to uri, "mime" to "video/mp4"),
-            )
-            runCatching {
-                library.add(dev.pfeed.data.repo.LibraryKind.SAVED, clip)
-                library.addToCollection(CLIPS, clip)
             }
             if (!settings.value.privateMode && item.key !in saved.value) runCatching { signals.record(item, Signal(SignalType.SAVE)) }
             offer("Clip saved to $CLIPS", "OK") {}
@@ -1275,9 +1256,7 @@ class FeedViewModel @Inject constructor(
         private const val CARRY_ON_MIN_MS = 60_000L
         const val FRAMES = "Frames"
         const val MOMENTS = "Moments"
-        const val CLIPS = "Clips"
-        /** How long a saved clip runs. */
-        private const val CLIP_MS = 30_000L
+        const val CLIPS = dev.pfeed.data.repo.ClipLibrary.CLIPS
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L

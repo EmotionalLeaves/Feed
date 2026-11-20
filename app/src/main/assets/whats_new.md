@@ -1,3 +1,9 @@
+## 5.51.0 — 2026-11-20
+Clip them all
+
+- Includes 5.50's **All caught up** marker in Following (its phone test lost the emulator, so it never published).
+- **Clip them all** on Discover's Your moments row: every moment you've marked becomes a 30-second clip kept on your phone (Saved → Clips), one after another, with a count as it goes. It's an offline reel of your favourite bits.
+
 ## 5.50.0 — 2026-11-20
 All caught up
 
@@ -7,9 +13,3 @@ All caught up
 Times in comments you can tap
 
 - **Tap a time in a comment**: in a video's Comments, any time someone wrote ("12:31") shows as a ▶ chip. Tap it and the video goes straight there.
-
-## 5.48.0 — 2026-11-19
-Clip the best part
-
-- **Clip the best part · 12:31** in the long-press menu: one tap saves 30 seconds from the best place the app knows (your moment, your favourite act, the site's most-rewatched stretch, or where commenters point), with no scrubbing.
-- **Save a clip** now starts a few seconds before where you are, since you usually reach for it just after the good bit begins.
