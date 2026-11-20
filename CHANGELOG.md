@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.77.0 — 2026-11-20
+
+Two more sites; memory check
+
+- **BigTitsLust and Nudez** join (41 tube sites). AlotPorn plays directly on the test phone.
+- 5.76 didn't publish: on the test phone the app was closed for using too much memory late in a long test session. The device test now records memory after each step, to find what grows it (fix to follow).
+
 ## 5.76.0 — 2026-11-20
 
 AlotPorn: full-length scenes

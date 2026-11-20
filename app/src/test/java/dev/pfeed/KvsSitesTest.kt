@@ -643,4 +643,67 @@ ecodeURIComponent(a[0])] = decodeURIComponent(a[1]);
 <source src='https://www.alotporn.com/get_file/6/8e5c4c7222788f6202d0c36ac0eb9014/640000/640149/640149_360p.mp4' title="SD" type='video/mp4' />
 <source src='https://www.alotporn.com/get_file/6/e9bee96d296c92c4c1a3410c4f900724/640000/640149/640149_720p.mp4' title="HD" type='video/mp4' />
 </video>"""
+
+    @Test
+    fun `kvs default theme`() {
+        val list = TubeSite.FreePorn8.parseList(FP8_LIST)
+        assertEquals(2, list.size)
+        assertEquals("1456783", list[0].id)
+        assertEquals("My neighbour asked me for a fine bang for his birthday.", list[0].title)
+        assertEquals(10 * 60 + 25, list[0].durationSec)
+        assertTrue(list[0].thumb!!.endsWith("/320x180/2.jpg"))
+        assertTrue(list[0].preview!!.contains("1456783_preview.mp4"))
+    }
+
+    private val FP8_LIST = """<a href="https://www.freeporn8.com/videos/1456783/my-neighbour-asked-me-for-a-fine-bang-for-his-birthday/" title="My neighbour asked me for a fine bang for his birthday." >
+ <div class="img">
+ <img class="thumb " src="https://www.freeporn8.com/contents/videos_screenshots/1456000/1456783/320x180/2.jpg" alt="My neighbour asked me for a fine bang for his birthday." data-cnt="10" data-preview="https://www.freeporn8.com/get_file/1/b976235acab66521a8d5f3d3784183b2/1456000/1456783/1456783_preview.mp4/" width="320" height="180"/>
+ <span class="ico-fav-0 " title="Add to Favourites" data-fav-video-id="1456783" data-fav-type="0"></span>
+ <span class="ico-fav-1 " title="Watch Later" data-fav-video-id="1456783" data-fav-type="1"></span>
+ </div>
+ <strong class="title">
+ My neighbour asked me for a fine bang for his birthday.
+ </strong>
+ <div class="wrap">
+ <div class="duration">10:25</div>
+
+ <div class="rating positive">
+ 0%
+ </div>
+ </div>
+ <div class="wrap">
+ <div class="added"><em>5 seconds ago</em></div>
+ </div>
+ </a>
+ </div>
+ <div class="item ">
+ <a href="https://www.freeporn8.com/videos/1456785/family-sinners-jessica-ryan-john-legendary-mothers-stepson-8-movie-scene-1/" title="FAMILY SINNERS - Jessica Ryan, John Legendary - Mothers & Stepson 8 Movie scene 1" >
+ <div class="img">
+ <img class="thumb " src="https://www.freeporn8.com/contents/videos_screenshots/1456000/1456785/320x180/2.jpg" alt="FAMILY SINNERS - Jessica Ryan, John Legendary - Mothers & Stepson 8 Movie scene 1" data-cnt="10" data-preview="https://www.freeporn8.com/get_file/1/374432138074975ffaf21921c9c3b57d/1456000/1456785/1456785_preview.mp4/" width="320" height="180"/>
+ <span class="ico-fav-0 " title="Add to Favourites" data-fav-video-id="1456785" data-fav-type="0"></span>
+ <span class="ico-fav-1 " title="Watch Later" data-fav-video-id="1456785" data-fav-type="1"></span>
+ </div>
+ <strong class="title">
+ FAMILY SINNERS - Jessica Ryan, John Legendary - Mothers & Stepson 8 Movie scene 1
+ </strong>
+ <div class="wrap">
+ <div class="duration">10:01</div>
+
+ <div class="rating positive">
+ 0%
+ </div>
+ </div>
+ <div class="wrap">
+ <div class="added"><em>1 minute ago</em></div>
+ </div>
+ </a>
+ </div>
+ <span><div class="item pignu">
+ <div style="position: relative;">
+ <span id="F8m-Native-Ad-1"></span>
+ <span class="is-av">Ad</span>
+ </div>
+ </div></span>
+ <div class="item ">
+ """
 }

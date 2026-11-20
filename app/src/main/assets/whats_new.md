@@ -1,3 +1,9 @@
+## 5.77.0 — 2026-11-20
+Two more sites; memory check
+
+- **BigTitsLust and Nudez** join (41 tube sites). AlotPorn plays directly on the test phone.
+- 5.76 didn't publish: on the test phone the app was closed for using too much memory late in a long test session. The device test now records memory after each step, to find what grows it (fix to follow).
+
 ## 5.76.0 — 2026-11-20
 AlotPorn: full-length scenes
 
@@ -7,9 +13,3 @@ AlotPorn: full-length scenes
 Three more tube sites
 
 - **PornWhite, SleazyNeasy and VikiPorn** join (KatesTube's sister sites): uploaders, dates, preview clips in the grids, up to 1080p. 37 tube sites in all.
-
-## 5.74.0 — 2026-11-20
-For You learns performers
-
-- **For You learns who you like watching**: a performer named in a studio title now counts like a tag for her, the same one boards use. Enjoy her in one upload and her other videos, on any site, rank higher; For You may also search her name for you.
-- **Creators for you** on Discover now also suggests performers you keep watching (named in three or more videos you watched) that you don't follow yet.

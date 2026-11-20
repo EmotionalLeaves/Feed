@@ -84,7 +84,7 @@ On by default, all filtered to porn only (non-porn posts are dropped) and throug
 
 | Source | What |
 |---|---|
-| **Tube sites** (38, each switchable) | XVideos, Pornhub, YouPorn, Tube8, xHamster, RedTube, Eporner, TNAFlix, Porntrex, YouJizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HQPorner, Porndig, PerfectGirls, OK.XXX, PornGo, XFreeHD, 3Movs, AnySex, ZB Porn, Analdin, KatesTube, TXXX, HClips, Upornia, TubePornClassic, VXXX, HDZog, ManySex, EMPFlix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn. Plays each site's own files directly (HLS or MP4, up to 1080p, 4K with Best quality; 480p with Data saver); if one copy won't play, the same upload on another site does. |
+| **Tube sites** (41, each switchable) | XVideos, Pornhub, YouPorn, Tube8, xHamster, RedTube, Eporner, TNAFlix, Porntrex, YouJizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HQPorner, Porndig, PerfectGirls, OK.XXX, PornGo, XFreeHD, 3Movs, AnySex, ZB Porn, Analdin, KatesTube, TXXX, HClips, Upornia, TubePornClassic, VXXX, HDZog, ManySex, EMPFlix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, Nudez. Plays each site's own files directly (HLS or MP4, up to 1080p, 4K with Best quality; 480p with Data saver); if one copy won't play, the same upload on another site does. |
 | **Live cams** | CamSoda and Cam4 public rooms, in the Live tab (and search). |
 | **RedGIFs** | Clips and GIFs. |
 | **Reddit** | Hundreds of NSFW subreddits (public RSS, paced to Reddit's limits). |

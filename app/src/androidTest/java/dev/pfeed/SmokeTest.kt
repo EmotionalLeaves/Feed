@@ -52,6 +52,21 @@ class SmokeTest {
 
     private val pin = listOf("1", "2", "3", "4")
 
+    @get:Rule
+    val testName = org.junit.rules.TestName()
+
+    /** How much memory each test leaves behind (they share one process): finds the one that grows it. */
+    @org.junit.After
+    fun memoryAfter() {
+        val mi = android.os.Debug.MemoryInfo().also { android.os.Debug.getMemoryInfo(it) }
+        val rt = Runtime.getRuntime()
+        android.util.Log.i(
+            "PFHEALTH",
+            "memory after ${testName.methodName}: pss ${mi.totalPss / 1024} MB (native ${mi.nativePss / 1024}, graphics ${mi.getMemoryStat("summary.graphics")?.toIntOrNull()?.div(1024)}, code ${mi.getMemoryStat("summary.code")?.toIntOrNull()?.div(1024)}), " +
+                "java ${(rt.totalMemory() - rt.freeMemory()) shr 20} MB, native heap ${android.os.Debug.getNativeHeapAllocatedSize() shr 20} MB",
+        )
+    }
+
     private fun exists(text: String, substring: Boolean = false) =
         rule.onAllNodes(hasText(text, substring = substring), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
 

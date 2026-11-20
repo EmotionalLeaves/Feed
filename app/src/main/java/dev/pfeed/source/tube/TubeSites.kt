@@ -116,7 +116,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, Nudez) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -1340,6 +1340,51 @@ sealed class TubeSite(val host: String, val label: String) {
 
         override fun embedUrl(id: String) = "https://www.alotporn.com/embed/$id"
     }
+
+    /**
+     * KVS's default theme (FreePorn8 and the many sites like it): each tile is a titled link with the
+     * thumbnail, a preview clip (data-preview), the length and title; KVS files and categories on the video page.
+     */
+    abstract class KvsDefault(host: String, label: String, private val www: Boolean = true) : TubeSite(host, label) {
+        private val base = if (www) "https://www.$host" else "https://$host"
+        private fun pg(page: Int) = if (page == 0) "" else "${page + 1}/"
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "$base/latest-updates/${pg(page)}"
+            "top" -> "$base/top-rated/${pg(page)}"
+            else -> "$base/search/${enc(section.lowercase().trim()).replace("+", "-")}/${pg(page)}"
+        }
+        private val esc = Regex.escape(host)
+        private val MARK = Regex("""<a href="(https://(?:www\.)?$esc/videos/(\d+)/[^"]*)" title="([^"]*)"""")
+        private val IMG = Regex("""<img [^>]*?(?:data-original|src)="(https://[^"]+\.jpg)"""")
+        private val CLIP = Regex("""data-preview="(https://[^"]+\.mp4/?)"""")
+        private val DUR = Regex("""class="duration">\s*([\d:]+)""")
+        private val TAG = Regex("""href="https://(?:www\.)?$esc/(?:tags|categories)/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList().distinctBy { it.groupValues[2] }
+            return hits.mapIndexed { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 4000))
+                TubeVideo(
+                    id = m.groupValues[2],
+                    title = unescape(m.groupValues[3]).trim().ifEmpty { null },
+                    pageUrl = m.groupValues[1],
+                    thumb = IMG.find(c)?.groupValues?.get(1),
+                    durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
+                    preview = CLIP.find(c)?.groupValues?.get(1),
+                )
+            }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? = kvsBest(pageHtml)
+        override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG)
+        override fun embedUrl(id: String) = "$base/embed/$id"
+    }
+
+    object FreePorn8 : KvsDefault("freeporn8.com", "FreePorn8")
+    object BigTitsLust : KvsDefault("bigtitslust.com", "BigTitsLust")
+    object Nudez : KvsDefault("nudez.com", "Nudez")
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */
     object XFreeHd : TubeSite("xfreehd.com", "XFreeHD") {
