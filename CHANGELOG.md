@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.36.0 — 2026-11-19
+
+Next video, sideways
+
+- **Next video** button in the sideways player's controls: move on to the next post without turning the phone back upright.
+
 ## 5.35.0 — 2026-11-19
 
 Co-watching remembers

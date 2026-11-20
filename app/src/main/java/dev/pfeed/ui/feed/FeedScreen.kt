@@ -1615,6 +1615,7 @@ private fun FeedPage(
                 onPause = { paused = !paused; controlsTouched = System.currentTimeMillis() },
                 onTouched = { controlsTouched = System.currentTimeMillis() },
                 onMoment = { MomentGrab.request.value = item.key },
+                onNext = onEnded,
                 scenes = run {
                     val v by dev.pfeed.domain.reco.Scenes.changes.collectAsStateWithLifecycle()
                     remember(item.key, v, player) { vm.sceneCuts(item) }
@@ -2259,6 +2260,7 @@ private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
     onPause: () -> Unit,
     onTouched: () -> Unit,
     onMoment: () -> Unit,
+    onNext: () -> Unit = {},
     scenes: List<Long> = emptyList(),
 ) {
     androidx.compose.animation.AnimatedVisibility(
@@ -2289,8 +2291,20 @@ private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
                 style = MaterialTheme.typography.titleMedium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.align(Alignment.TopStart).padding(start = 72.dp, end = 24.dp, top = 22.dp),
+                modifier = Modifier.align(Alignment.TopStart).padding(start = 72.dp, end = 150.dp, top = 22.dp),
             )
+            // On to the next post without turning back upright.
+            Row(
+                Modifier.align(Alignment.TopEnd).padding(top = 14.dp, end = 20.dp).clip(RoundedCornerShape(50))
+                    .background(Color.Black.copy(alpha = 0.45f))
+                    .clickable { onNext() }
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Next video", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.width(4.dp))
+                Icon(Icons.Filled.SkipNext, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+            }
             Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(40.dp)) {
                 IconButton(onClick = { p.seekTo((p.currentPosition - SKIP_MS).coerceAtLeast(0L)); onTouched() }, modifier = Modifier.size(56.dp)) {
                     Icon(Icons.Filled.FastRewind, contentDescription = "Back 10 seconds", tint = Color.White, modifier = Modifier.size(36.dp))
