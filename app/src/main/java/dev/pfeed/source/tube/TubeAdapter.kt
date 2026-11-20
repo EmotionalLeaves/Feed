@@ -11,6 +11,7 @@ import dev.pfeed.source.SourceException
 import dev.pfeed.source.net.CachingAdapter
 import dev.pfeed.source.net.HttpJson
 import kotlinx.coroutines.async
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.withTimeoutOrNull
@@ -31,6 +32,8 @@ class TubeAdapter @Inject constructor(
     private val http: HttpJson,
     private val blocks: dev.pfeed.data.repo.BlockRepository,
 ) : CachingAdapter() {
+    private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
+
     /** Sites switched off (in Sources, or hidden from a post's menu): not asked at all. */
     private suspend fun activeSites(): List<TubeSite> {
         val hidden = runCatching { blocks.current().origins }.getOrDefault(emptySet())
@@ -179,6 +182,16 @@ class TubeAdapter @Inject constructor(
             val comments = runCatching { site.comments(html) }.getOrDefault(emptyList())
             if (timeline != null || chapters.isNotEmpty() || heat.isNotEmpty() || comments.isNotEmpty())
                 dev.pfeed.domain.reco.VideoExtras.put(item.key, dev.pfeed.domain.reco.VideoExtras.Info(timeline, chapters, heat, comments))
+            // Sites that load their comments separately (XVideos): fetched alongside, never in the way of playing.
+            if (comments.isEmpty()) site.commentsUrl(html)?.let { url ->
+                background.launch {
+                    val found = runCatching { site.parseComments(http.get(id, url, mapOf("Referer" to page, "X-Requested-With" to "XMLHttpRequest"))) }.getOrDefault(emptyList())
+                    if (found.isNotEmpty()) {
+                        val now = dev.pfeed.domain.reco.VideoExtras.of(item.key) ?: dev.pfeed.domain.reco.VideoExtras.Info(timeline, chapters, heat)
+                        dev.pfeed.domain.reco.VideoExtras.put(item.key, now.copy(comments = found))
+                    }
+                }
+            }
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.playerUrl(html)?.let { player ->

@@ -75,6 +75,17 @@ class VideoExtrasTest {
         assertEquals(base + "108.jpg", tl.at(5_000_000).first)
     }
 
+    @Test
+    fun `xvideos comments come from their own call`() {
+        val page = """"vmdata":{"pub_comments":2,"has_comments":true}, "id_video":92570314,"encoded_id_video":"olulicae7ff""""
+        assertEquals("https://www.xvideos.com/threads/video-comments/get-posts/top/92570314/0/0", TubeSite.Xvideos.commentsUrl(page))
+        assertEquals(null, TubeSite.Xvideos.commentsUrl(page.replace("true", "false")))
+        val json = kotlinx.serialization.json.Json.parseToJsonElement(
+            """{"posts":{"nb_posts_total":2,"posts":{"1":{"id":"1","name":"Brittany2421","message":"best part 12:31 &amp; after"},"2":{"id":"2","name":"x","message":"<b>wow</b>"}}}}"""
+        )
+        assertEquals(listOf("Brittany2421" to "best part 12:31 & after", "x" to "wow"), TubeSite.Xvideos.parseComments(json))
+    }
+
     private val PH_COMMENT = """<a rel="nofollow"
  data-event="watch_page" data-label="profile_view"
  href="/users/bigdickaussie69696"

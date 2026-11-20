@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.41.0 — 2026-11-19
+
+XVideos comments
+
+- **XVideos comments**: the long-press menu's Comments now works on XVideos too, fetched quietly alongside the video. Times written in them ("12:31") feed the **Commenters point to…** best part and Highlights, as on Pornhub.
+
 ## 5.40.0 — 2026-11-19
 
 Your call

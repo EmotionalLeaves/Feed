@@ -80,6 +80,10 @@ sealed class TubeSite(val host: String, val label: String) {
 
     /** The comments under the video, where the page carries them: (who, what), top first. */
     open fun comments(pageHtml: String): List<Pair<String, String>> = emptyList()
+    /** Where a site that loads its comments separately keeps them, from its video page; null if in the page or none. */
+    open fun commentsUrl(pageHtml: String): String? = null
+    /** That answer, as (who, what). */
+    open fun parseComments(body: kotlinx.serialization.json.JsonElement): List<Pair<String, String>> = emptyList()
 
     /** Scrub previews and chapters, where the page has them (the Pornhub family's player setup). */
     open fun timeline(pageHtml: String): dev.pfeed.domain.reco.VideoExtras.Timeline? = phTimeline(pageHtml) ?: kvsTimeline(pageHtml)
@@ -237,6 +241,22 @@ sealed class TubeSite(val host: String, val label: String) {
             val sheet = Regex("""setThumbSlideBig\('(https://[^']+\.jpg)'""").find(pageHtml)?.groupValues?.get(1) ?: return null
             val sec = Regex("""og:duration" content="(\d+)"""").find(pageHtml)?.groupValues?.get(1)?.toIntOrNull() ?: return null
             return dev.pfeed.domain.reco.VideoExtras.spread(sheet, sec, cols = 10, rows = 10)
+        }
+        /** Comments come from a JSON call: `posts.posts.{id}.{name, message}`. */
+        override fun commentsUrl(pageHtml: String): String? {
+            if ("\"has_comments\":true" !in pageHtml) return null
+            val id = Regex(""""id_video":(\d+)""").find(pageHtml)?.groupValues?.get(1) ?: return null
+            return "https://www.$host/threads/video-comments/get-posts/top/$id/0/0"
+        }
+        override fun parseComments(body: kotlinx.serialization.json.JsonElement): List<Pair<String, String>> {
+            val posts = ((body as? kotlinx.serialization.json.JsonObject)?.get("posts") as? kotlinx.serialization.json.JsonObject)
+                ?.get("posts") as? kotlinx.serialization.json.JsonObject ?: return emptyList()
+            return posts.values.mapNotNull { p ->
+                val o = p as? kotlinx.serialization.json.JsonObject ?: return@mapNotNull null
+                fun text(k: String) = (o[k] as? kotlinx.serialization.json.JsonPrimitive)?.takeIf { it.isString }?.content
+                val msg = text("message")?.replace(Regex("<[^>]+>"), " ")?.let(::unescape)?.trim()?.takeIf { it.isNotEmpty() } ?: return@mapNotNull null
+                (text("name") ?: "someone") to msg
+            }.take(40)
         }
         override fun pageTags(pageHtml: String): List<String> =
             Regex("""\"video_tags\"\s*:\s*\[([^\]]*)\]""").find(pageHtml)?.groupValues?.get(1)
