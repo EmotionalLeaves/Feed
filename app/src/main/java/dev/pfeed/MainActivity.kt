@@ -41,6 +41,7 @@ class MainActivity : FragmentActivity() {
     @Inject lateinit var settingsRepository: dev.pfeed.data.settings.SettingsRepository
     @Inject lateinit var offlineStore: dev.pfeed.data.repo.OfflineStore
     @Inject lateinit var settingsExporter: dev.pfeed.data.repo.SettingsExporter
+    @Inject lateinit var clipMaker: dev.pfeed.player.ClipMaker
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)

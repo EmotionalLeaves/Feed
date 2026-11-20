@@ -678,4 +678,19 @@ class SmokeTest {
             assertTrue("More like this served nothing", got.isNotEmpty())
         }
     }
+
+    /** "Save a clip": a few seconds cut from a real site's MP4 into a file that plays. */
+    @Test
+    fun clipMakerCutsAClip() {
+        val a = rule.activity
+        runBlocking {
+            val list = runCatching { dev.pfeed.source.tube.TubeSite.ZbPorn.parseList(a.httpJson.getRaw("tube", dev.pfeed.source.tube.TubeSite.ZbPorn.listUrl("new", 0))) }.getOrDefault(emptyList())
+            val url = list.firstNotNullOfOrNull { it.preview } ?: return@runBlocking android.util.Log.i("PFHEALTH", "clip: no source clip found").let { }
+            val t0 = System.currentTimeMillis()
+            val file = kotlinx.coroutines.withTimeoutOrNull(90_000) { a.clipMaker.clip(url, "video/mp4", 1_000, 4_000) }
+            android.util.Log.i("PFHEALTH", "clip: ${file?.length() ?: 0} bytes in ${System.currentTimeMillis() - t0} ms from $url; error=${a.clipMaker.lastError}")
+            assertTrue("no clip made: ${a.clipMaker.lastError}", file != null && file.length() > 10_000)
+            file?.delete()
+        }
+    }
 }

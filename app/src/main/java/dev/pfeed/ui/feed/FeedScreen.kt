@@ -85,6 +85,7 @@ import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material3.Button
@@ -2437,6 +2438,17 @@ private fun androidx.compose.foundation.layout.BoxScope.LandscapeControls(
                         Icon(Icons.Filled.Bookmark, contentDescription = null, tint = Color(0xFFFFB547), modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
                         Text("Save moment", color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Row(
+                        Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.45f))
+                            .clickable { ClipGrab.request.value = item.key; onTouched() }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Filled.ContentCut, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Clip 30 s", color = Color.White, style = MaterialTheme.typography.labelLarge)
                     }
                 }
             }

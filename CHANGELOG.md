@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.46.0 — 2026-11-19
+
+Clip it sideways
+
+- **Clip 30 s** button in the sideways player, next to Save moment.
+- The phone test in CI now cuts a real clip from a live site every build, so Save a clip keeps working.
+
 ## 5.45.0 — 2026-11-19
 
 Save a clip
