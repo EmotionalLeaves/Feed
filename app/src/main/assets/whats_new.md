@@ -1,3 +1,8 @@
+## 5.52.0 — 2026-11-20
+Clips your length
+
+- **Save a clip** now asks how much: 15 s, 30 s, 1 min or 2 min, from just before where you are.
+
 ## 5.51.0 — 2026-11-20
 Clip them all
 
@@ -8,8 +13,3 @@ Clip them all
 All caught up
 
 - **Following knows where you left off**: going through Following, when you reach the first post from before your last visit, a note says you're all caught up, so you know everything above it is new to you.
-
-## 5.49.0 — 2026-11-19
-Times in comments you can tap
-
-- **Tap a time in a comment**: in a video's Comments, any time someone wrote ("12:31") shows as a ▶ chip. Tap it and the video goes straight there.

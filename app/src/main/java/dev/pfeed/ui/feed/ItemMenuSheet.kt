@@ -156,6 +156,25 @@ fun ItemMenuSheet(
                 }
                 return@Column
             }
+            if (mode == "clip") {
+                ListItem(
+                    headlineContent = { Text("Clip how much?", fontWeight = FontWeight.Bold) },
+                    leadingContent = { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") },
+                    colors = androidx.compose.material3.ListItemDefaults.colors(containerColor = androidx.compose.ui.graphics.Color.Transparent),
+                    modifier = Modifier.clickable { pickTag = null },
+                )
+                HorizontalDivider()
+                FlowRow(Modifier.padding(16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(15 to "15 s", 30 to "30 s", 60 to "1 min", 120 to "2 min").forEach { (sec, label) ->
+                        androidx.compose.material3.FilterChip(
+                            selected = sec == 30,
+                            onClick = { ClipGrab.lengthMs = sec * 1000L; ClipGrab.request.value = item.key; onDismiss() },
+                            label = { Text(label) },
+                        )
+                    }
+                }
+                return@Column
+            }
             if (mode == "sleep") {
                 ListItem(
                     headlineContent = { Text("Stop playing after…", fontWeight = FontWeight.Bold) },
@@ -327,7 +346,7 @@ fun ItemMenuSheet(
                             ClipGrab.at.value = item.key to at; onDismiss()
                         }
                     }
-                    MenuRow("Save a clip", Icons.Filled.ContentCut, "30 seconds from just before now, kept on your phone as a clip of its own (Saved → Clips)") { ClipGrab.request.value = item.key; onDismiss() }
+                    MenuRow("Save a clip", Icons.Filled.ContentCut, "From just before now, kept on your phone as a clip of its own (Saved → Clips)") { pickTag = "clip" }
                 }
                 MenuRow("Save this moment", Icons.Filled.BookmarkAdd, "Marks where you are: it shows on the scrub bar, and Saved → Moments plays the video from there") { MomentGrab.request.value = item.key; onDismiss() }
                 MenuRow("Save this frame", Icons.Filled.PhotoCamera, "Keep this exact moment as a picture, in Saved → Frames") { FrameGrab.request.value = item.key; onDismiss() }

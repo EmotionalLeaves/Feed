@@ -1004,10 +1004,10 @@ class FeedViewModel @Inject constructor(
      * "Save a clip": 30 s from [atMs] cut into a file on the phone, kept in Saved → Clips
      * as a video of its own (it plays offline and loops like any clip).
      */
-    fun saveClip(item: MediaItem, stream: StreamInfo.Direct, atMs: Long) {
+    fun saveClip(item: MediaItem, stream: StreamInfo.Direct, atMs: Long, lengthMs: Long = dev.pfeed.data.repo.ClipLibrary.CLIP_MS) {
         offer("Cutting a clip from ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}…", "OK") {}
         viewModelScope.launch {
-            val clip = clipLibrary.save(item, stream, atMs)
+            val clip = clipLibrary.save(item, stream, atMs, lengthMs)
             if (clip == null) {
                 offer("Couldn't cut a clip from this one (${clipLibrary.lastError ?: "the site's file wouldn't allow it"})", "OK") {}
                 return@launch

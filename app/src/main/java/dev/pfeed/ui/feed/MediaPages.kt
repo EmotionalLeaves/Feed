@@ -454,7 +454,7 @@ fun VideoPage(
         val p = player?.takeIf { it.currentMediaItem?.mediaId == item.key } ?: return@LaunchedEffect
         val s = stream as? StreamInfo.Direct ?: return@LaunchedEffect
         // A few seconds before now too: you reach for the menu just after the good bit starts.
-        vm.saveClip(item, s, (p.currentPosition - CLIP_LEAD_MS).coerceAtLeast(0L))
+        vm.saveClip(item, s, (p.currentPosition - CLIP_LEAD_MS).coerceAtLeast(0L), ClipGrab.lengthMs.also { ClipGrab.lengthMs = 30_000L })
     }
     val clipAtAsk by ClipGrab.at.collectAsState()
     LaunchedEffect(clipAtAsk) {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.52.0 — 2026-11-20
+
+Clips your length
+
+- **Save a clip** now asks how much: 15 s, 30 s, 1 min or 2 min, from just before where you are.
+
 ## 5.51.0 — 2026-11-20
 
 Clip them all

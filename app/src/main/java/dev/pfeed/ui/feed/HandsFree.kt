@@ -130,6 +130,8 @@ object SeekRequest {
 /** "Save a clip" asked for the video with this key: its page cuts the next 30 s from where it is. */
 object ClipGrab {
     val request = MutableStateFlow<String?>(null)
+    /** How long the asked-for clip runs. */
+    @Volatile var lengthMs: Long = 30_000L
     /** A clip from a given moment instead (key, ms): "Clip the best part". */
     val at = MutableStateFlow<Pair<String, Long>?>(null)
 }
