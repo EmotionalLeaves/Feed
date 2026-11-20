@@ -62,6 +62,26 @@ object Features {
         same("feet", "foot_fetish", "feet_fetish", "foot")
         same("milf", "milfs")
         same("trans", "transgender", "shemale", "tranny", "ts")
+        // Acts as the sites name them in chapters and tags.
+        same("handjob", "hand_job", "handjobs", "hj")
+        same("titfuck", "titty_fuck", "tittyfuck", "titjob", "tit_job", "boobjob", "paizuri")
+        same("pussy_licking", "cunnilingus", "eating_pussy", "pussy_eating", "licking_pussy")
+        same("squirt", "squirting", "squirts")
+        same("facial", "facials", "cum_on_face")
+        same("rimming", "rimjob", "rim_job", "ass_licking")
+        same("double_penetration", "dp", "double_penetrated")
+        same("reverse_cowgirl", "reverse_cow_girl", "reversecowgirl")
+        same("cowgirl", "cow_girl", "riding")
+        same("missionary", "missionary_position")
+        same("fingering", "finger_fucking", "fingered")
+        same("masturbation", "masturbating", "masturbate", "solo_masturbation")
+        same("cum_in_mouth", "cim", "oral_creampie")
+        same("gangbang", "gang_bang", "gangbanged")
+        same("bdsm", "bondage_bdsm")
+        same("asian", "asians")
+        same("ebony", "black_girl", "ebonies")
+        same("latina", "latinas", "latin")
+        same("teen", "teens", "teen_18", "teens_18", "18_year_old", "18yo")
     }
 
     fun of(item: MediaItem): List<String> {

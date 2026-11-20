@@ -1,3 +1,8 @@
+## 5.61.0 — 2026-11-20
+One word for one thing
+
+- **More sites' words understood as the same thing**: handjob/hand job, titjob/titty fuck, cunnilingus/pussy licking, squirt/squirting, facial/facials, rimming/rimjob, DP/double penetration, cowgirl/riding, reverse cowgirl, missionary, fingering, masturbation, cum in mouth, gangbang, and more. A taste learned on one site now carries to the others, and searching an act finds videos that call it by another name.
+
 ## 5.60.0 — 2026-11-20
 From clip to full video
 
@@ -7,9 +12,3 @@ From clip to full video
 Watch later from search
 
 - **Watch later from Search and Discover**: hold any result or tile to put it on Watch later, next to Save.
-
-## 5.58.0 — 2026-11-20
-Watch later, finished
-
-- **Watch later on Discover**: a row of what you meant to come back to.
-- Watch most of something on Watch later and it comes off the list by itself.
