@@ -1,3 +1,8 @@
+## 5.39.0 — 2026-11-19
+Commenters point the way
+
+- **Commenters point to…**: times written in a video's comments ("12:31 omg") are people's own bookmarks. When the site keeps no heatmap, the time most commenters point to becomes the video's best part: the pill says "Commenters point to 12:31", and Highlights starts there.
+
 ## 5.38.0 — 2026-11-19
 Your moments on Discover
 
@@ -8,8 +13,3 @@ Your moments on Discover
 Live badge
 
 - **Live rooms say they're live**: a small red-dot badge shows "LIVE · 1.2k watching · CamSoda" (or Cam4 / Flirt4Free) on every room in the feed.
-
-## 5.36.0 — 2026-11-19
-Next video, sideways
-
-- **Next video** button in the sideways player's controls: move on to the next post without turning the phone back upright.

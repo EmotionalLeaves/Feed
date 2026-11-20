@@ -550,7 +550,11 @@ fun VideoPage(
         }
         // A long video whose site keeps count of what people watch: offer to skip to the best part,
         // for the first few seconds (only while you're before it).
-        val siteBest = remember(item.key, stream) { dev.pfeed.domain.reco.BestPart.of(item.key) }
+        // The site's heatmap if it keeps one; else the time its commenters point to most.
+        val crowdTime = remember(item.key, stream) {
+            dev.pfeed.domain.reco.VideoExtras.of(item.key)?.comments?.let { dev.pfeed.domain.reco.CommentMoments.of(it, item.durationSec) }?.firstOrNull()
+        }
+        val siteBest = remember(item.key, stream) { dev.pfeed.domain.reco.BestPart.of(item.key) } ?: crowdTime
         // The act you like most, when the site names its acts: a better "best part" than the crowd's.
         val favourite by produceState<Pair<String, Long>?>(null, item.key, stream) { value = vm.favouriteAct(item) }
         // A moment you saved in it beats both.
@@ -613,6 +617,7 @@ fun VideoPage(
                     when {
                         moment != null -> "Your moment · "
                         fav != null -> "Jump to ${fav.first.lowercase()}, your favourite · "
+                        siteBest == crowdTime && crowdTime != null && dev.pfeed.domain.reco.BestPart.of(item.key) == null -> "Commenters point to "
                         else -> "Skip to the best part · "
                     } +
                         dev.pfeed.ui.common.formatDuration((best / 1000).toInt()),

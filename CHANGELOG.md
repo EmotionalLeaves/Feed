@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.39.0 — 2026-11-19
+
+Commenters point the way
+
+- **Commenters point to…**: times written in a video's comments ("12:31 omg") are people's own bookmarks. When the site keeps no heatmap, the time most commenters point to becomes the video's best part: the pill says "Commenters point to 12:31", and Highlights starts there.
+
 ## 5.38.0 — 2026-11-19
 
 Your moments on Discover

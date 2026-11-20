@@ -588,6 +588,8 @@ class FeedViewModel @Inject constructor(
         if (d < Highlights.MIN_SEC) return null
         favouriteAct(item)?.let { return it.second }
         dev.pfeed.domain.reco.BestPart.of(item.key)?.let { return it }
+        // Where its commenters point.
+        dev.pfeed.domain.reco.VideoExtras.of(item.key)?.comments?.let { dev.pfeed.domain.reco.CommentMoments.of(it, d) }?.firstOrNull()?.let { return it }
         // No better clue: the scene that starts nearest a good way in, if the scenes are known.
         val fallback = Highlights.fallbackMs(d)
         return dev.pfeed.domain.reco.Scenes.of(item.key)?.filter { it > 0 }?.minByOrNull { kotlin.math.abs(it - fallback) } ?: fallback
