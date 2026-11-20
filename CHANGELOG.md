@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.47.0 — 2026-11-19
+
+Clips leave with you
+
+- **Export clips and frames**: the long-press menu's **Export to Downloads** now works on the clips and frames you made, so you can take one outside the app.
+- Unsaving a clip or frame deletes its file too, so they don't pile up on your phone.
+
 ## 5.46.0 — 2026-11-19
 
 Clip it sideways

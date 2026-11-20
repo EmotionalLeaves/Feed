@@ -836,6 +836,8 @@ class FeedViewModel @Inject constructor(
         viewModelScope.launch {
             if (item.key in saved.value) {
                 library.remove(LibraryKind.SAVED, item)
+                // A clip or frame the app made lives only in Saved: unsaved, its file goes too.
+                ownFile(item)?.takeIf { it.parentFile?.name in setOf("clips", "frames") }?.delete()
             } else {
                 library.add(LibraryKind.SAVED, item)
                 statsFor(item.key).explicit = true
@@ -886,11 +888,17 @@ class FeedViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     /** Whether [item] is kept on the phone as a file that can be exported (not a stream). */
-    fun canExport(item: MediaItem): Boolean = android.os.Build.VERSION.SDK_INT >= 29 && !item.isGallery && offline.localFileCached(item.key)
+    /** A clip or frame the app made: its file on the phone. */
+    private fun ownFile(item: MediaItem): java.io.File? =
+        item.extras["media"]?.takeIf { it.startsWith("file:") }?.let { android.net.Uri.parse(it).path }?.let { java.io.File(it) }?.takeIf { it.exists() }
+
+    fun canExport(item: MediaItem): Boolean = android.os.Build.VERSION.SDK_INT >= 29 && !item.isGallery &&
+        (ownFile(item) != null || offline.localFileCached(item.key))
 
     fun exportToDownloads(item: MediaItem) {
         viewModelScope.launch {
-            val ok = offline.exportToDownloads(item.key, item.title)
+            val own = ownFile(item)
+            val ok = if (own != null) offline.exportFile(own, item.title) else offline.exportToDownloads(item.key, item.title)
             _messages.tryEmit(if (ok) "Saved to your phone's Downloads" else "Couldn't export it")
         }
     }

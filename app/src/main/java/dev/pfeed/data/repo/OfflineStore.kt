@@ -106,8 +106,13 @@ class OfflineStore @Inject constructor(
      * and the gallery can see it. Only when the person asks: nothing leaves the app's storage otherwise.
      */
     suspend fun exportToDownloads(key: String, title: String?): Boolean = withContext(Dispatchers.IO) {
-        if (android.os.Build.VERSION.SDK_INT < 29) return@withContext false
         val f = localFile(key) ?: return@withContext false
+        exportFile(f, title)
+    }
+
+    /** A file the app made itself (a clip, a frame) copied to Downloads. */
+    suspend fun exportFile(f: java.io.File, title: String?): Boolean = withContext(Dispatchers.IO) {
+        if (android.os.Build.VERSION.SDK_INT < 29 || !f.exists()) return@withContext false
         val safe = (title ?: "post").replace(Regex("[^A-Za-z0-9 ._-]"), "").trim().take(60).ifBlank { "post" }
         val values = android.content.ContentValues().apply {
             put(android.provider.MediaStore.Downloads.DISPLAY_NAME, "$safe.${f.extension}")
