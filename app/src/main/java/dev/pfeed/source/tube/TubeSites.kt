@@ -116,12 +116,12 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, Nudez) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
          */
-        val RETIRED: Set<String> = setOf("xnxx.com", "xozilla.xxx")
+        val RETIRED: Set<String> = setOf("xnxx.com", "xozilla.xxx", "nudez.com")
         private val KVS_SCREENS = Regex("""timeline_screens_url: '([^']+\{time\}[^']*)'""")
         private val KVS_INTERVAL = Regex("""timeline_screens_interval: '(\d+)'""")
         private val KVS_COUNT = Regex("""timeline_screens_count: '(\d+)'""")
@@ -1384,7 +1384,6 @@ sealed class TubeSite(val host: String, val label: String) {
 
     object FreePorn8 : KvsDefault("freeporn8.com", "FreePorn8")
     object BigTitsLust : KvsDefault("bigtitslust.com", "BigTitsLust")
-    object Nudez : KvsDefault("nudez.com", "Nudez")
 
     /** XFreeHD: amateur and studio uploads; listing with title, length and thumbnail, tags and SD/HD MP4s on the video page. */
     object XFreeHd : TubeSite("xfreehd.com", "XFreeHD") {

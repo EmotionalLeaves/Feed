@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.78.0 — 2026-11-20
+
+Hidden tags cover titles too
+
+- **Hide a tag now catches titles too**: tube listings rarely carry tags, so a hidden tag slipped through on those sites. Now a hidden tag also hides posts whose title says it (whole words: hiding "scat" doesn't hide "scatter"), and tags read later from a video's page count as well.
+- Nudez is out again: its videos only played in the site's own player and it often errored.
+
 ## 5.77.0 — 2026-11-20
 
 Two more sites; memory check

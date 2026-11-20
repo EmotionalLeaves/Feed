@@ -26,7 +26,18 @@ data class Blocklist(
         val creator = item.creator?.let(::normalize)
         if (creator != null && creator in creators) return false
         if (tags.isEmpty()) return true
-        return item.tags.none { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }
+        if (item.tags.any { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }) return false
+        // Tags read later from the video's own page count too.
+        if (dev.pfeed.domain.reco.PageTags.of(item.key).any { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }) return false
+        // And the words of the title: tube listings rarely carry tags, but say what it is in the title.
+        val title = item.title ?: return true
+        val padded = dev.pfeed.domain.reco.Mentions.padded(title)
+        return titlePhrases.none { padded.contains(it) }
+    }
+
+    /** Hidden tags as whole words or phrases of a title ("big_tits" → " big tits "). */
+    private val titlePhrases: List<String> by lazy {
+        tags.map { dev.pfeed.domain.reco.Mentions.padded(normalize(it).replace('_', ' ')) }.filter { it.trim().length >= 2 }
     }
 
     /**

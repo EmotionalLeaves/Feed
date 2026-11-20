@@ -59,4 +59,14 @@ class BlocklistTest {
         org.junit.Assert.assertFalse(b.allows(post))
         org.junit.Assert.assertTrue(b.allows(item("x/2", tags = listOf("solo"))))
     }
+
+    @Test
+    fun `a hidden tag also hides titles that say it, as whole words`() {
+        val bl = Blocklist(tags = setOf(Blocklist.normalize("big tits"), "scat"))
+        assertFalse(bl.allows(item("1", title = "Busty wife with BIG TITS rides")))
+        assertFalse(bl.allows(item("2", title = "Scat queen")))
+        // Part of another word isn't the word.
+        assertTrue(bl.allows(item("3", title = "Scatter the pillows")))
+        assertTrue(bl.allows(item("4", title = "Big titles everywhere")))
+    }
 }
