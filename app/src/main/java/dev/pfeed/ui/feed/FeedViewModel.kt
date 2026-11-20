@@ -1039,6 +1039,26 @@ class FeedViewModel @Inject constructor(
         offer("Moment saved at ${dev.pfeed.ui.common.formatDuration((atMs / 1000).toInt())}", "Undo") { dev.pfeed.player.Moments.remove(item.key, atMs) }
     }
 
+    /** Watch later: a list to come back to, not downloaded like Saved. */
+    val watchLater: StateFlow<Set<String>> = library.collectionItems(WATCH_LATER)
+        .map { list -> list.mapTo(HashSet()) { it.key } }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun toggleWatchLater(item: MediaItem) {
+        viewModelScope.launch {
+            if (item.key in watchLater.value) {
+                library.removeFromCollection(WATCH_LATER, item)
+                _messages.tryEmit("Off Watch later")
+            } else {
+                library.addToCollectionOnly(WATCH_LATER, item)
+                // Meaning to come back to it is a "yes", if a quieter one than saving it.
+                if (!settings.value.privateMode) runCatching { signals.record(item, Signal(SignalType.VIEW, WATCH_LATER_TARGET)) }
+                statsFor(item.key).explicit = true
+                _messages.tryEmit("On Watch later (in Saved, not downloaded)")
+            }
+        }
+    }
+
     /** What's queued after the post you're on (for "Coming up"). */
     fun upcoming(n: Int = COMING_UP): List<MediaItem> = items.value.drop(lastSettled + 1).take(n)
 
@@ -1257,6 +1277,8 @@ class FeedViewModel @Inject constructor(
         const val FRAMES = "Frames"
         const val MOMENTS = "Moments"
         const val CLIPS = dev.pfeed.data.repo.ClipLibrary.CLIPS
+        const val WATCH_LATER = "Watch later"
+        private const val WATCH_LATER_TARGET = 1.0
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L

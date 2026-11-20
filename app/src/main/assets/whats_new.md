@@ -1,3 +1,8 @@
+## 5.57.0 — 2026-11-20
+Watch later
+
+- **Watch later** (long-press menu): keep a video to come back to without downloading it. Saving downloads it to play offline; Watch later just keeps it in a list, under Saved → Watch later. It also counts as a quiet "yes" for For You.
+
 ## 5.56.0 — 2026-11-20
 A reel of your moments
 
@@ -8,8 +13,3 @@ Your clips on Discover
 
 - **Your reel works**: the CI phone test now cuts two clips from a live site and joins them into a reel every build (1.6 MB in about 3 seconds).
 - **Your clips** on Discover: the clips and reels you made, one tap to play them.
-
-## 5.54.0 — 2026-11-20
-Make a reel
-
-- **Make a reel** in Saved → Clips: joins your clips (up to 20, oldest first) into one video, kept in Clips. It's your own highlight reel, offline. Clips of different sizes are matched to 720p, and ones without sound get silence so the reel plays smoothly.

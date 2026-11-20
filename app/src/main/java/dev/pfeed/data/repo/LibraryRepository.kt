@@ -115,6 +115,12 @@ class LibraryRepository @Inject constructor(
         }
     }
 
+    /** Into a collection without saving (nothing downloaded): Watch later. */
+    suspend fun addToCollectionOnly(name: String, item: MediaItem) {
+        val n = cleanName(name) ?: return
+        addTo(COLLECTION + n, item)
+    }
+
     /**
      * A collection the app fills itself (Your weekly mix): replaced wholesale, and NOT saved (so
      * nothing is downloaded and Saved isn't filled with posts you never chose).

@@ -40,6 +40,7 @@ import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.QueueMusic
@@ -373,6 +374,10 @@ fun ItemMenuSheet(
                     if (feel) "The phone stops vibrating with the audio" else "The phone vibrates with the audio, stronger as it gets louder, sound on or off",
                 ) { FeelTheSound.set(!feel); onDismiss() }
             }
+            val later by vm.watchLater.collectAsState()
+            val isLater = item.key in later
+            MenuRow(if (isLater) "Remove from Watch later" else "Watch later", Icons.Filled.WatchLater,
+                if (isLater) null else "Keep it to come back to, without downloading it (Saved → Watch later)") { vm.toggleWatchLater(item); onDismiss() }
             if (onComingUp != null) MenuRow("Coming up", Icons.Filled.QueueMusic, "What's next in the feed: jump ahead, or pass some over before they come") { onComingUp(); onDismiss() }
             if (onForTheRoad != null) MenuRow("Take 20 for the road", Icons.Filled.FlightTakeoff, "This and the next posts, downloaded to watch offline") { onForTheRoad(); onDismiss() }
             val siteComments = remember(item.key) { dev.pfeed.domain.reco.VideoExtras.of(item.key)?.comments?.size ?: 0 }
