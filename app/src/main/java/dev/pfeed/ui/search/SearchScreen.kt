@@ -116,10 +116,13 @@ enum class DurationFilter(val label: String, val range: IntRange?) {
     SHORT("Under 1 min", 0 until 60),
     MEDIUM("1–5 min", 60..300),
     LONG("Over 5 min", 301..Int.MAX_VALUE),
+    SCENE("5–20 min", 301..1200),
+    /** Full scenes and films, not clips or short cuts. */
+    FULL("Over 20 min", 1201..Int.MAX_VALUE),
 }
 
-/** Order of results: best match (mixed across sites), or by length. */
-enum class SortOrder(val label: String) { BEST("Best match"), FOR_YOU("For you"), LONGEST("Longest first"), SHORTEST("Shortest first") }
+/** Order of results: best match (mixed across sites), for you, newest, or by length. */
+enum class SortOrder(val label: String) { BEST("Best match"), FOR_YOU("For you"), NEWEST("Newest first"), LONGEST("Longest first"), SHORTEST("Shortest first") }
 
 /** One of the main "what kind of thing" choices; null type = everything. */
 enum class TypeFilter(val label: String, val types: Set<MediaType>) {
@@ -303,6 +306,8 @@ class SearchViewModel @Inject constructor(
             SortOrder.BEST -> kept
             // What you'd most likely enjoy first, by everything For You knows about you.
             SortOrder.FOR_YOU -> forYouOrder(kept)
+            // Undated posts after the dated ones, in the order the sites gave them.
+            SortOrder.NEWEST -> kept.sortedByDescending { it.publishedAt?.toEpochMilli() ?: Long.MIN_VALUE }
             SortOrder.LONGEST -> kept.sortedByDescending { it.durationSec ?: -1 }
             SortOrder.SHORTEST -> kept.sortedBy { it.durationSec ?: Int.MAX_VALUE }
         }

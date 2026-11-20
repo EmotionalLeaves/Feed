@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.70.0 — 2026-11-20
+
+Find full scenes in search
+
+- **Search filters for full scenes**: Length now has **5–20 min** and **Over 20 min** (full scenes and films, no clips or short cuts), and Order has **Newest first**.
+
 ## 5.69.0 — 2026-11-20
 
 EMPFlix, and previews for TNAFlix
