@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.82.0 — 2026-11-20
+
+Performers as you type
+
+- **Search suggests performers as you type**: names from the titles of what you've watched (most watched first) join the suggestions, so typing "len" offers Lena Paul.
+
 ## 5.81.0 — 2026-11-20
 
 Performers on the post

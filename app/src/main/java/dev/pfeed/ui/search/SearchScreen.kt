@@ -303,6 +303,16 @@ class SearchViewModel @Inject constructor(
         mixed.distinctBy { dev.pfeed.domain.filter.Blocklist.normalize(it.first) }.take(CREATORS_FOR_YOU)
     }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** Performers named in what you've watched, most-watched first, for typeahead. */
+    val people: StateFlow<List<String>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
+        .map { history ->
+            val count = HashMap<String, Int>(); val shown = HashMap<String, String>()
+            history.forEach { item -> dev.pfeed.domain.reco.Mentions.performers(item.title).forEach { n -> val k = n.lowercase(); count[k] = (count[k] ?: 0) + 1; shown.putIfAbsent(k, n) } }
+            count.entries.sortedByDescending { it.value }.take(PEOPLE_TYPEAHEAD).map { shown.getValue(it.key) }
+        }
+        .flowOn(kotlinx.coroutines.Dispatchers.Default)
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Creators and tags you follow, for typeahead. */
     val followed: StateFlow<List<String>> = library.follows
         .map { f -> (f.creators.map { it.substringBefore('@') } + f.tags.map { it.replace('_', ' ') }).distinct() }
@@ -573,6 +583,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val continueWatching by vm.continueWatching.collectAsStateWithLifecycle()
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val followed by vm.followed.collectAsStateWithLifecycle()
+    val people by vm.people.collectAsStateWithLifecycle()
     val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
     val yourMoments by vm.yourMoments.collectAsStateWithLifecycle()
     val clipping by vm.clippingMoments.collectAsStateWithLifecycle()
@@ -735,6 +746,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 onMoment = { index -> nav.navigate(Routes.viewer(vm.openList(yourMoments, index, dev.pfeed.ui.feed.FeedViewModel.MOMENTS))) },
                 typed = ui.query,
                 followed = followed,
+                people = people,
                 creatorsForYou = creatorsForYou,
                 onCreator = { nav.openTag("@$it") },
                 recent = recent,
@@ -809,6 +821,7 @@ private fun SuggestionsPane(
     onRediscover: (Int) -> Unit = {},
     typed: String,
     followed: List<String>,
+    people: List<String> = emptyList(),
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
     onCreator: (String) -> Unit = {},
     recent: List<String>,
@@ -822,8 +835,8 @@ private fun SuggestionsPane(
         // As you type: matching searches you've made, things you like and common tags.
         val t = typed.trim().lowercase()
         if (t.length >= 2) {
-            val vocab = remember(recent, interests, followed) {
-                (recent + followed + interests + POPULAR + dev.pfeed.data.settings.SourceCatalog.tubeSections.drop(2) +
+            val vocab = remember(recent, interests, followed, people) {
+                (recent + followed + people + interests + POPULAR + dev.pfeed.data.settings.SourceCatalog.tubeSections.drop(2) +
                     dev.pfeed.data.settings.SourceCatalog.comicTags.map { it.replace('-', ' ') }).distinctBy { it.lowercase() }
             }
             val matches = (vocab.filter { it.lowercase().startsWith(t) } + vocab.filter { it.lowercase().contains(t) })
@@ -1488,4 +1501,6 @@ private const val COWATCHED_ROW = "Watched with your favourites"
 /** Not watched for this long: a saved post comes back round on Discover. */
 /** Named in this many videos you watched: suggested on Discover's "Creators for you". */
 private const val PERFORMER_FOR_YOU_MIN = 3
+/** Performers from your history offered as you type. */
+private const val PEOPLE_TYPEAHEAD = 60
 private const val REDISCOVER_AFTER_MS = 14L * 86_400_000L
