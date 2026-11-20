@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.81.0 — 2026-11-20
+
+Performers on the post
+
+- **Performers on the post**: in the feed, the performers a studio title names now show as chips above the tags. Tap one for everything with her, from every site (and follow her from there).
+
 ## 5.80.0 — 2026-11-20
 
 Related videos on the TXXX sites

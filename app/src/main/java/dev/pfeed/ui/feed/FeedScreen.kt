@@ -1862,8 +1862,21 @@ private fun Overlay(
                         .then(if (cut || expanded) Modifier.clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { expanded = !expanded } else Modifier),
                 )
             }
-            if (tags.isNotEmpty()) {
+            // Performers the title names: tap one for everything with her, from every site.
+            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.performers(item.title).filter { !it.equals(creator, true) } }
+            if (tags.isNotEmpty() || people.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    people.forEach { name ->
+                        Row(
+                            Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.22f)).clickable { onTag("@$name") }
+                                .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text(name, color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
+                        }
+                    }
                     // Tags you like first, lit in the brand colour.
                     val ordered = remember(tags, likedTags) { tags.sortedByDescending { dev.pfeed.domain.reco.Features.normalizeTag(it.second) in likedTags } }
                     ordered.forEach { (label, raw) ->
