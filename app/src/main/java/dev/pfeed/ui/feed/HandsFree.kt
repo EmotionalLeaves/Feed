@@ -116,6 +116,12 @@ object FrameGrab {
     val request = MutableStateFlow<String?>(null)
 }
 
+/** The video playing right now and where it is (updated twice a second while one plays). */
+object NowPlaying {
+    @Volatile var key: String? = null
+    @Volatile var positionMs: Long = 0L
+}
+
 /** Go to a moment in a video (key, ms), from outside its page (the scenes strip in the menu). */
 object SeekRequest {
     val request = MutableStateFlow<Pair<String, Long>?>(null)

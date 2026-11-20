@@ -1,3 +1,8 @@
+## 5.43.0 — 2026-11-19
+More of what's on screen
+
+- **More <act>** in the long-press menu: when the site names what's happening at this moment (cowgirl, doggystyle…), one tap opens videos of exactly that. They start right at that act, too.
+
 ## 5.42.0 — 2026-11-19
 Coming up
 
@@ -7,8 +12,3 @@ Coming up
 XVideos comments
 
 - **XVideos comments**: the long-press menu's Comments now works on XVideos too, fetched quietly alongside the video. Times written in them ("12:31") feed the **Commenters point to…** best part and Highlights, as on Pornhub.
-
-## 5.40.0 — 2026-11-19
-Your call
-
-- **Settings → Playback** has two new switches: **Up next card** and **Mark the bits I go back to** (auto-moments). Both are on by default; turn either off if you'd rather not have it.

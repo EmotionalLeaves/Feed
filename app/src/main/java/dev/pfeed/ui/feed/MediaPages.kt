@@ -294,6 +294,8 @@ fun VideoPage(
         while (true) {
             kotlinx.coroutines.delay(500)
             if (p.currentMediaItem?.mediaId != item.key) continue
+            NowPlaying.key = item.key
+            NowPlaying.positionMs = p.currentPosition
             val d = p.duration
             val left = d - p.currentPosition
             endingIn = if (d >= UP_NEXT_MIN_MS && p.repeatMode == Player.REPEAT_MODE_OFF && left in 0..UP_NEXT_MS) left else null

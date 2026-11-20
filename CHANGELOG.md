@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.43.0 — 2026-11-19
+
+More of what's on screen
+
+- **More <act>** in the long-press menu: when the site names what's happening at this moment (cowgirl, doggystyle…), one tap opens videos of exactly that. They start right at that act, too.
+
 ## 5.42.0 — 2026-11-19
 
 Coming up
