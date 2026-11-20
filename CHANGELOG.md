@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.69.0 — 2026-11-20
+
+EMPFlix, and previews for TNAFlix
+
+- **EMPFlix** joins (TNAFlix's sister site, same kind of catalogue): 34 tube sites.
+- **TNAFlix and EMPFlix tiles come alive**: their preview clips now play in the grids, and the uploader is shown and followable.
+
 ## 5.68.0 — 2026-11-20
 
 Seven more tube sites

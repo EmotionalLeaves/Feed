@@ -7,7 +7,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Analdin and KatesTube, against their pages as served in November 2026. */
+/** Analdin, KatesTube and EMPFlix, against their pages as served in November 2026. */
 class KvsSitesTest {
     @Test
     fun `analdin listing, stream, own tags and timeline`() {
@@ -354,4 +354,69 @@ ecodeURIComponent(a[0])] = decodeURIComponent(a[1]);
  <div class="top-spot" id="mobile-under-video" data-banner="1718048">
  <a style="text-align:center; width:300px; color:#FFFFFF; font-size:11px; margin:0 auto 2px; font-weight:normal;display:block;" class="remove-spots" href="https://www.katestube.com/signup.php">Re
 <div class="menu"></div>"""
+
+    @Test
+    fun `empflix shares tnaflix's template`() {
+        val list = TubeSite.Empflix.parseList(EMP_LIST)
+        assertEquals(2, list.size)
+        assertEquals("3825592", list[0].id)
+        assertEquals("Wife Lies to Cuck on Phone Keeps Sucking Lover", list[0].title)
+        assertEquals("hentaifushigi", list[0].creator)
+        assertEquals(207, list[0].durationSec)
+        assertTrue(list[0].pageUrl.startsWith("https://www.empflix.com/"))
+        assertTrue(list[0].preview!!.contains("trailer.mp4"))
+        assertTrue(TubeSite.Tnaflix.listUrl("new", 0).startsWith("https://www.tnaflix.com/new/"))
+    }
+
+    private val EMP_LIST = """<div data-vid="3825592" data-num="1" class="col-xs-6 col-md-4 col-lg-4 col-xl-3 mb-3" data-first-thumb="8">
+ 
+ <a class="thumb thumb-chrome video-thumb bg-dark" href="https://www.empflix.com/amateur-porn/wife-lies-to-cuck-on-phone-keeps-sucking-lover/video3825592" data-trailer="https://cdnl.empflix.com/227/38/25/3825592/trailer.mp4?secure=1dnbUtFAZobbVSIapile0A==,1795269638">
+
+ <img fetchpriority="high" src="https://cdnl.empflix.com/thumb/a16:8q80w356r/227/38/25/3825592/8.jpg" alt="Wife Lies to Cuck on Phone Keeps Sucking Lover" width="300" height="150" onerror="this.src='/assets/img/video_cover_placeholder.jpg'" />
+ 
+ <div class="thumb-icon video-duration">03:27</div>
+ <div class="thumb-icon max-quality">1080p</div>
+ </a>
+
+ <a href="https://www.empflix.com/amateur-porn/wife-lies-to-cuck-on-phone-keeps-sucking-lover/video3825592" class="video-title text-break">
+ Wife Lies to Cuck on Phone Keeps Sucking Lover </a>
+
+ <div class="d-flex">
+ <a href="https://www.empflix.com/profile/hentaifushigi" class="me-2 text-start text-truncate badge badge-video-info badge-unverified">
+ hentaifushigi </a>
+ 
+ <div class="my-auto text-truncate text-small d-flex">
+ <div class="me-2">
+ <i class="icon-eye"></i>344 </div>
+ </div>
+
+ </div>
+ </div>
+ 
+ <div data-vid="3825589" data-num="2" class="col-xs-6 col-md-4 col-lg-4 col-xl-3 mb-3" data-first-thumb="23">
+ 
+ <a class="thumb thumb-chrome video-thumb bg-dark" href="https://www.empflix.com/amateur-porn/plumber-gets-along-with-a-naughty-and-hot-housewife/video3825589" data-trailer="https://cdnl.empflix.com/227/38/25/3825589/trailer.mp4?secure=SpOZbkNisVBAssyqIDw2Dg==,1795269638">
+
+ <img class="lazyload" src="/assets/img/video_cover_placeholder.jpg" data-src="https://cdnl.empflix.com/thumb/a16:8q80w356r/227/38/25/3825589/23.jpg" alt="Plumber gets along with a naughty and hot housewife" width="300" height="150" onerror="this.src='/assets/img/video_cover_placeholder.jpg'" />
+ 
+ <div class="thumb-icon video-duration">02:59</div>
+ <div class="thumb-icon max-quality">1080p</div>
+ </a>
+
+ <a href="https://www.empflix.com/amateur-porn/plumber-gets-along-with-a-naughty-and-hot-housewife/video3825589" class="video-title text-break">
+ Plumber gets along with a naughty and hot housewife </a>
+
+ <div class="d-flex">
+ <a href="https://www.empflix.com/profile/hentaifushigi" class="me-2 text-start text-truncate badge badge-video-info badge-unverified">
+ hentaifushigi </a>
+ 
+ <div class="my-auto text-truncate text-small d-flex">
+ <div class="me-2">
+ <i class="icon-eye"></i>346 </div>
+ </div>
+
+ </div>
+ </div>
+ 
+ """
 }

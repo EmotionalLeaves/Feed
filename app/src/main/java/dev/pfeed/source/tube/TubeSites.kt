@@ -116,7 +116,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -631,29 +631,40 @@ sealed class TubeSite(val host: String, val label: String) {
     protected fun best(options: List<Pair<Int, String>>): TubeStream? =
         options.filter { it.first in 1..maxHeight && it.second.startsWith("http") }.maxByOrNull { it.first }?.let { TubeStream(it.second, "video/mp4") }
 
-    object Tnaflix : TubeSite("tnaflix.com", "TNAFlix") {
+    /** TNAFlix and EMPFlix: one company, one template (listing with preview clip and uploader; MP4s by height on the video page). */
+    abstract class TnaNet(host: String, label: String) : TubeSite(host, label) {
         override fun listUrl(section: String, page: Int): String = when (section) {
             // The very newest uploads are often still processing (their files answer 404): start a page in.
-            "new" -> "https://www.tnaflix.com/new/${page + 2}"
-            "top" -> "https://www.tnaflix.com/toprated/${page + 1}"
-            else -> "https://www.tnaflix.com/search?what=${enc(section)}&page=${page + 1}"
+            "new" -> "https://www.$host/new/${page + 2}"
+            "top" -> "https://www.$host/toprated/${page + 1}"
+            else -> "https://www.$host/search?what=${enc(section)}&page=${page + 1}"
         }
+        private val esc = Regex.escape(host)
         private val MARK = Regex("""<div data-vid="(\d+)"""")
-        private val HREF = Regex("""href="(https://www\.tnaflix\.com/[^"]+/video\d+)"""")
+        private val HREF = Regex("""href="(https://www\.$esc/[^"]+/video\d+)"""")
         private val IMG = Regex("""<img[^>]*\bsrc="(https://[^"]+\.jpg[^"]*)"""")
         private val ALT = Regex("""<img[^>]*\balt="([^"]*)"""")
         private val DUR = Regex("""video-duration">\s*([\d:]+)""")
+        private val TRAILER = Regex("""data-trailer="(https://[^"]+)"""")
+        private val PROFILE = Regex("""href="https://www\.$esc/profile/[^"]+"[^>]*>\s*([^<]+?)\s*</a>""")
         private val SOURCE = Regex("""<source src="([^"]+)" type="video/mp4" size="(\d+)"""")
 
         override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
             val href = HREF.find(c)?.groupValues?.get(1) ?: return@mapNotNull null
-            TubeVideo(id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let(::unescape), duration(DUR.find(c)?.groupValues?.get(1)))
+            TubeVideo(
+                id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let(::unescape), duration(DUR.find(c)?.groupValues?.get(1)),
+                creator = PROFILE.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
+                preview = TRAILER.find(c)?.groupValues?.get(1)?.let(::unescape),
+            )
         }.distinctBy { it.id }
 
         override fun stream(pageHtml: String): TubeStream? =
             best(SOURCE.findAll(pageHtml).map { it.groupValues[2].toInt() to unescape(it.groupValues[1]) }.toList())
-        override fun embedUrl(id: String) = "https://player.tnaflix.com/video/$id"
+        override fun embedUrl(id: String) = "https://player.$host/video/$id"
     }
+
+    object Tnaflix : TnaNet("tnaflix.com", "TNAFlix")
+    object Empflix : TnaNet("empflix.com", "EMPFlix")
 
     object Porntrex : TubeSite("porntrex.com", "Porntrex") {
         override fun listUrl(section: String, page: Int): String = when (section) {

@@ -174,7 +174,7 @@ object ArchiveHeaders {
     )
     private val SITES = listOf(
         "coomer.st", "kemono.cr", "coomer.su", "coomer.party", "kemono.su", "kemono.party",
-        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "xhamster2.com", "xhamster.desi", "xhamster19.com", "redtube.com", "eporner.com", "tnaflix.com", "porntrex.com", "youjizz.com", "imhentai.xxx", "hentaifox.com", "hentaiera.com", "hentairox.com", "erome.com", "rule34video.com", "8muses.com", "thisvid.com", "pornone.com", "pornhat.com",
+        "nhentai.net", "xvideos.com", "xnxx.com", "pornhub.com", "youporn.com", "tube8.com", "xhamster.com", "xhamster2.com", "xhamster.desi", "xhamster19.com", "redtube.com", "eporner.com", "tnaflix.com", "porntrex.com", "youjizz.com", "imhentai.xxx", "hentaifox.com", "hentaiera.com", "hentairox.com", "erome.com", "rule34video.com", "8muses.com", "thisvid.com", "pornone.com", "pornhat.com", "empflix.com",
     )
     private val COOKIES = mapOf(
         "pornhub.com" to "age_verified=1; accessAgeDisclaimerPH=1; accessAgeDisclaimerUK=1; accessPH=1; platform=pc; hasVisited=1; cookiesBannerSeen=1",
@@ -194,7 +194,7 @@ object ArchiveHeaders {
 
     /** The site to name as referrer for [host] (covers subdomains and the sites' CDN domains), or null. */
     /** Sites whose file servers only accept their www address as the referring page (checked live). */
-    private val WWW_REFERER = setOf("erome.com", "tnaflix.com")
+    private val WWW_REFERER = setOf("erome.com", "tnaflix.com", "empflix.com")
 
     fun refererFor(site: String): String = if (site in WWW_REFERER) "https://www.$site/" else "https://$site/"
 
