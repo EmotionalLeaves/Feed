@@ -297,6 +297,8 @@ fun VideoPage(
             NowPlaying.key = item.key
             NowPlaying.positionMs = p.currentPosition
             val d = p.duration
+            // Well into a short cut of a studio scene: see whether the full scene is on another site.
+            if (d > 0 && p.currentPosition > d * LONGER_AT && !detached) vm.offerLonger(item)
             val left = d - p.currentPosition
             endingIn = if (d >= UP_NEXT_MIN_MS && p.repeatMode == Player.REPEAT_MODE_OFF && left in 0..UP_NEXT_MS) left else null
         }
@@ -744,6 +746,8 @@ fun VideoPage(
 private const val BEST_OFFER_MS = 9_000L
 private const val HIGHLIGHT_TICK_MS = 250L
 private const val ACT_TICK_MS = 500L
+/** How far into a video before looking for a longer cut of it. */
+private const val LONGER_AT = 0.4
 private const val SCENES_AFTER_MS = 6_000L
 private const val CLIP_LEAD_MS = 6_000L
 /** "Up next" shows this long before a full scene ends. */

@@ -7,24 +7,8 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Xozilla, Analdin and KatesTube, against their pages as served in November 2026. */
+/** Analdin and KatesTube, against their pages as served in November 2026. */
 class KvsSitesTest {
-    @Test
-    fun `xozilla listing and stream`() {
-        val list = TubeSite.Xozilla.parseList(XOZ_LIST)
-        assertEquals(2, list.size)
-        assertEquals("850503", list[0].id)
-        assertEquals("Curvy Blonde Explores Vintage Orgy Ecstasy", list[0].title)
-        assertEquals(27 * 60 + 25, list[0].durationSec)
-        assertTrue(list[0].thumb!!.endsWith("/300x169/6.jpg"))
-        assertTrue(list[0].preview!!.endsWith("850503_vthumb.mp4"))
-        // 720p over 540p.
-        assertTrue(TubeSite.Xozilla.stream(XOZ_VIDEO)!!.url.contains("850503hd.mp4"))
-        val tags = TubeSite.Xozilla.pageTags(XOZ_VIDEO)
-        assertTrue(tags.toString(), "anal" in tags && "big dick" in tags)
-        assertFalse(tags.toString(), tags.any { it.length > 25 })
-    }
-
     @Test
     fun `analdin listing, stream, own tags and timeline`() {
         val list = TubeSite.Analdin.parseList(ANA_LIST)
@@ -56,119 +40,6 @@ class KvsSitesTest {
         assertEquals(listOf("amateur", "blowjob"), TubeSite.KatesTube.pageTags(KATE_VIDEO))
     }
 
-    private val XOZ_LIST = """<a href="https://www.xozilla.xxx/videos/850503/curvy-blonde-explores-vintage-orgy-ecstasy/" class="item "
- vthumb="https://www.xozilla.xxx/get_file/13/8b92fe3a88bd27ecf908c8f7f51eac81/850000/850503/850503_vthumb.mp4/">
- <div class="mobile-preview"></div>
- <div class="img ithumb">
- <img class="thumb lazy-load"
- src="data:," data-original="https://www.xozilla.xxx/contents/videos_screenshots/850000/850503/300x169/6.jpg"
- alt="Curvy Blonde Explores Vintage Orgy Ecstasy"
- thumb="https://www.xozilla.xxx/contents/videos_screenshots/850000/850503/300x169/6.jpg"
- width="300"
- height="169"/>
- <!-- <span class="hd-label">HD</span> -->
- <!-- <div class="duration">27m:25s</div> -->
- </div>
- <strong class="title">Curvy Blonde Explores Vintage Orgy Ecstasy</strong>
- </a>
- <a href="https://www.xozilla.xxx/videos/850477/playful-milf-explores-new-pants-ecstasy/" class="item "
- vthumb="https://www.xozilla.xxx/get_file/13/32e400971bf653ef5f3f947314992008/850000/850477/850477_vthumb.mp4/">
- <div class="mobile-preview"></div>
- <div class="img ithumb">
- <img class="thumb lazy-load"
- src="data:," data-original="https://www.xozilla.xxx/contents/videos_screenshots/850000/850477/300x169/1.jpg"
- alt="Playful MILF Explores New Pants Ecstasy"
- thumb="https://www.xozilla.xxx/contents/videos_screenshots/850000/850477/300x169/1.jpg"
- width="300"
- height="169"/>
- <!-- <span class="hd-label">HD</span> -->
- <!-- <div class="duration">14m:40s</div> -->
- </div>
- <strong class="title">Playful MILF Explores New Pants Ecstasy</strong>
- </a>
- """
-    private val XOZ_VIDEO = """var flashvars = {
- video_url: 'https://www.xozilla.xxx/get_file/13/acc64d79cda0ae56ba72829eb8cce413/850000/850503/850503.mp4/?v-acctoken=MTY4OHwxNDIzNzl8MHxhMTJkNGU5MjM0YmZhODhlNzA1YTExMzYwMTc1NjA3Yg',
- video_url_text: '540p',
- video_alt_url: 'https://www.xozilla.xxx/get_file/13/bdd41421639b1c3c3f7c1190d658c120/850000/850503/850503hd.mp4/?v-acctoken=MjYxOHwxNDIzNzl8MHwzNDI4MjA3NWFlYjg3NzQwMjY3MzA2ZGZlYmE4MTI1MQ',
- video_alt_url_text: '720p',
- preview_url: 'https://www.xozilla.xxx/contents/videos_screenshots/850000/850503/preview.jpg'
-};
-" class="tab-content">
- <div class="block-details">
-<!-- <div class="block-user">
- <div class="username">
- <a href="https://www.xozilla.xxx/members/142379/">
- kiera.daugherty
- </a>
- </div>
- <a class="avatar" href="https://www.xozilla.xxx/members/142379/" title="kiera.daugherty">
- <span class="no-thumb ">no photo</span>
- </a>
- </div>
- -->
- <div class="info">
- <div class="item">
- <span><i class="fa fa-clock-o" aria-hidden="true"></i> Duration: <em>27min 25sec</em></span>
- <!-- <span><i class="fa fa-eye" aria-hidden="true"></i> Views: <em>185</em></span> -->
- <span><i class="fa fa-calendar-check-o" aria-hidden="true"></i> Submitted: <em>12 hours ago</em></span>
-<!-- <span class="added-by">Submitted by:</span>
- -->
- </div>
- <div class="item">
- Sponsored by:
- <a href="https://www.xozilla.xxx/channels/noname/">noname</a>
- </div>
- <div class="item">
- <i class="fa fa-sliders" aria-hidden="true"></i>
- Categories:
- <a href="https://www.xozilla.xxx/categories/anal/">Anal</a>
- <a href="https://www.xozilla.xxx/categories/hardcore/">Hardcore</a>
- <a href="https://www.xozilla.xxx/categories/big-dick/">Big Dick</a>
- <a href="https://www.xozilla.xxx/categories/blowjob/">Blowjob</a>
- <a href="https://www.xozilla.xxx/categories/big-tits/">Big Tits</a>
- <a href="https://www.xozilla.xxx/categories/blonde/">Blonde</a>
- <a href="https://www.xozilla.xxx/categories/hd-porn-1080p/">hd porn 1080p</a>
- <a href="https://www.xozilla.xxx/categories/small-tits/">Small Tits</a>
- <a href="https://www.xozilla.xxx/categories/vintage/">Vintage</a>
- <a href="https://www.xozilla.xxx/categories/orgy/">Orgy</a>
- <a href="https://www.xozilla.xxx/categories/hard-fuck/">Hard Fuck</a>
- <a href="https://www.xozilla.xxx/categories/hard/">Hard</a>
- <a href="https://www.xozilla.xxx/categories/brunettes/">Brunettes</a>
- </div>
- <div class="item">
- <i class="fa fa-tags" aria-hidden="true"></i>
- Tags:
- <a href="https://www.xozilla.xxx/tags/big-tits/">big tits</a>
- <a href="https://www.xozilla.xxx/tags/hardcore/">hardcore</a>
- <a href="https://www.xozilla.xxx/tags/big-dick/">big dick</a>
- <a href="https://www.xozilla.xxx/tags/blowjob/">blowjob</a>
- <a href="https://www.xozilla.xxx/tags/blonde/">blonde</a>
- <a href="https://www.xozilla.xxx/tags/brunette/">brunette</a>
- <a href="https://www.xozilla.xxx/tags/small-tits/">Small Tits</a>
- <a href="https://www.xozilla.xxx/tags/vintage/">vintage</a>
- <a href="https://www.xozilla.xxx/tags/bridgette/">bridgette</a>
- <a href="https://www.xozilla.xxx/tags/hard-fuck/">Hard Fuck</a>
- <a href="https://www.xozilla.xxx/tags/4991c4e00aeb5bf6096de5e6197c3299/">-</a>
- </div>
- <div class="item">
- Models:
- <a href="https://www.xozilla.xxx/models/bridgette-kerkove/">Bridgette Kerkove</a>
- </div>
- </div>
- </div>
- </div>
- <div id="tab_report_rrror" class="tab-content hidden">
- <div class="block-flagging">
- <form method="post">
- <div class="generic-error hidden"></div>
- <div class="success hidden">Thank you! We appreciate your help.</div>
- <div class="block-radios">
- <label class="field-label">Report this video as</label>
- <div class="row">
- <input type="radio" id="flag_inappropriate_video" name="flag_id" value="flag_inappropriate_video" class="radio" >
- <label
-<div class="menu"></div>"""
     private val ANA_LIST = """<div class="item ">
 
  

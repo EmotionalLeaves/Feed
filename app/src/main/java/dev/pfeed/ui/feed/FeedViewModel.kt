@@ -566,6 +566,47 @@ class FeedViewModel @Inject constructor(
         }.await()
     }
 
+    private val longerFound = HashMap<String, Deferred<MediaItem?>>()
+    private val offeredLonger = HashSet<String>()
+
+    /** A longer cut of [item] on another tube site (see SameVideo.longer), looked up once per video. */
+    suspend fun longerVersion(item: MediaItem): MediaItem? {
+        if (!canHaveLonger(item)) return null
+        val query = dev.pfeed.domain.reco.SameVideo.query(item) ?: return null
+        return longerFound.getOrPut(item.key) {
+            viewModelScope.async {
+                val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) ?: return@async null
+                val found = kotlinx.coroutines.withTimeoutOrNull(LONGER_TIMEOUT_MS) {
+                    runCatching { tube.search(query, null).items }.getOrNull()
+                }.orEmpty()
+                dev.pfeed.domain.reco.SameVideo.longer(item, found)
+            }
+        }.await()
+    }
+
+    /** A tube video short enough to be a cut of a longer scene. */
+    fun canHaveLonger(item: MediaItem): Boolean =
+        item.type == dev.pfeed.domain.model.MediaType.VIDEO && item.sourceId == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID &&
+            (item.durationSec ?: 0) in LONGER_MIN_SEC..LONGER_MAX_SEC && !item.id.startsWith("clip/")
+
+    /**
+     * Partway into a short cut, or when asked from the menu ([manual]): if the full scene is on
+     * another site, say so, with a way to watch it there.
+     */
+    fun offerLonger(item: MediaItem, manual: Boolean = false) {
+        if (!canHaveLonger(item)) { if (manual) _messages.tryEmit("This one isn't a cut of something longer"); return }
+        if (!manual && !offeredLonger.add(item.key)) return
+        if (manual) _messages.tryEmit("Looking on the other sites…")
+        viewModelScope.launch {
+            val l = longerVersion(item)
+            if (l == null) { if (manual) _messages.tryEmit("No longer copy found on the other sites"); return@launch }
+            val mins = ((l.durationSec ?: 0) + 30) / 60
+            offer("Longer version: $mins min on ${Display.source(l, l.sourceId)}", "Watch") {
+                openViewerRequest.value = holder.put(listOf(l), 0, title = "Longer version")
+            }
+        }
+    }
+
     /**
      * Where a long video starts when you've not watched it before: past the studio intro, if
      * "Skip intros" is on (videos of 5 minutes and more; 0 otherwise).
@@ -1308,6 +1349,9 @@ class FeedViewModel @Inject constructor(
         const val FAVOURITES = "Favourites"
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
+        private const val LONGER_TIMEOUT_MS = 15_000L
+        private const val LONGER_MIN_SEC = 4 * 60
+        private const val LONGER_MAX_SEC = 25 * 60
         private const val NOTICE_GAP_MS = 5 * 60_000L
         private const val LIVE_FOLLOW_CHECK_MS = 2 * 60_000L
         /** In For You, look every this many rounds (ten minutes). */

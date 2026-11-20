@@ -116,12 +116,12 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Xozilla, Analdin, KatesTube) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
          */
-        val RETIRED: Set<String> = setOf("xnxx.com")
+        val RETIRED: Set<String> = setOf("xnxx.com", "xozilla.xxx")
         private val KVS_SCREENS = Regex("""timeline_screens_url: '([^']+\{time\}[^']*)'""")
         private val KVS_INTERVAL = Regex("""timeline_screens_interval: '(\d+)'""")
         private val KVS_COUNT = Regex("""timeline_screens_count: '(\d+)'""")
@@ -1095,7 +1095,7 @@ sealed class TubeSite(val host: String, val label: String) {
     }
 
     /**
-     * KVS's stock theme (Xozilla, Analdin): each listing link carries its preview clip (vthumb), the
+     * KVS's stock theme (Analdin): each listing link carries its preview clip (vthumb), the
      * thumbnail is lazy-loaded (data-original), the length sits in a comment; the video page has
      * video_url / video_alt_url with their quality, and the video's own categories under "Categories:".
      */
@@ -1136,9 +1136,6 @@ sealed class TubeSite(val host: String, val label: String) {
 
         override fun embedUrl(id: String) = "$base/embed/$id/"
     }
-
-    /** Xozilla: big studio catalogue on KVS's stock theme. */
-    object Xozilla : KvsStock("xozilla.xxx", "Xozilla")
 
     /** Analdin: studio scenes, KVS stock theme, with a scrub-preview timeline. */
     object Analdin : KvsStock("analdin.com", "Analdin")

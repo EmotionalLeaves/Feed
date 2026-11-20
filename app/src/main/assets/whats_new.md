@@ -1,3 +1,9 @@
+## 5.66.0 — 2026-11-20
+The full scene, from a short cut
+
+- **Longer version**: many sites keep only a 10–15 minute cut of a studio scene. Partway into one, the app quietly looks on the other sites and, if the full scene is there, offers it: "Longer version: 34 min on Pornhub · Watch". Also in the long-press menu as **Find a longer version**.
+- Xozilla is out again: it sends the app to an ad site instead of its videos too often. Analdin and KatesTube stay (26 tube sites).
+
 ## 5.65.0 — 2026-11-20
 Three more tube sites
 
@@ -8,8 +14,3 @@ From your Saved, a while back
 
 - **From your Saved, a while back** on Discover: a few things you saved and haven't been back to in two weeks or more, a different few each day.
 - Also ships 5.63's **Best for you right now** order for Saved, Liked and collections (5.63's build didn't finish its device test).
-
-## 5.63.0 — 2026-11-20
-Saved, sorted for you
-
-- **Best for you right now**: a new order for Saved, Liked and collections. It puts first what suits your taste at this hour, the way For You would, so a big Saved list surfaces what you're in the mood for.

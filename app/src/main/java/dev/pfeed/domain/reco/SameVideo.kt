@@ -44,6 +44,34 @@ object SameVideo {
 
     const val MATCH = 0.75
 
+    /**
+     * A longer cut of the same scene among [found]: many sites keep a 10–15 minute cut of a studio
+     * scene that runs 30–40 minutes in full elsewhere. Same title (word for word, give or take the
+     * site's own additions), and clearly longer; of those, the longest (the fullest cut).
+     */
+    fun longer(item: MediaItem, found: List<MediaItem>): MediaItem? {
+        val wa = words(item.title).takeIf { it.size >= 3 } ?: return null
+        val da = item.durationSec ?: return null
+        return found.asSequence()
+            .filter { it.key != item.key && it.type == item.type }
+            .mapNotNull { b ->
+                val db = b.durationSec ?: return@mapNotNull null
+                if (db < da * LONGER_RATIO + LONGER_MIN_GAIN_SEC || db > LONGER_MAX_SEC) return@mapNotNull null
+                val wb = words(b.title).takeIf { it.size >= 3 } ?: return@mapNotNull null
+                val shared = (wa intersect wb).size.toDouble()
+                val overlap = shared / minOf(wa.size, wb.size)
+                val jaccard = shared / (wa union wb).size
+                if (overlap < LONGER_OVERLAP || jaccard < LONGER_JACCARD) null else Triple(b, overlap + jaccard, db)
+            }
+            .maxWithOrNull(compareBy<Triple<MediaItem, Double, Int>> { it.third }.thenBy { it.second })?.first
+    }
+
+    private const val LONGER_RATIO = 1.25
+    private const val LONGER_MIN_GAIN_SEC = 90
+    private const val LONGER_MAX_SEC = 3 * 3600
+    private const val LONGER_OVERLAP = 0.8
+    private const val LONGER_JACCARD = 0.5
+
     /** The likeliest copies of [item] among [found], best first. */
     fun copies(item: MediaItem, found: List<MediaItem>): List<MediaItem> =
         found.map { it to score(item, it) }.filter { it.second >= MATCH }.sortedByDescending { it.second }.map { it.first }

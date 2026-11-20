@@ -23,4 +23,21 @@ class SameVideoTest {
         assertEquals(listOf("xvideos.com/9"), SameVideo.copies(dead, found).map { it.id })
         assertEquals("stepsister gets caught shower", SameVideo.query(dead))
     }
+
+    @Test
+    fun `finds the full scene of a short cut`() {
+        val cut = v("analdin.com/830981", "Roller Dirty 2 - Pervs On Patrol", 900)
+        val found = listOf(
+            v("xvideos.com/1", "Pervs On Patrol - Roller Dirty 2 (Mofos)", 2310),
+            v("pornhub.com/2", "Roller Dirty 2 Pervs On Patrol", 902), // the same cut
+            v("eporner.com/3", "Roller derby girls", 2600), // another video
+            v("xnxx.com/4", "Pervs On Patrol: Roller Dirty 2", 1500),
+        )
+        // Two longer ones match the title; the longest is the full scene.
+        assertEquals("xvideos.com/1", SameVideo.longer(cut, found)?.id)
+        // Nothing longer: nothing offered.
+        assertEquals(null, SameVideo.longer(cut, found.drop(1).take(2)))
+        // Too few title words to be sure of anything.
+        assertEquals(null, SameVideo.longer(v("a.com/1", "Hot milf", 600), listOf(v("b.com/2", "Hot milf", 2000))))
+    }
 }

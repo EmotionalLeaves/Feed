@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.66.0 — 2026-11-20
+
+The full scene, from a short cut
+
+- **Longer version**: many sites keep only a 10–15 minute cut of a studio scene. Partway into one, the app quietly looks on the other sites and, if the full scene is there, offers it: "Longer version: 34 min on Pornhub · Watch". Also in the long-press menu as **Find a longer version**.
+- Xozilla is out again: it sends the app to an ad site instead of its videos too often. Analdin and KatesTube stay (26 tube sites).
+
 ## 5.65.0 — 2026-11-20
 
 Three more tube sites

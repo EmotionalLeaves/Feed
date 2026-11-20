@@ -375,6 +375,9 @@ fun ItemMenuSheet(
                     if (feel) "The phone stops vibrating with the audio" else "The phone vibrates with the audio, stronger as it gets louder, sound on or off",
                 ) { FeelTheSound.set(!feel); onDismiss() }
             }
+            if (vm.canHaveLonger(item)) {
+                MenuRow("Find a longer version", Icons.Filled.Movie, "Many sites keep a short cut of a scene; looks for the full one on the others") { vm.offerLonger(item, manual = true); onDismiss() }
+            }
             if (item.extras[dev.pfeed.data.repo.ClipLibrary.FROM] != null) {
                 MenuRow("Watch the full video", Icons.Filled.Movie, "The video this clip came from, from where the clip starts") { vm.openFullVideo(item); onDismiss() }
             }
