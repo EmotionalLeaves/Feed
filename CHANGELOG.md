@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.67.0 — 2026-11-20
+
+Follow a performer, see her everywhere
+
+- **Following finds people in anyone's uploads**: follow a performer and Following now brings her videos from every site, not only from the account you followed. Tube sites credit the uploader or studio, but name the performers in the title or tags; when a name you follow (two words or more, so one-word follows can't match half the site) is there, the video is hers too.
+- **Creator pages** put those videos up top with the creator's own uploads.
+
 ## 5.66.0 — 2026-11-20
 
 The full scene, from a short cut

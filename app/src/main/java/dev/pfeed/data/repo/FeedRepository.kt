@@ -362,9 +362,13 @@ class FeedSession(
         // Tag feeds come from per-source searches, which match on titles and related tags too; keep
         // those, but put exact tag matches first when ranking (see takeBatch).
         if (mode == FeedMode.FOLLOWING) {
+            // Also a video that names someone you follow, whoever uploaded it: a performer you follow
+            // turns up from every site, not only from the one account you followed her on.
+            val people = follows.creators.mapNotNull(dev.pfeed.domain.reco.Mentions::personName).toSet()
             items = items.filter { item ->
                 item.creator?.let { Blocklist.normalize(it) in follows.creators } == true ||
-                    item.tags.any { Blocklist.normalize(it) in follows.tags }
+                    item.tags.any { Blocklist.normalize(it) in follows.tags } ||
+                    dev.pfeed.domain.reco.Mentions.named(item, people).isNotEmpty()
             }
         }
         // Near-duplicate detection hashes thumbnails; on the very first screen don't hold it up for long.
@@ -523,7 +527,9 @@ class FeedSession(
             Spread.order(
                 candidates.sortedWith(
                     compareByDescending<MediaItem> { item ->
-                        if (creatorName != null) item.creator?.let(Blocklist::normalize) == creatorName
+                        if (creatorName != null) item.creator?.let(Blocklist::normalize) == creatorName ||
+                            // Named in the title or tags (a performer in someone else's upload).
+                            dev.pfeed.domain.reco.Mentions.personName(creatorName)?.let { dev.pfeed.domain.reco.Mentions.named(item, listOf(it)).isNotEmpty() } == true
                         else item.tags.any { Features.normalizeTag(it) == t }
                     }
                         .thenByDescending { personal[it.key] ?: 0.0 },
