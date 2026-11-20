@@ -39,4 +39,11 @@ class MentionsTest {
         assertEquals(emptyList<String>(), Mentions.performers("Big Tits At Work - Office Fun"))
         assertEquals(emptyList<String>(), Mentions.performers("Hot Milf - fucked hard"))
     }
+
+    @Test
+    fun `a named performer is a taste feature, like a board's tag for her`() {
+        val f = dev.pfeed.domain.reco.Features.of(v("Lena Paul & Abella Danger - Lesbian Fun"))
+        assertEquals(true, dev.pfeed.domain.reco.Features.normalizeTag("Lena Paul") in f)
+        assertEquals(true, dev.pfeed.domain.reco.Features.normalizeTag("abella_danger") in f)
+    }
 }

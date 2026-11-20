@@ -1,3 +1,9 @@
+## 5.74.0 — 2026-11-20
+For You learns performers
+
+- **For You learns who you like watching**: a performer named in a studio title now counts like a tag for her, the same one boards use. Enjoy her in one upload and her other videos, on any site, rank higher; For You may also search her name for you.
+- **Creators for you** on Discover now also suggests performers you keep watching (named in three or more videos you watched) that you don't follow yet.
+
 ## 5.73.0 — 2026-11-20
 Who's in it
 
@@ -7,8 +13,3 @@ Who's in it
 Pick the sites in search
 
 - **Tube sites filter in search**: with results from several tube sites, Filters lists them with how many each found ("Pornhub · 42", "TXXX · 38"…). Pick one or a few to see only theirs.
-
-## 5.71.0 — 2026-11-20
-Cleaner tags from the TXXX sites
-
-- **Cleaner tags on TXXX, HClips, Upornia and the rest of that network**: uploaders there pile nationalities onto videos for traffic (Bangladeshi, Estonian, Greek, Swiss… on one video). When a video has three or more, they're dropped, so they don't steer what For You learns or searches for you.

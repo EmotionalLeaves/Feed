@@ -106,6 +106,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import dev.pfeed.ui.openTag
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -280,11 +281,27 @@ class SearchViewModel @Inject constructor(
         val followedNow = follows.creators.map { dev.pfeed.domain.filter.Blocklist.normalize(it) }.toSet()
         val latest = HashMap<String, MediaItem>()
         history.forEach { item -> item.creator?.let { c -> latest.putIfAbsent(dev.pfeed.domain.filter.Blocklist.normalize(c), item) } }
-        aff.entries.filter { it.value >= CREATOR_FOR_YOU_MIN && it.key !in followedNow && latest.containsKey(it.key) }
+        val fromTaste = aff.entries.filter { it.value >= CREATOR_FOR_YOU_MIN && it.key !in followedNow && latest.containsKey(it.key) }
             .sortedByDescending { it.value }
-            .take(CREATORS_FOR_YOU)
             .map { (key, _) -> val item = latest.getValue(key); (item.creator ?: key) to item }
-    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+        // Performers you keep watching, whoever uploaded them: named in the titles of several videos you watched.
+        val count = HashMap<String, Int>()
+        val firstSeen = HashMap<String, Pair<String, MediaItem>>()
+        history.forEach { item ->
+            dev.pfeed.domain.reco.Mentions.performers(item.title).forEach { name ->
+                val k = dev.pfeed.domain.filter.Blocklist.normalize(name)
+                count[k] = (count[k] ?: 0) + 1
+                firstSeen.putIfAbsent(k, name to item)
+            }
+        }
+        val performers = count.entries.filter { it.value >= PERFORMER_FOR_YOU_MIN && it.key !in followedNow }
+            .sortedByDescending { it.value }.map { firstSeen.getValue(it.key) }
+        // Taste first, then performers, alternating so both kinds show in a short row.
+        val mixed = ArrayList<Pair<String, MediaItem>>()
+        val a = fromTaste.iterator(); val b = performers.iterator()
+        while (a.hasNext() || b.hasNext()) { if (a.hasNext()) mixed += a.next(); if (b.hasNext()) mixed += b.next() }
+        mixed.distinctBy { dev.pfeed.domain.filter.Blocklist.normalize(it.first) }.take(CREATORS_FOR_YOU)
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** Creators and tags you follow, for typeahead. */
     val followed: StateFlow<List<String>> = library.follows
@@ -1469,4 +1486,6 @@ private fun FiltersSheet(
 private const val LIVE_ROW = "Live now"
 private const val COWATCHED_ROW = "Watched with your favourites"
 /** Not watched for this long: a saved post comes back round on Discover. */
+/** Named in this many videos you watched: suggested on Discover's "Creators for you". */
+private const val PERFORMER_FOR_YOU_MIN = 3
 private const val REDISCOVER_AFTER_MS = 14L * 86_400_000L
