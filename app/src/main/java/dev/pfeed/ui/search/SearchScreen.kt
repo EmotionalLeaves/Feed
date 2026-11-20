@@ -107,6 +107,8 @@ import kotlinx.coroutines.flow.first
 import dev.pfeed.ui.openTag
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -405,6 +407,7 @@ class SearchViewModel @Inject constructor(
             loadTopicRows((tastes + _interests.value).distinct().ifEmpty { POPULAR.take(TOPIC_ROWS) }.take(TOPIC_ROWS))
             loadLiveRow()
             loadTopRow()
+            loadPeopleRow()
             // Because you liked …: what the site showed beside videos you enjoyed lately.
             // Watched with your favourites: beside two or more of the videos you enjoyed, on their sites.
             dev.pfeed.domain.reco.Related.cowatched().takeIf { it.size >= 4 }?.let { list ->
@@ -442,6 +445,32 @@ class SearchViewModel @Inject constructor(
                 val live = rest.filter { it.first == LIVE_ROW }
                 live + (TOP_ROW to ranked) + rest.filter { it.first != LIVE_ROW }
             }
+        }
+    }
+
+    /**
+     * New with people you watch: the latest videos naming the performers you watch most (and don't
+     * necessarily follow), from every site, that you haven't seen.
+     */
+    private fun loadPeopleRow() {
+        val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) ?: return
+        viewModelScope.launch {
+            val names = kotlinx.coroutines.withTimeoutOrNull(10_000) { people.first { it.isNotEmpty() } }?.take(PEOPLE_ROW_NAMES) ?: return@launch
+            val seen = runCatching { library.keys(dev.pfeed.data.repo.LibraryKind.HISTORY).first() }.getOrDefault(emptySet())
+            val blocklist = runCatching { blocks.current() }.getOrNull()
+            val perName = names.map { name ->
+                async {
+                    val q = dev.pfeed.domain.reco.Mentions.personName(name) ?: return@async emptyList()
+                    runCatching { tube.search(name, null).items }.getOrDefault(emptyList())
+                        .filter { it.key !in seen && it.thumbnailUrl != null && blocklist?.allows(it) != false && dev.pfeed.domain.reco.Mentions.padded(it.title).contains(" $q ") }
+                        .sortedByDescending { it.publishedAt?.toEpochMilli() ?: 0L }
+                }
+            }.awaitAll()
+            // Taking turns, so one person doesn't fill the row.
+            val row = ArrayList<MediaItem>()
+            var i = 0
+            while (row.size < 12 && perName.any { it.size > i }) { perName.forEach { l -> l.getOrNull(i)?.let { if (row.none { r -> r.key == it.key }) row += it } }; i++ }
+            if (row.size >= 4) _topicRows.update { rows -> rows.filter { it.first != PEOPLE_ROW } + (PEOPLE_ROW to row.take(12)) }
         }
     }
 
@@ -1036,10 +1065,10 @@ private fun SuggestionsPane(
                 TextButton(onClick = {
                     when {
                         topic == LIVE_ROW -> onLive()
-                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW -> onTopicItem(topic, 0)
+                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW || topic == PEOPLE_ROW -> onTopicItem(topic, 0)
                         else -> onPick(topic)
                     }
-                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW) "Play" else "See all") }
+                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW || topic == PEOPLE_ROW) "Play" else "See all") }
             }
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }
@@ -1397,7 +1426,7 @@ private fun ResultsPane(
 ) {
     Column(Modifier.fillMaxSize()) {
         // Searched a person: who it is, how many of the results name her, follow in one tap.
-        val person = remember(ui.searched, ui.results.size / 20) { personFor(ui.searched, ui.results) }
+        val person = remember(ui.searched, ui.results.size / 20) { ui.searched?.let { personFor(it, ui.results) } }
         if (person != null) {
             val (name, count) = person
             val on = dev.pfeed.domain.filter.Blocklist.normalize(name) in followedCreators
@@ -1592,6 +1621,9 @@ private const val COWATCHED_ROW = "Watched with your favourites"
 private const val TOP_ROW = "Top on the sites"
 /** How many sites' top lists that row draws from. */
 private const val TOP_ROW_SITES = 8
+/** Discover's row of new videos with the performers you watch most. */
+private const val PEOPLE_ROW = "New with people you watch"
+private const val PEOPLE_ROW_NAMES = 3
 /** Not watched for this long: a saved post comes back round on Discover. */
 /** Named in this many videos you watched: suggested on Discover's "Creators for you". */
 private const val PERFORMER_FOR_YOU_MIN = 3

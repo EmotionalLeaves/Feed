@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.89.0 — 2026-11-20
+
+New with people you watch
+
+- **New with people you watch** on Discover: the latest videos naming the performers you watch most (followed or not), from every site, that you haven't seen yet. Taking turns between them; tap Play for all.
+- Also ships 5.88's **person card** on name searches (5.88's build didn't compile).
+
 ## 5.88.0 — 2026-11-20
 
 Search a name, follow the person

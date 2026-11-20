@@ -1,3 +1,9 @@
+## 5.89.0 — 2026-11-20
+New with people you watch
+
+- **New with people you watch** on Discover: the latest videos naming the performers you watch most (followed or not), from every site, that you haven't seen yet. Taking turns between them; tap Play for all.
+- Also ships 5.88's **person card** on name searches (5.88's build didn't compile).
+
 ## 5.88.0 — 2026-11-20
 Search a name, follow the person
 
@@ -7,8 +13,3 @@ Search a name, follow the person
 Performers wherever the title names them
 
 - **Performers recognised anywhere in a title**: once the app knows a name is a person (you follow her, or titles have credited her before), it spots her in any title, not just the "Name – Title" form, for the chips on the post and the long-press menu.
-
-## 5.86.0 — 2026-11-20
-Top on the sites
-
-- **Top on the sites** on Discover: what's at the top of the sites' own top-rated lists right now, from the sites you watch most plus a few others (a different few each day), best for you first and without what you've already watched. Tap Play for all of it.
