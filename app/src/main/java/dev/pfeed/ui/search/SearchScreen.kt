@@ -225,6 +225,18 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    /** Saved posts you haven't been back to in a while (or ever since saving): worth another look. */
+    val rediscover: StateFlow<List<MediaItem>> = combine(
+        library.items(dev.pfeed.data.repo.LibraryKind.SAVED),
+        library.times(dev.pfeed.data.repo.LibraryKind.HISTORY),
+        library.times(dev.pfeed.data.repo.LibraryKind.SAVED),
+    ) { saved, watched, savedAt ->
+        val cutoff = System.currentTimeMillis() - REDISCOVER_AFTER_MS
+        saved.filter { (watched[it.key] ?: savedAt[it.key] ?: 0L) < cutoff && !it.id.startsWith("clip/") && !it.id.startsWith("frame/") }
+            .shuffled(kotlin.random.Random(System.currentTimeMillis() / 86_400_000L)) // a different few each day
+            .take(12)
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** What you put on Watch later. */
     val watchLater: StateFlow<List<MediaItem>> = library.collectionItems(dev.pfeed.ui.feed.FeedViewModel.WATCH_LATER)
         .map { it.take(16) }
@@ -536,6 +548,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val clipping by vm.clippingMoments.collectAsStateWithLifecycle()
     val yourClips by vm.yourClips.collectAsStateWithLifecycle()
     val watchLater by vm.watchLater.collectAsStateWithLifecycle()
+    val rediscover by vm.rediscover.collectAsStateWithLifecycle()
     val watchedKeys by vm.watched.collectAsStateWithLifecycle()
     val savedKeys by vm.savedKeys.collectAsStateWithLifecycle()
     // Press and hold a result: save it, or open it on its site, without leaving the results.
@@ -684,6 +697,8 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 onClipAll = vm::clipAllMoments,
                 yourClips = yourClips,
                 watchLater = watchLater,
+                rediscover = rediscover,
+                onRediscover = { index -> nav.navigate(Routes.viewer(vm.openList(rediscover, index, "From your Saved"))) },
                 onWatchLater = { index -> nav.navigate(Routes.viewer(vm.openList(watchLater, index, dev.pfeed.ui.feed.FeedViewModel.WATCH_LATER))) },
                 onClip = { index -> nav.navigate(Routes.viewer(vm.openList(yourClips, index, dev.pfeed.data.repo.ClipLibrary.CLIPS))) },
                 // Titled "Moments", the viewer starts each one at its first moment.
@@ -754,6 +769,8 @@ private fun SuggestionsPane(
     onClip: (Int) -> Unit = {},
     watchLater: List<MediaItem> = emptyList(),
     onWatchLater: (Int) -> Unit = {},
+    rediscover: List<MediaItem> = emptyList(),
+    onRediscover: (Int) -> Unit = {},
     typed: String,
     followed: List<String>,
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
@@ -854,6 +871,15 @@ private fun SuggestionsPane(
                 items(yourMoments.size, key = { "moment:" + yourMoments[it].key }) { i ->
                     ContinueCard(yourMoments[i], momentMs = remember(yourMoments[i].key) { dev.pfeed.player.Moments.of(yourMoments[i].key).firstOrNull() }) { onMoment(i) }
                 }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+        // From your Saved: things you kept and haven't been back to in a while.
+        if (t.isEmpty() && rediscover.size >= 3) {
+            SectionTitle("From your Saved, a while back")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(rediscover.size, key = { "re:" + rediscover[it].key }) { i -> TopicTile(rediscover[i]) { onRediscover(i) } }
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -1409,3 +1435,5 @@ private fun FiltersSheet(
 /** Discover's row of people live right now. */
 private const val LIVE_ROW = "Live now"
 private const val COWATCHED_ROW = "Watched with your favourites"
+/** Not watched for this long: a saved post comes back round on Discover. */
+private const val REDISCOVER_AFTER_MS = 14L * 86_400_000L

@@ -1,3 +1,9 @@
+## 5.64.0 — 2026-11-20
+From your Saved, a while back
+
+- **From your Saved, a while back** on Discover: a few things you saved and haven't been back to in two weeks or more, a different few each day.
+- Also ships 5.63's **Best for you right now** order for Saved, Liked and collections (5.63's build didn't finish its device test).
+
 ## 5.63.0 — 2026-11-20
 Saved, sorted for you
 
@@ -7,8 +13,3 @@ Saved, sorted for you
 Later, from the queue
 
 - **Coming up** has a clock button: send a queued post to Watch later instead of watching it now, without it counting as a skip.
-
-## 5.61.0 — 2026-11-20
-One word for one thing
-
-- **More sites' words understood as the same thing**: handjob/hand job, titjob/titty fuck, cunnilingus/pussy licking, squirt/squirting, facial/facials, rimming/rimjob, DP/double penetration, cowgirl/riding, reverse cowgirl, missionary, fingering, masturbation, cum in mouth, gangbang, and more. A taste learned on one site now carries to the others, and searching an act finds videos that call it by another name.

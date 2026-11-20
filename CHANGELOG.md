@@ -1,5 +1,12 @@
 # Changelog
 
+## 5.64.0 — 2026-11-20
+
+From your Saved, a while back
+
+- **From your Saved, a while back** on Discover: a few things you saved and haven't been back to in two weeks or more, a different few each day.
+- Also ships 5.63's **Best for you right now** order for Saved, Liked and collections (5.63's build didn't finish its device test).
+
 ## 5.63.0 — 2026-11-20
 
 Saved, sorted for you
