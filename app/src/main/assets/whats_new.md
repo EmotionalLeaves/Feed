@@ -1,3 +1,9 @@
+## 5.38.0 — 2026-11-19
+Your moments on Discover
+
+- Includes 5.37's **live badge** (its device test hit an emulator hiccup, so it never published).
+- **Your moments** on Discover: the videos you marked moments in (yourself, or by going back to the same bit twice), each showing where the moment is. Tap one and it plays from there.
+
 ## 5.37.0 — 2026-11-19
 Live badge
 
@@ -7,8 +13,3 @@ Live badge
 Next video, sideways
 
 - **Next video** button in the sideways player's controls: move on to the next post without turning the phone back upright.
-
-## 5.35.0 — 2026-11-19
-Co-watching remembers
-
-- **What the sites showed beside videos you enjoyed is now kept between launches**, encrypted with the app's own key. So the co-watching boost in For You and Discover's **Watched with your favourites** row don't start from nothing every time you open the app. Clearing history clears it too.

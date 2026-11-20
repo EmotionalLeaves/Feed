@@ -87,6 +87,9 @@ object Moments {
     fun of(key: String): List<Long> =
         prefs?.getString(key, null)?.split(',')?.mapNotNull { it.toLongOrNull() }?.sorted().orEmpty()
 
+    /** Every video that has a moment. */
+    fun keys(): Set<String> = prefs?.all?.keys.orEmpty()
+
     fun add(key: String, atMs: Long) {
         val p = prefs ?: return
         val now = of(key)

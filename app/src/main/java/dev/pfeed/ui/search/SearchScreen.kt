@@ -193,6 +193,12 @@ class SearchViewModel @Inject constructor(
     val watched: StateFlow<Set<String>> = library.keys(dev.pfeed.data.repo.LibraryKind.HISTORY)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
 
+    /** Videos you marked moments in (saved or auto), newest watched first: they play from the moment. */
+    val yourMoments: StateFlow<List<MediaItem>> = combine(library.items(dev.pfeed.data.repo.LibraryKind.HISTORY), dev.pfeed.player.Moments.changes) { history, _ ->
+        val keys = dev.pfeed.player.Moments.keys()
+        history.filter { it.key in keys }.take(12)
+    }.stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
     val continueWatching: StateFlow<List<MediaItem>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
         .map { list ->
             list.filter { dev.pfeed.player.ResumePoints.get(it.key) != null || (it.isGallery && dev.pfeed.player.ComicPages.get(it.key) != null) }.take(12)
@@ -482,6 +488,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val followed by vm.followed.collectAsStateWithLifecycle()
     val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
+    val yourMoments by vm.yourMoments.collectAsStateWithLifecycle()
     val watchedKeys by vm.watched.collectAsStateWithLifecycle()
     val savedKeys by vm.savedKeys.collectAsStateWithLifecycle()
     // Press and hold a result: save it, or open it on its site, without leaving the results.
@@ -619,6 +626,9 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 onMix = { name, list -> nav.navigate(Routes.viewer(vm.openList(list, 0, "Mix · $name"))) },
                 onTopicItem = { topic, index -> nav.navigate(Routes.viewer(vm.openList(topicRows.first { it.first == topic }.second, index, topic))) },
                 onContinue = { index -> nav.navigate(Routes.viewer(vm.openList(continueWatching, index, "Continue"))) },
+                yourMoments = yourMoments,
+                // Titled "Moments", the viewer starts each one at its first moment.
+                onMoment = { index -> nav.navigate(Routes.viewer(vm.openList(yourMoments, index, dev.pfeed.ui.feed.FeedViewModel.MOMENTS))) },
                 typed = ui.query,
                 followed = followed,
                 creatorsForYou = creatorsForYou,
@@ -677,6 +687,8 @@ private fun SuggestionsPane(
     onMix: (String, List<MediaItem>) -> Unit = { _, _ -> },
     onTopicItem: (String, Int) -> Unit,
     onContinue: (Int) -> Unit,
+    yourMoments: List<MediaItem> = emptyList(),
+    onMoment: (Int) -> Unit = {},
     typed: String,
     followed: List<String>,
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
@@ -753,6 +765,17 @@ private fun SuggestionsPane(
                     .distinctBy { it.key }
                 "${rows[a].first} + ${rows[b].first}" to woven
             }
+        }
+        // Your moments: the bits you marked, one tap from playing again.
+        if (t.isEmpty() && yourMoments.isNotEmpty()) {
+            SectionTitle("Your moments")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                items(yourMoments.size, key = { "moment:" + yourMoments[it].key }) { i ->
+                    ContinueCard(yourMoments[i], momentMs = remember(yourMoments[i].key) { dev.pfeed.player.Moments.of(yourMoments[i].key).firstOrNull() }) { onMoment(i) }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
         }
         // Creators for you: people whose posts you keep staying for, not followed yet.
         if (t.isEmpty() && creatorsForYou.size >= 3) {
@@ -1082,10 +1105,11 @@ private fun TopicTile(item: MediaItem, onClick: () -> Unit) {
 
 /** A video you left partway: its picture with how far you got, and how much is left. */
 @Composable
-private fun ContinueCard(item: MediaItem, onClick: () -> Unit) {
-    // A video: time watched of its length. A comic: the page you're on of its pages.
-    val page = remember(item.key) { if (item.isGallery) dev.pfeed.player.ComicPages.get(item.key) else null }
-    val at = if (page != null) page + 1L else remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) ?: 0L }
+private fun ContinueCard(item: MediaItem, momentMs: Long? = null, onClick: () -> Unit) {
+    // A video: time watched of its length. A comic: the page you're on of its pages. A moment: where it is.
+    val page = remember(item.key) { if (item.isGallery && momentMs == null) dev.pfeed.player.ComicPages.get(item.key) else null }
+    val resume = remember(item.key) { dev.pfeed.player.ResumePoints.get(item.key) ?: 0L }
+    val at = if (page != null) page + 1L else momentMs ?: resume
     val total = if (page != null) item.pages.size.toLong() else (item.durationSec ?: 0) * 1000L
     Column(Modifier.width(176.dp).clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick)) {
         Box(Modifier.fillMaxWidth().aspectRatio(16f / 10f).clip(RoundedCornerShape(12.dp)).background(MaterialTheme.colorScheme.surfaceContainerHigh)) {
@@ -1101,7 +1125,11 @@ private fun ContinueCard(item: MediaItem, onClick: () -> Unit) {
             }
             if (total > 0) {
                 Text(
-                    if (page != null) "Page ${page + 1} of ${item.pages.size}" else dev.pfeed.ui.common.formatDuration(((total - at) / 1000).toInt().coerceAtLeast(0)) + " left",
+                    when {
+                        page != null -> "Page ${page + 1} of ${item.pages.size}"
+                        momentMs != null -> "at " + dev.pfeed.ui.common.formatDuration((momentMs / 1000).toInt())
+                        else -> dev.pfeed.ui.common.formatDuration(((total - at) / 1000).toInt().coerceAtLeast(0)) + " left"
+                    },
                     color = Color.White,
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp).background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp),
