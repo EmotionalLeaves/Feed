@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.91.0 — 2026-11-20
+
+Find by person in your Library
+
+- **People in your Library**: open Find in Saved, Liked, a collection or History and the performers its titles name most show as chips ("Lena Paul · 6"). Tap one to see just hers.
+
 ## 5.90.0 — 2026-11-20
 
 Only what you haven't seen

@@ -301,7 +301,7 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
             androidx.compose.material3.TextField(
                 value = query,
                 onValueChange = { query = it },
-                placeholder = { Text("Find by title, creator or tag", maxLines = 1) },
+                placeholder = { Text("Find by title, creator, tag or person", maxLines = 1) },
                 singleLine = true,
                 leadingIcon = { androidx.compose.material3.Icon(Icons.Filled.Search, contentDescription = null) },
                 shape = RoundedCornerShape(28.dp),
@@ -313,6 +313,30 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                 ),
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
             )
+            // The people this list's titles name most: one tap finds theirs.
+            val listNow = when (tab) { 0 -> if (collection != null) collectionItems else saved; 1 -> liked; else -> history }
+            val people = remember(listNow) {
+                val count = HashMap<String, Int>(); val shown = HashMap<String, String>()
+                listNow.forEach { item -> dev.pfeed.domain.reco.Mentions.inTitle(item).forEach { n -> val k = n.lowercase(); count[k] = (count[k] ?: 0) + 1; shown.putIfAbsent(k, n) } }
+                count.entries.filter { it.value >= 2 }.sortedByDescending { it.value }.take(12).map { shown.getValue(it.key) to it.value }
+            }
+            if (people.isNotEmpty() && query.isBlank()) {
+                androidx.compose.foundation.lazy.LazyRow(
+                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(bottom = 6.dp),
+                ) {
+                    items(people.size, key = { "p:" + people[it].first }) { i ->
+                        val (name, n) = people[i]
+                        Text(
+                            "$name · $n",
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                                .clickable { query = name }.padding(horizontal = 12.dp, vertical = 7.dp),
+                        )
+                    }
+                }
+            }
         }
         val toFeed = {
             nav.navigate(Routes.FEED) {
