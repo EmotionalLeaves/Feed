@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.14.1 — 2026-11-21
+
+Faces appear as they're found
+
+- Avatars showing a performer's initial switch to her picture as soon as one is found, for example while her page is loading, without having to reopen it.
+
 ## 6.14 — 2026-11-21
 
 Faces for performers

@@ -36,6 +36,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -416,7 +417,8 @@ fun InitialAvatar(name: String, size: androidx.compose.ui.unit.Dp = 32.dp, modif
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
         )
         // A performer: a still from a video of hers over the initial (not with Blur previews on).
-        val face = androidx.compose.runtime.remember(clean) { dev.pfeed.domain.reco.CoStars.face(clean) }
+        val faces = dev.pfeed.domain.reco.CoStars.faceCount.collectAsState().value
+        val face = androidx.compose.runtime.remember(clean, faces) { dev.pfeed.domain.reco.CoStars.face(clean) }
         if (face != null && !LocalBlurPreviews.current) coil.compose.AsyncImage(
             model = face,
             contentDescription = null,

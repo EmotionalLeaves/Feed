@@ -22,6 +22,9 @@ object CoStars {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_KEYS
     }
     @Volatile private var file: File? = null
+    private val _faceCount = kotlinx.coroutines.flow.MutableStateFlow(0)
+    /** Goes up as people get their first still, so avatars showing an initial can look again. */
+    val faceCount: kotlinx.coroutines.flow.StateFlow<Int> = _faceCount
     @Volatile private var dirty = false
 
     /** Each of [items] once (by key): the people it names, in pairs. */
@@ -29,7 +32,14 @@ object CoStars {
         for (item in items) {
             val names = Mentions.inTitle(item)
             if (names.size == 1) item.thumbnailUrl?.takeIf { it.startsWith("https://") }?.let { url ->
-                Mentions.personName(names[0])?.let { k -> synchronized(this) { if (faces.put(k, url) != url) dirty = true; while (faces.size > MAX_PEOPLE) faces.remove(faces.keys.first()) } }
+                Mentions.personName(names[0])?.let { k ->
+                    synchronized(this) {
+                        val before = faces.put(k, url)
+                        if (before != url) dirty = true
+                        if (before == null) _faceCount.value++
+                        while (faces.size > MAX_PEOPLE) faces.remove(faces.keys.first())
+                    }
+                }
             }
             if (names.size < 2) continue
             val fresh = synchronized(this) { counted.put(item.key, Unit) == null }
