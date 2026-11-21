@@ -32,6 +32,13 @@ class HttpJson @Inject constructor(
     private val http: OkHttpClient,
     private val json: Json,
 ) {
+    /**
+     * Some sites' bot checks (Porntrex's) turn away this app's HTTP/2 but let the same request
+     * through over HTTP/1.1: those are asked over 1.1.
+     */
+    private val http1 by lazy { http.newBuilder().protocols(listOf(okhttp3.Protocol.HTTP_1_1)).build() }
+    private fun clientFor(host: String): OkHttpClient = if (HTTP1_HOSTS.any { host == it || host.endsWith(".$it") }) http1 else http
+
     suspend fun get(sourceId: String, url: String, headers: Map<String, String> = emptyMap()): JsonElement {
         val parsed = url.toHttpUrlOrNull() ?: throw SourceException(sourceId, "Invalid URL: $url")
         val builder = Request.Builder().url(parsed).header("Accept", "application/json")
@@ -40,7 +47,7 @@ class HttpJson @Inject constructor(
             builder.header("User-Agent", "Mozilla/5.0 (Android; Mobile) AppleWebKit/537.36 PrivateFeed/1.1")
         }
         headers.forEach { (k, v) -> builder.header(k, v) }
-        val call = http.newCall(builder.build())
+        val call = clientFor(parsed.host).newCall(builder.build())
 
         val (code, body) = try {
             call.await()
@@ -73,7 +80,7 @@ class HttpJson @Inject constructor(
         val parsed = url.toHttpUrlOrNull() ?: throw SourceException(sourceId, "Invalid URL: $url")
         val builder = Request.Builder().url(parsed).header("Accept", "text/html")
         headers.forEach { (k, v) -> builder.header(k, v) }
-        val call = http.newCall(builder.build())
+        val call = clientFor(parsed.host).newCall(builder.build())
         val (code, body) = try {
             call.await()
         } catch (e: CancellationException) {
@@ -134,3 +141,7 @@ class HttpJson @Inject constructor(
         })
     }
 }
+
+/** Hosts asked over HTTP/1.1 (see HttpJson.clientFor). */
+private val HTTP1_HOSTS = setOf("porntrex.com")
+

@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.25.1 — 2026-11-21
+
+Porntrex over HTTP/1.1
+
+- **Porntrex is asked over HTTP/1.1:** its bot check had been turning the app away while letting the same request through from a plain client.
+
 ## 6.25 — 2026-11-21
 
 The TV keeps going
