@@ -302,7 +302,9 @@ class FeedSession(
     }
 
     private suspend fun searchFetch(a: SourceAdapter, query: String, cursor: String?): Result<Page<MediaItem>> = try {
-        Result.success(a.search(query, cursor))
+        // A followed site ("site:host") is only the tube sites' to answer.
+        if (query.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) && a.id != dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) Result.success(Page(emptyList(), null))
+        else Result.success(a.search(query, cursor))
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
@@ -369,6 +371,8 @@ class FeedSession(
             items = items.filter { item ->
                 item.creator?.let { Blocklist.normalize(it) in follows.creators } == true ||
                     item.tags.any { Blocklist.normalize(it) in follows.tags } ||
+                    // A site you follow: everything from it.
+                    (item.sourceId == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID && (dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX + item.id.substringBefore('/')) in follows.tags) ||
                     dev.pfeed.domain.reco.Mentions.named(item, people).isNotEmpty()
             }
         }

@@ -395,8 +395,14 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                     val isTag = row.kind == FollowKind.TAG.name
                     // Tags open their feed; creators open their page (everything by them, every source).
                     FollowRow(
-                        name = if (isTag) "#${row.value.replace('_', ' ')}" else "@${row.value}",
-                        kind = if (isTag) "Tag" else "Creator",
+                        name = when {
+                            // A followed site: its name.
+                            isTag && row.value.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) ->
+                                dev.pfeed.source.tube.TubeSite.byHost(row.value.removePrefix(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX))?.label ?: row.value
+                            isTag -> "#${row.value.replace('_', ' ')}"
+                            else -> "@${row.value}"
+                        },
+                        kind = if (isTag && row.value.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX)) "Site" else if (isTag) "Tag" else "Creator",
                         isTag = isTag,
                         onOpen = { nav.openTag(if (isTag) row.value else "@" + row.value) },
                         onUnfollow = { vm.unfollow(row) },

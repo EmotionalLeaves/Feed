@@ -529,7 +529,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onAskSteer = if (vm.isMainFeed) ({ steerOpen = true }) else null,
             onThisOrThat = if (vm.isMainFeed) ({ thisOrThat = true }) else null,
             onBack = if (!vm.isMainFeed) ({ nav.popBackStack(); Unit }) else null,
-            followTag = vm.tag?.takeUnless { it.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) }?.let { t -> (t to vm.isFollowingPage(t, follows)) },
+            followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
             onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
             onWall = if (vm.isMainFeed) ({ wallMode = true }) else null,

@@ -1334,7 +1334,11 @@ class FeedViewModel @Inject constructor(
                 library.unfollow(FollowKind.TAG, tag)
             } else {
                 library.follow(FollowKind.TAG, tag)
-                _messages.tryEmit("Following #${Blocklist.normalize(tag).replace('_', ' ')}")
+                _messages.tryEmit(
+                    tag.takeIf { it.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) }
+                        ?.let { "Following " + (dev.pfeed.source.tube.TubeSite.byHost(it.removePrefix(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX))?.label ?: it) + ": its new videos join Following" }
+                        ?: "Following #${Blocklist.normalize(tag).replace('_', ' ')}",
+                )
             }
         }
     }
