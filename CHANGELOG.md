@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.18 — 2026-11-21
+
+Your searches on Discover
+
+- **Discover shows a row for each search you follow** (up to three), with its newest finds you haven't seen.
+- **Searching a performer's name now ranks videos the site credits her in** near the top, even when the title doesn't name her. The New with people you watch row includes them too.
+
 ## 6.17.1 — 2026-11-21
 
 Credited performers everywhere

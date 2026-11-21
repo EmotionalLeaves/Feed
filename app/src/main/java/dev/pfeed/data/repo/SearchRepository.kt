@@ -71,6 +71,8 @@ class SearchRepository @Inject constructor(
                 title == q -> 2.0
                 qTag in tags -> 1.6
                 title.contains(q) -> 1.2
+                // A performer the site credits on it, though the title doesn't name her.
+                item.extras[dev.pfeed.domain.reco.Mentions.PERFORMERS]?.split(',')?.any { it.trim().lowercase() == q } == true -> 1.4
                 else -> 0.0
             }
             // Partial credit for multi-word queries: share of words found in title or tags.

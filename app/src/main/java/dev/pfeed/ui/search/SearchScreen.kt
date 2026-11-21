@@ -458,6 +458,7 @@ class SearchViewModel @Inject constructor(
             loadLiveRow()
             loadTopRow()
             loadPeopleRow()
+            loadFollowedSearchRows()
             loadPhotoRow()
             // Because you liked …: what the site showed beside videos you enjoyed lately.
             // Watched with your favourites: beside two or more of the videos you enjoyed, on their sites.
@@ -516,7 +517,7 @@ class SearchViewModel @Inject constructor(
                     val photos = registry.byId(dev.pfeed.source.photos.PhotoSetsAdapter.SOURCE_ID)
                     (runCatching { tube.search(name, null).items }.getOrDefault(emptyList()) +
                         (photos?.let { runCatching { it.search(name, null).items }.getOrDefault(emptyList()) }.orEmpty()))
-                        .filter { it.key !in seen && it.thumbnailUrl != null && blocklist?.allows(it) != false && dev.pfeed.domain.reco.Mentions.padded(it.title).contains(" $q ") }
+                        .filter { it.key !in seen && it.thumbnailUrl != null && blocklist?.allows(it) != false && dev.pfeed.domain.reco.Mentions.named(it, listOf(q)).isNotEmpty() }
                         .sortedByDescending { it.publishedAt?.toEpochMilli() ?: 0L }
                 }
             }.awaitAll()
@@ -561,6 +562,28 @@ class SearchViewModel @Inject constructor(
                 list.sortedByDescending { it.creator?.lowercase() in mine }
             }.take(12)
             if (ranked.size >= 4) _topicRows.update { rows -> listOf(LIVE_ROW to ranked) + rows.filter { it.first != LIVE_ROW } }
+        }
+    }
+
+    /** A row per search you follow (a few): its newest finds you haven't seen. */
+    private fun loadFollowedSearchRows() {
+        val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) ?: return
+        viewModelScope.launch {
+            val searches = runCatching { library.follows.first().tags.filter(dev.pfeed.domain.reco.FollowedSearch::isOne) }.getOrDefault(emptyList()).take(FOLLOWED_SEARCH_ROWS)
+            if (searches.isEmpty()) return@launch
+            val seen = runCatching { library.keys(dev.pfeed.data.repo.LibraryKind.HISTORY).first() }.getOrDefault(emptySet())
+            val blocklist = runCatching { blocks.current() }.getOrNull()
+            searches.forEach { tag ->
+                launch {
+                    val q = dev.pfeed.domain.reco.FollowedSearch.query(tag)
+                    val row = runCatching { tube.search(q, null).items }.getOrDefault(emptyList())
+                        .filter { it.key !in seen && it.thumbnailUrl != null && blocklist?.allows(it) != false && dev.pfeed.domain.reco.FollowedSearch.matches(it, tag) }
+                        .distinctBy { it.title?.lowercase() ?: it.key }
+                        .sortedByDescending { it.publishedAt?.toEpochMilli() ?: 0L }.take(12)
+                    val name = "“$q”"
+                    if (row.size >= 4) _topicRows.update { rows -> rows.filter { it.first != name } + (name to row) }
+                }
+            }
         }
     }
 
@@ -1862,6 +1885,8 @@ private const val PERFORMER_FOR_YOU_MIN = 3
 private const val PEOPLE_TYPEAHEAD = 60
 /** Discover's "Often with people you watch": from this many of yours, this many new faces. */
 private const val OFTEN_WITH_SEEDS = 8
+/** Discover rows for searches you follow, at most. */
+private const val FOLLOWED_SEARCH_ROWS = 3
 private const val OFTEN_WITH_ROW = 12
 /** Sites offered before you've watched any. */
 private val DEFAULT_SITES = listOf("pornhub.com", "xvideos.com", "txxx.com", "eporner.com", "xhamster.com", "hclips.com", "drtuber.com", "tnaflix.com")
