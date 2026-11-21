@@ -1,3 +1,8 @@
+## 6.23.1 — 2026-11-21
+Stop casting
+
+- **Stop casting** is in the hold menu while a TV is playing.
+
 ## 6.23 — 2026-11-21
 Cast to TV
 
@@ -9,8 +14,3 @@ Cast to TV
 Order and filter tag pages too
 
 - **Tag pages get the same chips:** Newest, Longest and Not watched, above the grid.
-
-## 6.22 — 2026-11-21
-What you haven't watched
-
-- **"Not watched" on a creator's or performer's page** hides everything of theirs you've already seen, so you can go straight to what's new to you. It combines with Newest, Longest and the tag chips.

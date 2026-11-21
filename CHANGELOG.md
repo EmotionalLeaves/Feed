@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.23.1 — 2026-11-21
+
+Stop casting
+
+- **Stop casting** is in the hold menu while a TV is playing.
+
 ## 6.23 — 2026-11-21
 
 Cast to TV
