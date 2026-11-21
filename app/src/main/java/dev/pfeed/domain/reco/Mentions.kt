@@ -27,7 +27,19 @@ object Mentions {
         // Title, tags, and the performers its site or page credits.
         val credited = item.extras[PERFORMERS]?.split(',').orEmpty() + PagePeople.of(item.key)
         val text = padded(item.title) + item.tags.joinToString("") { padded(it.replace('_', ' ')) } + credited.joinToString("") { padded(it) }
-        return names.filter { text.contains(" $it ") }
+        if (names.size < GRAM_LOOKUP_FROM) return names.filter { text.contains(" $it ") }
+        // Many names (everyone the app knows): look each two- and three-word run of the text up,
+        // instead of searching the text for every name.
+        // (Each part on its own, so a run never spans the end of the title and the start of a tag.)
+        val grams = HashSet<String>()
+        for (part in text.split("  ")) {
+            val words = part.trim().split(' ').filter { it.isNotEmpty() }
+            for (i in words.indices) {
+                if (i + 1 < words.size) grams += words[i] + " " + words[i + 1]
+                if (i + 2 < words.size) grams += words[i] + " " + words[i + 1] + " " + words[i + 2]
+            }
+        }
+        return names.filter { n -> if (n.count { it == ' ' } <= 2) n in grams else text.contains(" $n ") }
     }
 
     /**
@@ -71,6 +83,7 @@ object Mentions {
     }
 
     private const val MAX_KNOWN = 2000
+    private const val GRAM_LOOKUP_FROM = 40
 
     /**
      * The person [query] most likely meant, when it's a name typed slightly wrong ("lena pual"):

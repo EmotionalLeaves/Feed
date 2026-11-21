@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.27.2 — 2026-11-21
+
+Lighter name matching
+
+- **Recognising performers in titles takes far less work** now that the app knows thousands of names: each title's two- and three-word runs are looked up, instead of the title being searched once for every name. That means less battery and smoother scrolling when big lists load.
+
 ## 6.27.1 — 2026-11-21
 
 Who you follow, at a glance

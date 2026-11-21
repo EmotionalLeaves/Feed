@@ -100,4 +100,12 @@ class MentionsTest {
         assertNull(Mentions.closest("milf anal", names)) // nothing like it
         assertNull(Mentions.closest("redhead", names)) // one word: not a name
     }
+
+    @Test
+    fun `with many names known, the lookup finds the same people and none across parts`() {
+        val many = (1..60).map { "person number$it" } + listOf("lena paul", "anna bell peaks")
+        assertEquals(listOf("lena paul", "anna bell peaks"), Mentions.named(v("Lena Paul meets Anna Bell Peaks"), many))
+        // "lena" ends the title and "paul" starts a tag: not her.
+        assertEquals(emptyList<String>(), Mentions.named(v("Afternoon with lena", tags = listOf("paul", "milf")), many))
+    }
 }
