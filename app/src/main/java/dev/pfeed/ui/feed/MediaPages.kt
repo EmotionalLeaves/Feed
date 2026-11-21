@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material3.CircularProgressIndicator
@@ -715,6 +716,20 @@ fun VideoPage(
                     .clickable { stayAtEnd = !stayAtEnd }
                     .padding(horizontal = 12.dp, vertical = 6.dp),
             )
+        }
+        // At a full scene's end: more with the performer it named, from every site.
+        val endPerson = remember(item.key) { dev.pfeed.domain.reco.Mentions.inTitle(item).firstOrNull() }
+        if (endPerson != null && next != null && ending != null && upNextOn && !detached && !handsFreeNow && !sideways && highlightLeft == null) androidx.compose.foundation.layout.Row(
+            Modifier.align(Alignment.BottomCenter).padding(bottom = 222.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(50))
+                .background(androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.7f))
+                .clickable { vm.openPageRequest.value = "@$endPerson" }
+                .padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Filled.Person, contentDescription = null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(16.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp))
+            androidx.compose.material3.Text("More with $endPerson", color = androidx.compose.ui.graphics.Color.White, style = androidx.compose.material3.MaterialTheme.typography.labelLarge)
         }
         // Highlights: how long this one has left, with a way to stay on it.
         val left = highlightLeft

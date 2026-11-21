@@ -205,6 +205,8 @@ class FeedViewModel @Inject constructor(
 
     /** A viewer to open (its token), asked for from an offer: the screen navigates there. */
     val openViewerRequest = MutableStateFlow<String?>(null)
+    /** A tag or creator page ("@name") a page asked to open (e.g. "More with …" at a scene's end). */
+    val openPageRequest = MutableStateFlow<String?>(null)
 
     /** Opens a live room you follow as its own viewer. */
     fun openLive(item: MediaItem): String = holder.put(listOf(item), 0, title = "Live")

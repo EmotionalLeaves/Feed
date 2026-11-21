@@ -586,6 +586,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             val at = items.indexOfFirst { it.key == key }
             if (at >= 0) pagerState.scrollToPage(at)
         }
+        val pageAsked by vm.openPageRequest.collectAsStateWithLifecycle()
+        LaunchedEffect(pageAsked) { pageAsked?.let { vm.openPageRequest.value = null; nav.openTag(it) } }
         val viewerAsked by vm.openViewerRequest.collectAsStateWithLifecycle()
         LaunchedEffect(viewerAsked) { viewerAsked?.let { vm.openViewerRequest.value = null; nav.navigate(Routes.viewer(it)) } }
         val asked by vm.thisOrThatRequest.collectAsStateWithLifecycle()
