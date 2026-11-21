@@ -2099,6 +2099,8 @@ private fun CreatorHeader(
     similar: List<String> = emptyList(),
     onOpenCreator: (String) -> Unit = {},
 ) {
+    // A performer: who she's most often in videos with (learned from every listing that names two).
+    val oftenWith = remember(name, items.size / 10) { dev.pfeed.domain.reco.CoStars.with(name, max = 10) }
     val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.map { it.key } }
     val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
     Column(Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -2154,32 +2156,38 @@ private fun CreatorHeader(
                 IconButton(onClick = onShuffle) { Icon(Icons.Filled.Shuffle, "Shuffle", tint = Color.White.copy(alpha = 0.8f)) }
             }
         }
+        if (oftenWith.isNotEmpty()) PeopleRow("OFTEN WITH", oftenWith, onOpenCreator)
         // Who else makes this kind of thing (by where their posts sit on your map), tap to open.
-        if (similar.isNotEmpty()) {
-            Spacer(Modifier.height(18.dp))
-            Text(
-                "SIMILAR CREATORS",
-                style = MaterialTheme.typography.labelSmall,
-                color = Color.White.copy(alpha = 0.5f),
-                modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-            )
-            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
-                for (c in similar) item(key = c) {
-                    Column(
-                        Modifier.width(64.dp).clip(RoundedCornerShape(10.dp)).clickable { onOpenCreator(c) },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        dev.pfeed.ui.common.InitialAvatar(c.substringBefore('@'), 52.dp)
-                        Spacer(Modifier.height(4.dp))
-                        Text(c.substringBefore('@'), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-            }
-        }
+        val more = remember(similar, oftenWith) { similar.filter { s -> oftenWith.none { it.equals(s.substringBefore('@'), true) } } }
+        if (more.isNotEmpty()) PeopleRow("SIMILAR CREATORS", more, onOpenCreator)
         if (items.isEmpty()) {
             Spacer(Modifier.height(48.dp))
             if (loading) dev.pfeed.ui.common.BrandSpinner()
             else Text("Nothing by them right now", style = MaterialTheme.typography.bodyMedium, color = Color.White.copy(alpha = 0.6f))
+        }
+    }
+}
+
+/** A titled row of people as avatars with their names; tap one to open their page. */
+@Composable
+private fun PeopleRow(title: String, people: List<String>, onOpen: (String) -> Unit) {
+    Spacer(Modifier.height(18.dp))
+    Text(
+        title,
+        style = MaterialTheme.typography.labelSmall,
+        color = Color.White.copy(alpha = 0.5f),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+    )
+    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
+        for (c in people) item(key = c) {
+            Column(
+                Modifier.width(64.dp).clip(RoundedCornerShape(10.dp)).clickable { onOpen(c) },
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                dev.pfeed.ui.common.InitialAvatar(c.substringBefore('@'), 52.dp)
+                Spacer(Modifier.height(4.dp))
+                Text(c.substringBefore('@'), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.8f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }

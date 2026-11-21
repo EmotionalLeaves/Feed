@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.12.1 — 2026-11-21
+
+Often with on her page
+
+- **A performer's page shows who she's often with,** as a row of faces above Similar creators. Tap one to go to her page.
+
 ## 6.12 — 2026-11-21
 
 Often with
