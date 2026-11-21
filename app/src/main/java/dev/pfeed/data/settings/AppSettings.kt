@@ -103,6 +103,8 @@ data class AppSettings(
     val privateMode: Boolean = false,
     /** Data saver: videos at most 480p (fewer megabytes on mobile data). */
     val dataSaver: Boolean = false,
+    /** Data saver only on mobile data (480p there, full quality on Wi-Fi). */
+    val dataSaverOnMobile: Boolean = false,
     /** Blur grid previews (Library, Search) until opened, for using the app around other people. */
     val blurPreviews: Boolean = false,
     /** Saved posts are downloaded (on Wi-Fi) into private storage so they play offline. */

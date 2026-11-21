@@ -1,3 +1,8 @@
+## 6.26 — 2026-11-21
+Data saver on mobile data
+
+- **New setting, Data saver on mobile data** (Settings, under Data saver): videos are capped at 480p while you're on mobile data and go back to full quality on Wi-Fi, switching by itself as the phone moves between them.
+
 ## 6.25.2 — 2026-11-21
 Porntrex change undone
 
@@ -7,8 +12,3 @@ Porntrex change undone
 Porntrex over HTTP/1.1
 
 - **Porntrex is asked over HTTP/1.1:** its bot check had been turning the app away while letting the same request through from a plain client.
-
-## 6.25 — 2026-11-21
-The TV keeps going
-
-- **Casting keeps going:** when a video ends on the TV, the next video in the feed that can play there follows on its own. Ones that only play on their own site are passed over.

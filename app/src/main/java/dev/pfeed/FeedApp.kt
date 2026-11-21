@@ -32,11 +32,14 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         get() = Configuration.Builder().setWorkerFactory(workerFactory).build()
 
     @Volatile private var dataSaver = false
+    /** Data saver only while on mobile data (and the network is metered right now). */
+    @Volatile private var dataSaverOnMobile = false
+    @Volatile private var metered = false
     @Volatile private var bestQuality = false
 
     /** 480p with Data saver on, or while the battery is low (battery saver); 1080p otherwise. */
     private fun applyQuality() {
-        val height = if (dataSaver || dev.pfeed.player.Battery.saving) 480 else if (bestQuality) 2160 else 1080
+        val height = if (dataSaver || (dataSaverOnMobile && metered) || dev.pfeed.player.Battery.saving) 480 else if (bestQuality) 2160 else 1080
         dev.pfeed.source.tube.TubeSite.maxHeight = height
         dev.pfeed.player.PlayerPool.maxHeight = height
     }
@@ -46,6 +49,17 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
     override fun onCreate() {
         super.onCreate()
         dev.pfeed.player.ResumePoints.init(this)
+        // Wi-Fi or mobile data: what "Data saver on mobile data" goes by, as the phone moves between them.
+        runCatching {
+            val cm = getSystemService(android.net.ConnectivityManager::class.java)
+            metered = cm.isActiveNetworkMetered
+            cm.registerDefaultNetworkCallback(object : android.net.ConnectivityManager.NetworkCallback() {
+                override fun onCapabilitiesChanged(network: android.net.Network, caps: android.net.NetworkCapabilities) {
+                    val now = !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_NOT_METERED)
+                    if (now != metered) { metered = now; applyQuality() }
+                }
+            })
+        }
         dev.pfeed.player.Moments.init(this)
         dev.pfeed.player.ActPrefs.init(this)
         dev.pfeed.player.ComicPages.init(this)
@@ -67,6 +81,7 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
                 dev.pfeed.source.net.EncryptedDns.always = it.encryptedDns
                 dev.pfeed.source.net.AppProxy.configure(proxyConfig(it))
                 dataSaver = it.dataSaver
+                dataSaverOnMobile = it.dataSaverOnMobile
                 bestQuality = it.bestQuality
                 dev.pfeed.player.Battery.saverOn = it.batterySaver
                 if (it.readyAhead != readyScheduled) { readyScheduled = it.readyAhead; dev.pfeed.work.ReadyWorker.schedule(this@FeedApp, it.readyAhead) }

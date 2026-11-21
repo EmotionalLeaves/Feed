@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.26 — 2026-11-21
+
+Data saver on mobile data
+
+- **New setting, Data saver on mobile data** (Settings, under Data saver): videos are capped at 480p while you're on mobile data and go back to full quality on Wi-Fi, switching by itself as the phone moves between them.
+
 ## 6.25.2 — 2026-11-21
 
 Porntrex change undone

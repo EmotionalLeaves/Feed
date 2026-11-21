@@ -401,6 +401,16 @@ fun SettingsScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) 
                     onChange = vm::setDataSaver,
                 )
                 RowDivider()
+                if (!s.dataSaver) {
+                    SwitchSetting(
+                        "Data saver on mobile data",
+                        s.dataSaverOnMobile,
+                        subtitle = "480p on mobile data, full quality again on Wi-Fi",
+                        icon = Icons.Filled.DataSaverOn,
+                        onChange = vm::setDataSaverOnMobile,
+                    )
+                    RowDivider()
+                }
                 val batteryLow by dev.pfeed.player.Battery.low.collectAsStateWithLifecycle()
                 SwitchSetting(
                     "Battery saver",
