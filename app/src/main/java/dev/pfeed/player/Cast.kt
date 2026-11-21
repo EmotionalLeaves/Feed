@@ -11,6 +11,7 @@ import com.google.android.gms.cast.framework.OptionsProvider
 import com.google.android.gms.cast.framework.SessionManagerListener
 import com.google.android.gms.cast.framework.SessionProvider
 import com.google.android.gms.cast.framework.media.CastMediaOptions
+import kotlinx.coroutines.launch
 
 /**
  * Cast to a TV: plays the video's own file on a Chromecast or Google TV with Google's default
@@ -21,6 +22,12 @@ import com.google.android.gms.cast.framework.media.CastMediaOptions
 object Cast {
     private var pending: Triple<String, String, Long>? = null
     private var listening = false
+
+    /** Asked for when the TV reaches the end of a video: the next one to play there (url, type), or null. */
+    @Volatile var next: (suspend () -> Pair<String, String?>?)? = null
+    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Main)
+    private var watched: com.google.android.gms.cast.framework.media.RemoteMediaClient? = null
+    @Volatile private var appContext: Context? = null
 
     /** Google Play services' cast framework, if this phone has it. */
     fun context(context: Context): CastContext? = runCatching { CastContext.getSharedInstance(context.applicationContext) }.getOrNull()
@@ -34,7 +41,8 @@ object Cast {
      */
     fun play(activity: android.app.Activity, url: String, mime: String?, startMs: Long, onMessage: (String) -> Unit): Boolean {
         val cast = context(activity) ?: return false
-        val type = mime ?: if (url.substringBefore('?').endsWith(".m3u8") || ".m3u8" in url) "application/x-mpegURL" else "video/mp4"
+        appContext = activity.applicationContext
+        val type = mime ?: guessType(url)
         val session = cast.sessionManager.currentCastSession
         if (session?.isConnected == true) { load(session, url, type, startMs); onMessage("Playing on ${session.castDevice?.friendlyName ?: "the TV"}"); return true }
         pending = Triple(url, type, startMs)
@@ -65,8 +73,27 @@ object Cast {
     private fun load(session: CastSession, url: String, type: String, startMs: Long) {
         val meta = MediaMetadata(MediaMetadata.MEDIA_TYPE_MOVIE).apply { putString(MediaMetadata.KEY_TITLE, "Video") }
         val info = MediaInfo.Builder(url).setStreamType(MediaInfo.STREAM_TYPE_BUFFERED).setContentType(type).setMetadata(meta).build()
-        session.remoteMediaClient?.load(MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true).setCurrentTime(startMs.coerceAtLeast(0)).build())
+        val client = session.remoteMediaClient ?: return
+        client.load(MediaLoadRequestData.Builder().setMediaInfo(info).setAutoplay(true).setCurrentTime(startMs.coerceAtLeast(0)).build())
+        // When it ends on the TV, the next video of the feed follows there.
+        if (watched !== client) {
+            watched = client
+            client.registerCallback(object : com.google.android.gms.cast.framework.media.RemoteMediaClient.Callback() {
+                override fun onStatusUpdated() {
+                    val st = client.mediaStatus ?: return
+                    if (st.playerState != com.google.android.gms.cast.MediaStatus.PLAYER_STATE_IDLE || st.idleReason != com.google.android.gms.cast.MediaStatus.IDLE_REASON_FINISHED) return
+                    val ask = next ?: return
+                    scope.launch {
+                        val n = runCatching { ask() }.getOrNull() ?: return@launch
+                        val s = context(appContext ?: return@launch)?.sessionManager?.currentCastSession ?: return@launch
+                        if (s.isConnected) load(s, n.first, n.second ?: guessType(n.first), 0)
+                    }
+                }
+            })
+        }
     }
+
+    private fun guessType(url: String) = if (".m3u8" in url) "application/x-mpegURL" else "video/mp4"
 }
 
 /** Cast setup: Google's default receiver; no phone notification or media session (discretion). */

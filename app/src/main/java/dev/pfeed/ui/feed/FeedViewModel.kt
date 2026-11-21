@@ -340,9 +340,29 @@ class FeedViewModel @Inject constructor(
             val at = NowPlaying.positionMs.takeIf { NowPlaying.key == item.key } ?: 0L
             val ok = dev.pfeed.player.Cast.play(activity, stream.url, stream.mimeType, at) { _messages.tryEmit(it) }
             if (!ok) _messages.tryEmit("Casting needs Google Play services, which this phone doesn't have")
-            else castPaused.value = item.key
+            else {
+                castPaused.value = item.key
+                castAt = item.key
+                // When it ends on the TV, the feed's next video that can play there follows.
+                dev.pfeed.player.Cast.next = next@{
+                    val list = items.value
+                    var i = list.indexOfFirst { it.key == castAt }
+                    repeat(CAST_TRIES) {
+                        i++
+                        val n = list.getOrNull(i) ?: return@next null
+                        if (n.type != dev.pfeed.domain.model.MediaType.VIDEO) return@repeat
+                        val s = runCatching { resolve(n) }.getOrNull() as? StreamInfo.Direct ?: return@repeat
+                        castAt = n.key
+                        return@next s.url to s.mimeType
+                    }
+                    null
+                }
+            }
         }
     }
+
+    /** The last post sent to the TV (where "next" goes on from). */
+    @Volatile private var castAt: String? = null
 
     /** The post sent to the TV: its page pauses on the phone. */
     val castPaused = MutableStateFlow<String?>(null)
@@ -534,6 +554,7 @@ class FeedViewModel @Inject constructor(
     }
 
     override fun onCleared() {
+        if (castAt != null) dev.pfeed.player.Cast.next = null
         if (isMainFeed && _mode.value == FeedMode.FOLLOWING) markFollowingSeen()
         session?.close()
         super.onCleared()
@@ -1414,6 +1435,7 @@ class FeedViewModel @Inject constructor(
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
         private const val LONGER_TIMEOUT_MS = 15_000L
         private const val SHARPER_BELOW = 720
+        private const val CAST_TRIES = 6
         private const val SHARPER_MIN_SEC = 2 * 60
         private const val LONGER_MIN_SEC = 4 * 60
         private const val LONGER_MAX_SEC = 25 * 60
