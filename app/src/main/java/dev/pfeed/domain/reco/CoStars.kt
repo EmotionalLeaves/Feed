@@ -68,6 +68,9 @@ object CoStars {
             .take(max).map { shown[it.key] ?: it.key.split(' ').joinToString(" ") { w -> w.replaceFirstChar { c -> c.uppercase() } } }
     }
 
+    /** Everyone it knows by name, as titles write them. */
+    @Synchronized fun names(): List<String> = shown.values.toList()
+
     /** A still of [name] (from a video that names only her), or null. */
     @Synchronized fun face(name: String): String? = Mentions.personName(name)?.let { faces[it] }
 

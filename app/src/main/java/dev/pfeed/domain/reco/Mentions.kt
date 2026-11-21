@@ -72,6 +72,45 @@ object Mentions {
 
     private const val MAX_KNOWN = 2000
 
+    /**
+     * The person [query] most likely meant, when it's a name typed slightly wrong ("lena pual"):
+     * the closest of [names] within two letters' difference, or null (also when it's spelled right).
+     */
+    fun closest(query: String, names: Collection<String>): String? {
+        val q = personName(query) ?: return null
+        var best: String? = null
+        var bestD = MAX_TYPO + 1
+        for (n in names) {
+            val k = personName(n) ?: continue
+            if (k == q) return null
+            if (kotlin.math.abs(k.length - q.length) > MAX_TYPO) continue
+            val d = editDistance(q, k, bestD)
+            if (d < bestD) { bestD = d; best = n.substringBefore('@').trim() }
+        }
+        return best?.takeIf { bestD <= MAX_TYPO }
+    }
+
+    private const val MAX_TYPO = 2
+
+    /** Letters to change, add or drop to turn [a] into [b] (stops counting past [limit]). */
+    private fun editDistance(a: String, b: String, limit: Int): Int {
+        var prev = IntArray(b.length + 1) { it }
+        for (i in 1..a.length) {
+            val cur = IntArray(b.length + 1); cur[0] = i
+            var rowMin = cur[0]
+            for (j in 1..b.length) {
+                cur[j] = minOf(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+                rowMin = minOf(rowMin, cur[j])
+            }
+            if (rowMin >= limit) return limit
+            prev = cur
+        }
+        return prev[b.length]
+    }
+
+    /** Everyone [inTitle] knows by name. */
+    fun knownNames(): Collection<String> = known.values
+
     private fun names(part: String): List<String>? {
         val list = part.split(JOIN).map { it.trim() }.filter { it.isNotEmpty() }
         if (list.isEmpty() || list.size > MAX_NAMES) return null

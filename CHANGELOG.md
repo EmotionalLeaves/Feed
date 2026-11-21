@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.21 — 2026-11-21
+
+Did you mean
+
+- **Typed a name slightly wrong?** When a search for a name finds little, the app offers the person it knows with a name like it ("lena pual" → Did you mean Lena Paul?). Tap it to search again.
+
 ## 6.20 — 2026-11-21
 
 People you watch, in Library

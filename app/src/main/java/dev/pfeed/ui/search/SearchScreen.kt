@@ -190,6 +190,8 @@ data class SearchUi(
     val alsoTry: List<String> = emptyList(),
     /** You've searched this before (it's among your recent searches): following it is offered more plainly. */
     val again: Boolean = false,
+    /** A name like the one searched that the app knows ("lena pual" → Lena Paul), when results are few. */
+    val didYouMean: String? = null,
 )
 
 @HiltViewModel
@@ -642,7 +644,7 @@ class SearchViewModel @Inject constructor(
         job?.cancel()
         val again = recent.items.value.any { it.equals(query, ignoreCase = true) }
         _ui.update {
-            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0, alsoTry = emptyList(), again = again)
+            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0, alsoTry = emptyList(), again = again, didYouMean = null)
         }
         // Simple searches get "also try": what means nearly the same on your map.
         if (query.split(' ').size <= 3 && '+' !in query && '-' !in query) viewModelScope.launch {
@@ -673,6 +675,12 @@ class SearchViewModel @Inject constructor(
                 }
             }
             _ui.update { it.copy(loading = false, pending = 0) }
+            // Few results for what looks like a name: perhaps it's spelled a little differently.
+            if (combo.isPlain && _ui.value.results.size < DID_YOU_MEAN_BELOW) {
+                val names = (people.value + dev.pfeed.domain.reco.Mentions.knownNames() + dev.pfeed.domain.reco.CoStars.names()).distinctBy { it.lowercase() }
+                val guess = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { dev.pfeed.domain.reco.Mentions.closest(query, names) }
+                if (guess != null) _ui.update { if (it.searched == query) it.copy(didYouMean = guess) else it }
+            }
         }
     }
 
@@ -1672,6 +1680,16 @@ private fun ResultsPane(
                 }
             }
         }
+        ui.didYouMean?.let { name ->
+            Row(
+                Modifier.fillMaxWidth().clickable { onSearch(name) }.padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Did you mean ", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+                Text(name, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold, color = Accent)
+                Text("?", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f))
+            }
+        }
         if (ui.alsoTry.isNotEmpty()) {
             androidx.compose.foundation.lazy.LazyRow(
                 Modifier.fillMaxWidth().padding(vertical = 6.dp),
@@ -1907,6 +1925,8 @@ private const val PERFORMER_FOR_YOU_MIN = 3
 private const val PEOPLE_TYPEAHEAD = 60
 /** Discover's "Often with people you watch": from this many of yours, this many new faces. */
 private const val OFTEN_WITH_SEEDS = 8
+/** Fewer results than this for a name: look for a name like it ("did you mean"). */
+private const val DID_YOU_MEAN_BELOW = 12
 /** A pause in typing this long before the sites' suggestions are asked for. */
 private const val SUGGEST_DEBOUNCE_MS = 250L
 /** Discover rows for searches you follow, at most. */

@@ -90,4 +90,14 @@ class MentionsTest {
         // "name + tag" is already narrowed: no person card for it.
         assertNull(dev.pfeed.ui.search.personFor("lena paul + anal", results))
     }
+
+    @Test
+    fun `a name typed slightly wrong finds the person meant`() {
+        val names = listOf("Lena Paul", "Abella Danger", "Riley Reid")
+        assertEquals("Lena Paul", Mentions.closest("lena pual", names))
+        assertEquals("Abella Danger", Mentions.closest("abela danger", names))
+        assertNull(Mentions.closest("lena paul", names)) // spelled right
+        assertNull(Mentions.closest("milf anal", names)) // nothing like it
+        assertNull(Mentions.closest("redhead", names)) // one word: not a name
+    }
 }
