@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.27 — 2026-11-21
+
+Hold to follow
+
+- **Hold a performer's chip on a post to follow her** (hold again to stop), without leaving the video. A tap still opens her page.
+
 ## 6.26.1 — 2026-11-21
 
 HQPorner steadier

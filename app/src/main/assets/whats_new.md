@@ -1,3 +1,8 @@
+## 6.27 — 2026-11-21
+Hold to follow
+
+- **Hold a performer's chip on a post to follow her** (hold again to stop), without leaving the video. A tap still opens her page.
+
 ## 6.26.1 — 2026-11-21
 HQPorner steadier
 
@@ -7,8 +12,3 @@ HQPorner steadier
 Data saver on mobile data
 
 - **New setting, Data saver on mobile data** (Settings, under Data saver): videos are capped at 480p while you're on mobile data and go back to full quality on Wi-Fi, switching by itself as the phone moves between them.
-
-## 6.25.2 — 2026-11-21
-Porntrex change undone
-
-- Undid 6.25.1's HTTP/1.1 change for Porntrex: the device check showed it didn't get past the site's bot check. Porntrex still works whenever the check lets the app through, and its videos still turn up from the other sites that carry them.

@@ -1803,6 +1803,7 @@ private fun FeedPage(
             onFollow = { vm.toggleFollowCreator(item) },
             onFullscreen = { onLandscape(true) },
             onTag = onOpenTag,
+            onFollowPerson = { name -> haptic.performHapticFeedback(HapticFeedbackType.LongPress); vm.toggleFollowTag("@$name") },
             onMenu = onMenu,
         )
         if (isVideo && !clean && !pipNow) {
@@ -1851,6 +1852,7 @@ private fun LandscapeMode(enabled: Boolean) {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun Overlay(
     item: MediaItem,
@@ -1873,6 +1875,8 @@ private fun Overlay(
     onFollow: () -> Unit,
     onFullscreen: () -> Unit,
     onTag: (String) -> Unit,
+    /** Hold a performer's chip: follow her (or stop). */
+    onFollowPerson: (String) -> Unit = {},
     onMenu: () -> Unit,
 ) {
     // One row: the caption takes whatever width the button rail leaves, so they can never overlap.
@@ -1954,7 +1958,8 @@ private fun Overlay(
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     people.forEach { name ->
                         Row(
-                            Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.22f)).clickable { onTag("@$name") }
+                            Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.22f))
+                                .combinedClickable(onClick = { onTag("@$name") }, onLongClick = { onFollowPerson(name) })
                                 .padding(start = 3.dp, end = 12.dp, top = 3.dp, bottom = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
