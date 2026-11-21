@@ -1,3 +1,8 @@
+## 6.20 — 2026-11-21
+People you watch, in Library
+
+- **Library → Following starts with the people you watch a lot but don't follow yet,** shown as faces with how many of their videos you've watched. Tap one for her page.
+
 ## 6.19.1 — 2026-11-21
 Newest and longest on a page
 
@@ -7,8 +12,3 @@ Newest and longest on a page
 Popular searches as you type
 
 - **As you type a search, popular searches from the sites show up** under your own matches ("redhead" → redhead anal, redhead milf, redhead pov…), marked with a trending arrow. They're asked for after a short pause in typing. Anything that could suggest a minor is left out.
-
-## 6.18.3 — 2026-11-21
-Picture cache back to full size
-
-- The in-memory picture cache is back to its usual size (a quarter of the app's memory, at most 128 MB), so scrolling back doesn't reload thumbnails. The 6.18.2 cap had made it smaller than needed on most phones.

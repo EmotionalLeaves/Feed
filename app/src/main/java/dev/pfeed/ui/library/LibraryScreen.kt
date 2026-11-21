@@ -387,7 +387,37 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
             }
             1 -> liked.found().let { l -> if (liked.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.FavoriteBorder, "No likes yet", "Double-tap a post or tap the heart. Likes teach For You what you want.", openGrid(l), onBrowse = toFeed, onShuffle = shuffle(l), onLongPress = { holding = it to "Liked" }, onMoreLike = { moreLikeThese(l); toFeed() }) }
             2 -> history.found().let { l -> if (history.isNotEmpty() && l.isEmpty()) NoMatch() else Grid(l, Icons.Filled.History, "No history yet", "Everything you watch shows up here.", openGrid(l), sectionOf = { whenWatched(historyTimes[it.key]) }, onLongPress = { holding = it to "History" }, header = if (query.isBlank()) ({ WeekRecap(history, historyTimes, onOpenTag = { nav.openTag(it) }) }) else null) }
-            else -> LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
+            else -> {
+            // People you keep watching but don't follow yet: their faces, one tap to their page.
+            val yours by androidx.compose.runtime.produceState(emptyList<Pair<String, Int>>(), history.size, follows) {
+                value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    val followedNames = follows.filter { it.kind != FollowKind.TAG.name }.map { it.value.substringBefore('@').lowercase() }.toSet()
+                    history.asSequence().flatMap { dev.pfeed.domain.reco.Mentions.inTitle(it).asSequence() }
+                        .groupingBy { it }.eachCount().entries.filter { it.value >= 3 && it.key.lowercase() !in followedNames }
+                        .sortedByDescending { it.value }.take(16).map { it.key to it.value }
+                }
+            }
+            LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 8.dp)) {
+                if (yours.size >= 2) item(key = "yours") {
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        Text("YOU WATCH THEM A LOT", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                        Spacer(Modifier.height(8.dp))
+                        androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                            items(yours.size, key = { "y:" + yours[it].first }) { i ->
+                                val (name, n) = yours[i]
+                                Column(
+                                    Modifier.width(68.dp).clip(RoundedCornerShape(10.dp)).clickable { nav.openTag("@$name") },
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                ) {
+                                    dev.pfeed.ui.common.InitialAvatar(name, 56.dp)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Text("$n watched", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                }
+                            }
+                        }
+                    }
+                }
                 if (follows.isEmpty()) item {
                     EmptyState(Icons.Filled.PersonAdd, "Not following anyone", "Tap Follow next to a creator, or open a tag and follow it. Their posts fill the Following feed.")
                 }
@@ -414,6 +444,7 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                         onUnfollow = { vm.unfollow(row) },
                     )
                 }
+            }
             }
         }
         }
