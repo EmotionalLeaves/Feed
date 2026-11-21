@@ -48,6 +48,18 @@ class MentionsTest {
     }
 
     @Test
+    fun `a followed performer the site credits is found`() {
+        val names = listOf("coco lovelock")
+        assertEquals(names, Mentions.named(v("Breakthrough session").copy(extras = mapOf(Mentions.PERFORMERS to "CoCo Lovelock")), names))
+    }
+
+    @Test
+    fun `a performer the site credits is a taste feature too`() {
+        val f = dev.pfeed.domain.reco.Features.of(v("Breakthrough session").copy(extras = mapOf(Mentions.PERFORMERS to "CoCo Lovelock")))
+        assertEquals(true, dev.pfeed.domain.reco.Features.normalizeTag("CoCo Lovelock") in f)
+    }
+
+    @Test
     fun `known people are found anywhere in a title`() {
         Mentions.learn(listOf("Zelda Quartz@onlyfans", "solo"))
         assertEquals(listOf("Zelda Quartz"), Mentions.inTitle(v("zelda quartz gets a surprise at the gym")))

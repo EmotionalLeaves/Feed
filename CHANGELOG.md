@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.17.1 — 2026-11-21
+
+Credited performers everywhere
+
+- **Following a performer now also brings videos where she's only credited by the site** (not named in the title), and For You learns from those credits the way it learns from names in titles.
+
 ## 6.17 — 2026-11-21
 
 Your follows at a tap

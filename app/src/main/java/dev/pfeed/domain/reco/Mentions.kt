@@ -24,7 +24,9 @@ object Mentions {
     /** Which of [names] (already passed through [personName]) are in [item]'s title or tags. */
     fun named(item: MediaItem, names: Collection<String>): List<String> {
         if (names.isEmpty()) return emptyList()
-        val text = padded(item.title) + item.tags.joinToString("") { padded(it.replace('_', ' ')) }
+        // Title, tags, and the performers its site or page credits.
+        val credited = item.extras[PERFORMERS]?.split(',').orEmpty() + PagePeople.of(item.key)
+        val text = padded(item.title) + item.tags.joinToString("") { padded(it.replace('_', ' ')) } + credited.joinToString("") { padded(it) }
         return names.filter { text.contains(" $it ") }
     }
 

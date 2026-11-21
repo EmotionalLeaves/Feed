@@ -87,7 +87,9 @@ object Features {
     fun of(item: MediaItem): List<String> {
         // Performers a studio title names count like a tag of theirs (the same "lena_paul" a board
         // would tag), so liking her in one upload carries to her other videos on every site.
-        val tags = (item.tags.asSequence() + PageTags.of(item.key).asSequence() + Mentions.performers(item.title).asSequence())
+        // The ones its site credits (TXXX network's models) count the same way.
+        val credited = item.extras[Mentions.PERFORMERS]?.split(',')?.asSequence()?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        val tags = (item.tags.asSequence() + PageTags.of(item.key).asSequence() + Mentions.performers(item.title).asSequence() + credited)
             .map(::normalizeTag)
             .filter { it.isNotBlank() && it !in GENERIC }
             .distinct()
