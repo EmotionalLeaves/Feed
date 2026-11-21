@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.18.1 — 2026-11-21
+
+Videos with both
+
+- **"Often with" on a performer's search card now finds the videos with both of them** in one tap, not just the other person.
+- Combined searches ("name + name", "name + tag") also count the performers a site credits.
+- Members-only qualities listed by some sites as a link to their login page are skipped, so the best quality that actually plays is picked.
+
 ## 6.18 — 2026-11-21
 
 Your searches on Discover

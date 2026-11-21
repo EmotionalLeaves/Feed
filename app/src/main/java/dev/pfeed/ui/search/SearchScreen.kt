@@ -707,7 +707,8 @@ internal data class Combo(val ask: String, val need: List<String>, val without: 
     val isPlain: Boolean get() = need.isEmpty() && without.isEmpty()
 
     fun matches(item: MediaItem): Boolean {
-        val text = (item.tags + listOfNotNull(item.title, item.creator)).joinToString(" ").lowercase().replace('_', ' ')
+        val credited = item.extras[dev.pfeed.domain.reco.Mentions.PERFORMERS]?.split(',').orEmpty() + dev.pfeed.domain.reco.PagePeople.of(item.key)
+        val text = (item.tags + listOfNotNull(item.title, item.creator) + credited).joinToString(" ").lowercase().replace('_', ' ')
         return need.all { it in text } && without.none { it in text }
     }
 
@@ -1610,7 +1611,7 @@ private fun ResultsPane(
                 if (on) androidx.compose.material3.OutlinedButton(onClick = { onFollowPerson(name) }) { Text("Following") }
                 else dev.pfeed.ui.common.BrandButton("Follow", onClick = { onFollowPerson(name) }, compact = true)
             }
-            // Who she's most often in videos with: one tap searches them.
+            // Who she's most often in videos with: one tap finds the videos with both of them.
             val costars = remember(name, ui.results.size / 20) { dev.pfeed.domain.reco.CoStars.with(name) }
             if (costars.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(
                 Modifier.fillMaxWidth().padding(bottom = 4.dp),
@@ -1622,7 +1623,7 @@ private fun ResultsPane(
                 for (p in costars) item(key = "with:$p") {
                     Row(
                         Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
-                            .clickable { onSearch(p) }.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                            .clickable { onSearch("$name + ${p.lowercase()}") }.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         dev.pfeed.ui.common.InitialAvatar(p, size = 22.dp)

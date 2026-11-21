@@ -653,7 +653,8 @@ sealed class TubeSite(val host: String, val label: String) {
             val key = m.groupValues[1]
             val q = Regex(Regex.escape(key) + """_text\s*:\s*'(\d{3,4})p""").find(html)?.groupValues?.get(1)?.toIntOrNull() ?: 360
             q to unescape(m.groupValues[2])
-        }.filter { it.second.startsWith("https://") }.toList()
+        // Members-only qualities are listed as a link to the login page: not a file.
+        }.filter { it.second.startsWith("https://") && "login" !in it.second.substringBefore("?v-acctoken") }.toList()
         if (files.isEmpty()) return null
         val pick = files.filter { it.first <= maxHeight }.maxByOrNull { it.first } ?: files.minBy { it.first }
         return TubeStream(pick.second, "video/mp4")
