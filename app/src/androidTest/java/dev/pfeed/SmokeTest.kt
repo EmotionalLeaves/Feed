@@ -563,12 +563,21 @@ class SmokeTest {
                 found.firstOrNull { it.isGallery && it.pages.size <= 40 },
                 found.firstOrNull { it.type == dev.pfeed.domain.model.MediaType.IMAGE && !it.isGallery },
             ).distinctBy { it.key }
+            picks.forEach { android.util.Log.i("PFHEALTH", "offline pick: ${it.sourceId} ${it.id.take(60)} ${it.type} ${it.durationSec}s pages=${it.pages.size}") }
             picks.forEach { a.library.add(dev.pfeed.data.repo.LibraryKind.SAVED, it) }
             try {
                 val t0 = System.currentTimeMillis()
                 fun done(it: dev.pfeed.domain.model.MediaItem) =
                     if (it.isGallery) a.offlineStore.local("${it.key}#${it.pages.size - 1}") != null else a.offlineStore.local(it.key) != null
-                while (picks.any { !done(it) } && System.currentTimeMillis() - t0 < 180_000) kotlinx.coroutines.delay(2_000)
+                var ticks = 0
+                while (picks.any { !done(it) } && System.currentTimeMillis() - t0 < 180_000) {
+                    kotlinx.coroutines.delay(2_000)
+                    // Memory while downloading: this test is where the phone ran out once.
+                    if (++ticks % 3 == 0) {
+                        val mi = android.os.Debug.MemoryInfo().also { android.os.Debug.getMemoryInfo(it) }
+                        android.util.Log.i("PFHEALTH", "offline: ${(System.currentTimeMillis() - t0) / 1000}s pss ${mi.totalPss / 1024} MB native heap ${android.os.Debug.getNativeHeapAllocatedSize() shr 20} MB java ${(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) shr 20} MB; done ${picks.count(::done)}/${picks.size}")
+                    }
+                }
                 picks.forEach { p ->
                     val local = if (p.isGallery) a.offlineStore.local("${p.key}#0") else a.offlineStore.local(p.key)
                     android.util.Log.i("PFHEALTH", "offline ${p.sourceId}/${p.type}${if (p.isGallery) " (${p.pages.size} pages)" else ""}: ${if (done(p)) "kept" else "NOT kept"} in ${System.currentTimeMillis() - t0} ms ${local?.mimeType ?: a.offlineStore.problem(p.key)} ${p.id.substringBefore('/')}; total ${a.offlineStore.bytes.value / 1024} KB")
