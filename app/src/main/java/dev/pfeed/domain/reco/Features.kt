@@ -108,13 +108,16 @@ object Features {
         },
         // Clip or full scene: people usually want one or the other.
         item.durationSec?.takeIf { it > 0 }?.let { d -> LENGTH + when { d < 60 -> "short"; d < 8 * 60 -> "medium"; else -> "long" } },
+        // HD where the site says so: someone who sticks with HD and skips the rest gets more of it.
+        item.extras["height"]?.toIntOrNull()?.takeIf { it >= 720 }?.let { QUALITY + "hd" },
     )
 
-    fun isMeta(feature: String) = feature.startsWith(ORIGIN) || feature.startsWith(TYPE) || feature.startsWith(LENGTH)
+    fun isMeta(feature: String) = feature.startsWith(ORIGIN) || feature.startsWith(TYPE) || feature.startsWith(LENGTH) || feature.startsWith(QUALITY)
 
     const val ORIGIN = "o:"
     const val TYPE = "type:"
     const val LENGTH = "len:"
+    const val QUALITY = "q:"
 
     internal fun titleWords(title: String?): List<String> {
         if (title.isNullOrBlank()) return emptyList()
@@ -148,6 +151,7 @@ object Features {
         feature.startsWith(LENGTH) -> when (feature.removePrefix(LENGTH)) {
             "short" -> "Short clips (under a minute)"; "medium" -> "Videos of 1–8 minutes"; else -> "Long videos (8 minutes and up)"
         }
+        feature == QUALITY + "hd" -> "HD videos"
         else -> "#${feature.replace('_', ' ')}"
     }
 }

@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.2.0 — 2026-11-20
+
+For You learns if you like HD
+
+- **For You learns whether you prefer HD**: where the site says a video is HD, that counts like any other trait, so if you stay with HD and skip the rest you get more of it. It shows under Your taste.
+- **Ask For You for HD**: type "only HD" or "more HD videos" in the steer box.
+
 ## 6.1.0 — 2026-11-20
 
 Hide a performer

@@ -99,7 +99,7 @@ fun TasteScreen(nav: NavController, vm: SettingsViewModel = hiltViewModel()) {
         // What it learned, grouped the way people think about it: what kind of post, which sites,
         // then the subjects themselves.
         val all = likes.map { Triple(it.first, it.second, true) } + dislikes.map { Triple(it.first, it.second, false) }
-        val formats = all.filter { it.first.startsWith(Features.TYPE) || it.first.startsWith(Features.LENGTH) }
+        val formats = all.filter { it.first.startsWith(Features.TYPE) || it.first.startsWith(Features.LENGTH) || it.first.startsWith(Features.QUALITY) }
         val sites = all.filter { it.first.startsWith(Features.ORIGIN) }
         val moreOf = likes.filterNot { Features.isMeta(it.first) }
         val lessOf = dislikes.filterNot { Features.isMeta(it.first) }

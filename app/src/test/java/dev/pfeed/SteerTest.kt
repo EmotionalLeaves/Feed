@@ -43,4 +43,10 @@ class SteerTest {
         val only = ranker.rank(items, emptyMap(), emptyMap(), Instant.now(), limit = 10, steer = listOf(Steer.Directive(Kind.ONLY, "type:video")))
         assertTrue("only videos", only.isNotEmpty() && only.all { it.type == MediaType.VIDEO })
     }
+
+    @Test
+    fun `hd is a quality, not a tag`() {
+        assertEquals(listOf(Steer.Kind.ONLY to "q:hd"), parse("only hd"))
+        assertEquals(listOf(Steer.Kind.MORE to "q:hd"), parse("more HD videos"))
+    }
 }

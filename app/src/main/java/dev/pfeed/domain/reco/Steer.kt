@@ -21,6 +21,7 @@ object Steer {
     private fun short(tag: String): String = when {
         tag.startsWith(Features.LENGTH) -> when (tag.removePrefix(Features.LENGTH)) { "short" -> "short clips"; "long" -> "long videos"; else -> "mid-length videos" }
         tag.startsWith(Features.TYPE) -> Features.label(tag).lowercase()
+        tag == Features.QUALITY + "hd" -> "HD videos"
         else -> Features.label(tag).removePrefix("#")
     }
 
@@ -49,6 +50,7 @@ object Steer {
         "short videos" to "short", "short clips" to "short", "short ones" to "short", "quickies" to "short",
         "long videos" to "long", "long ones" to "long", "full videos" to "long", "full length" to "long",
     )
+    private val QUALITIES = setOf("hd", "hd videos", "hd ones", "high quality", "1080p", "4k")
 
     /**
      * Read [text] into directives. [resolve] turns a phrase into the tag it most likely means among
@@ -77,6 +79,7 @@ object Steer {
             clause = clause.removePrefix("of ").removePrefix("the ").trim()
             if (clause.length < 2) continue
             val tag = LENGTHS[clause]?.let { Features.LENGTH + it }
+                ?: clause.takeIf { it in QUALITIES }?.let { Features.QUALITY + "hd" }
                 ?: FORMATS[clause]?.let { Features.TYPE + it }
                 ?: resolve(clause)
             if (tag.isBlank()) continue

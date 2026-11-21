@@ -1,3 +1,9 @@
+## 6.2.0 — 2026-11-20
+For You learns if you like HD
+
+- **For You learns whether you prefer HD**: where the site says a video is HD, that counts like any other trait, so if you stay with HD and skip the rest you get more of it. It shows under Your taste.
+- **Ask For You for HD**: type "only HD" or "more HD videos" in the steer box.
+
 ## 6.1.0 — 2026-11-20
 Hide a performer
 
@@ -7,9 +13,3 @@ Hide a performer
 Tidier titles
 
 - **Tidier titles from the TXXX sites**: uploads titled all in lower case start with a capital.
-
-## 6.0.0 — 2026-11-20
-More with her
-
-- **More with her, at a scene's end**: as a full scene finishes, above Up next, a "More with Lena Paul" button opens everything with the performer it named, from every site.
-- 6.0: forty-three tube sites, photo sets, live cams, boards, comics and more, with performers followed across all of them.
