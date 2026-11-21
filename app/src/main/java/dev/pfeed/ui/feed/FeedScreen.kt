@@ -1955,11 +1955,12 @@ private fun Overlay(
                     people.forEach { name ->
                         Row(
                             Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.22f)).clickable { onTag("@$name") }
-                                .padding(start = 8.dp, end = 12.dp, top = 5.dp, bottom = 5.dp),
+                                .padding(start = 3.dp, end = 12.dp, top = 3.dp, bottom = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Filled.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(4.dp))
+                            // Her face, when the app has a still of her; else her initial.
+                            dev.pfeed.ui.common.InitialAvatar(name, 20.dp)
+                            Spacer(Modifier.width(5.dp))
                             Text(name, color = Color.White, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1)
                         }
                     }

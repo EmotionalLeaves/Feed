@@ -367,14 +367,27 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                         .take(AUTO_TAG_MAX)
                         .map { it.key to it.value }
                 }
+                // And by the people in them: everyone in three or more of your saved posts.
+                val autoPeople = remember(saved) {
+                    saved.flatMap { item -> dev.pfeed.domain.reco.Mentions.inTitle(item).distinctBy { it.lowercase() } }
+                        .groupingBy { it }.eachCount()
+                        .filter { it.value >= AUTO_TAG_MIN }
+                        .entries.sortedByDescending { it.value }
+                        .take(AUTO_TAG_MAX)
+                        .map { it.key to it.value }
+                }
                 // Secret collections show only while Find holds their exact name.
                 val shown = collections.filter { !it.name.startsWith(".") || it.name.equals(query.trim(), ignoreCase = true) || it.name == collection }
                 LaunchedEffect(query, collections) {
                     collections.firstOrNull { it.name.startsWith(".") && it.name.equals(query.trim(), ignoreCase = true) }?.let { vm.collection.value = it.name; query = "" }
                 }
-                if (shown.isNotEmpty() || collection != null || autoTags.isNotEmpty()) CollectionChips(shown, collection, saved.size, autoTags) { vm.collection.value = it }
+                if (shown.isNotEmpty() || collection != null || autoTags.isNotEmpty() || autoPeople.isNotEmpty()) CollectionChips(shown, collection, saved.size, autoTags, autoPeople) { vm.collection.value = it }
                 val open = collection
-                if (open != null && open.startsWith("#")) {
+                if (open != null && open.startsWith("@")) {
+                    val name = open.removePrefix("@")
+                    val l = saved.filter { item -> dev.pfeed.domain.reco.Mentions.inTitle(item).any { it.equals(name, ignoreCase = true) } }.found()
+                    Grid(l, Icons.Filled.BookmarkBorder, "Nothing with $name", "", { index -> nav.navigate(Routes.viewer(vm.open(l, index, name))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$name · shuffled"))) }, onLongPress = { holding = it to "Saved" })
+                } else if (open != null && open.startsWith("#")) {
                     val tag = open.removePrefix("#")
                     val l = saved.filter { item -> dev.pfeed.ui.feed.Display.tags(item, 12).any { it.first.equals(tag, ignoreCase = true) } }.found()
                     Grid(l, Icons.Filled.BookmarkBorder, "Nothing tagged $open", "", { index -> nav.navigate(Routes.viewer(vm.open(l, index, open))) }, onShuffle = { nav.navigate(Routes.viewer(vm.open(l.shuffled(), 0, "$open · shuffled"))) }, onLongPress = { holding = it to "Saved" })
@@ -539,6 +552,7 @@ private fun CollectionChips(
     selected: String?,
     savedCount: Int,
     autoTags: List<Pair<String, Int>> = emptyList(),
+    autoPeople: List<Pair<String, Int>> = emptyList(),
     onSelect: (String?) -> Unit,
 ) {
     androidx.compose.foundation.lazy.LazyRow(
@@ -574,6 +588,16 @@ private fun CollectionChips(
                         androidx.compose.material3.Icon(Icons.Filled.Folder, contentDescription = null, modifier = Modifier.size(16.dp))
                     }
                 },
+                colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
+            )
+        }
+        // The people you've saved most, each a folder of her own.
+        items(autoPeople, key = { "@" + it.first }) { (name, count) ->
+            androidx.compose.material3.FilterChip(
+                selected = selected == "@$name",
+                onClick = { onSelect("@$name") },
+                label = { Text("$name · $count", maxLines = 1) },
+                leadingIcon = { dev.pfeed.ui.common.InitialAvatar(name, 18.dp) },
                 colors = androidx.compose.material3.FilterChipDefaults.filterChipColors(selectedContainerColor = Accent, selectedLabelColor = Color.White, selectedLeadingIconColor = Color.White),
             )
         }

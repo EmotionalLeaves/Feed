@@ -1,3 +1,9 @@
+## 6.24 — 2026-11-21
+Saved, by person
+
+- **Saved sorts itself by the people in it:** everyone in three or more of your saved posts gets a folder chip (with her face) next to the tag folders. Tap one for just her.
+- **Performer chips on posts show her face** when the app has a still of her.
+
 ## 6.23.2 — 2026-11-21
 Steadier site lists
 
@@ -7,10 +13,3 @@ Steadier site lists
 Stop casting
 
 - **Stop casting** is in the hold menu while a TV is playing.
-
-## 6.23 — 2026-11-21
-Cast to TV
-
-- **Cast to TV:** hold a video → Cast to TV, pick your Chromecast or Google TV, and it plays there from where you were. The phone's copy pauses.
-  - **Discreet:** nothing shows in the phone's notifications or lock screen, and the TV is told only "Video".
-  - **Needs Google Play services.** Videos from sites that only serve their files to their own pages can't be cast; the app says so.
