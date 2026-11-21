@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.21.2 — 2026-11-21
+
+Photo sets load again
+
+- **Photo sets load again:** BabeSource had started turning away requests that didn't look like a browser. The app now asks it the way it asks the video sites.
+
 ## 6.21.1 — 2026-11-21
 
 More like this, with the same faces
