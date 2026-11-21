@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.96.0 — 2026-11-20
+
+New photo sets on Discover
+
+- **New photo sets** on Discover: the studios' latest photo sets, best for you first. Tap Play to swipe through them.
+
 ## 5.95.0 — 2026-11-20
 
 DrTuber, Nuvid, IcePorn play directly

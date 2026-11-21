@@ -1,3 +1,8 @@
+## 5.96.0 — 2026-11-20
+New photo sets on Discover
+
+- **New photo sets** on Discover: the studios' latest photo sets, best for you first. Tap Play to swipe through them.
+
 ## 5.95.0 — 2026-11-20
 DrTuber, Nuvid, IcePorn play directly
 
@@ -7,9 +12,3 @@ DrTuber, Nuvid, IcePorn play directly
 DrTuber, Nuvid and IcePorn
 
 - **Three more big tube sites: DrTuber, Nuvid and IcePorn**, with preview clips in the grids and high quality where they have it. 43 tube sites in all.
-
-## 5.93.0 — 2026-11-20
-Her photo sets too
-
-- **New with people you watch** now also brings the performers' photo sets, not only their videos.
-- The long-press menu says **In this set** on photo sets.

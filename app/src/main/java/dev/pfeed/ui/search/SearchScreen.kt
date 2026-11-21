@@ -410,6 +410,7 @@ class SearchViewModel @Inject constructor(
             loadLiveRow()
             loadTopRow()
             loadPeopleRow()
+            loadPhotoRow()
             // Because you liked …: what the site showed beside videos you enjoyed lately.
             // Watched with your favourites: beside two or more of the videos you enjoyed, on their sites.
             dev.pfeed.domain.reco.Related.cowatched().takeIf { it.size >= 4 }?.let { list ->
@@ -476,6 +477,19 @@ class SearchViewModel @Inject constructor(
             var i = 0
             while (row.size < 12 && perName.any { it.size > i }) { perName.forEach { l -> l.getOrNull(i)?.let { if (row.none { r -> r.key == it.key }) row += it } }; i++ }
             if (row.size >= 4) _topicRows.update { rows -> rows.filter { it.first != PEOPLE_ROW } + (PEOPLE_ROW to row.take(12)) }
+        }
+    }
+
+    /** New photo sets: the studios' latest sets, best for you first. */
+    private fun loadPhotoRow() {
+        val photos = registry.byId(dev.pfeed.source.photos.PhotoSetsAdapter.SOURCE_ID) as? dev.pfeed.source.photos.PhotoSetsAdapter ?: return
+        viewModelScope.launch {
+            if (registry.enabledAdapters().none { it.id == photos.id }) return@launch
+            val blocklist = runCatching { blocks.current() }.getOrNull()
+            val sets = photos.newest().filter { blocklist?.allows(it) != false }
+            if (sets.size < 4) return@launch
+            val ranked = forYouOrder(sets).take(12)
+            _topicRows.update { rows -> rows.filter { it.first != PHOTO_ROW } + (PHOTO_ROW to ranked) }
         }
     }
 
@@ -1072,10 +1086,10 @@ private fun SuggestionsPane(
                 TextButton(onClick = {
                     when {
                         topic == LIVE_ROW -> onLive()
-                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW || topic == PEOPLE_ROW -> onTopicItem(topic, 0)
+                        topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW || topic == PEOPLE_ROW || topic == PHOTO_ROW -> onTopicItem(topic, 0)
                         else -> onPick(topic)
                     }
-                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW || topic == PEOPLE_ROW) "Play" else "See all") }
+                }) { Text(if (topic.startsWith("Because you liked") || topic == COWATCHED_ROW || topic == TOP_ROW || topic == PEOPLE_ROW || topic == PHOTO_ROW) "Play" else "See all") }
             }
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(items.size, key = { items[it].key }) { i -> TopicTile(items[i]) { onTopicItem(topic, i) } }
@@ -1636,6 +1650,8 @@ private const val TOP_ROW_SITES = 8
 /** Discover's row of new videos with the performers you watch most. */
 private const val PEOPLE_ROW = "New with people you watch"
 private const val PEOPLE_ROW_NAMES = 3
+/** Discover's row of the newest photo sets. */
+private const val PHOTO_ROW = "New photo sets"
 /** Not watched for this long: a saved post comes back round on Discover. */
 /** Named in this many videos you watched: suggested on Discover's "Creators for you". */
 private const val PERFORMER_FOR_YOU_MIN = 3

@@ -59,6 +59,10 @@ class PhotoSetsAdapter @Inject constructor(
         (readAll(listed.take(SEARCH_LIMIT)) + poolMatches(query)).distinctBy { it.key }
     }
 
+    /** The newest sets (first [n] of the first page), for Discover. */
+    suspend fun newest(n: Int = CHUNK): List<MediaItem> =
+        attempt { readAll(BabeSource.parseList(http.getRaw(id, BabeSource.listUrl("newest", 1))).take(n)) }.getOrDefault(emptyList())
+
     private val gate = Semaphore(PAGE_CONCURRENCY)
 
     private suspend fun readAll(listed: List<BabeSource.Listed>): List<MediaItem> = coroutineScope {
