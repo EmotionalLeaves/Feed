@@ -1789,6 +1789,7 @@ private fun FeedPage(
             saved = saved,
             muted = muted,
             followingCreator = followingCreator,
+            followedPeople = vm.follows.collectAsStateWithLifecycle().value.creators,
             isVideo = isVideo,
             // Turning sideways is for video; a still or a comic page reads fine upright.
             canFullscreen = isVideo || type == MediaType.EMBED,
@@ -1865,6 +1866,8 @@ private fun Overlay(
     saved: Boolean,
     muted: Boolean,
     followingCreator: Boolean,
+    /** People you follow (normalised names): their chips are lit. */
+    followedPeople: Set<String> = emptySet(),
     isVideo: Boolean,
     canFullscreen: Boolean,
     onLike: () -> Unit,
@@ -1958,7 +1961,8 @@ private fun Overlay(
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     people.forEach { name ->
                         Row(
-                            Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = 0.22f))
+                            Modifier.clip(RoundedCornerShape(50))
+                                .background(if (dev.pfeed.domain.filter.Blocklist.normalize(name) in followedPeople) Accent.copy(alpha = 0.6f) else Color.White.copy(alpha = 0.22f))
                                 .combinedClickable(onClick = { onTag("@$name") }, onLongClick = { onFollowPerson(name) })
                                 .padding(start = 3.dp, end = 12.dp, top = 3.dp, bottom = 3.dp),
                             verticalAlignment = Alignment.CenterVertically,

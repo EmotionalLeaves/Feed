@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.27.1 — 2026-11-21
+
+Who you follow, at a glance
+
+- **People you follow are lit on a post:** their chip shows in the brand colour, so you can see at a glance who in a video you already follow.
+
 ## 6.27 — 2026-11-21
 
 Hold to follow
