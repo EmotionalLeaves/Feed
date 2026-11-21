@@ -520,7 +520,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onMode = { m ->
                 // For You tapped while on it: your tastes as chips, to pick one (tap again to hide).
                 // Live tapped while on it: who's on cam.
-                if (m == mode && (m == FeedMode.FOR_YOU || m == FeedMode.LIVE) && vm.isMainFeed) { chipsOpen = !chipsOpen; if (chipsOpen && m == FeedMode.FOR_YOU) vm.loadTasteChips() }
+                // Following tapped while on it: everyone and everything you follow, to open one.
+                if (m == mode && (m == FeedMode.FOR_YOU || m == FeedMode.LIVE || m == FeedMode.FOLLOWING) && vm.isMainFeed) { chipsOpen = !chipsOpen; if (chipsOpen && m == FeedMode.FOR_YOU) vm.loadTasteChips() }
                 else { chipsOpen = false; vm.setMode(m) }
             },
             mood = vm.mood.collectAsStateWithLifecycle().value,
@@ -560,6 +561,31 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     val on = steeringNow.isNotEmpty() && steeringNow.map { it.tag } == c.tags.take(3)
                     TasteChip(label, selected = on) { vm.playTaste(c); chipsOpen = false }
                 }
+            }
+        }
+        if (chipsOpen && vm.isMainFeed && mode == FeedMode.FOLLOWING && !landscape && !wallMode && !cleanOn) {
+            LaunchedEffect(Unit) { kotlinx.coroutines.delay(10_000); chipsOpen = false }
+            // People first (each to her page), then searches, tags and sites (each to its own feed).
+            val entries = remember(follows) {
+                follows.creators.sorted().map { c ->
+                    val name = c.substringBefore('@')
+                    // People's names as names ("lena paul" → "Lena Paul"); handles as they are.
+                    (if (dev.pfeed.domain.reco.Mentions.personName(name) != null) name.split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } } else name) to "@$c"
+                } +
+                    follows.tags.sorted().map { t ->
+                        when {
+                            dev.pfeed.domain.reco.FollowedSearch.isOne(t) -> "“${dev.pfeed.domain.reco.FollowedSearch.query(t)}”"
+                            t.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) -> dev.pfeed.source.tube.TubeSite.byHost(t.removePrefix(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX))?.label ?: t
+                            else -> "#" + t.replace('_', ' ')
+                        } to t
+                    }
+            }
+            if (entries.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(
+                Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 54.dp).fillMaxWidth(),
+                contentPadding = PaddingValues(horizontal = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                for ((label, open) in entries) item(key = "f:$open") { TasteChip(label, selected = false) { chipsOpen = false; nav.openTag(open) } }
             }
         }
         if (chipsOpen && vm.isMainFeed && mode == FeedMode.LIVE && !landscape && !wallMode && !cleanOn) {

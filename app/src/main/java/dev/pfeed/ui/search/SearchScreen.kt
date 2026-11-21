@@ -187,6 +187,8 @@ data class SearchUi(
     val sourcesWithResults: Int = 0,
     /** Tags that mean nearly the same as the search, on your map (see TasteEngine.neighbours). */
     val alsoTry: List<String> = emptyList(),
+    /** You've searched this before (it's among your recent searches): following it is offered more plainly. */
+    val again: Boolean = false,
 )
 
 @HiltViewModel
@@ -600,8 +602,9 @@ class SearchViewModel @Inject constructor(
         val query = q.trim()
         if (query.isEmpty()) return
         job?.cancel()
+        val again = recent.items.value.any { it.equals(query, ignoreCase = true) }
         _ui.update {
-            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0, alsoTry = emptyList())
+            it.copy(query = query, searched = query, loading = true, total = 0, results = emptyList(), errors = emptyList(), elapsedMs = null, sourcesWithResults = 0, alsoTry = emptyList(), again = again)
         }
         // Simple searches get "also try": what means nearly the same on your map.
         if (query.split(' ').size <= 3 && '+' !in query && '-' !in query) viewModelScope.launch {
@@ -1670,7 +1673,9 @@ private fun ResultsPane(
                 val asked = ui.searched?.let(dev.pfeed.domain.filter.Blocklist::normalize)
                 if (asked != null && person == null && asked.length >= 2 && !asked.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) && Combo.parse(asked).isPlain) {
                     val on = asked in followedSearches
-                    androidx.compose.material3.TextButton(onClick = { onFollowSearch(asked) }) {
+                    // Searched again: you keep coming back to it, so following it is offered in colour.
+                    if (!on && ui.again) dev.pfeed.ui.common.BrandButton("Follow search", onClick = { onFollowSearch(asked) }, compact = true)
+                    else androidx.compose.material3.TextButton(onClick = { onFollowSearch(asked) }) {
                         Text(if (on) "Following" else "Follow search", fontWeight = if (on) FontWeight.Normal else FontWeight.Bold)
                     }
                     Spacer(Modifier.width(4.dp))

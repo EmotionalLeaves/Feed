@@ -61,6 +61,7 @@ You can also run `adb install -r app/build/outputs/apk/release/app-release.apk`.
 
 Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 
+- **Tap Following again** for everyone and everything you follow as chips; tap one to open just that.
 - **Feed** has four modes along the top: **For You** (learned from what you watch), **Following** (creators and tags you follow), **Live** (people on cam right now, from CamSoda and Cam4; tap Live again to choose who) and **Latest**. Swipe up for the next post; pull down on the first post to refresh.
 - **Gestures:** tap to pause, double-tap to like, hold the right side of a video for 2×, press and hold for the menu (why it's here, Not interested, hide a tag/creator/site, open or copy the link, report; hiding can be undone), three fingers anywhere to leave instantly. Swipe left on a post for everything by its creator. Pinch to zoom; zoomed in, one finger pans. Sideways, double-tap a video's edges to skip 10 s. Volume up unmutes.
 - **Hands-free:** from the hold menu. The feed moves on by itself: pictures after 6 s, galleries a page every 4 s, short clips after they've looped about 12 s, longer videos at their end. Tap to pause the countdown; tap the Hands-free pill to stop.
