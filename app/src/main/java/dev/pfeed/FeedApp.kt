@@ -77,7 +77,10 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         // Updates from GitHub: look as the app comes up; a downloaded one that can go in without a
         // prompt is installed once you've left the app, so it never closes in front of you.
         androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.addObserver(object : androidx.lifecycle.DefaultLifecycleObserver {
-            override fun onStart(owner: androidx.lifecycle.LifecycleOwner) = updater.auto()
+            override fun onStart(owner: androidx.lifecycle.LifecycleOwner) {
+                updater.auto()
+                dev.pfeed.data.repo.FollowingNews.load(this@FeedApp)
+            }
             override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
                 tasteEngine.flush()
                 Thread { relatedStore.save() }.start()

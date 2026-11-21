@@ -1,5 +1,13 @@
 # Changelog
 
+## 6.11 — 2026-11-21
+
+New in Following
+
+- **A number on the Following tab** says how many new posts wait there since your last visit. It's counted in the background on Wi-Fi while the app is closed (with Ready when you are on), and goes away when you open Following.
+- **Search a performer and see what she's in most:** under her card, chips such as "milf" or "anal" narrow the results to her in that, in one tap.
+- Her card also counts the videos whose site credits her, not only the ones whose title names her.
+
 ## 6.10 — 2026-11-21
 
 Credited performers

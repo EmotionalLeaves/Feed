@@ -79,6 +79,8 @@ Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 - **Performers:** names in studio titles are recognised. Tap one on a post (or **In this video** in the hold menu) for her page with everything from every site, follow her so **Following** brings her uploads from any site, or hide her. For You learns them like tags; Discover suggests the ones you keep watching and shows **New with people you watch**; searching a name shows her card.
 - **Sites:** tap a site's name on a post, or **Browse a site** on Discover, for that site's own newest videos. **HD / 4K** badges where the site says so, an **HD only** search filter, and For You learns whether you prefer HD.
 - **Discover rows:** Top on the sites, New with people you watch, New photo sets, From your Saved a while back, Watch later, Your clips and moments, Creators for you, plus rows for your tastes.
+- **New in Following:** the Following tab shows how many new posts wait there since your last visit (counted in the background on Wi-Fi with Ready when you are on).
+- **Sharper copy:** a video playing below 720p is offered from another site that has the same upload in HD, carrying on from where you were.
 - **Longer version:** partway into a short cut of a studio scene, the app looks for the full scene on the other sites and offers it.
 - The app lock (PIN, then biometrics) is optional: turn it on in **Settings → Privacy**.
 

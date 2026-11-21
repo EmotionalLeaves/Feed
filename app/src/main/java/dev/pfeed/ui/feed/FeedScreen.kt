@@ -516,6 +516,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             } ?: vm.viewerTitle,
             showModes = vm.isMainFeed,
             mode = mode,
+            followingNew = dev.pfeed.data.repo.FollowingNews.count.collectAsStateWithLifecycle().value,
             onMode = { m ->
                 // For You tapped while on it: your tastes as chips, to pick one (tap again to hide).
                 // Live tapped while on it: who's on cam.
@@ -1058,6 +1059,8 @@ private fun TopBar(
     title: String?,
     showModes: Boolean,
     mode: FeedMode,
+    /** Posts waiting in Following since your last visit (a number on its tab). */
+    followingNew: Int = 0,
     onMode: (FeedMode) -> Unit,
     mood: FeedViewModel.Mood = FeedViewModel.Mood.BALANCED,
     onMood: ((FeedViewModel.Mood) -> Unit)? = null,
@@ -1108,6 +1111,7 @@ private fun TopBar(
                             ModeTab(
                                 label,
                                 selected = m == mode,
+                                badge = if (m == FeedMode.FOLLOWING && m != mode) followingNew else 0,
                                 // Hold For You: choose its mood.
                                 onLongClick = if (m == FeedMode.FOR_YOU && onMood != null) ({ moodOpen = true }) else null,
                             ) { onMode(m) }
@@ -1211,7 +1215,7 @@ private fun TopBar(
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
+private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modifier, badge: Int = 0, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val tint by androidx.compose.animation.animateColorAsState(if (selected) Color.White else Color.White.copy(alpha = 0.6f), label = "modeTint")
     Column(
         modifier.clip(RoundedCornerShape(8.dp)).combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(start = 6.dp, end = 6.dp, top = 10.dp, bottom = 17.dp),
@@ -1232,6 +1236,17 @@ private fun ModeTab(label: String, selected: Boolean, modifier: Modifier = Modif
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
                 style = MaterialTheme.typography.titleSmall.shadowed(),
             )
+            // New posts waiting there since your last visit.
+            if (badge > 0) {
+                Spacer(Modifier.width(4.dp))
+                Text(
+                    if (badge >= 99) "99+" else "$badge",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.clip(RoundedCornerShape(50)).background(Accent).padding(horizontal = 5.dp, vertical = 1.dp),
+                )
+            }
         }
     }
 }

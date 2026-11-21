@@ -299,7 +299,10 @@ class FeedViewModel @Inject constructor(
         if (mode == _mode.value) return
         // Leaving Following: everything up to now counts as seen there.
         if (_mode.value == FeedMode.FOLLOWING) markFollowingSeen()
-        if (mode == FeedMode.FOLLOWING) { followingSeenAt = followingPrefs.getLong(FOLLOWING_SEEN, 0L); caughtUpSaid = false }
+        if (mode == FeedMode.FOLLOWING) {
+            followingSeenAt = followingPrefs.getLong(FOLLOWING_SEEN, 0L); caughtUpSaid = false
+            dev.pfeed.data.repo.FollowingNews.opened(app)
+        }
         _mode.value = mode
         restart()
     }

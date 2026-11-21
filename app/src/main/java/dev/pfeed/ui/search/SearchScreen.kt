@@ -1523,6 +1523,24 @@ private fun ResultsPane(
                 if (on) androidx.compose.material3.OutlinedButton(onClick = { onFollowPerson(name) }) { Text("Following") }
                 else dev.pfeed.ui.common.BrandButton("Follow", onClick = { onFollowPerson(name) }, compact = true)
             }
+            // What she's in most here: one tap narrows to her in that.
+            val hers = remember(name, ui.results.size / 20) { personTags(name, ui.results) }
+            if (hers.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(
+                Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                item { Text("Her most", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), modifier = Modifier.padding(end = 4.dp)) }
+                for (t in hers) item(key = "her:$t") {
+                    Text(
+                        t,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            .clickable { onSearch("$name + $t") }.padding(horizontal = 12.dp, vertical = 7.dp),
+                    )
+                }
+            }
         }
         if (ui.alsoTry.isNotEmpty()) {
             androidx.compose.foundation.lazy.LazyRow(
@@ -1691,20 +1709,43 @@ private fun FiltersSheet(
  * results' titles say it, with how many do.
  */
 internal fun personFor(query: String, results: List<MediaItem>): Pair<String, Int>? {
-    // Only a name of two or three words can be a person (one word matches half the site).
-    val q = dev.pfeed.domain.reco.Mentions.personName(query) ?: return null
+    // A plain search only (not "name + tag"), and only a name of two or three words can be a person.
+    val combo = Combo.parse(query)
+    if (!combo.isPlain) return null
+    val q = dev.pfeed.domain.reco.Mentions.personName(combo.ask) ?: return null
     if (q.count { it == ' ' } > 2) return null
     var count = 0
     var shown: String? = null
     for (item in results) {
-        if (!dev.pfeed.domain.reco.Mentions.padded(item.title).contains(" $q ")) continue
+        if (!names(item, q)) continue
         count++
-        if (shown == null) shown = dev.pfeed.domain.reco.Mentions.performers(item.title).firstOrNull { it.lowercase() == q }
+        if (shown == null) shown = dev.pfeed.domain.reco.Mentions.inTitle(item).firstOrNull { it.lowercase() == q }
     }
     if (count < 3) return null
     // As the titles write it; else the query in title case.
     return (shown ?: q.split(' ').joinToString(" ") { w -> w.replaceFirstChar { it.uppercase() } }) to count
 }
+
+/** Does [item] name the person [q] (as from Mentions.personName): in its title, or among the performers its site credits? */
+private fun names(item: MediaItem, q: String): Boolean =
+    dev.pfeed.domain.reco.Mentions.padded(item.title).contains(" $q ") ||
+        item.extras[dev.pfeed.domain.reco.Mentions.PERFORMERS]?.split(',')?.any { dev.pfeed.domain.reco.Mentions.personName(it) == q } == true
+
+/**
+ * The tags most common among the results that name [name], most first (up to [max], each on at
+ * least two of them): what she's in most, to narrow her search by.
+ */
+internal fun personTags(name: String, results: List<MediaItem>, max: Int = 6): List<String> {
+    val q = dev.pfeed.domain.reco.Mentions.personName(name) ?: return emptyList()
+    val own = q.split(' ').toSet()
+    return results.asSequence().filter { names(it, q) }
+        .flatMap { item -> item.tags.map { it.lowercase().replace('_', ' ').trim() }.distinct() }
+        .filter { t -> t.length > 2 && t !in PERSON_TAG_NOISE && t.split(' ').none { it in own } }
+        .groupingBy { it }.eachCount().entries.filter { it.value >= 2 }
+        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).take(max).map { it.key }
+}
+
+private val PERSON_TAG_NOISE = setOf("hd", "hd porn", "pornstar", "pornstars", "porn", "sex", "xxx", "babe", "in english", "4k", "full hd", "high definition", "straight", "female", "exclusive", "verified")
 
 /** Discover's row of people live right now. */
 private const val LIVE_ROW = "Live now"

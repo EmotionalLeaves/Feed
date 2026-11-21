@@ -1,3 +1,10 @@
+## 6.11 — 2026-11-21
+New in Following
+
+- **A number on the Following tab** says how many new posts wait there since your last visit. It's counted in the background on Wi-Fi while the app is closed (with Ready when you are on), and goes away when you open Following.
+- **Search a performer and see what she's in most:** under her card, chips such as "milf" or "anal" narrow the results to her in that, in one tap.
+- Her card also counts the videos whose site credits her, not only the ones whose title names her.
+
 ## 6.10 — 2026-11-21
 Credited performers
 
@@ -9,10 +16,3 @@ Sharper copy
 
 - **Sharper copy:** when a video plays below 720p and another site has the same upload in HD, the app offers it, and it carries on from where you were.
 - **InPorn videos play** (its files want the site named as the page they're played from).
-
-## 6.8 — 2026-11-21
-Six more sites
-
-- **Six more video sites:** HotMovs, InPorn, Fetish Shrine and Pornicom join the feeds and search (49 in all).
-- **TheGay and Shemalez** are there too, switched off to start: turn them on in Settings → Sources → Tube sites and they join your feeds, search and Discover.
-- Sites that only list tags in their player now bring those tags too, so For You learns from them.

@@ -61,4 +61,21 @@ class MentionsTest {
         assertEquals(null, dev.pfeed.ui.search.personFor("lesbian", results))
         assertEquals(null, dev.pfeed.ui.search.personFor("lena paul", results.take(2)))
     }
+
+    @Test
+    fun `credited performers count, and her most common tags narrow her search`() {
+        val credited = v("Breakthrough session", tags = listOf("milf", "anal")).let { it.copy(extras = mapOf(Mentions.PERFORMERS to "Lena Paul,Someone Else")) }
+        assertEquals(listOf("Lena Paul", "Someone Else"), Mentions.inTitle(credited).take(2))
+        val results = listOf(
+            credited,
+            v("Lena Paul at work", tags = listOf("milf", "office", "HD", "lena paul")),
+            v("Busy day with lena paul", tags = listOf("anal", "milf")),
+            v("Other video", tags = listOf("anal", "milf", "teen")),
+        )
+        assertEquals("Lena Paul" to 3, dev.pfeed.ui.search.personFor("lena paul", results))
+        // Her own name and "hd" aren't what she's in; tags on one video only don't make the cut.
+        assertEquals(listOf("milf", "anal"), dev.pfeed.ui.search.personTags("Lena Paul", results))
+        // "name + tag" is already narrowed: no person card for it.
+        assertNull(dev.pfeed.ui.search.personFor("lena paul + anal", results))
+    }
 }

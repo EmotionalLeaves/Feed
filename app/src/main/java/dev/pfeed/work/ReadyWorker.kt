@@ -62,6 +62,14 @@ class ReadyWorker @AssistedInject constructor(
                 .take(FIRST_CLIPS)
             clips.forEach { (key, url) -> preloader.video(key, url) }
             if (clips.isNotEmpty()) kotlinx.coroutines.delay(CLIP_WAIT_MS)
+            // What's new in Following since you last looked: a number on its tab.
+            if (dev.pfeed.data.repo.FollowingNews.seenAt(applicationContext) > 0) {
+                val following = sessions.create(FeedSpec.Main(FeedMode.FOLLOWING), scope)
+                val found = withTimeoutOrNull(FOLLOWING_LIMIT_MS) { runCatching { following.loadMore().items }.getOrNull() }
+                if (found != null) dev.pfeed.data.repo.FollowingNews.found(applicationContext, found.mapNotNull { item ->
+                    item.publishedAt?.toEpochMilli()?.takeIf { item.extras[dev.pfeed.domain.model.MediaItem.APPROX_DATE] == null }
+                })
+            }
         } finally {
             scope.cancel()
         }
@@ -71,6 +79,7 @@ class ReadyWorker @AssistedInject constructor(
     companion object {
         private const val NAME = "ready-when-you-are"
         private const val TIME_LIMIT_MS = 90_000L
+        private const val FOLLOWING_LIMIT_MS = 60_000L
         private const val FIRST_SCREEN = 12
         private const val FIRST_CLIPS = 4
         private const val CLIP_WAIT_MS = 20_000L
