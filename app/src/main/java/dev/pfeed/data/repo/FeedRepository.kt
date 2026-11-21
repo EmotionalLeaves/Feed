@@ -197,7 +197,7 @@ class FeedSession(
         val searches: List<String>? = when {
             forYou -> interestQueries()
             // Coomer creators are stored as "name@service"; search by the name.
-            following -> (follows.creators.map { it.substringBefore('@') } + follows.tags)
+            following -> (follows.creators.map { it.substringBefore('@') } + follows.tags.map { if (dev.pfeed.domain.reco.FollowedSearch.isOne(it)) dev.pfeed.domain.reco.FollowedSearch.query(it) else it })
                 .map { it.replace('_', ' ').trim() }.filter { it.length >= 2 }.distinct()
             // More like this: every one of the post's queries, not just the first.
             spec is FeedSpec.Similar -> spec.queries.drop(1)
@@ -367,8 +367,11 @@ class FeedSession(
             // Also a video that names someone you follow, whoever uploaded it: a performer you follow
             // turns up from every site, not only from the one account you followed her on.
             // (Followed tags of two words or more count in titles too: a "big tits" video is one.)
-            val people = (follows.creators + follows.tags).mapNotNull(dev.pfeed.domain.reco.Mentions::personName).toSet()
+            val people = (follows.creators + follows.tags.filterNot(dev.pfeed.domain.reco.FollowedSearch::isOne)).mapNotNull(dev.pfeed.domain.reco.Mentions::personName).toSet()
+            val searches = follows.tags.filter(dev.pfeed.domain.reco.FollowedSearch::isOne)
             items = items.filter { item ->
+                // A search you follow: every one of its words.
+                searches.any { dev.pfeed.domain.reco.FollowedSearch.matches(item, it) } ||
                 item.creator?.let { Blocklist.normalize(it) in follows.creators } == true ||
                     item.tags.any { Blocklist.normalize(it) in follows.tags } ||
                     // A site you follow: everything from it.
@@ -431,6 +434,8 @@ class FeedSession(
                 // A site's page: only the tube sites answer it.
                 tag?.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) == true ->
                     if (a.id == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) a.search(tag, cursor) else Page(emptyList(), null)
+                // A followed search's page: the search itself.
+                tag != null && dev.pfeed.domain.reco.FollowedSearch.isOne(tag) -> a.search(dev.pfeed.domain.reco.FollowedSearch.query(tag), cursor)
                 tag != null -> a.search(tag.removePrefix("@").replace('_', ' '), cursor)
                 else -> a.fetchFeed(cursor, prefs)
             },

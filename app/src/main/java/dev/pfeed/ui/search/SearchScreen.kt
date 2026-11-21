@@ -362,9 +362,24 @@ class SearchViewModel @Inject constructor(
         }
     }
 
+    /** Searches you follow (as typed, normalised): their posts come to Following. */
+    val followedSearches: StateFlow<Set<String>> = library.follows
+        .map { f -> f.tags.filter(dev.pfeed.domain.reco.FollowedSearch::isOne).mapTo(HashSet(), dev.pfeed.domain.reco.FollowedSearch::query) }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
+
+    fun toggleFollowSearch(query: String) {
+        val q = dev.pfeed.domain.filter.Blocklist.normalize(query)
+        if (q.length < 2) return
+        viewModelScope.launch {
+            val tag = dev.pfeed.domain.reco.FollowedSearch.PREFIX + q
+            if (q in followedSearches.value) library.unfollow(dev.pfeed.data.repo.FollowKind.TAG, tag)
+            else library.follow(dev.pfeed.data.repo.FollowKind.TAG, tag)
+        }
+    }
+
     /** Creators and tags you follow, for typeahead. */
     val followed: StateFlow<List<String>> = library.follows
-        .map { f -> (f.creators.map { it.substringBefore('@') } + f.tags.map { it.replace('_', ' ') }).distinct() }
+        .map { f -> (f.creators.map { it.substringBefore('@') } + f.tags.map { if (dev.pfeed.domain.reco.FollowedSearch.isOne(it)) dev.pfeed.domain.reco.FollowedSearch.query(it) else it.replace('_', ' ') }).distinct() }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _ui = MutableStateFlow(SearchUi())
@@ -894,9 +909,12 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
             )
         } else {
             val followedNow by vm.followedCreators.collectAsStateWithLifecycle()
+            val searchesNow by vm.followedSearches.collectAsStateWithLifecycle()
             ResultsPane(
                 followedCreators = followedNow,
                 onFollowPerson = vm::toggleFollowPerson,
+                followedSearches = searchesNow,
+                onFollowSearch = vm::toggleFollowSearch,
                 onOpenPerson = { nav.openTag("@$it") },
                 watched = watchedKeys,
                 onLongPress = { holding = it },
@@ -1543,6 +1561,8 @@ private fun ResultsPane(
     followedCreators: Set<String> = emptySet(),
     onFollowPerson: (String) -> Unit = {},
     onOpenPerson: (String) -> Unit = {},
+    followedSearches: Set<String> = emptySet(),
+    onFollowSearch: (String) -> Unit = {},
 ) {
     Column(Modifier.fillMaxSize()) {
         // Searched a person: who it is, how many of the results name her, follow in one tap.
@@ -1646,6 +1666,15 @@ private fun ResultsPane(
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     modifier = Modifier.weight(1f),
                 )
+                // Follow the search itself (not a person): what it finds comes to Following.
+                val asked = ui.searched?.let(dev.pfeed.domain.filter.Blocklist::normalize)
+                if (asked != null && person == null && asked.length >= 2 && !asked.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) && Combo.parse(asked).isPlain) {
+                    val on = asked in followedSearches
+                    androidx.compose.material3.TextButton(onClick = { onFollowSearch(asked) }) {
+                        Text(if (on) "Following" else "Follow search", fontWeight = if (on) FontWeight.Normal else FontWeight.Bold)
+                    }
+                    Spacer(Modifier.width(4.dp))
+                }
                 dev.pfeed.ui.common.BrandButton("Play all", onClick = { onOpen(0) }, icon = Icons.Filled.PlayArrow, compact = true)
             }
         }

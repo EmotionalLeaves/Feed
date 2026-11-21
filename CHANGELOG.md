@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.16 — 2026-11-21
+
+Follow a search
+
+- **Follow a search:** search for anything ("redhead pov", "office anal") and tap **Follow search** above the results. Posts with every one of its words, from every site, then come to Following, and count toward its new-post number.
+- Followed searches are listed in Library → Following as searches; open one to see its latest, or unfollow it there.
+
 ## 6.15.1 — 2026-11-21
 
 HQPorner plays in the app's player
