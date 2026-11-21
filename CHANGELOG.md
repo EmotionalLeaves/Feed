@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.23.2 — 2026-11-21
+
+Steadier site lists
+
+- **A site's newest or top list that comes back empty is asked again once**, a moment later. Some sites (Analdin) now and then send a first visit to an advertiser's page instead of the list, and their videos went missing from that load.
+
 ## 6.23.1 — 2026-11-21
 
 Stop casting

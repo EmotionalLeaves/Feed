@@ -127,6 +127,20 @@ class TubeAdapter @Inject constructor(
 
     /** The listing at [url], from the site or, if it answers with nothing usable, one of its mirrors. */
     private suspend fun listWithMirrors(site: TubeSite, url: String): List<TubeVideo> {
+        // A site's own newest or top list is never really empty: some (Analdin) now and then send a
+        // first visit off to an advertiser's page instead. Once more, a moment later, gets the list.
+        val own = (0 until 3).any { p -> url == site.listUrl("new", p) || url == site.listUrl("top", p) }
+        if (!own) return listOnce(site, url)
+        val first = try { listOnce(site, url) } catch (e: SourceException) {
+            if (e.httpCode == 429 || e.isAuthError) throw e
+            emptyList()
+        }
+        if (first.isNotEmpty() || (emptyUntil[site.host] ?: 0L) > System.currentTimeMillis()) return first
+        kotlinx.coroutines.delay(LIST_RETRY_MS)
+        return listOnce(site, url)
+    }
+
+    private suspend fun listOnce(site: TubeSite, url: String): List<TubeVideo> {
         // A site that answered every domain with an empty shell (a regional page with no list at
         // all, see TubeSite.isShell) rests for a while instead of being asked four times per load.
         if ((emptyUntil[site.host] ?: 0L) > System.currentTimeMillis()) return emptyList()
@@ -303,6 +317,7 @@ class TubeAdapter @Inject constructor(
         private const val TAG_CHECK_LIMIT = 16
         private const val TOP_TIMEOUT_MS = 15_000L
         private const val SUGGEST_TIMEOUT_MS = 2_500L
+        private const val LIST_RETRY_MS = 1_500L
         private const val SUGGEST_MAX = 8
         private const val TAG_CHECK_SEARCH = 8
         const val SOURCE_ID = "tube"
