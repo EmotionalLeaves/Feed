@@ -17,6 +17,14 @@ class BlocklistTest {
     }
 
     @Test
+    fun `a hidden performer stays hidden when the site credits her`() {
+        val credited = item("1", creator = "Some Studio").let { it.copy(extras = mapOf(dev.pfeed.domain.reco.Mentions.PERFORMERS to "Lena Paul,Other Person")) }
+        assertFalse(Blocklist(creators = setOf(Blocklist.normalize("Lena Paul"))).allows(credited))
+        assertFalse(Blocklist(tags = setOf(Blocklist.normalize("lena paul"))).allows(credited))
+        assertTrue(Blocklist(creators = setOf(Blocklist.normalize("Riley Reid"))).allows(credited))
+    }
+
+    @Test
     fun `blocked creator hides item`() {
         val bl = Blocklist(creators = setOf("alice"))
         assertFalse(bl.allows(item("1", creator = "Alice")))

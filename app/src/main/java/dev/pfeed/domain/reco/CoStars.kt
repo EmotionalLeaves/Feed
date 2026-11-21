@@ -16,6 +16,8 @@ object CoStars {
 
     private val pairs = LinkedHashMap<String, HashMap<String, Int>>(256, 0.75f, true)
     private val shown = HashMap<String, String>()
+    /** A still of each person: the latest listing thumbnail of a video that names her alone. */
+    private val faces = LinkedHashMap<String, String>(256, 0.75f, true)
     private val counted = object : LinkedHashMap<String, Unit>(1024, 0.75f, false) {
         override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Unit>?) = size > MAX_KEYS
     }
@@ -26,6 +28,9 @@ object CoStars {
     fun seen(items: List<MediaItem>) {
         for (item in items) {
             val names = Mentions.inTitle(item)
+            if (names.size == 1) item.thumbnailUrl?.takeIf { it.startsWith("https://") }?.let { url ->
+                Mentions.personName(names[0])?.let { k -> synchronized(this) { if (faces.put(k, url) != url) dirty = true; while (faces.size > MAX_PEOPLE) faces.remove(faces.keys.first()) } }
+            }
             if (names.size < 2) continue
             val fresh = synchronized(this) { counted.put(item.key, Unit) == null }
             if (fresh) record(names)
@@ -53,6 +58,9 @@ object CoStars {
             .take(max).map { shown[it.key] ?: it.key.split(' ').joinToString(" ") { w -> w.replaceFirstChar { c -> c.uppercase() } } }
     }
 
+    /** A still of [name] (from a video that names only her), or null. */
+    @Synchronized fun face(name: String): String? = Mentions.personName(name)?.let { faces[it] }
+
     /** Where it's kept; read once at start (off the main thread). */
     fun load(dir: File) {
         val f = File(dir, "costars.tsv").also { file = it }
@@ -63,6 +71,7 @@ object CoStars {
                 synchronized(this) {
                     when {
                         p.size == 2 && p[0].startsWith("=") -> shown[p[0].drop(1)] = p[1]
+                        p.size == 2 && p[0].startsWith("#") -> faces[p[0].drop(1)] = p[1]
                         p.size == 3 -> pairs.getOrPut(p[0]) { HashMap() }[p[1]] = p[2].toIntOrNull() ?: 1
                     }
                 }
@@ -79,10 +88,11 @@ object CoStars {
             buildString {
                 for ((k, n) in shown) if (k in pairs) append('=').append(k).append('\t').append(n.replace('\t', ' ')).append('\n')
                 for ((a, m) in pairs) for ((b, c) in m) append(a).append('\t').append(b).append('\t').append(c).append('\n')
+                for ((k, u) in faces) append('#').append(k).append('\t').append(u).append('\n')
             }
         }
         runCatching { File(f.parentFile, f.name + ".tmp").also { it.writeText(text) }.renameTo(f) }
     }
 
-    @Synchronized internal fun clearForTests() { pairs.clear(); shown.clear(); counted.clear() }
+    @Synchronized internal fun clearForTests() { pairs.clear(); shown.clear(); counted.clear(); faces.clear() }
 }

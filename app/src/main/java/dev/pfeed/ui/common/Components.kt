@@ -415,6 +415,14 @@ fun InitialAvatar(name: String, size: androidx.compose.ui.unit.Dp = 32.dp, modif
             fontSize = (size.value * 0.42f).sp,
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
         )
+        // A performer: a still from a video of hers over the initial (not with Blur previews on).
+        val face = androidx.compose.runtime.remember(clean) { dev.pfeed.domain.reco.CoStars.face(clean) }
+        if (face != null && !LocalBlurPreviews.current) coil.compose.AsyncImage(
+            model = face,
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = Modifier.matchParentSize(),
+        )
     }
 }
 

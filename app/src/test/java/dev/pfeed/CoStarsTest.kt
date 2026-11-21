@@ -37,4 +37,14 @@ class CoStarsTest {
         assertEquals(listOf("Abella Danger"), CoStars.with("Lena Paul"))
         dir.deleteRecursively()
     }
+
+    @Test
+    fun `a still of a performer from a video that names only her`() {
+        CoStars.seen(listOf(
+            v("x.com/1", "Lena Paul, Abella Danger - Office Fun").copy(thumbnailUrl = "https://t/both.jpg"),
+            v("x.com/2", "Lena Paul - Solo Time").copy(thumbnailUrl = "https://t/lena.jpg"),
+        ))
+        assertEquals("https://t/lena.jpg", CoStars.face("lena paul"))
+        assertEquals(null, CoStars.face("Abella Danger"))
+    }
 }

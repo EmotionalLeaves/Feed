@@ -25,7 +25,11 @@ data class Blocklist(
         if (origins.isNotEmpty() && normalize(dev.pfeed.domain.reco.Spread.origin(item)) in origins) return false
         val creator = item.creator?.let(::normalize)
         if (creator != null && creator in creators) return false
+        // The performers its site credits: a hidden person stays hidden whoever uploaded her.
+        val credited = item.extras[dev.pfeed.domain.reco.Mentions.PERFORMERS]?.split(',')?.map { it.trim() }?.filter { it.isNotEmpty() }.orEmpty()
+        if (credited.isNotEmpty() && creators.isNotEmpty() && credited.any { normalize(it) in creators }) return false
         if (tags.isEmpty()) return true
+        if (credited.any { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }) return false
         if (item.tags.any { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }) return false
         // Tags read later from the video's own page count too.
         if (dev.pfeed.domain.reco.PageTags.of(item.key).any { dev.pfeed.domain.reco.Features.normalizeTag(it) in canonicalTags }) return false
