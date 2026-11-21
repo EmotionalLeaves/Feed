@@ -260,6 +260,8 @@ class TubeAdapter @Inject constructor(
             } ?: site.playerUrl(html)?.let { player ->
                 // Player pages framed by the video page (HQPorner's) answer only with it as the referrer.
                 attempt { site.stream(http.getRaw(id, player, mapOf("Referer" to page))) }.getOrNull()
+                    // Once more, a moment later (the player host is slow to answer now and then).
+                    ?: run { kotlinx.coroutines.delay(PLAYER_RETRY_MS); attempt { site.stream(http.getRaw(id, player, mapOf("Referer" to page))) }.getOrNull() }
             } ?: site.embedUrl(vid).takeIf { it != page }?.let { embed ->
                 // Some pages (a region notice, a "processing" placeholder) lack the player setup that
                 // the embed page still carries; read the stream from there before giving up.
@@ -319,6 +321,7 @@ class TubeAdapter @Inject constructor(
         private const val TOP_TIMEOUT_MS = 15_000L
         private const val SUGGEST_TIMEOUT_MS = 2_500L
         private const val LIST_RETRY_MS = 1_500L
+        private const val PLAYER_RETRY_MS = 800L
         private const val SUGGEST_MAX = 8
         private const val TAG_CHECK_SEARCH = 8
         const val SOURCE_ID = "tube"

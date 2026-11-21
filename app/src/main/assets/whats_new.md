@@ -1,3 +1,8 @@
+## 6.26.1 — 2026-11-21
+HQPorner steadier
+
+- HQPorner's player page is asked once more when it doesn't answer the first time, so its videos play in the app's own player more often instead of the site's web player.
+
 ## 6.26 — 2026-11-21
 Data saver on mobile data
 
@@ -7,8 +12,3 @@ Data saver on mobile data
 Porntrex change undone
 
 - Undid 6.25.1's HTTP/1.1 change for Porntrex: the device check showed it didn't get past the site's bot check. Porntrex still works whenever the check lets the app through, and its videos still turn up from the other sites that carry them.
-
-## 6.25.1 — 2026-11-21
-Porntrex over HTTP/1.1
-
-- **Porntrex is asked over HTTP/1.1:** its bot check had been turning the app away while letting the same request through from a plain client.
