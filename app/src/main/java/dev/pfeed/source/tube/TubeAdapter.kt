@@ -239,13 +239,16 @@ class TubeAdapter @Inject constructor(
     }
 
     override suspend fun search(query: String, cursor: String?): Page<MediaItem> {
-        // "site:host": that one site's own listing, newest first, page by page (a site's page).
+        // "site:host": that one site's own listings (a site's page).
         if (query.startsWith(SITE_PREFIX)) {
             val site = TubeSite.byHost(query.removePrefix(SITE_PREFIX).trim()) ?: return Page(emptyList(), null)
-            val page = cursor?.toIntOrNull() ?: 0
-            val listed = attempt { site.items(listWithMirrors(site, site.listUrl("new", page)), "new", page) }.getOrDefault(emptyList())
+            // Its newest and its top rated, page by page in turn.
+            val n = cursor?.toIntOrNull() ?: 0
+            val section = if (n % 2 == 0) "new" else "top"
+            val page = n / 2
+            val listed = attempt { site.items(listWithMirrors(site, site.listUrl(section, page)), section, page) }.getOrDefault(emptyList())
             val items = if (site.checkTagsFirst) checked(site, listed.take(TAG_CHECK_LIMIT)) else listed
-            return Page(items, if (listed.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString())
+            return Page(items, if (page + 1 >= MAX_PAGES) null else (n + 1).toString())
         }
         return searchAll(query, cursor)
     }

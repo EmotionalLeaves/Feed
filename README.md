@@ -76,6 +76,10 @@ Four tabs: **Feed**, **Search**, **Library**, **Settings**.
 - **Search:** Spotlight cards on top, Surprise me, and combos: `pov + redhead -toys`.
 - **Library:** Your week recap, smart folders by top tag, secret collections (a name starting with `.` stays hidden until you type it in Find), order by newest/oldest/longest/shortest, pick several to remove.
 - **Playback options:** smart volume, best quality (up to 4K), battery saver, skip intros, volume keys turn pages, sound only with headphones, picture-in-picture, live grids, break reminder.
+- **Performers:** names in studio titles are recognised. Tap one on a post (or **In this video** in the hold menu) for her page with everything from every site, follow her so **Following** brings her uploads from any site, or hide her. For You learns them like tags; Discover suggests the ones you keep watching and shows **New with people you watch**; searching a name shows her card.
+- **Sites:** tap a site's name on a post, or **Browse a site** on Discover, for that site's own newest videos. **HD / 4K** badges where the site says so, an **HD only** search filter, and For You learns whether you prefer HD.
+- **Discover rows:** Top on the sites, New with people you watch, New photo sets, From your Saved a while back, Watch later, Your clips and moments, Creators for you, plus rows for your tastes.
+- **Longer version:** partway into a short cut of a studio scene, the app looks for the full scene on the other sites and offers it.
 - The app lock (PIN, then biometrics) is optional: turn it on in **Settings → Privacy**.
 
 ## Sources
@@ -85,7 +89,8 @@ On by default, all filtered to porn only (non-porn posts are dropped) and throug
 | Source | What |
 |---|---|
 | **Tube sites** (43, each switchable) | XVideos, Pornhub, YouPorn, Tube8, xHamster, RedTube, Eporner, TNAFlix, Porntrex, YouJizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HQPorner, Porndig, PerfectGirls, OK.XXX, PornGo, XFreeHD, 3Movs, AnySex, ZB Porn, Analdin, KatesTube, TXXX, HClips, Upornia, TubePornClassic, VXXX, HDZog, ManySex, EMPFlix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, DrTuber, Nuvid, IcePorn. Plays each site's own files directly (HLS or MP4, up to 1080p, 4K with Best quality; 480p with Data saver); if one copy won't play, the same upload on another site does. |
-| **Live cams** | CamSoda and Cam4 public rooms, in the Live tab (and search). |
+| **Live cams** | CamSoda, Cam4 and Flirt4Free public rooms, in the Live tab (and search). |
+| **Photo sets** | Studios' own photo sets of their scenes (BabeSource), each a gallery you swipe through. |
 | **RedGIFs** | Clips and GIFs. |
 | **Reddit** | Hundreds of NSFW subreddits (public RSS, paced to Reddit's limits). |
 | **Image boards** | Gelbooru, Rule34, e621, Danbooru-style boards and more. |

@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.5.1 — 2026-11-20
+
+Site pages: newest and top
+
+- **Site pages mix the site's newest and its top rated**, a page of each in turn.
+- README: performers, sites, HD, Discover rows and photo sets described.
+
 ## 6.5.0 — 2026-11-20
 
 Browse a site
