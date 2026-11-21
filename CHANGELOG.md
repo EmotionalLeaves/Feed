@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.0.1 — 2026-11-20
+
+Tidier titles
+
+- **Tidier titles from the TXXX sites**: uploads titled all in lower case start with a capital.
+
 ## 6.0.0 — 2026-11-20
 
 More with her

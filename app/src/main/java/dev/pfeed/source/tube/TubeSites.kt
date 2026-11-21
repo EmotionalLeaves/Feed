@@ -1240,7 +1240,9 @@ sealed class TubeSite(val host: String, val label: String) {
                 if (v.str("is_private") == "1") return@mapNotNull null
                 TubeVideo(
                     id = id,
-                    title = v.str("title")?.let(::unescape)?.trim()?.ifEmpty { null },
+                    // Many uploads are titled all in lower case: a capital to start reads better.
+                    title = v.str("title")?.let(::unescape)?.trim()?.ifEmpty { null }
+                        ?.let { t -> if (t == t.lowercase()) t.replaceFirstChar { it.uppercase() } else t },
                     pageUrl = "https://$host/videos/$id/$dir/",
                     thumb = v.str("scr"),
                     durationSec = duration(v.str("duration")),

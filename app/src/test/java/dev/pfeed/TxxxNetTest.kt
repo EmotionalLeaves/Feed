@@ -13,7 +13,7 @@ class TxxxNetTest {
         assertEquals(2, list.size)
         val v = list[0]
         assertEquals("21855859", v.id)
-        assertEquals("roommate ass fetish fun", v.title)
+        assertEquals("Roommate ass fetish fun", v.title)
         assertEquals("https://txxx.com/videos/21855859/roommate-ass-fetish-fun/", v.pageUrl)
         assertEquals(15 * 60 + 12, v.durationSec)
         assertEquals("davidfs21", v.creator)

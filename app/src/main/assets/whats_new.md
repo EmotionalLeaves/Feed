@@ -1,3 +1,8 @@
+## 6.0.1 — 2026-11-20
+Tidier titles
+
+- **Tidier titles from the TXXX sites**: uploads titled all in lower case start with a capital.
+
 ## 6.0.0 — 2026-11-20
 More with her
 
@@ -8,8 +13,3 @@ More with her
 HD on more sites
 
 - **HD badges and HD only now cover XVideos and AnySex too**, from the quality their listings show.
-
-## 5.98.0 — 2026-11-20
-HD only
-
-- **HD only** in search Filters: just the videos their site lists as HD or 4K.
