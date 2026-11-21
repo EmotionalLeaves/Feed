@@ -506,7 +506,14 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
 
         val cleanOn by CleanScreen.on.collectAsStateWithLifecycle()
         if (!landscape && !wallMode && !cleanOn && !Pip.active.collectAsStateWithLifecycle().value) TopBar(
-            title = vm.tag?.let { if (it.startsWith("@")) it else "#" + it.replace('_', ' ') } ?: vm.viewerTitle,
+            title = vm.tag?.let {
+                when {
+                    it.startsWith("@") -> it
+                    // A site's page: its name.
+                    it.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) -> dev.pfeed.source.tube.TubeSite.byHost(it.removePrefix(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX))?.label ?: it
+                    else -> "#" + it.replace('_', ' ')
+                }
+            } ?: vm.viewerTitle,
             showModes = vm.isMainFeed,
             mode = mode,
             onMode = { m ->
@@ -522,7 +529,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
             onAskSteer = if (vm.isMainFeed) ({ steerOpen = true }) else null,
             onThisOrThat = if (vm.isMainFeed) ({ thisOrThat = true }) else null,
             onBack = if (!vm.isMainFeed) ({ nav.popBackStack(); Unit }) else null,
-            followTag = vm.tag?.let { t -> (t to vm.isFollowingPage(t, follows)) },
+            followTag = vm.tag?.takeUnless { it.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) }?.let { t -> (t to vm.isFollowingPage(t, follows)) },
             onFollowTag = { vm.tag?.let(vm::toggleFollowTag) },
             onGrid = if (vm.tag != null && items.size >= 4) ({ gridView = true }) else null,
             onWall = if (vm.isMainFeed) ({ wallMode = true }) else null,
@@ -1803,8 +1810,12 @@ private fun Overlay(
         verticalAlignment = Alignment.Bottom,
     ) {
         Column(Modifier.weight(1f).padding(end = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // The site's name: tap it for that site's own newest videos.
+            val siteHost = remember(item.key) { item.id.substringBefore('/').takeIf { item.sourceId == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID && dev.pfeed.source.tube.TubeSite.byHost(it) != null } }
             Row(
-                Modifier.background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(50)).padding(horizontal = 10.dp, vertical = 4.dp),
+                Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.35f), RoundedCornerShape(50))
+                    .then(if (siteHost != null) Modifier.clickable { onTag(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX + siteHost) } else Modifier)
+                    .padding(horizontal = 10.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val live = item.extras[dev.pfeed.source.live.LiveCamsAdapter.LIVE] == "1"

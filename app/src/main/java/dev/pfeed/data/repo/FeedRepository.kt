@@ -422,7 +422,15 @@ class FeedSession(
      */
     private suspend fun fetch(a: SourceAdapter, cursor: String?, prefs: FeedPrefs): Result<Page<MediaItem>> = try {
         val tag = (spec as? FeedSpec.Tag)?.tag ?: (spec as? FeedSpec.Similar)?.queries?.firstOrNull()
-        Result.success(if (tag != null) a.search(tag.removePrefix("@").replace('_', ' '), cursor) else a.fetchFeed(cursor, prefs))
+        Result.success(
+            when {
+                // A site's page: only the tube sites answer it.
+                tag?.startsWith(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX) == true ->
+                    if (a.id == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) a.search(tag, cursor) else Page(emptyList(), null)
+                tag != null -> a.search(tag.removePrefix("@").replace('_', ' '), cursor)
+                else -> a.fetchFeed(cursor, prefs)
+            },
+        )
     } catch (e: CancellationException) {
         throw e
     } catch (e: SourceException) {

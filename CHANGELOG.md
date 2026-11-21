@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.4.0 — 2026-11-20
+
+Site pages
+
+- **Tap a site's name for its page**: on any tube video, the site's name at the top of the caption now opens that site's own newest videos ("TXXX", "Pornhub"…), best for you first, scrolling through its pages.
+
 ## 6.3.2 — 2026-11-20
 
 Steer by quality and length

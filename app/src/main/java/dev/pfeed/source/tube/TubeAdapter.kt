@@ -238,7 +238,19 @@ class TubeAdapter @Inject constructor(
         return stream
     }
 
-    override suspend fun search(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
+    override suspend fun search(query: String, cursor: String?): Page<MediaItem> {
+        // "site:host": that one site's own listing, newest first, page by page (a site's page).
+        if (query.startsWith(SITE_PREFIX)) {
+            val site = TubeSite.byHost(query.removePrefix(SITE_PREFIX).trim()) ?: return Page(emptyList(), null)
+            val page = cursor?.toIntOrNull() ?: 0
+            val listed = attempt { site.items(listWithMirrors(site, site.listUrl("new", page)), "new", page) }.getOrDefault(emptyList())
+            val items = if (site.checkTagsFirst) checked(site, listed.take(TAG_CHECK_LIMIT)) else listed
+            return Page(items, if (listed.isEmpty() || page + 1 >= MAX_PAGES) null else (page + 1).toString())
+        }
+        return searchAll(query, cursor)
+    }
+
+    private suspend fun searchAll(query: String, cursor: String?): Page<MediaItem> = cachedSearch(query, cursor) {
         val q = query.trim()
         if (q.isEmpty()) return@cachedSearch emptyList()
         val sites = activeSites()
@@ -266,6 +278,8 @@ class TubeAdapter @Inject constructor(
         private const val TOP_TIMEOUT_MS = 15_000L
         private const val TAG_CHECK_SEARCH = 8
         const val SOURCE_ID = "tube"
+        /** A tag page for "site:pornhub.com" is that site's own newest videos. */
+        const val SITE_PREFIX = "site:"
         private const val MAX_PAGES = 30
         private const val SEARCH_TIMEOUT_MS = 8_000L
     }
