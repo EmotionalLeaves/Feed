@@ -1,3 +1,8 @@
+## 6.22.1 — 2026-11-21
+Order and filter tag pages too
+
+- **Tag pages get the same chips:** Newest, Longest and Not watched, above the grid.
+
 ## 6.22 — 2026-11-21
 What you haven't watched
 
@@ -7,8 +12,3 @@ What you haven't watched
 Photo sets load again
 
 - **Photo sets load again:** BabeSource had started turning away requests that didn't look like a browser. The app now asks it the way it asks the video sites.
-
-## 6.21.1 — 2026-11-21
-More like this, with the same faces
-
-- **More like this now also looks for the people in the video,** and one each of those they're most often with, alongside its creator and tags.

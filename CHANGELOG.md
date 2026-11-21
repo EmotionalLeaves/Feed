@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.22.1 — 2026-11-21
+
+Order and filter tag pages too
+
+- **Tag pages get the same chips:** Newest, Longest and Not watched, above the grid.
+
 ## 6.22 — 2026-11-21
 
 What you haven't watched

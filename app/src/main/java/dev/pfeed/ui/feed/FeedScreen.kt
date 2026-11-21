@@ -714,6 +714,10 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         onOpenTag = { nav.openTag(it) },
                         onPlay = { gridView = false; pagerScope.launch { pagerState.scrollToPage(0) } },
                         onShuffle = { gridView = false; pagerScope.launch { pagerState.scrollToPage(items.indices.random()) } },
+                        orderBy = orderBy,
+                        onOrder = { orderBy = if (orderBy == it) "" else it },
+                        unwatched = unwatched,
+                        onUnwatched = { unwatched = !unwatched },
                     )
                 }) else null
                 dev.pfeed.ui.common.MediaGrid(
@@ -2066,6 +2070,10 @@ private fun TagHeader(
     onOpenTag: (String) -> Unit,
     onPlay: () -> Unit,
     onShuffle: () -> Unit,
+    orderBy: String = "",
+    onOrder: (String) -> Unit = {},
+    unwatched: Boolean = false,
+    onUnwatched: () -> Unit = {},
 ) {
     val sites = remember(items.size) { items.map { Display.source(it, it.sourceId) }.distinct().size }
     val videos = remember(items.size) { items.count { it.type == MediaType.VIDEO } }
@@ -2129,6 +2137,15 @@ private fun TagHeader(
                             .clickable { onOpenTag(raw) }.padding(horizontal = 12.dp, vertical = 7.dp),
                     )
                 }
+            }
+        }
+        // Put in order, or only what you haven't seen.
+        if (items.size >= 6) {
+            Spacer(Modifier.height(12.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TasteChip("Newest", selected = orderBy == "newest") { onOrder("newest") }
+                TasteChip("Longest", selected = orderBy == "longest") { onOrder("longest") }
+                TasteChip("Not watched", selected = unwatched) { onUnwatched() }
             }
         }
         if (items.isEmpty() && loading) {
