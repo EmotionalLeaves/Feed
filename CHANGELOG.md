@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.7 — 2026-11-21
+
+Every site, A to Z
+
+- **Discover → Browse a site now ends with an "All 43 →" chip** that opens every site in one alphabetical list; tap any to open its own newest and top videos.
+
 ## 6.6.1 — 2026-11-21
 
 DrTuber tags

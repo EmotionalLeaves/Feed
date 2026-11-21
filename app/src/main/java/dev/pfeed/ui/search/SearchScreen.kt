@@ -915,7 +915,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun SuggestionsPane(
     continueWatching: List<MediaItem>,
@@ -1058,6 +1058,7 @@ private fun SuggestionsPane(
             Spacer(Modifier.height(20.dp))
         }
         // The sites themselves: each one's own newest videos, the ones you watch most first.
+        var allSites by remember { mutableStateOf(false) }
         if (t.isEmpty() && sites.size >= 3) {
             SectionTitle("Browse a site")
             Spacer(Modifier.height(10.dp))
@@ -1070,8 +1071,30 @@ private fun SuggestionsPane(
                             .clickable { onSite(sites[i].first) }.padding(horizontal = 14.dp, vertical = 9.dp),
                     )
                 }
+                // Every site, A to Z.
+                item(key = "site:all") {
+                    Text(
+                        "All ${dev.pfeed.source.tube.TubeSite.ACTIVE.size} →",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+                            .clickable { allSites = true }.padding(horizontal = 14.dp, vertical = 9.dp),
+                    )
+                }
             }
             Spacer(Modifier.height(20.dp))
+            if (allSites) ModalBottomSheet(onDismissRequest = { allSites = false }) {
+                val all = remember { dev.pfeed.source.tube.TubeSite.ACTIVE.sortedBy { it.label.lowercase() } }
+                androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxWidth().navigationBarsPadding()) {
+                    items(all.size, key = { all[it].host }) { i ->
+                        Text(
+                            all[i].label,
+                            style = MaterialTheme.typography.bodyLarge,
+                            modifier = Modifier.fillMaxWidth().clickable { allSites = false; onSite(all[i].host) }.padding(horizontal = 24.dp, vertical = 14.dp),
+                        )
+                    }
+                }
+            }
         }
         // Creators for you: people whose posts you keep staying for, not followed yet.
         if (t.isEmpty() && creatorsForYou.size >= 3) {
