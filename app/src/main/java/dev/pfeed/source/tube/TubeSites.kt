@@ -1471,6 +1471,15 @@ sealed class TubeSite(val host: String, val label: String) {
         }
 
         override fun embedUrl(id: String) = "https://www.$host/embed/$id"
+
+        private val CATEGORY = Regex("""href="/categories/([a-z0-9-]+)"""")
+        /** Single-word tags only: the rest are pairs of the same words ("amateur-bbc"). */
+        private val ONE_WORD_TAG = Regex("""href="/tags/([a-z0-9]+)"""")
+
+        /** The video's categories and its one-word tags (DrTuber names them on the video page). */
+        override fun pageTags(pageHtml: String): List<String> =
+            (CATEGORY.findAll(pageHtml).map { it.groupValues[1].replace('-', ' ') } + ONE_WORD_TAG.findAll(pageHtml).map { it.groupValues[1] })
+                .distinct().take(20).toList()
     }
 
     object DrTuber : DrNet("drtuber.com", "DrTuber")

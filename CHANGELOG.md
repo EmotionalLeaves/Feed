@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.6.1 — 2026-11-21
+
+DrTuber tags
+
+- **DrTuber videos now bring their categories and tags**, so For You learns from them and hidden tags apply to them like on other sites.
+
 ## 6.6.0 — 2026-11-20
 
 Follow a site

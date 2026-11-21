@@ -1,3 +1,8 @@
+## 6.6.1 — 2026-11-21
+DrTuber tags
+
+- **DrTuber videos now bring their categories and tags**, so For You learns from them and hidden tags apply to them like on other sites.
+
 ## 6.6.0 — 2026-11-20
 Follow a site
 
@@ -8,8 +13,3 @@ Site pages: newest and top
 
 - **Site pages mix the site's newest and its top rated**, a page of each in turn.
 - README: performers, sites, HD, Discover rows and photo sets described.
-
-## 6.5.0 — 2026-11-20
-Browse a site
-
-- **Browse a site** on Discover: the sites you watch most (a few big ones before you've watched anything), one tap each for that site's own newest videos.
