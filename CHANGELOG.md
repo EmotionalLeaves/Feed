@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.28 — 2026-11-21
+
+Your week, by who
+
+- **Your week (top of History) now names the performer you watched most,** with her face, ahead of the uploader you watched most. Tap her for her page.
+
 ## 6.27.4 — 2026-11-21
 
 Hold to follow, everywhere

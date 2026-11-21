@@ -751,7 +751,7 @@ private fun LibraryTabs(selected: Int, onSelect: (Int) -> Unit) {
 }
 
 /** What you watched over the last seven days, from History. */
-private data class Week(val posts: Int, val minutes: Int, val creator: String?, val creatorCount: Int, val tags: List<Pair<String, String>>, val days: List<Int>)
+private data class Week(val posts: Int, val minutes: Int, val creator: String?, val creatorCount: Int, val tags: List<Pair<String, String>>, val days: List<Int>, val person: String? = null)
 
 private fun week(history: List<MediaItem>, times: Map<String, Long>, now: Long = System.currentTimeMillis()): Week? {
     val dayMs = 86_400_000L
@@ -769,7 +769,10 @@ private fun week(history: List<MediaItem>, times: Map<String, Long>, now: Long =
         val end = now - back * dayMs
         recent.count { val t = times[it.key] ?: 0L; t > end - dayMs && t <= end }
     }
-    return Week(recent.size, (seconds / 60).toInt(), top?.key?.takeIf { top.value >= 2 }, top?.value ?: 0, tags, days)
+    // The performer you watched most (in two or more videos), whoever uploaded them.
+    val person = recent.flatMap { dev.pfeed.domain.reco.Mentions.inTitle(it).distinctBy { n -> n.lowercase() } }
+        .groupingBy { it }.eachCount().maxByOrNull { it.value }?.takeIf { it.value >= 2 }?.key
+    return Week(recent.size, (seconds / 60).toInt(), top?.key?.takeIf { top.value >= 2 && !it.equals(person, true) }, top?.value ?: 0, tags, days, person)
 }
 
 private const val WEEK_MIN_POSTS = 5
@@ -807,9 +810,20 @@ private fun WeekRecap(history: List<MediaItem>, times: Map<String, Long>, onOpen
                 }
             }
         }
-        if (w.creator != null || w.tags.isNotEmpty()) {
+        if (w.creator != null || w.tags.isNotEmpty() || w.person != null) {
             Spacer(Modifier.height(14.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically, modifier = Modifier.horizontalScroll(rememberScrollState())) {
+                w.person?.let { p ->
+                    Row(
+                        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.3f))
+                            .clickable { onOpenTag("@$p") }.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        dev.pfeed.ui.common.InitialAvatar(p, 24.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text("Most: $p", style = MaterialTheme.typography.labelLarge, color = Color.White, maxLines = 1)
+                    }
+                }
                 w.creator?.let { c ->
                     Row(
                         Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.3f))

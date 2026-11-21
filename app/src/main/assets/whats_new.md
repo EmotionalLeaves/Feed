@@ -1,3 +1,8 @@
+## 6.28 — 2026-11-21
+Your week, by who
+
+- **Your week (top of History) now names the performer you watched most,** with her face, ahead of the uploader you watched most. Tap her for her page.
+
 ## 6.27.4 — 2026-11-21
 Hold to follow, everywhere
 
@@ -7,8 +12,3 @@ Hold to follow, everywhere
 Hold a face to follow
 
 - **On Discover, hold a face in Creators for you or Often with people you watch to follow them.** They move out of the suggestions and into your Following.
-
-## 6.27.2 — 2026-11-21
-Lighter name matching
-
-- **Recognising performers in titles takes far less work** now that the app knows thousands of names: each title's two- and three-word runs are looked up, instead of the title being searched once for every name. That means less battery and smoother scrolling when big lists load.
