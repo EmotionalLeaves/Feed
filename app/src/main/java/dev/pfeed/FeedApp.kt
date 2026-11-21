@@ -52,6 +52,11 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
         dev.pfeed.source.net.GeoBlock.init(this)
         CrashLog.install(this)
         lockManager.attach()
+        // Create the UI's shared state holders here, on the main thread, before any screen draws:
+        // created first from the settings collector below (another thread), a screen already
+        // composing couldn't read them ("state created after the snapshot was taken") and crashed.
+        dev.pfeed.ui.theme.Palette.current.main
+        dev.pfeed.ui.lock.LockLook.calculator.value
         kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default).launch {
             settings.flow.collect {
                 dev.pfeed.ui.theme.Palette.set(it.accent)

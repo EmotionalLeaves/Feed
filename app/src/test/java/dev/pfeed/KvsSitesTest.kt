@@ -32,6 +32,7 @@ class KvsSitesTest {
         assertEquals("German curvy MILF cures hangover with blowjob", list[0].title)
         assertEquals(8 * 60 + 8, list[0].durationSec)
         assertEquals("EroCom.TV", list[0].creator)
+        assertEquals(720, list[0].height)
         assertNotNull(list[0].published)
         assertTrue(list[0].preview!!.endsWith("_preview.mp4"))
         // The 1080p file over 720p.
@@ -365,6 +366,7 @@ ecodeURIComponent(a[0])] = decodeURIComponent(a[1]);
         assertEquals(207, list[0].durationSec)
         assertTrue(list[0].pageUrl.startsWith("https://www.empflix.com/"))
         assertTrue(list[0].preview!!.contains("trailer.mp4"))
+        assertEquals(1080, list[0].height)
         assertTrue(TubeSite.Tnaflix.listUrl("new", 0).startsWith("https://www.tnaflix.com/new/"))
     }
 

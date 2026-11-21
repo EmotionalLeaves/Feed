@@ -283,7 +283,12 @@ private fun GridTile(
             }
         }
         val badge = when (item.type) {
-            MediaType.VIDEO, MediaType.EMBED -> item.durationSec?.let(::formatDuration) ?: ""
+            MediaType.VIDEO, MediaType.EMBED -> {
+                // "HD" / "4K" when the site's listing says so.
+                val h = item.extras[dev.pfeed.source.tube.HEIGHT]?.toIntOrNull()
+                val q = when { h == null -> null; h >= 2000 -> "4K"; h >= 720 -> "HD"; else -> null }
+                listOfNotNull(q, item.durationSec?.let(::formatDuration)).joinToString(" · ")
+            }
             MediaType.GIF -> "GIF"
             MediaType.IMAGE -> null
         }

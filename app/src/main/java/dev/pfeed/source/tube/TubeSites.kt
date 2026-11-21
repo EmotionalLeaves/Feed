@@ -26,6 +26,8 @@ data class TubeVideo(
     val creator: String? = null,
     /** A few seconds' muted preview clip the site offers (for live grids), if any. */
     val preview: String? = null,
+    /** The best height the listing says it comes in (720 for "HD"), if it says. */
+    val height: Int? = null,
 )
 
 /** What a video page gave us: a stream the player can open, or nothing (the embed is used then). */
@@ -649,6 +651,7 @@ sealed class TubeSite(val host: String, val label: String) {
         private val DUR = Regex("""video-duration">\s*([\d:]+)""")
         private val TRAILER = Regex("""data-trailer="(https://[^"]+)"""")
         private val PROFILE = Regex("""href="https://www\.$esc/profile/[^"]+"[^>]*>\s*([^<]+?)\s*</a>""")
+        private val QUALITY = Regex("""max-quality">\s*(\d{3,4})p""")
         private val SOURCE = Regex("""<source src="([^"]+)" type="video/mp4" size="(\d+)"""")
 
         override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
@@ -657,6 +660,7 @@ sealed class TubeSite(val host: String, val label: String) {
                 id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let(::unescape), duration(DUR.find(c)?.groupValues?.get(1)),
                 creator = PROFILE.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
                 preview = TRAILER.find(c)?.groupValues?.get(1)?.let(::unescape),
+                height = QUALITY.find(c)?.groupValues?.get(1)?.toIntOrNull(),
             )
         }.distinctBy { it.id }
 
@@ -1172,6 +1176,7 @@ sealed class TubeSite(val host: String, val label: String) {
         private val DATE = Regex("""<meta itemprop="uploadDate" content="([^"]+)"""")
         private val LEN = Regex("""<span class="length">\s*(?:<i>)?\s*([\d:]+)""")
         private val BY = Regex("""thumb-submitter">\s*<a [^>]*>\s*([^<]+?)\s*</a>""")
+        private val QUALITY = Regex("""btn-quality">\s*(\d{3,4})p""")
         private val TAG = Regex("""href="https://www\.$esc/(?:tags|categories)/([a-z0-9-]+)/"""")
 
         override val checkTagsFirst = false
@@ -1189,6 +1194,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     published = DATE.find(c)?.groupValues?.get(1)?.let { runCatching { java.time.OffsetDateTime.parse(it).toInstant() }.getOrNull() },
                     creator = BY.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
                     preview = CLIP.find(c)?.groupValues?.get(1),
+                    height = QUALITY.find(c)?.groupValues?.get(1)?.toIntOrNull(),
                 )
             }
         }
@@ -1238,6 +1244,8 @@ sealed class TubeSite(val host: String, val label: String) {
                     published = v.str("post_date")?.let { runCatching { java.time.LocalDateTime.parse(it.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC) }.getOrNull() },
                     creator = v.str("display_name") ?: v.str("username"),
                     preview = v.str("pv")?.let { if (it.startsWith("http")) it else "https://$it" },
+                    height = v.str("file_dimensions")?.substringAfter('x')?.toIntOrNull()
+                        ?: (v["props"] as? JsonObject)?.str("hd")?.takeIf { it == "1" }?.let { 720 },
                 )
             }
         }
@@ -1407,6 +1415,7 @@ sealed class TubeSite(val host: String, val label: String) {
         private val IMG = Regex("""<img [^>]*\bsrc="(https://[^"]+/320_240/\d+\.jpg)"""")
         private val ALT = Regex("""\balt="([^"]*)"""")
         private val WEBM = Regex("""data-webm="(https://[^"]+\.mp4)"""")
+        private val HD_MARK = Regex("""class="hd[^"]*">\s*HD\s*<""")
         private val DUR = Regex(""">\s*(\d{1,2}:\d{2}(?::\d{2})?)\s*<""")
 
         override val checkTagsFirst = false
@@ -1423,6 +1432,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     thumb = img?.groupValues?.get(1),
                     durationSec = duration(img?.let { DUR.find(c, it.range.last)?.groupValues?.get(1) }),
                     preview = WEBM.find(c)?.groupValues?.get(1),
+                    height = if (HD_MARK.containsMatchIn(c)) 720 else null,
                 )
             }.filter { it.thumb != null }
         }
@@ -1734,8 +1744,10 @@ private fun TubeSite.item(v: TubeVideo, section: String, published: java.time.In
         thumbnailUrl = v.thumb,
         pageUrl = v.pageUrl,
         publishedAt = published,
-        extras = buildMap { put("resolve", "tube"); put("vid", v.id); v.preview?.let { put(PREVIEW, it) } },
+        extras = buildMap { put("resolve", "tube"); put("vid", v.id); v.preview?.let { put(PREVIEW, it) }; v.height?.let { put(HEIGHT, it.toString()) } },
     )
 
 /** In a tube post's extras: its site's short preview clip. */
 const val PREVIEW = "preview"
+/** Extras key: the video's best height as its listing gives it ("720", "1080"). */
+const val HEIGHT = "height"
