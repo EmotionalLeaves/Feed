@@ -21,6 +21,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -192,6 +193,7 @@ class LibraryViewModel @Inject constructor(
         }
     }
     fun unfollow(row: FollowEntity) = viewModelScope.launch { library.unfollow(FollowKind.valueOf(row.kind), row.value) }
+    fun followPerson(name: String) = viewModelScope.launch { library.follow(FollowKind.CREATOR, name) }
     fun clearHistory() = viewModelScope.launch { library.clearHistory() }
 }
 
@@ -205,6 +207,7 @@ fun LibraryScreen(nav: NavController, vm: LibraryViewModel = hiltViewModel()) {
     ) { LibraryScreenContent(nav, vm) }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -418,8 +421,13 @@ private fun LibraryScreenContent(nav: NavController, vm: LibraryViewModel) {
                         androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                             items(yours.size, key = { "y:" + yours[it].first }) { i ->
                                 val (name, n) = yours[i]
+                                val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
                                 Column(
-                                    Modifier.width(68.dp).clip(RoundedCornerShape(10.dp)).clickable { nav.openTag("@$name") },
+                                    // Tap: her page. Hold: follow her (she moves down into your follows).
+                                    Modifier.width(68.dp).clip(RoundedCornerShape(10.dp)).combinedClickable(
+                                        onClick = { nav.openTag("@$name") },
+                                        onLongClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); vm.followPerson(name) },
+                                    ),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
                                     dev.pfeed.ui.common.InitialAvatar(name, 56.dp)

@@ -694,6 +694,7 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                             value = vm.similarCreators(tag.removePrefix("@"), items)
                         }.value,
                         onOpenCreator = { nav.openTag("@$it") },
+                        onFollowCreator = { vm.toggleFollowTag("@$it") },
                     )
                 }) else if (profilePage) ({
                     TagHeader(
@@ -2180,6 +2181,8 @@ private fun CreatorHeader(
     tags: List<String> = emptyList(),
     narrowTo: String? = null,
     onNarrow: (String?) -> Unit = {},
+    /** Hold a face in its rows: follow them. */
+    onFollowCreator: (String) -> Unit = {},
     orderBy: String = "",
     onOrder: (String) -> Unit = {},
     unwatched: Boolean = false,
@@ -2242,7 +2245,7 @@ private fun CreatorHeader(
                 IconButton(onClick = onShuffle) { Icon(Icons.Filled.Shuffle, "Shuffle", tint = Color.White.copy(alpha = 0.8f)) }
             }
         }
-        if (oftenWith.isNotEmpty()) PeopleRow("OFTEN WITH", oftenWith, onOpenCreator)
+        if (oftenWith.isNotEmpty()) PeopleRow("OFTEN WITH", oftenWith, onOpenCreator, onFollowCreator)
         // What they make most: tap to see only that (again for everything).
         if (items.size >= 6) {
             Spacer(Modifier.height(16.dp))
@@ -2256,7 +2259,7 @@ private fun CreatorHeader(
         }
         // Who else makes this kind of thing (by where their posts sit on your map), tap to open.
         val more = remember(similar, oftenWith) { similar.filter { s -> oftenWith.none { it.equals(s.substringBefore('@'), true) } } }
-        if (more.isNotEmpty()) PeopleRow("SIMILAR CREATORS", more, onOpenCreator)
+        if (more.isNotEmpty()) PeopleRow("SIMILAR CREATORS", more, onOpenCreator, onFollowCreator)
         if (items.isEmpty()) {
             Spacer(Modifier.height(48.dp))
             if (loading) dev.pfeed.ui.common.BrandSpinner()
@@ -2282,7 +2285,9 @@ private fun hasTag(item: MediaItem, tag: String): Boolean =
 
 /** A titled row of people as avatars with their names; tap one to open their page. */
 @Composable
-private fun PeopleRow(title: String, people: List<String>, onOpen: (String) -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun PeopleRow(title: String, people: List<String>, onOpen: (String) -> Unit, onFollow: (String) -> Unit = {}) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Spacer(Modifier.height(18.dp))
     Text(
         title,
@@ -2293,7 +2298,7 @@ private fun PeopleRow(title: String, people: List<String>, onOpen: (String) -> U
     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp), modifier = Modifier.fillMaxWidth()) {
         for (c in people) item(key = c) {
             Column(
-                Modifier.width(64.dp).clip(RoundedCornerShape(10.dp)).clickable { onOpen(c) },
+                Modifier.width(64.dp).clip(RoundedCornerShape(10.dp)).combinedClickable(onClick = { onOpen(c) }, onLongClick = { haptic.performHapticFeedback(HapticFeedbackType.LongPress); onFollow(c.substringBefore('@')) }),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 dev.pfeed.ui.common.InitialAvatar(c.substringBefore('@'), 52.dp)

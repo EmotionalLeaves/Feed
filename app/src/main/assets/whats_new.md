@@ -1,3 +1,8 @@
+## 6.27.4 — 2026-11-21
+Hold to follow, everywhere
+
+- **Holding a face follows them everywhere faces show:** Library → Following's "You watch them a lot", and the Often with and Similar creators rows on a creator's page.
+
 ## 6.27.3 — 2026-11-21
 Hold a face to follow
 
@@ -7,8 +12,3 @@ Hold a face to follow
 Lighter name matching
 
 - **Recognising performers in titles takes far less work** now that the app knows thousands of names: each title's two- and three-word runs are looked up, instead of the title being searched once for every name. That means less battery and smoother scrolling when big lists load.
-
-## 6.27.1 — 2026-11-21
-Who you follow, at a glance
-
-- **People you follow are lit on a post:** their chip shows in the brand colour, so you can see at a glance who in a video you already follow.
