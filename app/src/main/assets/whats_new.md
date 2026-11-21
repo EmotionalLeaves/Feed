@@ -1,3 +1,8 @@
+## 6.3.0 — 2026-11-20
+HD from Porntrex and ThisVid
+
+- **HD and 4K badges for Porntrex and ThisVid** too, so HD only and For You's HD learning cover them.
+
 ## 6.2.0 — 2026-11-20
 For You learns if you like HD
 
@@ -8,8 +13,3 @@ For You learns if you like HD
 Hide a performer
 
 - **Hide a performer**: the long-press menu's Hide a tag… now lists the performers a video names first. Pick one and every post that names her is hidden, from every site.
-
-## 6.0.1 — 2026-11-20
-Tidier titles
-
-- **Tidier titles from the TXXX sites**: uploads titled all in lower case start with a capital.

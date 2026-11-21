@@ -682,6 +682,7 @@ sealed class TubeSite(val host: String, val label: String) {
         }
         private val MARK = Regex("""data-item-id="(\d+)"""")
         private val HREF = Regex("""href="(https://www\.porntrex\.com/video/[^"]+)"""")
+        private val QUALITY = Regex("""<span class="quality">(\d{3,4}p|4[Kk])</span>""")
         private val IMG = Regex("""data-src="(//[^"]+\.jpg[^"]*)"""")
         private val ALT = Regex("""\balt="([^"]*)"""")
         private val DUR = Regex("""class="durations">(?:<i[^>]*></i>)?\s*([\d:]+)""")
@@ -692,7 +693,10 @@ sealed class TubeSite(val host: String, val label: String) {
 
         override fun parseList(body: String): List<TubeVideo> = chunks(body, MARK).mapNotNull { (id, c) ->
             val href = HREF.find(c)?.groupValues?.get(1) ?: return@mapNotNull null
-            TubeVideo(id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let { "https:" + unescape(it) }, duration(DUR.find(c)?.groupValues?.get(1)))
+            TubeVideo(
+                id, ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim(), href, IMG.find(c)?.groupValues?.get(1)?.let { "https:" + unescape(it) }, duration(DUR.find(c)?.groupValues?.get(1)),
+                height = QUALITY.find(c)?.groupValues?.get(1)?.let { q -> if (q.equals("4k", true)) 2160 else q.removeSuffix("p").toIntOrNull() },
+            )
         }.distinctBy { it.id }
 
         override fun stream(pageHtml: String): TubeStream? =
@@ -1619,7 +1623,7 @@ sealed class TubeSite(val host: String, val label: String) {
             if (c.substringBefore("</a>").contains("private", ignoreCase = true)) return@mapNotNull null
             val title = (TITLE.find(c.substringBefore('>'))?.groupValues?.get(1) ?: TITLE_SPAN.find(c)?.groupValues?.get(1))?.let(::unescape)?.trim()
             val thumb = IMG.find(c)?.groupValues?.get(1)?.let { if (it.startsWith("//")) "https:$it" else it }
-            TubeVideo(slug, title, "https://thisvid.com/videos/$slug/", thumb, duration(DUR.find(c)?.groupValues?.get(1)))
+            TubeVideo(slug, title, "https://thisvid.com/videos/$slug/", thumb, duration(DUR.find(c)?.groupValues?.get(1)), height = if (c.contains("""<span class="quality">HD</span>""")) 720 else null)
         }.distinctBy { it.id }
 
         override fun pageTags(pageHtml: String): List<String> =

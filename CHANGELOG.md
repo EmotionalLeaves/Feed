@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.3.0 — 2026-11-20
+
+HD from Porntrex and ThisVid
+
+- **HD and 4K badges for Porntrex and ThisVid** too, so HD only and For You's HD learning cover them.
+
 ## 6.2.0 — 2026-11-20
 
 For You learns if you like HD
