@@ -1,3 +1,8 @@
+## 5.95.0 — 2026-11-20
+DrTuber, Nuvid, IcePorn play directly
+
+- **DrTuber, Nuvid and IcePorn now play in the app's own player** (5.94 fell back to their embedded players): the files are asked for the way the site's own player asks, from the video's page.
+
 ## 5.94.0 — 2026-11-20
 DrTuber, Nuvid and IcePorn
 
@@ -8,8 +13,3 @@ Her photo sets too
 
 - **New with people you watch** now also brings the performers' photo sets, not only their videos.
 - The long-press menu says **In this set** on photo sets.
-
-## 5.92.0 — 2026-11-20
-Photo sets
-
-- **New source: Photo sets.** The studios' own photo sets of their scenes (from BabeSource): newest, top rated and most viewed, each a gallery you swipe through, credited to the studio, with the performers recognised (follow her and her sets join Following too). Searchable, and switchable in Sources like every source.

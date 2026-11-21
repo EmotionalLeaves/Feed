@@ -1427,12 +1427,22 @@ sealed class TubeSite(val host: String, val label: String) {
             }.filter { it.thumb != null }
         }
 
-        /** The player's JSON holds the files. */
-        override fun streamPageUrl(pageUrl: String, id: String) =
-            "https://www.$host/player_config_json/?vid=$id&aid=0&domain_id=0&embed=0&ref=null&check_speed=0"
+        private val VID = Regex("""/video/(\d+)/""")
 
-        override fun stream(pageHtml: String): TubeStream? {
-            val files = runCatching { json.parseToJsonElement(pageHtml).jsonObject["files"] as? JsonObject }.getOrNull() ?: return null
+        /** The player's JSON holds the files; it answers only with the video's page as the referrer. */
+        override fun streamIndexUrl(pageHtml: String): String? =
+            (CANONICAL.find(pageHtml) ?: VIDEO_ID.find(pageHtml) ?: VID.find(pageHtml))?.groupValues?.get(1)?.let { configUrl(it) }
+        private val CANONICAL = Regex("""rel="canonical" href="https://www\.[^/]+/video/(\d+)/""")
+        private val VIDEO_ID = Regex("""video_id["':= ]+(\d+)""")
+
+        internal fun configUrl(id: String) = "https://www.$host/player_config_json/?vid=$id&aid=0&domain_id=0&embed=0&ref=null&check_speed=0"
+
+        override fun stream(pageHtml: String): TubeStream? = null
+
+        override fun streamFromIndex(indexJson: JsonElement): TubeStream? = files(indexJson)
+
+        internal fun files(config: JsonElement): TubeStream? {
+            val files = runCatching { config.jsonObject["files"] as? JsonObject }.getOrNull() ?: return null
             val options = listOf("4k" to 2160, "hq" to 720, "lq" to 360).mapNotNull { (k, h) ->
                 (files[k] as? JsonPrimitive)?.contentOrNull?.takeIf { it.startsWith("http") }?.let { h to it }
             }

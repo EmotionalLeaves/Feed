@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.95.0 — 2026-11-20
+
+DrTuber, Nuvid, IcePorn play directly
+
+- **DrTuber, Nuvid and IcePorn now play in the app's own player** (5.94 fell back to their embedded players): the files are asked for the way the site's own player asks, from the video's page.
+
 ## 5.94.0 — 2026-11-20
 
 DrTuber, Nuvid and IcePorn
