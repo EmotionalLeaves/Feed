@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.13 — 2026-11-21
+
+Often with people you watch
+
+- **New Discover row, "Often with people you watch":** performers who keep turning up alongside the ones you watch and follow, that you don't follow yet. Tap one for her page.
+- **Creators for you and the people typeahead** now also count the performers sites credit, not only the ones titles name.
+
 ## 6.12.1 — 2026-11-21
 
 Often with on her page

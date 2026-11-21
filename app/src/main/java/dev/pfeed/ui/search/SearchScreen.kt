@@ -295,7 +295,7 @@ class SearchViewModel @Inject constructor(
         val count = HashMap<String, Int>()
         val firstSeen = HashMap<String, Pair<String, MediaItem>>()
         history.forEach { item ->
-            dev.pfeed.domain.reco.Mentions.performers(item.title).forEach { name ->
+            dev.pfeed.domain.reco.Mentions.inTitle(item).forEach { name ->
                 val k = dev.pfeed.domain.filter.Blocklist.normalize(name)
                 count[k] = (count[k] ?: 0) + 1
                 firstSeen.putIfAbsent(k, name to item)
@@ -314,13 +314,32 @@ class SearchViewModel @Inject constructor(
     val people: StateFlow<List<String>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
         .map { history ->
             val count = HashMap<String, Int>(); val shown = HashMap<String, String>()
-            history.forEach { item -> dev.pfeed.domain.reco.Mentions.performers(item.title).forEach { n -> val k = n.lowercase(); count[k] = (count[k] ?: 0) + 1; shown.putIfAbsent(k, n) } }
+            history.forEach { item -> dev.pfeed.domain.reco.Mentions.inTitle(item).forEach { n -> val k = n.lowercase(); count[k] = (count[k] ?: 0) + 1; shown.putIfAbsent(k, n) } }
             count.entries.sortedByDescending { it.value }.take(PEOPLE_TYPEAHEAD).map { shown.getValue(it.key) }
                 // Named again elsewhere, in any form of title, they're recognised (see Mentions.inTitle).
                 .also { dev.pfeed.domain.reco.Mentions.learn(it) }
         }
         .flowOn(kotlinx.coroutines.Dispatchers.Default)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /**
+     * People often in videos with the ones you watch and follow, whom you don't follow or watch much
+     * yet: the more of yours she's with, and the more often, the sooner she comes.
+     */
+    val oftenWithYours: StateFlow<List<String>> = combine(people, library.follows) { watched, follows ->
+        val seeds = (follows.creators.filter { dev.pfeed.domain.reco.Mentions.personName(it) != null } + watched).distinctBy { it.lowercase() }.take(OFTEN_WITH_SEEDS)
+        val known = (follows.creators + watched.take(OFTEN_WITH_SEEDS)).map { it.substringBefore('@').lowercase() }.toSet()
+        val score = HashMap<String, Double>(); val shown = HashMap<String, String>()
+        seeds.forEachIndexed { rank, seed ->
+            dev.pfeed.domain.reco.CoStars.with(seed, max = 6).forEachIndexed { i, p ->
+                val k = p.lowercase()
+                if (k in known) return@forEachIndexed
+                score[k] = (score[k] ?: 0.0) + 1.0 / (1 + rank) + 0.5 / (1 + i)
+                shown.putIfAbsent(k, p)
+            }
+        }
+        score.entries.sortedByDescending { it.value }.take(OFTEN_WITH_ROW).map { shown.getValue(it.key) }
+    }.flowOn(kotlinx.coroutines.Dispatchers.Default).stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
     /** The tube sites you watch most (host to name), for Discover's row of sites; a few big ones before you have any. */
     val yourSites: StateFlow<List<Pair<String, String>>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
@@ -691,6 +710,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val people by vm.people.collectAsStateWithLifecycle()
     val yourSites by vm.yourSites.collectAsStateWithLifecycle()
     val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
+    val oftenWithYours by vm.oftenWithYours.collectAsStateWithLifecycle()
     val yourMoments by vm.yourMoments.collectAsStateWithLifecycle()
     val clipping by vm.clippingMoments.collectAsStateWithLifecycle()
     val yourClips by vm.yourClips.collectAsStateWithLifecycle()
@@ -856,6 +876,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 sites = yourSites,
                 onSite = { nav.openTag(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX + it) },
                 creatorsForYou = creatorsForYou,
+                oftenWith = oftenWithYours,
                 onCreator = { nav.openTag("@$it") },
                 recent = recent,
                 interests = interests,
@@ -939,6 +960,7 @@ private fun SuggestionsPane(
     sites: List<Pair<String, String>> = emptyList(),
     onSite: (String) -> Unit = {},
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
+    oftenWith: List<String> = emptyList(),
     onCreator: (String) -> Unit = {},
     recent: List<String>,
     interests: List<String>,
@@ -1116,6 +1138,25 @@ private fun SuggestionsPane(
                                 modifier = Modifier.matchParentSize(),
                             )
                         }
+                        Spacer(Modifier.height(6.dp))
+                        Text(name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+        // People often with the ones you watch: new faces, one step from yours.
+        if (t.isEmpty() && oftenWith.size >= 3) {
+            SectionTitle("Often with people you watch")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                items(oftenWith.size, key = { "with:" + oftenWith[it] }) { i ->
+                    val name = oftenWith[i]
+                    Column(
+                        Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).clickable { onCreator(name) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        dev.pfeed.ui.common.InitialAvatar(name, size = 64.dp)
                         Spacer(Modifier.height(6.dp))
                         Text(name, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                     }
@@ -1785,6 +1826,9 @@ private const val PHOTO_ROW = "New photo sets"
 private const val PERFORMER_FOR_YOU_MIN = 3
 /** Performers from your history offered as you type. */
 private const val PEOPLE_TYPEAHEAD = 60
+/** Discover's "Often with people you watch": from this many of yours, this many new faces. */
+private const val OFTEN_WITH_SEEDS = 8
+private const val OFTEN_WITH_ROW = 12
 /** Sites offered before you've watched any. */
 private val DEFAULT_SITES = listOf("pornhub.com", "xvideos.com", "txxx.com", "eporner.com", "xhamster.com", "hclips.com", "drtuber.com", "tnaflix.com")
 private const val REDISCOVER_AFTER_MS = 14L * 86_400_000L
