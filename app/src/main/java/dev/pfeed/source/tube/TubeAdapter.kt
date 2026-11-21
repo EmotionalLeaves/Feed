@@ -69,6 +69,20 @@ class TubeAdapter @Inject constructor(
      * What's at the top of each of [hosts]' own "top rated" lists right now (first page each, 15 s
      * at most per site), for Discover. Sites you've switched off are skipped.
      */
+    /**
+     * What people search for that starts like [prefix] (XVideos' suggestions, most searched first),
+     * for typeahead; empty if XVideos is switched off or doesn't answer quickly.
+     */
+    suspend fun suggest(prefix: String): List<String> {
+        val p = prefix.trim()
+        if (p.length < 2 || activeSites().none { it == TubeSite.Xvideos }) return emptyList()
+        val body = withTimeoutOrNull(SUGGEST_TIMEOUT_MS) {
+            attempt { http.getRaw(id, "https://www.xvideos.com/search-suggest/" + java.net.URLEncoder.encode(p, "UTF-8").replace("+", "%20"), mapOf("X-Requested-With" to "XMLHttpRequest")) }.getOrNull()
+        } ?: return emptyList()
+        return Regex(""""N"\s*:\s*"([^"]{2,60})"""").findAll(body).map { it.groupValues[1].trim() }
+            .filter { it.isNotEmpty() && dev.pfeed.domain.filter.MinorsFilter.allowsText(it) }.distinct().take(SUGGEST_MAX).toList()
+    }
+
     suspend fun topOf(hosts: List<String>): List<MediaItem> = coroutineScope {
         val on = activeSites().map { it.host }.toSet()
         hosts.filter { it in on }.mapNotNull { TubeSite.byHost(it) }.map { site ->
@@ -288,6 +302,8 @@ class TubeAdapter @Inject constructor(
         private const val RESOLVED_TTL_MS = 20 * 60_000L
         private const val TAG_CHECK_LIMIT = 16
         private const val TOP_TIMEOUT_MS = 15_000L
+        private const val SUGGEST_TIMEOUT_MS = 2_500L
+        private const val SUGGEST_MAX = 8
         private const val TAG_CHECK_SEARCH = 8
         const val SOURCE_ID = "tube"
         /** A tag page for "site:pornhub.com" is that site's own newest videos. */

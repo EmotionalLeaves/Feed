@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.19 — 2026-11-21
+
+Popular searches as you type
+
+- **As you type a search, popular searches from the sites show up** under your own matches ("redhead" → redhead anal, redhead milf, redhead pov…), marked with a trending arrow. They're asked for after a short pause in typing. Anything that could suggest a minor is left out.
+
 ## 6.18.3 — 2026-11-21
 
 Picture cache back to full size

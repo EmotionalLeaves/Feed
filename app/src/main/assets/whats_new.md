@@ -1,3 +1,8 @@
+## 6.19 — 2026-11-21
+Popular searches as you type
+
+- **As you type a search, popular searches from the sites show up** under your own matches ("redhead" → redhead anal, redhead milf, redhead pov…), marked with a trending arrow. They're asked for after a short pause in typing. Anything that could suggest a minor is left out.
+
 ## 6.18.3 — 2026-11-21
 Picture cache back to full size
 
@@ -7,10 +12,3 @@ Picture cache back to full size
 Lighter on memory
 
 - **The feed holds fewer decoded pictures in memory** (at most 128 MB), so long sessions are less likely to be closed by Android on phones with less memory.
-
-## 6.18.1 — 2026-11-21
-Videos with both
-
-- **"Often with" on a performer's search card now finds the videos with both of them** in one tap, not just the other person.
-- Combined searches ("name + name", "name + tag") also count the performers a site credits.
-- Members-only qualities listed by some sites as a link to their login page are skipped, so the best quality that actually plays is picked.

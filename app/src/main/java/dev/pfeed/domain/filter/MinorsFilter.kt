@@ -47,6 +47,14 @@ object MinorsFilter {
         return title.split(SPLIT).none { it in TITLE_TERMS }
     }
 
+    /** A bit of text on its own (a search suggestion): strict, any word that can mean a minor rules it out. */
+    fun allowsText(text: String): Boolean {
+        val t = text.trim().lowercase()
+        if (UNDER_18_AGE.containsMatchIn(t)) return false
+        val words = t.split(SPLIT)
+        return words.none { it in TERMS || it in COMPOUND_WORDS || it in TITLE_TERMS } && t.replace(' ', '_') !in TERMS
+    }
+
     private val TITLE_TERMS = setOf(
         "loli", "lolicon", "shota", "shotacon", "underage", "preteen", "toddlercon", "jailbait", "pedo",
         "highschool", "middleschool", "lolis", "shotas", "underaged",

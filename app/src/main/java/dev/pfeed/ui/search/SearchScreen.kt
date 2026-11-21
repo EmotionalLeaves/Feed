@@ -2,6 +2,7 @@ package dev.pfeed.ui.search
 
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Casino
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import dev.pfeed.ui.feed.Display
@@ -613,7 +614,21 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun setQuery(q: String) = _ui.update { it.copy(query = q) }
+    fun setQuery(q: String) {
+        _ui.update { it.copy(query = q) }
+        // What others search for, starting the same: after a short pause in typing.
+        suggestJob?.cancel()
+        val p = q.trim()
+        if (p.length < 2 || '+' in p || p.startsWith("-")) { siteSuggestions.value = emptyList(); return }
+        suggestJob = viewModelScope.launch {
+            kotlinx.coroutines.delay(SUGGEST_DEBOUNCE_MS)
+            val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) as? dev.pfeed.source.tube.TubeAdapter ?: return@launch
+            siteSuggestions.value = runCatching { tube.suggest(p) }.getOrDefault(emptyList())
+        }
+    }
+    private var suggestJob: kotlinx.coroutines.Job? = null
+    /** Popular searches on the sites that start like what's typed. */
+    val siteSuggestions = MutableStateFlow<List<String>>(emptyList())
 
     fun clearQuery() {
         job?.cancel()
@@ -913,6 +928,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 // Titled "Moments", the viewer starts each one at its first moment.
                 onMoment = { index -> nav.navigate(Routes.viewer(vm.openList(yourMoments, index, dev.pfeed.ui.feed.FeedViewModel.MOMENTS))) },
                 typed = ui.query,
+                popular = vm.siteSuggestions.collectAsStateWithLifecycle().value,
                 followed = followed,
                 people = people,
                 sites = yourSites,
@@ -1000,6 +1016,8 @@ private fun SuggestionsPane(
     rediscover: List<MediaItem> = emptyList(),
     onRediscover: (Int) -> Unit = {},
     typed: String,
+    /** What people search for on the sites, starting like [typed]. */
+    popular: List<String> = emptyList(),
     followed: List<String>,
     people: List<String> = emptyList(),
     sites: List<Pair<String, String>> = emptyList(),
@@ -1022,14 +1040,17 @@ private fun SuggestionsPane(
                 (recent + followed + people + interests + POPULAR + dev.pfeed.data.settings.SourceCatalog.tubeSections.drop(2) +
                     dev.pfeed.data.settings.SourceCatalog.comicTags.map { it.replace('-', ' ') }).distinctBy { it.lowercase() }
             }
-            val matches = (vocab.filter { it.lowercase().startsWith(t) } + vocab.filter { it.lowercase().contains(t) })
-                .distinct().filter { it.lowercase() != t }.take(8)
+            val mine = (vocab.filter { it.lowercase().startsWith(t) } + vocab.filter { it.lowercase().contains(t) })
+                .distinct().filter { it.lowercase() != t }.take(6)
+            // Then what people search for on the sites (most searched first).
+            val matches = (mine + popular.filter { p -> p.lowercase() != t && mine.none { it.equals(p, true) } }).take(10)
             matches.forEach { q ->
                 // What kind of suggestion it is, at a glance: one you searched before, one you follow,
                 // or a topic; and the part you've typed in bold.
                 val kind = when {
                     recent.any { it.equals(q, true) } -> Icons.Filled.History
                     followed.any { it.equals(q, true) } -> Icons.Filled.Favorite
+                    q !in mine -> Icons.AutoMirrored.Filled.TrendingUp
                     else -> Icons.Filled.Search
                 }
                 Row(
@@ -1886,6 +1907,8 @@ private const val PERFORMER_FOR_YOU_MIN = 3
 private const val PEOPLE_TYPEAHEAD = 60
 /** Discover's "Often with people you watch": from this many of yours, this many new faces. */
 private const val OFTEN_WITH_SEEDS = 8
+/** A pause in typing this long before the sites' suggestions are asked for. */
+private const val SUGGEST_DEBOUNCE_MS = 250L
 /** Discover rows for searches you follow, at most. */
 private const val FOLLOWED_SEARCH_ROWS = 3
 private const val OFTEN_WITH_ROW = 12
