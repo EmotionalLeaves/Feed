@@ -27,7 +27,7 @@ android {
         targetSdk = 36
         // Always higher than the last CI build, so Android accepts every new APK as an update.
         versionCode = 100 + (System.getenv("GITHUB_RUN_NUMBER")?.toIntOrNull() ?: 0)
-        versionName = "6.22.1"
+        versionName = "6.23"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // API source adapter configuration (see SOURCES.md). Empty = adapter stays disabled.
@@ -148,6 +148,10 @@ dependencies {
     implementation(libs.media3.datasource.okhttp)
     implementation(libs.media3.ui)
     implementation(libs.media3.transformer)
+    // Cast to a TV (Chromecast / Google TV); used only where Google Play services is there.
+    implementation(libs.play.services.cast)
+    implementation(libs.androidx.mediarouter)
+    implementation(libs.androidx.appcompat)
 
     implementation(libs.coil.compose)
     implementation(libs.coil.gif)

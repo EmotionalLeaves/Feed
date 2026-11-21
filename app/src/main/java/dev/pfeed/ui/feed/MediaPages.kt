@@ -287,6 +287,9 @@ fun VideoPage(
     }
 
     LaunchedEffect(player, play) { player?.playWhenReady = play }
+    // Sent to the TV: the phone's copy stops, so the two don't play at once.
+    val castKey by vm.castPaused.collectAsState()
+    LaunchedEffect(castKey, player) { if (castKey == item.key) { player?.pause(); vm.castPaused.value = null } }
 
     LaunchedEffect(player, play, firstFrame) {
         endingIn = null

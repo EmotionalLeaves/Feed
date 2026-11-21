@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.Movie
+import androidx.compose.material.icons.filled.Cast
+import dev.pfeed.ui.common.findActivity
 import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material.icons.filled.ContentCut
 import androidx.compose.material.icons.filled.Search
@@ -417,6 +419,11 @@ fun ItemMenuSheet(
             }
             if (vm.canHaveLonger(item)) {
                 MenuRow("Find a longer version", Icons.Filled.Movie, "Many sites keep a short cut of a scene; looks for the full one on the others") { vm.offerLonger(item, manual = true); onDismiss() }
+            }
+            if (item.type == dev.pfeed.domain.model.MediaType.VIDEO) {
+                MenuRow("Cast to TV", Icons.Filled.Cast, "Plays it on a Chromecast or Google TV, from where you are; nothing shows on the phone's lock screen") {
+                    vm.castToTv(context.findActivity(), item); onDismiss()
+                }
             }
             if (item.extras[dev.pfeed.data.repo.ClipLibrary.FROM] != null) {
                 MenuRow("Watch the full video", Icons.Filled.Movie, "The video this clip came from, from where the clip starts") { vm.openFullVideo(item); onDismiss() }

@@ -16,5 +16,8 @@
 # Retrofit service interface (Retrofit ships its own rules for the rest).
 -keep,allowobfuscation interface dev.pfeed.source.api.ApiService
 
+# Named in the manifest's cast meta-data, found by reflection.
+-keep class dev.pfeed.player.CastOptionsProvider { *; }
+
 # Activity aliases are referenced by class name from LauncherDisguise.
 -keep class dev.pfeed.MainActivity

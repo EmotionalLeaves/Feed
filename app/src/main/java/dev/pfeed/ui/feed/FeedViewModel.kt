@@ -328,6 +328,25 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /**
+     * Play [item] on a TV (Chromecast / Google TV), from where it is on the phone; the phone's copy
+     * pauses. Says why not when it can't (no Google Play services, or a site that only plays its own page).
+     */
+    fun castToTv(activity: android.app.Activity?, item: MediaItem) {
+        if (activity == null) return
+        viewModelScope.launch {
+            val stream = runCatching { resolve(item) }.getOrNull() as? StreamInfo.Direct
+            if (stream == null) { _messages.tryEmit("This one only plays on its own site, so it can't go to a TV"); return@launch }
+            val at = NowPlaying.positionMs.takeIf { NowPlaying.key == item.key } ?: 0L
+            val ok = dev.pfeed.player.Cast.play(activity, stream.url, stream.mimeType, at) { _messages.tryEmit(it) }
+            if (!ok) _messages.tryEmit("Casting needs Google Play services, which this phone doesn't have")
+            else castPaused.value = item.key
+        }
+    }
+
+    /** The post sent to the TV: its page pauses on the phone. */
+    val castPaused = MutableStateFlow<String?>(null)
+
     /** Keys of everything you've watched (for "Not watched yet" on a page). */
     val watchedKeys: StateFlow<Set<String>> = library.keys(LibraryKind.HISTORY)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
