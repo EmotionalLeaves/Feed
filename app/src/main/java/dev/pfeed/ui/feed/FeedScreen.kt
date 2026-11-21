@@ -663,8 +663,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 val topTags = remember(tag, items.size / 10) { if (creatorPage) profileTags(tag.removePrefix("@"), items) else emptyList() }
                 // And put in order: as the sites list them, newest first or longest first.
                 var orderBy by androidx.compose.runtime.saveable.rememberSaveable(tag) { mutableStateOf("") }
-                val gridItems = remember(items, narrowTo, orderBy) {
-                    val kept = narrowTo?.let { t -> items.filter { hasTag(it, t) } } ?: items
+                var unwatched by androidx.compose.runtime.saveable.rememberSaveable(tag) { mutableStateOf(false) }
+                val watched by vm.watchedKeys.collectAsStateWithLifecycle()
+                val gridItems = remember(items, narrowTo, orderBy, unwatched, watched) {
+                    val kept = (narrowTo?.let { t -> items.filter { hasTag(it, t) } } ?: items)
+                        .let { l -> if (unwatched) l.filter { it.key !in watched } else l }
                     when (orderBy) {
                         "newest" -> kept.sortedByDescending { it.publishedAt?.toEpochMilli() ?: Long.MIN_VALUE }
                         "longest" -> kept.sortedByDescending { it.durationSec ?: -1 }
@@ -680,6 +683,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         onNarrow = { narrowTo = it },
                         orderBy = orderBy,
                         onOrder = { orderBy = if (orderBy == it) "" else it },
+                        unwatched = unwatched,
+                        onUnwatched = { unwatched = !unwatched },
                         loading = loading,
                         following = vm.isFollowingPage(tag, follows),
                         onFollow = { vm.toggleFollowTag(tag) },
@@ -2150,6 +2155,8 @@ private fun CreatorHeader(
     onNarrow: (String?) -> Unit = {},
     orderBy: String = "",
     onOrder: (String) -> Unit = {},
+    unwatched: Boolean = false,
+    onUnwatched: () -> Unit = {},
 ) {
     // A performer: who she's most often in videos with (learned from every listing that names two).
     val oftenWith = remember(name, items.size / 10) { dev.pfeed.domain.reco.CoStars.with(name, max = 10) }
@@ -2215,6 +2222,7 @@ private fun CreatorHeader(
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                 item(key = "newest") { TasteChip("Newest", selected = orderBy == "newest") { onOrder("newest") } }
                 item(key = "longest") { TasteChip("Longest", selected = orderBy == "longest") { onOrder("longest") } }
+                item(key = "unwatched") { TasteChip("Not watched", selected = unwatched) { onUnwatched() } }
                 if (tags.size >= 2) item(key = "all") { TasteChip("All", selected = narrowTo == null) { onNarrow(null) } }
                 if (tags.size >= 2) for (t in tags) item(key = "t:$t") { TasteChip(t, selected = narrowTo == t) { onNarrow(if (narrowTo == t) null else t) } }
             }

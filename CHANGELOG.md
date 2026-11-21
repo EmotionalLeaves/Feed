@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.22 — 2026-11-21
+
+What you haven't watched
+
+- **"Not watched" on a creator's or performer's page** hides everything of theirs you've already seen, so you can go straight to what's new to you. It combines with Newest, Longest and the tag chips.
+
 ## 6.21.2 — 2026-11-21
 
 Photo sets load again

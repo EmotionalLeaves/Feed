@@ -328,6 +328,10 @@ class FeedViewModel @Inject constructor(
         }
     }
 
+    /** Keys of everything you've watched (for "Not watched yet" on a page). */
+    val watchedKeys: StateFlow<Set<String>> = library.keys(LibraryKind.HISTORY)
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
+
     fun refresh() = restart()
 
     /**
