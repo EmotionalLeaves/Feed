@@ -150,9 +150,11 @@ data class SearchFilters(
     val sites: Set<String> = emptySet(),
     /** Leave out what you've watched before. */
     val hideWatched: Boolean = false,
+    /** Only videos their site lists as HD or better. */
+    val hdOnly: Boolean = false,
 ) {
     /** How many of the filters hidden in the sheet are active (shown as a badge). */
-    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0) + (if (sites.isNotEmpty()) 1 else 0) + (if (hideWatched) 1 else 0)
+    val sheetCount: Int get() = (if (sources.isNotEmpty()) 1 else 0) + (if (duration != DurationFilter.ANY) 1 else 0) + (if (sort != SortOrder.BEST) 1 else 0) + (if (sites.isNotEmpty()) 1 else 0) + (if (hideWatched) 1 else 0) + (if (hdOnly) 1 else 0)
 
     /** Any filter on: the endless continuation can't honour them, so it isn't offered. */
     val active: Boolean get() = sheetCount > 0 || type != TypeFilter.ALL
@@ -164,6 +166,7 @@ data class SearchFilters(
         // Images means single pictures; Comics means the multi-page ones.
         if (type == TypeFilter.COMICS && !item.isGallery) return false
         if (type == TypeFilter.IMAGES && item.isGallery) return false
+        if (hdOnly && (item.extras[dev.pfeed.source.tube.HEIGHT]?.toIntOrNull() ?: 0) < 720) return false
         val range = duration.range ?: return true
         val d = item.durationSec ?: return false
         return d in range
@@ -596,7 +599,8 @@ class SearchViewModel @Inject constructor(
     fun setType(t: TypeFilter) = _filters.update { it.copy(type = t) }
     fun setDuration(d: DurationFilter) = _filters.update { it.copy(duration = d) }
     fun setSort(o: SortOrder) = _filters.update { it.copy(sort = o) }
-    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST, sites = emptySet(), hideWatched = false) }
+    fun resetSheetFilters() = _filters.update { it.copy(sources = emptySet(), duration = DurationFilter.ANY, sort = SortOrder.BEST, sites = emptySet(), hideWatched = false, hdOnly = false) }
+    fun setHdOnly(on: Boolean) = _filters.update { it.copy(hdOnly = on) }
     fun setHideWatched(on: Boolean) = _filters.update { it.copy(hideWatched = on) }
     fun toggleSite(host: String) = _filters.update { f -> f.copy(sites = if (host in f.sites) f.sites - host else f.sites + host) }
 
@@ -890,6 +894,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 },
                 onToggleSite = vm::toggleSite,
                 onHideWatched = vm::setHideWatched,
+                onHdOnly = vm::setHdOnly,
                 onDuration = vm::setDuration,
                 onSort = vm::setSort,
                 onReset = vm::resetSheetFilters,
@@ -1558,6 +1563,7 @@ private fun FiltersSheet(
     sites: List<Pair<String, String>> = emptyList(),
     onToggleSite: (String) -> Unit = {},
     onHideWatched: (Boolean) -> Unit = {},
+    onHdOnly: (Boolean) -> Unit = {},
     onDuration: (DurationFilter) -> Unit,
     onSort: (SortOrder) -> Unit,
     onReset: () -> Unit,
@@ -1579,6 +1585,13 @@ private fun FiltersSheet(
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Hide what I've watched", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
             androidx.compose.material3.Switch(checked = filters.hideWatched, onCheckedChange = onHideWatched)
+        }
+        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("HD only", style = MaterialTheme.typography.bodyLarge)
+                Text("Videos their site lists as HD or 4K", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+            }
+            androidx.compose.material3.Switch(checked = filters.hdOnly, onCheckedChange = onHdOnly)
         }
         SectionTitle("Length")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

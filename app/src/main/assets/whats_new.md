@@ -1,3 +1,8 @@
+## 5.98.0 — 2026-11-20
+HD only
+
+- **HD only** in search Filters: just the videos their site lists as HD or 4K.
+
 ## 5.97.0 — 2026-11-20
 HD badges; a startup crash fixed
 
@@ -9,8 +14,3 @@ HD badges; a startup crash fixed
 New photo sets on Discover
 
 - **New photo sets** on Discover: the studios' latest photo sets, best for you first. Tap Play to swipe through them.
-
-## 5.95.0 — 2026-11-20
-DrTuber, Nuvid, IcePorn play directly
-
-- **DrTuber, Nuvid and IcePorn now play in the app's own player** (5.94 fell back to their embedded players): the files are asked for the way the site's own player asks, from the video's page.

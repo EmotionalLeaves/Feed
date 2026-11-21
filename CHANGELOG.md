@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.98.0 — 2026-11-20
+
+HD only
+
+- **HD only** in search Filters: just the videos their site lists as HD or 4K.
+
 ## 5.97.0 — 2026-11-20
 
 HD badges; a startup crash fixed
