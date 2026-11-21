@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.18.2 — 2026-11-21
+
+Lighter on memory
+
+- **The feed holds fewer decoded pictures in memory** (at most 128 MB), so long sessions are less likely to be closed by Android on phones with less memory.
+
 ## 6.18.1 — 2026-11-21
 
 Videos with both

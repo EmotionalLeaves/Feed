@@ -1,3 +1,8 @@
+## 6.18.2 — 2026-11-21
+Lighter on memory
+
+- **The feed holds fewer decoded pictures in memory** (at most 128 MB), so long sessions are less likely to be closed by Android on phones with less memory.
+
 ## 6.18.1 — 2026-11-21
 Videos with both
 
@@ -10,8 +15,3 @@ Your searches on Discover
 
 - **Discover shows a row for each search you follow** (up to three), with its newest finds you haven't seen.
 - **Searching a performer's name now ranks videos the site credits her in** near the top, even when the title doesn't name her. The New with people you watch row includes them too.
-
-## 6.17.1 — 2026-11-21
-Credited performers everywhere
-
-- **Following a performer now also brings videos where she's only credited by the site** (not named in the title), and For You learns from those credits the way it learns from names in titles.

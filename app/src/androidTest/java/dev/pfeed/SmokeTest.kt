@@ -175,11 +175,15 @@ class SmokeTest {
         // failure rate are what using the app feels like.
         fun mem(): String {
             val rt = Runtime.getRuntime()
-            return "java ${(rt.totalMemory() - rt.freeMemory()) / 1_048_576} MB, native ${android.os.Debug.getNativeHeapAllocatedSize() / 1_048_576} MB"
+            val images = coil.Coil.imageLoader(rule.activity).memoryCache?.let { "${it.size / 1_048_576}/${it.maxSize / 1_048_576}" } ?: "-"
+            return "java ${(rt.totalMemory() - rt.freeMemory()) / 1_048_576} MB, native ${android.os.Debug.getNativeHeapAllocatedSize() / 1_048_576} MB, image cache $images MB"
         }
         android.util.Log.i("PFHEALTH", "feed: memory after ${swipes} swipes: ${mem()}")
         repeat(45) { swipeUpGesture(); repeat(6) { rule.mainClock.advanceTimeBy(250); Thread.sleep(120) } }
         android.util.Log.i("PFHEALTH", "feed: memory after ${swipes + 45} swipes: ${mem()}")
+        // After a collection: what's still held, against what was only waiting to be freed.
+        Runtime.getRuntime().gc(); Thread.sleep(500); Runtime.getRuntime().gc()
+        android.util.Log.i("PFHEALTH", "feed: memory after collecting: ${mem()}")
         val events = rule.activity.mediaHealth.recentEvents()
         events.forEach { android.util.Log.i("PFHEALTH", "  feed $it") }
         android.util.Log.i("PFHEALTH", "feed: ${shown.get()} shown after ${swipes + 45} swipes, " +

@@ -104,6 +104,12 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
             add(MaxSizeInterceptor)
         }
         .crossfade(true)
+        // Decoded pictures kept in memory: at most a sixth of what the app may use, and never more
+        // than 128 MB (Coil's default quarter of a large heap grew the feed past 900 MB on the test phone).
+        .memoryCache {
+            val bytes = (Runtime.getRuntime().maxMemory() / 6).coerceAtMost(128L * 1024 * 1024)
+            coil.memory.MemoryCache.Builder(this).maxSizeBytes(bytes.toInt()).build()
+        }
         .build()
 }
 
