@@ -43,7 +43,7 @@ import androidx.compose.ui.unit.dp
 import dev.pfeed.domain.reco.Steer
 import dev.pfeed.ui.common.SecureDialog
 
-private val EXAMPLES = listOf("more redheads, less cosplay", "only amateur", "no feet", "just videos", "short clips and pov")
+private val EXAMPLES = listOf("more redheads, less cosplay", "only amateur", "no feet", "just videos", "only HD", "full length", "short clips and pov")
 
 /** Tell For You what you're in the mood for, in your own words. */
 @OptIn(ExperimentalLayoutApi::class)
