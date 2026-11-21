@@ -322,6 +322,15 @@ class SearchViewModel @Inject constructor(
         .flowOn(kotlinx.coroutines.Dispatchers.Default)
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    /** The tube sites you watch most (host to name), for Discover's row of sites; a few big ones before you have any. */
+    val yourSites: StateFlow<List<Pair<String, String>>> = library.items(dev.pfeed.data.repo.LibraryKind.HISTORY)
+        .map { history ->
+            val watched = history.filter { it.sourceId == dev.pfeed.source.tube.TubeAdapter.SOURCE_ID }.groupingBy { it.id.substringBefore('/') }.eachCount()
+                .entries.sortedByDescending { it.value }.map { it.key }
+            (watched + DEFAULT_SITES).distinct().mapNotNull { h -> dev.pfeed.source.tube.TubeSite.byHost(h)?.takeIf { it in dev.pfeed.source.tube.TubeSite.ACTIVE }?.let { h to it.label } }.take(12)
+        }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptyList())
+
     /** Normalised names of the creators you follow (for the person card on results). */
     val followedCreators: StateFlow<Set<String>> = library.follows.map { it.creators }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.WhileSubscribed(5_000), emptySet())
@@ -680,6 +689,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     val topicRows by vm.topicRows.collectAsStateWithLifecycle()
     val followed by vm.followed.collectAsStateWithLifecycle()
     val people by vm.people.collectAsStateWithLifecycle()
+    val yourSites by vm.yourSites.collectAsStateWithLifecycle()
     val creatorsForYou by vm.creatorsForYou.collectAsStateWithLifecycle()
     val yourMoments by vm.yourMoments.collectAsStateWithLifecycle()
     val clipping by vm.clippingMoments.collectAsStateWithLifecycle()
@@ -843,6 +853,8 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 typed = ui.query,
                 followed = followed,
                 people = people,
+                sites = yourSites,
+                onSite = { nav.openTag(dev.pfeed.source.tube.TubeAdapter.SITE_PREFIX + it) },
                 creatorsForYou = creatorsForYou,
                 onCreator = { nav.openTag("@$it") },
                 recent = recent,
@@ -924,6 +936,8 @@ private fun SuggestionsPane(
     typed: String,
     followed: List<String>,
     people: List<String> = emptyList(),
+    sites: List<Pair<String, String>> = emptyList(),
+    onSite: (String) -> Unit = {},
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
     onCreator: (String) -> Unit = {},
     recent: List<String>,
@@ -1040,6 +1054,22 @@ private fun SuggestionsPane(
             Spacer(Modifier.height(10.dp))
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(yourClips.size, key = { "clip:" + yourClips[it].key }) { i -> TopicTile(yourClips[i]) { onClip(i) } }
+            }
+            Spacer(Modifier.height(20.dp))
+        }
+        // The sites themselves: each one's own newest videos, the ones you watch most first.
+        if (t.isEmpty() && sites.size >= 3) {
+            SectionTitle("Browse a site")
+            Spacer(Modifier.height(10.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(sites.size, key = { "site:" + sites[it].first }) { i ->
+                    Text(
+                        sites[i].second,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            .clickable { onSite(sites[i].first) }.padding(horizontal = 14.dp, vertical = 9.dp),
+                    )
+                }
             }
             Spacer(Modifier.height(20.dp))
         }
@@ -1670,4 +1700,6 @@ private const val PHOTO_ROW = "New photo sets"
 private const val PERFORMER_FOR_YOU_MIN = 3
 /** Performers from your history offered as you type. */
 private const val PEOPLE_TYPEAHEAD = 60
+/** Sites offered before you've watched any. */
+private val DEFAULT_SITES = listOf("pornhub.com", "xvideos.com", "txxx.com", "eporner.com", "xhamster.com", "hclips.com", "drtuber.com", "tnaflix.com")
 private const val REDISCOVER_AFTER_MS = 14L * 86_400_000L

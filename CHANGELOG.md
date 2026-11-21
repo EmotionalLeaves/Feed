@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.5.0 — 2026-11-20
+
+Browse a site
+
+- **Browse a site** on Discover: the sites you watch most (a few big ones before you've watched anything), one tap each for that site's own newest videos.
+
 ## 6.4.0 — 2026-11-20
 
 Site pages
