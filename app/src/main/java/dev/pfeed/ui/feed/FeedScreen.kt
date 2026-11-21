@@ -632,10 +632,17 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     )
                 }
                 val tag = vm.tag.orEmpty()
+                // A creator's page: narrow the grid to one of what they make most.
+                var narrowTo by androidx.compose.runtime.saveable.rememberSaveable(tag) { mutableStateOf<String?>(null) }
+                val topTags = remember(tag, items.size / 10) { if (creatorPage) profileTags(tag.removePrefix("@"), items) else emptyList() }
+                val gridItems = remember(items, narrowTo) { narrowTo?.let { t -> items.filter { hasTag(it, t) } } ?: items }
                 val profile: (@Composable () -> Unit)? = if (creatorPage) ({
                     CreatorHeader(
                         name = tag.removePrefix("@"),
                         items = items,
+                        tags = topTags,
+                        narrowTo = narrowTo,
+                        onNarrow = { narrowTo = it },
                         loading = loading,
                         following = vm.isFollowingPage(tag, follows),
                         onFollow = { vm.toggleFollowTag(tag) },
@@ -668,8 +675,11 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                     )
                 }) else null
                 dev.pfeed.ui.common.MediaGrid(
-                    items = items,
-                    onOpen = { index -> gridView = false; pagerScope.launch { pagerState.scrollToPage(index) } },
+                    items = gridItems,
+                    onOpen = { index ->
+                        val at = items.indexOf(gridItems.getOrNull(index)).coerceAtLeast(0)
+                        gridView = false; pagerScope.launch { pagerState.scrollToPage(at) }
+                    },
                     onNearEnd = vm::loadMore,
                     livePreview = dev.pfeed.ui.common.rememberLivePreview(vm.livePreviews, playing = active),
                     header = profile,
@@ -2098,6 +2108,9 @@ private fun CreatorHeader(
     onShuffle: () -> Unit,
     similar: List<String> = emptyList(),
     onOpenCreator: (String) -> Unit = {},
+    tags: List<String> = emptyList(),
+    narrowTo: String? = null,
+    onNarrow: (String?) -> Unit = {},
 ) {
     // A performer: who she's most often in videos with (learned from every listing that names two).
     val oftenWith = remember(name, items.size / 10) { dev.pfeed.domain.reco.CoStars.with(name, max = 10) }
@@ -2157,6 +2170,14 @@ private fun CreatorHeader(
             }
         }
         if (oftenWith.isNotEmpty()) PeopleRow("OFTEN WITH", oftenWith, onOpenCreator)
+        // What they make most: tap to see only that (again for everything).
+        if (tags.size >= 2) {
+            Spacer(Modifier.height(16.dp))
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                item(key = "all") { TasteChip("All", selected = narrowTo == null) { onNarrow(null) } }
+                for (t in tags) item(key = "t:$t") { TasteChip(t, selected = narrowTo == t) { onNarrow(if (narrowTo == t) null else t) } }
+            }
+        }
         // Who else makes this kind of thing (by where their posts sit on your map), tap to open.
         val more = remember(similar, oftenWith) { similar.filter { s -> oftenWith.none { it.equals(s.substringBefore('@'), true) } } }
         if (more.isNotEmpty()) PeopleRow("SIMILAR CREATORS", more, onOpenCreator)
@@ -2167,6 +2188,21 @@ private fun CreatorHeader(
         }
     }
 }
+
+/** The tags most common on [name]'s page (on at least 3 posts, not her own name), most first. */
+private fun profileTags(name: String, items: List<MediaItem>, max: Int = 8): List<String> {
+    val own = dev.pfeed.domain.reco.Mentions.padded(name).trim().split(' ').toSet()
+    return items.asSequence().flatMap { it.tags.map { t -> t.lowercase().replace('_', ' ').trim() }.distinct() }
+        .filter { t -> t.length > 2 && t.split(' ').none { it in own } && t !in PROFILE_TAG_NOISE }
+        .groupingBy { it }.eachCount().entries.filter { it.value >= 3 }
+        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key }).take(max).map { it.key }
+}
+
+private val PROFILE_TAG_NOISE = setOf("hd", "porn", "pornstar", "sex", "xxx", "in english", "4k", "verified", "exclusive", "straight", "top", "new")
+
+/** Does [item] have [tag] (as a tag, or in its title)? */
+private fun hasTag(item: MediaItem, tag: String): Boolean =
+    item.tags.any { it.lowercase().replace('_', ' ').trim() == tag } || dev.pfeed.domain.reco.Mentions.padded(item.title).contains(" $tag ")
 
 /** A titled row of people as avatars with their names; tap one to open their page. */
 @Composable

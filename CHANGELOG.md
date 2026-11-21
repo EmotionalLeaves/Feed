@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.15 — 2026-11-21
+
+Narrow a page by what they make
+
+- **A creator's or performer's page now has chips for what they make most** (anal, milf, pov…) above the grid. Tap one to see only those, tap All to see everything again.
+
 ## 6.14.1 — 2026-11-21
 
 Faces appear as they're found
