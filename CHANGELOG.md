@@ -1,5 +1,11 @@
 # Changelog
 
+## 5.99.0 — 2026-11-20
+
+HD on more sites
+
+- **HD badges and HD only now cover XVideos and AnySex too**, from the quality their listings show.
+
 ## 5.98.0 — 2026-11-20
 
 HD only

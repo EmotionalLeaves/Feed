@@ -21,6 +21,7 @@ class TubeSitesTest {
     @Test
     fun `xvideos tiles carry their preview clip`() {
         val list = TubeSite.Xvideos.parseList(XV_TILE)
+        assertEquals(720, list[0].height)
         assertEquals("https://thumb-cdn77.xvideos-cdn.com/03160cda-d465-46fb-a94b-79a64bc5b1fe/6/preview.mp4", list[0].preview)
         // Without data-pvv: worked out from the thumbnail, which sits beside it.
         val bare = TubeSite.Xvideos.parseList(XV_TILE.replace(Regex("data-pvv=\"[^\"]+\""), ""))

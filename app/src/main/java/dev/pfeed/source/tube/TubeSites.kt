@@ -299,9 +299,11 @@ sealed class TubeSite(val host: String, val label: String) {
                 // Beside each thumbnail on the CDN: a short silent preview clip (about 200 KB).
                 preview = PVV.find(thumbPart)?.groupValues?.get(1)
                     ?: IMG.find(thumbPart)?.groupValues?.get(1)?.let { PREVIEW_BASE.find(it) }?.let { it.groupValues[1] + "preview.mp4" },
+                height = HD_MARK.find(thumbPart)?.groupValues?.get(1)?.toIntOrNull(),
             )
         }.toList()
 
+        private val HD_MARK = Regex("""video-hd-mark">\s*(\d{3,4})p""")
         private val PVV = Regex("""data-pvv="(https://[^"]+\.mp4)"""")
         private val PREVIEW_BASE = Regex("""^(https://[a-z0-9-]+\.xvideos-cdn\.com/[0-9a-f-]{36}/\d+/)xv_\d+_t\.jpg$""")
         private val NAME = Regex("""<span class="name">([^<]+)</span>""")
@@ -1037,6 +1039,7 @@ sealed class TubeSite(val host: String, val label: String) {
         private val HREF = Regex("""<a href="(https://anysex\.com/video/\d+/[^"]*)"""")
         private val IMG = Regex("""<img\s+src="(https://i\d*\.anysex\.com/[^"]+\.jpg)"""")
         private val CLIP = Regex("""data-preview="(https://preview\.anysex\.com/[^"]+\.mp4)"""")
+        private val IS_HD = Regex("""class="is-hd hd(\d{3,4})""")
         private val DUR = Regex("""<div class="duration">(\d{1,2}:\d{2}(?::\d{2})?)</div>""")
         private val TITLE = Regex("""<strong class="title">\s*(.*?)\s*</strong>""", RegexOption.DOT_MATCHES_ALL)
         private val AUTHOR = Regex("""class="author-link"><a href="https://anysex\.com/(?:models|channels)/[^"]+/">(?:<i[^>]*></i>)?([^<]+)<""")
@@ -1058,6 +1061,7 @@ sealed class TubeSite(val host: String, val label: String) {
                     durationSec = duration(DUR.find(c)?.groupValues?.get(1)),
                     creator = AUTHOR.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
                     preview = CLIP.find(c)?.groupValues?.get(1),
+                    height = IS_HD.find(c)?.groupValues?.get(1)?.toIntOrNull(),
                 )
             }.distinctBy { it.id }
         }

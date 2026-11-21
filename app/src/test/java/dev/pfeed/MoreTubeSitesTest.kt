@@ -27,6 +27,7 @@ class MoreTubeSitesTest {
         assertEquals(2, list.size)
         assertEquals("402359", list[0].id)
         assertEquals("Kevlyn Santos P", list[0].creator)
+        assertEquals(720, list[0].height)
         assertEquals(8 * 60 + 54, list[0].durationSec)
         assertTrue(list[0].title!!.startsWith("I fuck red haired escort girl"))
         assertTrue(list[0].preview!!.startsWith("https://preview.anysex.com/"))
