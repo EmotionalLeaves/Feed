@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.24.1 — 2026-11-21
+
+Second chance after a refusal
+
+- A site's list that's refused once (a bot check's "403", as Porntrex sometimes answers) is asked again a moment later, instead of leaving its videos out of that load.
+
 ## 6.24 — 2026-11-21
 
 Saved, by person

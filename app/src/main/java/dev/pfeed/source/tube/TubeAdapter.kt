@@ -132,7 +132,8 @@ class TubeAdapter @Inject constructor(
         val own = (0 until 3).any { p -> url == site.listUrl("new", p) || url == site.listUrl("top", p) }
         if (!own) return listOnce(site, url)
         val first = try { listOnce(site, url) } catch (e: SourceException) {
-            if (e.httpCode == 429 || e.isAuthError) throw e
+            // Rate-limited: asking again won't help. A refusal (a bot check's 403) often passes the second time.
+            if (e.httpCode == 429) throw e
             emptyList()
         }
         if (first.isNotEmpty() || (emptyUntil[site.host] ?: 0L) > System.currentTimeMillis()) return first
