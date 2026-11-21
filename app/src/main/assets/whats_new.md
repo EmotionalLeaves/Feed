@@ -1,3 +1,8 @@
+## 6.27.3 — 2026-11-21
+Hold a face to follow
+
+- **On Discover, hold a face in Creators for you or Often with people you watch to follow them.** They move out of the suggestions and into your Following.
+
 ## 6.27.2 — 2026-11-21
 Lighter name matching
 
@@ -7,8 +12,3 @@ Lighter name matching
 Who you follow, at a glance
 
 - **People you follow are lit on a post:** their chip shows in the brand colour, so you can see at a glance who in a video you already follow.
-
-## 6.27 — 2026-11-21
-Hold to follow
-
-- **Hold a performer's chip on a post to follow her** (hold again to stop), without leaving the video. A tap still opens her page.

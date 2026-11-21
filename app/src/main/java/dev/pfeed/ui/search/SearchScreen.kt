@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -944,6 +945,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
                 creatorsForYou = creatorsForYou,
                 oftenWith = oftenWithYours,
                 onCreator = { nav.openTag("@$it") },
+                onFollowCreator = vm::toggleFollowPerson,
                 recent = recent,
                 interests = interests,
                 onPick = run,
@@ -1005,7 +1007,7 @@ private fun SearchScreenContent(nav: NavController, vm: SearchViewModel) {
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SuggestionsPane(
     continueWatching: List<MediaItem>,
@@ -1033,6 +1035,8 @@ private fun SuggestionsPane(
     creatorsForYou: List<Pair<String, MediaItem>> = emptyList(),
     oftenWith: List<String> = emptyList(),
     onCreator: (String) -> Unit = {},
+    /** Hold a face: follow them. */
+    onFollowCreator: (String) -> Unit = {},
     recent: List<String>,
     interests: List<String>,
     onPick: (String) -> Unit,
@@ -1040,6 +1044,7 @@ private fun SuggestionsPane(
     onClearRecent: () -> Unit,
     onLive: () -> Unit = {},
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         // As you type: matching searches you've made, things you like and common tags.
         val t = typed.trim().lowercase()
@@ -1200,7 +1205,7 @@ private fun SuggestionsPane(
                 items(creatorsForYou.size, key = { "creator:" + creatorsForYou[it].first }) { i ->
                     val (name, item) = creatorsForYou[i]
                     Column(
-                        Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).clickable { onCreator(name) },
+                        Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = { onCreator(name) }, onLongClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); onFollowCreator(name) }),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Box(Modifier.size(64.dp).clip(androidx.compose.foundation.shape.CircleShape).border(2.dp, dev.pfeed.ui.theme.BrandGradient, androidx.compose.foundation.shape.CircleShape).padding(3.dp).clip(androidx.compose.foundation.shape.CircleShape)) {
@@ -1227,7 +1232,7 @@ private fun SuggestionsPane(
                 items(oftenWith.size, key = { "with:" + oftenWith[it] }) { i ->
                     val name = oftenWith[i]
                     Column(
-                        Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).clickable { onCreator(name) },
+                        Modifier.width(76.dp).clip(RoundedCornerShape(12.dp)).combinedClickable(onClick = { onCreator(name) }, onLongClick = { haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress); onFollowCreator(name) }),
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         dev.pfeed.ui.common.InitialAvatar(name, size = 64.dp)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.27.3 — 2026-11-21
+
+Hold a face to follow
+
+- **On Discover, hold a face in Creators for you or Often with people you watch to follow them.** They move out of the suggestions and into your Following.
+
 ## 6.27.2 — 2026-11-21
 
 Lighter name matching
