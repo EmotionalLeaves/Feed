@@ -9,6 +9,153 @@ import org.junit.Test
 
 /** Analdin, KatesTube and EMPFlix, against their pages as served in November 2026. */
 class KvsSitesTest {
+    private val PCOM_LIST = """<div class="item video-thumb big-thumb mobile-thumb" >
+ <div class="link" itemscope itemtype="https://schema.org/ImageObject">
+ <div class="img-holder image" >
+ <a href="https://www.pornicom.com/videos/2947263/tifa-quinn-stepdaddy-readstepfather-discovered-my-diarypersonal-journal/" class="thumb" target="_self">
+ <span class="img" data-id="2947263" data-poster="https://c87f27190d.mjedge.net/contents/videos_screenshots/2947000/2947263/390x293/3.jpg?ver=3" data-src="https://www.pornicom.com/get_file/6/fdaae56eaab60e9850c2430b8e4c87c0/2947000/2947263/2947263_preview.mp4/">
+ <img class="thumb" src="https://c87f27190d.mjedge.net/contents/videos_screenshots/2947000/2947263/390x293/3.jpg?ver=3" alt="tifa quinn - stepdaddy readstepfather discovered my diarypersonal journal" fetchpriority="high" width="240" height="180" >
+ <span class="video"><video preload="none" loading="lazy" id="2947263" muted="" loop="" playsinline="" poster="https://c87f27190d.mjedge.net/contents/videos_screenshots/2947000/2947263/390x293/3.jpg?ver=3" src="https://www.pornicom.com/get_file/6/fdaae56eaab60e9850c2430b8e4c87c0/2947000/2947263/2947263_preview.mp4/"></video></span>
+ <meta itemprop="contentUrl" content="https://www.pornicom.com/get_file/6/fdaae56eaab60e9850c2430b8e4c87c0/2947000/2947263/2947263_preview.mp4/">
+ </span>
+ </a>
+ <div class="time-holder">
+ <span class="time">
+ 15:05
+ </span>
+ <meta itemprop="duration" content="15M:05S">
+ </div>
+ <span class="ico-new">New</span>
+ </div>
+ <span class="title-item">
+ <span class="thumb-info">
+ <span class="avatar no-avatar color_n">
+ <a href="https://www.pornicom.com/members/782132/"><span>n</span></a>
+ </span>
+ <span class="info-inner">
+ <span class="title" itemprop="name">
+ <a href="https://www.pornicom.com/videos/2947263/tifa-quinn-stepdaddy-readstepfather-discovered-my-diarypersonal-journal/" target="_self">tifa quinn - stepdaddy readstepfather discovered my diarypersonal journal</a>
+ </span>
+ <meta itemprop="datePublished" content="2026-11-14">
+ <span class="thumb-members">
+ <span class="thumb-submitter">
+ <a href="https://www.pornicom.com/members/782132/">nancylp88</a>
+ </span>
+ <span class="views-info">
+ <i class="icon-eye"></i>
+ 19 </span>
+ </span>
+ </span>
+ </span>
+ </span>
+ <div class="dots">
+ <b></b>
+ <div class="drop">
+ <span class="block-fav">
+ <button title="Favorite" data-id="2947263">Add To Favorite</button>
+ <span class="success">Video Added</span>
+ <span class="fail">You have to <a href="https://www.pornicom.com/login.php">Login</a></span>
+ </span>
+ <span class="subs">
+ <button title="Subscribe to nancylp88" data-id="782132">Subscribe to nancylp88</button>
+ <span class="success">Subscribed</span>
+ <span class="fail">You have to <a href="https://www.pornicom.com/login.php">Login</a></span>
+ </span>
+ <span data-page="https://www.pornicom.com/videos/2947263/tifa-quinn-stepdaddy-readstepfather-discovered-my-diarypersonal-journal/" class="btn-share">Share</span>
+ <span class="btn-date">55 minutes ago</span>
+ <span class="btn-quality">720p</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ <div class="item video-thumb big-thumb mobile-thumb" >
+ <div class="link" itemscope itemtype="https://schema.org/ImageObject">
+ <div class="img-holder image" >
+ <a href="https://www.pornicom.com/videos/2946501/shecrumbled-handjob-and-passionate-sex-compilation/" class="thumb" target="_self">
+ <span class="img" data-id="2946501" data-poster="https://c87f27190d.mjedge.net/contents/videos_screenshots/2946000/2946501/390x293/5.jpg?ver=3" data-src="https://www.pornicom.com/get_file/6/15caad6e8d6cf3299fa7abb5ae3d6b11/2946000/2946501/2946501_preview.mp4/">
+ <img class="thumb" src="https://c87f27190d.mjedge.net/contents/videos_screenshots/2946000/2946501/390x293/5.jpg?ver=3" alt="sheCRUMBLED Handjob And Passionate Sex Compilation" fetchpriority="high" width="240" height="180" >
+ <span class="video"><video preload="none" loading="lazy" id="2946501" muted="" loop="" playsinline="" poster="https://c87f27190d.mjedge.net/contents/videos_screenshots/2946000/2946501/390x293/5.jpg?ver=3" src="https://www.pornicom.com/get_file/6/15caad6e8d6cf3299fa7abb5ae3d6b11/2946000/2946501/2946501_preview.mp4/"></video></span>
+ <meta itemprop="contentUrl" content="https://www.pornicom.com/get_file/6/15caad6e8d6cf3299fa7abb5ae3d6b11/2946000/2946501/2946501_preview.mp4/">
+ </span>
+ </a>
+ <div class="time-holder">
+ <span class="time">
+ 15:00
+ </span>
+ <meta itemprop="duration" content="15M:00S">
+ </div>
+ <span class="ico-new">New</span>
+ </div>
+ <span class="title-item">
+ <span class="thumb-info">
+ <span class="avatar color_s">
+ <a href="https://www.pornicom.com/members/782711/"><img width="150" height="120" loading="lazy" src="https://c87f27190d.mjedge.net/contents/avatars/782000/782711.jpg?rand=20261120081736" alt="sheCRUMBLED"></a>
+ </span>
+ <span class="info-inner">
+ <span class="title" itemprop="name">
+ <a href="https://www.pornicom.com/videos/2946501/shecrumbled-handjob-and-passionate-sex-compilation/" target="_self">sheCRUMBLED Handjob And Passionate Sex Compilation</a>
+ </span>
+ <meta itemprop="datePublished" content="2026-11-12">
+ <span class="thumb-members">
+ <span class="thumb-submitter">
+ <a href="https://www.pornicom.com/members/782711/">sheCRUMBLED</a>
+ </span>
+ <span class="views-info">
+ <i class="icon-eye"></i>
+ 20 </span>
+ </span>
+ </span>
+ </span>
+ </span>
+ <div class="dots">
+ <b></b>
+ <div class="drop">
+ <span class="block-fav">
+ <button title="Favorite" data-id="2946501">Add To Favorite</button>
+ <span class="success">Video Added</span>
+ <span class="fail">You have to <a href="https://www.pornicom.com/login.php">Login</a></span>
+ </span>
+ <span class="subs">
+ <button title="Subscribe to sheCRUMBLED" data-id="782711">Subscribe to sheCRUMBLED</button>
+ <span class="success">Subscribed</span>
+ <span class="fail">You have to <a href="https://www.pornicom.com/login.php">Login</a></span>
+ </span>
+ <span data-page="https://www.pornicom.com/videos/2946501/shecrumbled-handjob-and-passionate-sex-compilation/" class="btn-share">Share</span>
+ <span class="btn-date">1 hour ago</span>
+ <span class="btn-quality">720p</span>
+ </div>
+ </div>
+ </div>
+ </div>
+ """
+    private val PCOM_VIDEO = """var flashvars = { tags: 'babe, blowjob, brunette, cumshot, hardcore, Facial, Big Natural Tits, big cock, couple, taboo, In English, stepdad, stepdaughter, Big Dick, step dad and step daughter, Big Tits Natural, room', video_url: 'https://www.pornicom.com/get_file/6/4789a78821d9d0f1f4b8220450b46713/2947000/2947263/2947263.mp4/?v-acctoken=MTMyMnw3ODIxMzJ8MHwyOGFmNzA4MTgzNjJhNGQ0NTBkYTI0MzM1NTM1ZWViMA7b3547e4e0c4e9d7', video_url_text: '720p', video_alt_url: 'https://www.pornicom.com/get_file/6/d6254af8bd6f53650706e35343992169/2947000/2947263/2947263_s.mp4/?v-acctoken=MTEwN3w3ODIxMzJ8MHxlZmJjNDdhYjg2MWJmZTYwMjVjZmEwODE3NmZlOTliYg9c915a0ddfbc6249', video_alt_url_text: '1080p' };
+<div>lass="item"> <span class="text">Categories:</span> <a class="link" href="/categories/babe/" target="_self" onclick="exoMobilePop();" title="Babe porn movies | Babe sex clips | Babe fuck videos | Babe tube">Babe</a>, <a class="link" href="/categories/big-dick/" target="_self" onclick="exoMobilePop();" title="Big Dick porn movies | Big Dick sex clips | Big Dick fuck videos | Big Dick tube">Big dick</a>, <a class="link" href="/categories/big-tits/" target="_self" onclick="exoMobilePop();" title="Big tits porn movies | Busty sex clips | Big tits fuck videos | Busty tube">Big tits</a>, <a class="link" href="/categories/blowjob/" target="_self" onclick="exoMobilePop();" title="Blowjob porn movies | Blowjob sex clips | Blowjob fuck videos | Blowjob tube">Blowjob</a>, <a class="link" href="/categories/brunette/" target="_self" onclick="exoMobilePop();" title="Brunette porn movies | Brunette sex clips | Brunette fuck videos | Brunette tube - porn">Brunette</a>, <a class="link" href="/categories/cumshots/" target="_self" onclick="exoMobilePop();" title="Cumshots porn movies | Cumshots sex clips | Cumshots fuck videos | Cumshots tube - porn">Cumshots</a>, <a class="link" href="/categories/hardcore/" target="_self" onclick="exoMobilePop();" title="Hardcore porn movies | Hardcore sex clips | Hardco</div>"""
+    private val FS_VIDEO = """var flashvars = { tags: 'blonde, blowjob, cumshot, hardcore, mature, dildo, big tits, eating pussy, big cock, gilf, In English, nude, sex, hot, toy, hottest, hard' };"""
+
+    @Test
+    fun `pornicom listing, stream and tags`() {
+        val list = TubeSite.Pornicom.parseList(PCOM_LIST)
+        assertEquals(2, list.size)
+        assertEquals("2947263", list[0].id)
+        assertEquals("Tifa quinn - stepdaddy readstepfather discovered my diarypersonal journal", list[0].title)
+        assertEquals("sheCRUMBLED Handjob And Passionate Sex Compilation", list[1].title)
+        assertEquals(15 * 60 + 5, list[0].durationSec)
+        assertEquals("nancylp88", list[0].creator)
+        assertNotNull(list[0].published)
+        assertTrue(list[0].preview!!.contains("_preview.mp4"))
+        assertTrue(list[0].thumb!!.startsWith("https://"))
+        assertTrue(TubeSite.Pornicom.stream(PCOM_VIDEO)!!.url.startsWith("https://www.pornicom.com/get_file/"))
+        val tags = TubeSite.Pornicom.pageTags(PCOM_VIDEO)
+        assertTrue(tags.toString(), "big dick" in tags && "babe" in tags)
+    }
+
+    @Test
+    fun `fetish shrine tags from the player settings`() {
+        val tags = TubeSite.FetishShrine.pageTags(FS_VIDEO)
+        assertTrue(tags.toString(), "gilf" in tags && "eating pussy" in tags)
+        assertFalse(tags.toString(), "in english" in tags || "hot" in tags)
+    }
+
     @Test
     fun `analdin listing, stream, own tags and timeline`() {
         val list = TubeSite.Analdin.parseList(ANA_LIST)

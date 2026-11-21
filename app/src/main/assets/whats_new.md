@@ -1,3 +1,10 @@
+## 6.8 — 2026-11-21
+Six more sites
+
+- **Six more video sites:** HotMovs, InPorn, Fetish Shrine and Pornicom join the feeds and search (49 in all).
+- **TheGay and Shemalez** are there too, switched off to start: turn them on in Settings → Sources → Tube sites and they join your feeds, search and Discover.
+- Sites that only list tags in their player now bring those tags too, so For You learns from them.
+
 ## 6.7 — 2026-11-21
 Every site, A to Z
 
@@ -7,8 +14,3 @@ Every site, A to Z
 DrTuber tags
 
 - **DrTuber videos now bring their categories and tags**, so For You learns from them and hidden tags apply to them like on other sites.
-
-## 6.6.0 — 2026-11-20
-Follow a site
-
-- **Follow a site**: a site's page (tap its name on a post, or Browse a site on Discover) has a Follow button. Its new videos then join Following, and it's listed under Library → Following as a site.

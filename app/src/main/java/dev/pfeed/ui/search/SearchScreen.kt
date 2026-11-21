@@ -445,7 +445,7 @@ class SearchViewModel @Inject constructor(
             val history = runCatching { library.items(dev.pfeed.data.repo.LibraryKind.HISTORY).first() }.getOrDefault(emptyList())
             val yours = history.filter { it.sourceId == tube.id }.groupingBy { it.id.substringBefore('/') }.eachCount()
                 .entries.sortedByDescending { it.value }.map { it.key }.take(TOP_ROW_SITES / 2)
-            val others = dev.pfeed.source.tube.TubeSite.ACTIVE.map { it.host }.filter { it !in yours }
+            val others = dev.pfeed.source.tube.TubeSite.ACTIVE.filter { !it.startsOff }.map { it.host }.filter { it !in yours }
                 .shuffled(kotlin.random.Random(System.currentTimeMillis() / 86_400_000L))
             val hosts = (yours + others).take(TOP_ROW_SITES)
             val blocklist = runCatching { blocks.current() }.getOrNull()

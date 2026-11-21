@@ -244,6 +244,11 @@ class SettingsViewModel @Inject constructor(
     fun setEncryptedDns(v: Boolean) = update { it.copy(encryptedDns = v) }
     fun setPrivateMode(v: Boolean) = update { it.copy(privateMode = v) }
     fun setDataSaver(v: Boolean) = update { it.copy(dataSaver = v) }
+    /** A site that starts off (gay, trans) switched on or back off. */
+    fun setSiteOn(host: String, on: Boolean) = viewModelScope.launch {
+        settingsRepo.update { it.copy(sitesOn = if (on) it.sitesOn + host else it.sitesOn - host) }
+        if (on) blocks.unblock(BlockKind.ORIGIN.name, dev.pfeed.domain.filter.Blocklist.normalize("tube:$host"))
+    }
     fun setBlurPreviews(v: Boolean) = update { it.copy(blurPreviews = v) }
     fun setKeepSavedOffline(v: Boolean) = update { it.copy(keepSavedOffline = v) }
 

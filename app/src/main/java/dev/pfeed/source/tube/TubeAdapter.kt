@@ -31,13 +31,15 @@ import javax.inject.Singleton
 class TubeAdapter @Inject constructor(
     private val http: HttpJson,
     private val blocks: dev.pfeed.data.repo.BlockRepository,
+    private val settings: dev.pfeed.data.settings.SettingsRepository,
 ) : CachingAdapter() {
     private val background = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.IO)
 
     /** Sites switched off (in Sources, or hidden from a post's menu): not asked at all. */
     private suspend fun activeSites(): List<TubeSite> {
         val hidden = runCatching { blocks.current().origins }.getOrDefault(emptySet())
-        return TubeSite.ACTIVE.filter { "tube:${it.host}" !in hidden }
+        val on = runCatching { settings.get().sitesOn }.getOrDefault(emptySet())
+        return TubeSite.ACTIVE.filter { "tube:${it.host}" !in hidden && (!it.startsOff || it.host in on) }
     }
 
     override val id = SOURCE_ID

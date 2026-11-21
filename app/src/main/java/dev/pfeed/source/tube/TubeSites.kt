@@ -67,6 +67,9 @@ sealed class TubeSite(val host: String, val label: String) {
      */
     open val checkTagsFirst: Boolean = false
 
+    /** Sites for one audience (gay, trans) start switched off: on in Settings → Sources → Tube sites. */
+    open val startsOff: Boolean = false
+
     /** Tags (and categories) named on a video page, for [checkTagsFirst] sites. */
     open fun pageTags(pageHtml: String): List<String> = emptyList()
     open fun streamFromIndex(indexJson: JsonElement): TubeStream? = null
@@ -120,7 +123,7 @@ sealed class TubeSite(val host: String, val label: String) {
     companion object {
         // Lazy: the nested objects extend TubeSite, so building this eagerly during the companion's
         // initialisation re-enters the class initialiser and reads a null list.
-        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, DrTuber, Nuvid, IcePorn) }
+        val ALL: List<TubeSite> by lazy { listOf(Xvideos, Xnxx, Pornhub, Youporn, Tube8, Xhamster, Redtube, Eporner, Tnaflix, Porntrex, Youjizz, Erome, Rule34Video, ThisVid, PornOne, PornHat, HqPorner, Porndig, PerfectGirls, OkXxx, PornGo, XFreeHd, ThreeMovs, AnySex, ZbPorn, Analdin, KatesTube, Txxx, HClips, Upornia, TubePornClassic, Vxxx, HdZog, ManySex, Empflix, PornWhite, SleazyNeasy, VikiPorn, AlotPorn, FreePorn8, BigTitsLust, DrTuber, Nuvid, IcePorn, HotMovs, InPorn, FetishShrine, Pornicom, TheGay, Shemalez) }
         /**
          * Sites the app no longer lists, searches or shows (you asked for XNXX to go). They stay in
          * [ALL] only so posts already saved from them can still play.
@@ -188,6 +191,8 @@ sealed class TubeSite(val host: String, val label: String) {
         /** Tallest MP4 picked (1080, or 480 with Data saver on); adaptive streams are capped by the player. */
         @Volatile var maxHeight: Int = 1080
         private val KVS_FILE = Regex("""\b(video_(?:alt_)?url\d*)\s*:\s*'(https://[^']+)'""")
+        private val KVS_TAGS = Regex("""\btags\s*:\s*'([^']*)'""")
+        private val KVS_FILLER = setOf("in english", "hd", "sex", "hot", "hottest", "hard", "nude", "porn", "xxx", "video", "videos", "new", "best", "free", "room")
 
         internal fun bestOf(list: JsonArray, site: String = ""): TubeStream? = list.mapNotNull { it as? JsonObject }
             .mapNotNull { o ->
@@ -632,6 +637,11 @@ sealed class TubeSite(val host: String, val label: String) {
             .filter { it.length > 2 && !it.matches(Regex("[0-9a-f]{20,}")) }
             .map { it.replace('-', ' ') }.distinct().take(30).toList()
     }
+
+    /** The tags in a KVS player's settings (tags: 'a, b, c'), without the site's filler words. */
+    protected fun kvsPlayerTags(html: String): List<String> =
+        KVS_TAGS.find(html)?.groupValues?.get(1)?.split(',')?.map { unescape(it).trim().lowercase() }
+            ?.filter { it.length > 2 && it !in KVS_FILLER }?.distinct()?.take(20).orEmpty()
 
     /** Best "quality → url" pick up to 1080p (4K is too heavy for a phone feed). */
     protected fun best(options: List<Pair<Int, String>>): TubeStream? =
@@ -1208,7 +1218,7 @@ sealed class TubeSite(val host: String, val label: String) {
         }
 
         override fun stream(pageHtml: String): TubeStream? = kvsBest(pageHtml)
-        override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG)
+        override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG).ifEmpty { kvsPlayerTags(pageHtml) }
         override fun embedUrl(id: String) = "$base/embed/$id"
     }
 
@@ -1217,6 +1227,51 @@ sealed class TubeSite(val host: String, val label: String) {
     object PornWhite : MjNet("pornwhite.com", "PornWhite")
     object SleazyNeasy : MjNet("sleazyneasy.com", "SleazyNeasy")
     object VikiPorn : MjNet("vikiporn.com", "VikiPorn")
+    /** Fetish Shrine: fetish and kink, from BDSM to feet. */
+    object FetishShrine : MjNet("fetishshrine.com", "Fetish Shrine")
+
+    /** Pornicom: studio scenes and amateur uploads, up to 1080p, with preview clips. */
+    object Pornicom : TubeSite("pornicom.com", "Pornicom") {
+        private const val BASE = "https://www.pornicom.com"
+        override fun listUrl(section: String, page: Int): String = when (section) {
+            "new" -> "$BASE/latest-updates/${if (page == 0) "" else "${page + 1}/"}"
+            "top" -> "$BASE/top-rated/${if (page == 0) "" else "${page + 1}/"}"
+            else -> "$BASE/search/?q=${enc(section)}" + if (page > 0) "&from_videos=${page + 1}" else ""
+        }
+        private val MARK = Regex("""<a href="(https://www\.pornicom\.com/videos/(\d+)/[^"]*)" class="thumb"""")
+        private val POSTER = Regex("""data-poster="(https://[^"]+)"""")
+        private val CLIP = Regex("""data-src="(https://[^"]+_preview\.mp4/?)"""")
+        private val ALT = Regex("""<img class="thumb" [^>]*?alt="([^"]*)"""")
+        private val LEN = Regex("""class="time">\s*([\d:]+)""")
+        private val DATE = Regex("""itemprop="datePublished" content="(\d{4}-\d\d-\d\d)"""")
+        private val BY = Regex("""thumb-submitter">\s*<a [^>]*>\s*([^<]+?)\s*</a>""")
+        private val TAG = Regex("""href="/categories/([a-z0-9-]+)/"""")
+
+        override val checkTagsFirst = false
+
+        override fun parseList(body: String): List<TubeVideo> {
+            val hits = MARK.findAll(body).toList().distinctBy { it.groupValues[2] }
+            return hits.mapIndexed { i, m ->
+                val c = body.substring(m.range.first, if (i + 1 < hits.size) hits[i + 1].range.first else minOf(body.length, m.range.first + 6000))
+                TubeVideo(
+                    id = m.groupValues[2],
+                    // Titles are uploaded in lower case: a capital to start reads better.
+                    title = ALT.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null }
+                        ?.let { t -> if (t == t.lowercase()) t.replaceFirstChar { it.uppercase() } else t },
+                    pageUrl = m.groupValues[1],
+                    thumb = POSTER.find(c)?.groupValues?.get(1),
+                    durationSec = duration(LEN.find(c)?.groupValues?.get(1)),
+                    published = DATE.find(c)?.groupValues?.get(1)?.let { runCatching { java.time.LocalDate.parse(it).atStartOfDay(java.time.ZoneOffset.UTC).toInstant() }.getOrNull() },
+                    creator = BY.find(c)?.groupValues?.get(1)?.let(::unescape)?.trim()?.ifEmpty { null },
+                    preview = CLIP.find(c)?.groupValues?.get(1),
+                )
+            }
+        }
+
+        override fun stream(pageHtml: String): TubeStream? = kvsBest(pageHtml)
+        override fun pageTags(pageHtml: String): List<String> = kvsOwnTags(pageHtml, TAG).ifEmpty { kvsPlayerTags(pageHtml) }
+        override fun embedUrl(id: String) = "$BASE/embed/$id"
+    }
 
     /**
      * One network of tube sites (TXXX, HClips, Upornia…) behind the same JSON API: listings and
@@ -1320,6 +1375,12 @@ sealed class TubeSite(val host: String, val label: String) {
     /** HDZog: HD uploads. */
     object HdZog : TxxxNet("hdzog.com", "HDZog")
     object ManySex : TxxxNet("manysex.com", "ManySex")
+    object HotMovs : TxxxNet("hotmovs.com", "HotMovs")
+    object InPorn : TxxxNet("inporn.com", "InPorn")
+    /** TheGay: gay scenes (off to start). */
+    object TheGay : TxxxNet("thegay.com", "TheGay") { override val startsOff = true }
+    /** Shemalez: trans scenes (off to start). */
+    object Shemalez : TxxxNet("shemalez.com", "Shemalez") { override val startsOff = true }
 
     /** AlotPorn: full-length scenes (often 30 min and more), with preview clips; SD/HD MP4s and genres on the video page. */
     object AlotPorn : TubeSite("alotporn.com", "AlotPorn") {

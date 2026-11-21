@@ -515,6 +515,7 @@ private fun TubeSites(vm: SettingsViewModel) {
     val blocked by vm.blockEntries.collectAsStateWithLifecycle()
     val hidden = blocked.filter { it.kind == dev.pfeed.data.repo.BlockKind.ORIGIN.name }.mapTo(HashSet()) { it.value }
     val watched by vm.tubeWatched.collectAsStateWithLifecycle()
+    val sitesOn = vm.settings.collectAsStateWithLifecycle().value.sitesOn
     // The sites you watch most first, then the rest by name.
     val ordered = remember(watched) { TubeSite.ACTIVE.sortedWith(compareByDescending<TubeSite> { watched[it.host] ?: 0 }.thenBy { it.label.lowercase() }) }
     Section(
@@ -527,12 +528,16 @@ private fun TubeSites(vm: SettingsViewModel) {
             val r = report[site.label]
             // Each site can be switched off on its own (the same as hiding it from a post's menu).
             val origin = "tube:${site.host}"
-            val on = origin !in hidden
+            val on = origin !in hidden && (!site.startsOff || site.host in sitesOn)
             val n = watched[site.host] ?: 0
             SettingRow(
                 site.label,
                 below = when {
-                    report.isEmpty() -> if (n > 0) ({ StatusLine("$n watched", TextLow) }) else null
+                    report.isEmpty() -> when {
+                        n > 0 -> ({ StatusLine("$n watched", TextLow) })
+                        site.startsOff && !on -> ({ StatusLine("Off to start: switch on to add it to your feeds", TextLow) })
+                        else -> null
+                    }
                     r == null -> ({ StatusLine("Checking…", TextLow) })
                     else -> ({ StatusLine(r, if (r.contains("plays")) Good else Bad) })
                 },
@@ -540,7 +545,8 @@ private fun TubeSites(vm: SettingsViewModel) {
                     androidx.compose.material3.Switch(
                         checked = on,
                         onCheckedChange = { want ->
-                            if (want) vm.unblockOrigin(origin) else vm.block(dev.pfeed.data.repo.BlockKind.ORIGIN, origin)
+                            if (site.startsOff) vm.setSiteOn(site.host, want)
+                            else if (want) vm.unblockOrigin(origin) else vm.block(dev.pfeed.data.repo.BlockKind.ORIGIN, origin)
                         },
                     )
                 },

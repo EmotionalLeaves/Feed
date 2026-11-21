@@ -109,6 +109,8 @@ data class AppSettings(
     val keepSavedOffline: Boolean = true,
     /** Kinds of post kept out of the main feeds ("video", "image", "gif", "comic"); search and tag pages still show them. */
     val hiddenFeedTypes: Set<String> = emptySet(),
+    /** Tube sites that start switched off (TubeSite.startsOff) and were turned on, by host. */
+    val sitesOn: Set<String> = emptySet(),
     /** Which videos the main feeds show by length: "any", "short" (clips under 3 min) or "long" (3 min and up). */
     val videoLength: String = "any",
     /** Leave out AI-generated art (Stable Diffusion, NovelAI…) everywhere: feeds, search, tag pages. */
