@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.19.1 — 2026-11-21
+
+Newest and longest on a page
+
+- **A creator's or performer's page can be put in order:** Newest or Longest chips above the grid, alongside the chips for what they make most.
+
 ## 6.19 — 2026-11-21
 
 Popular searches as you type

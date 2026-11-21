@@ -661,7 +661,16 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                 // A creator's page: narrow the grid to one of what they make most.
                 var narrowTo by androidx.compose.runtime.saveable.rememberSaveable(tag) { mutableStateOf<String?>(null) }
                 val topTags = remember(tag, items.size / 10) { if (creatorPage) profileTags(tag.removePrefix("@"), items) else emptyList() }
-                val gridItems = remember(items, narrowTo) { narrowTo?.let { t -> items.filter { hasTag(it, t) } } ?: items }
+                // And put in order: as the sites list them, newest first or longest first.
+                var orderBy by androidx.compose.runtime.saveable.rememberSaveable(tag) { mutableStateOf("") }
+                val gridItems = remember(items, narrowTo, orderBy) {
+                    val kept = narrowTo?.let { t -> items.filter { hasTag(it, t) } } ?: items
+                    when (orderBy) {
+                        "newest" -> kept.sortedByDescending { it.publishedAt?.toEpochMilli() ?: Long.MIN_VALUE }
+                        "longest" -> kept.sortedByDescending { it.durationSec ?: -1 }
+                        else -> kept
+                    }
+                }
                 val profile: (@Composable () -> Unit)? = if (creatorPage) ({
                     CreatorHeader(
                         name = tag.removePrefix("@"),
@@ -669,6 +678,8 @@ fun FeedScreen(nav: NavController, locked: Boolean, vm: FeedViewModel = hiltView
                         tags = topTags,
                         narrowTo = narrowTo,
                         onNarrow = { narrowTo = it },
+                        orderBy = orderBy,
+                        onOrder = { orderBy = if (orderBy == it) "" else it },
                         loading = loading,
                         following = vm.isFollowingPage(tag, follows),
                         onFollow = { vm.toggleFollowTag(tag) },
@@ -2137,6 +2148,8 @@ private fun CreatorHeader(
     tags: List<String> = emptyList(),
     narrowTo: String? = null,
     onNarrow: (String?) -> Unit = {},
+    orderBy: String = "",
+    onOrder: (String) -> Unit = {},
 ) {
     // A performer: who she's most often in videos with (learned from every listing that names two).
     val oftenWith = remember(name, items.size / 10) { dev.pfeed.domain.reco.CoStars.with(name, max = 10) }
@@ -2197,11 +2210,13 @@ private fun CreatorHeader(
         }
         if (oftenWith.isNotEmpty()) PeopleRow("OFTEN WITH", oftenWith, onOpenCreator)
         // What they make most: tap to see only that (again for everything).
-        if (tags.size >= 2) {
+        if (items.size >= 6) {
             Spacer(Modifier.height(16.dp))
             androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                item(key = "all") { TasteChip("All", selected = narrowTo == null) { onNarrow(null) } }
-                for (t in tags) item(key = "t:$t") { TasteChip(t, selected = narrowTo == t) { onNarrow(if (narrowTo == t) null else t) } }
+                item(key = "newest") { TasteChip("Newest", selected = orderBy == "newest") { onOrder("newest") } }
+                item(key = "longest") { TasteChip("Longest", selected = orderBy == "longest") { onOrder("longest") } }
+                if (tags.size >= 2) item(key = "all") { TasteChip("All", selected = narrowTo == null) { onNarrow(null) } }
+                if (tags.size >= 2) for (t in tags) item(key = "t:$t") { TasteChip(t, selected = narrowTo == t) { onNarrow(if (narrowTo == t) null else t) } }
             }
         }
         // Who else makes this kind of thing (by where their posts sit on your map), tap to open.
