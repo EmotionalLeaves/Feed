@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.18.3 — 2026-11-21
+
+Picture cache back to full size
+
+- The in-memory picture cache is back to its usual size (a quarter of the app's memory, at most 128 MB), so scrolling back doesn't reload thumbnails. The 6.18.2 cap had made it smaller than needed on most phones.
+
 ## 6.18.2 — 2026-11-21
 
 Lighter on memory
