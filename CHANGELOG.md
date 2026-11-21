@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.21.1 — 2026-11-21
+
+More like this, with the same faces
+
+- **More like this now also looks for the people in the video,** and one each of those they're most often with, alongside its creator and tags.
+
 ## 6.21 — 2026-11-21
 
 Did you mean

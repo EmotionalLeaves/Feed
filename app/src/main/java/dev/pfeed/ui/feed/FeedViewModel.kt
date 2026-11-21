@@ -1021,7 +1021,10 @@ class FeedViewModel @Inject constructor(
         fun searchable(t: String) = t.length >= 3 && t.count { it.isLetter() } >= 3 && !t.first().isDigit()
         val tags = features.filterNot { it.startsWith("w:") }.map { it.replace('_', ' ') }.filter(::searchable).take(3)
         val words = features.filter { it.startsWith("w:") }.take(2).map { it.removePrefix("w:") }
-        val queries = (listOfNotNull(creator) + tags + words).distinct().ifEmpty { listOfNotNull(item.title?.take(40)) }
+        // The people in it, and one each of those they're most often with: more of the same faces.
+        val people = dev.pfeed.domain.reco.Mentions.inTitle(item).take(2)
+        val costars = people.mapNotNull { p -> dev.pfeed.domain.reco.CoStars.with(p, max = 3).firstOrNull { c -> people.none { it.equals(c, true) } } }
+        val queries = (listOfNotNull(creator) + people + tags + words + costars).distinctBy { it.lowercase() }.ifEmpty { listOfNotNull(item.title?.take(40)) }
         return FeedSpec.Similar(item.key, queries, features.toSet(), item.creator, item.extras[dev.pfeed.domain.reco.Visual.EXTRA])
     }
 
