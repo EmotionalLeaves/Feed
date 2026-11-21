@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.1.0 — 2026-11-20
+
+Hide a performer
+
+- **Hide a performer**: the long-press menu's Hide a tag… now lists the performers a video names first. Pick one and every post that names her is hidden, from every site.
+
 ## 6.0.1 — 2026-11-20
 
 Tidier titles

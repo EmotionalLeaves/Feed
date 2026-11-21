@@ -99,7 +99,9 @@ fun ItemMenuSheet(
     var pickTag by remember { mutableStateOf<String?>(null) } // "block" while picking a tag to hide
     val creator = remember(item.key) { Display.creator(item) }
     val tags = remember(item.key) {
-        val own = Display.tags(item, max = 24)
+        // The performers it names come first: hiding one hides every title that names her.
+        val own = dev.pfeed.domain.reco.Mentions.inTitle(item).map { it to it } +
+            Display.tags(item, max = 24).filter { t -> dev.pfeed.domain.reco.Mentions.inTitle(item).none { it.equals(t.first, true) } }
         // Tube videos rarely carry tags; a hidden word hides titles that say it, so offer the title's words too.
         if (own.size >= 8) own
         else own + dev.pfeed.domain.reco.Features.titleWords(item.title).map { it.removePrefix("w:") }
