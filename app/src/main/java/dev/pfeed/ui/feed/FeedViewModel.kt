@@ -572,22 +572,46 @@ class FeedViewModel @Inject constructor(
         }.await()
     }
 
-    private val longerFound = HashMap<String, Deferred<MediaItem?>>()
+    private val copiesFound = HashMap<String, Deferred<List<MediaItem>>>()
     private val offeredLonger = HashSet<String>()
+    private val offeredSharper = HashSet<String>()
+
+    /** The same title searched on every tube site, once per video (for a longer cut or a sharper copy). */
+    private suspend fun otherCopies(item: MediaItem): List<MediaItem> {
+        val query = dev.pfeed.domain.reco.SameVideo.query(item) ?: return emptyList()
+        return copiesFound.getOrPut(item.key) {
+            viewModelScope.async {
+                val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) ?: return@async emptyList()
+                kotlinx.coroutines.withTimeoutOrNull(LONGER_TIMEOUT_MS) {
+                    runCatching { tube.search(query, null).items }.getOrNull()
+                }.orEmpty()
+            }
+        }.await()
+    }
 
     /** A longer cut of [item] on another tube site (see SameVideo.longer), looked up once per video. */
     suspend fun longerVersion(item: MediaItem): MediaItem? {
         if (!canHaveLonger(item)) return null
-        val query = dev.pfeed.domain.reco.SameVideo.query(item) ?: return null
-        return longerFound.getOrPut(item.key) {
-            viewModelScope.async {
-                val tube = registry.byId(dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) ?: return@async null
-                val found = kotlinx.coroutines.withTimeoutOrNull(LONGER_TIMEOUT_MS) {
-                    runCatching { tube.search(query, null).items }.getOrNull()
-                }.orEmpty()
-                dev.pfeed.domain.reco.SameVideo.longer(item, found)
+        return dev.pfeed.domain.reco.SameVideo.longer(item, otherCopies(item))
+    }
+
+    /**
+     * A tube video playing below 720p ([heightNow], from the player): if another site has the same
+     * upload sharper, offer it, carrying on from where you are. Not with Data saver on.
+     */
+    fun offerSharper(item: MediaItem, heightNow: Int, positionMs: Long, durationMs: Long) {
+        if (item.type != dev.pfeed.domain.model.MediaType.VIDEO || item.sourceId != dev.pfeed.source.tube.TubeAdapter.SOURCE_ID) return
+        if (heightNow <= 0 || heightNow >= SHARPER_BELOW || dev.pfeed.source.tube.TubeSite.maxHeight < SHARPER_BELOW) return
+        if ((item.durationSec ?: 0) < SHARPER_MIN_SEC || item.id.startsWith("clip/") || !offeredSharper.add(item.key)) return
+        viewModelScope.launch {
+            val s = dev.pfeed.domain.reco.SameVideo.sharper(item, otherCopies(item), heightNow) ?: return@launch
+            val h = s.extras[dev.pfeed.source.tube.HEIGHT]?.toIntOrNull() ?: return@launch
+            offer("Sharper copy: ${if (h >= 2160) "4K" else "${h}p"} on ${Display.source(s, s.sourceId)}", "Watch") {
+                val at = NowPlaying.positionMs.takeIf { NowPlaying.key == item.key } ?: positionMs
+                dev.pfeed.player.ResumePoints.save(s.key, at, durationMs)
+                openViewerRequest.value = holder.put(listOf(s), 0, title = "Sharper copy")
             }
-        }.await()
+        }
     }
 
     /** A tube video short enough to be a cut of a longer scene. */
@@ -1360,6 +1384,8 @@ class FeedViewModel @Inject constructor(
         private const val ROAD_COUNT = 20
         private const val ELSEWHERE_TIMEOUT_MS = 10_000L
         private const val LONGER_TIMEOUT_MS = 15_000L
+        private const val SHARPER_BELOW = 720
+        private const val SHARPER_MIN_SEC = 2 * 60
         private const val LONGER_MIN_SEC = 4 * 60
         private const val LONGER_MAX_SEC = 25 * 60
         private const val NOTICE_GAP_MS = 5 * 60_000L

@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.9 — 2026-11-21
+
+Sharper copy
+
+- **Sharper copy:** when a video plays below 720p and another site has the same upload in HD, the app offers it, and it carries on from where you were.
+- **InPorn videos play** (its files want the site named as the page they're played from).
+
 ## 6.8 — 2026-11-21
 
 Six more sites

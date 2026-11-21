@@ -300,6 +300,13 @@ fun VideoPage(
             val d = p.duration
             // Well into a short cut of a studio scene: see whether the full scene is on another site.
             if (d > 0 && p.currentPosition > d * LONGER_AT && !detached) vm.offerLonger(item)
+            // A single file (not adaptive) playing soft, below 720p, a few seconds in: see whether
+            // another site has it sharper. (Adaptive streams start low and climb on their own.)
+            val file = (stream as? StreamInfo.Direct)?.let { it.mimeType == "video/mp4" || it.url.substringBefore('?').endsWith(".mp4") || it.url.contains(".mp4/") } == true
+            if (file && d > 0 && p.currentPosition > SHARPER_AT_MS && !detached) {
+                val v = p.videoSize
+                if (v.width > 0 && v.height > 0) vm.offerSharper(item, minOf(v.width, v.height), p.currentPosition, d)
+            }
             val left = d - p.currentPosition
             endingIn = if (d >= UP_NEXT_MIN_MS && p.repeatMode == Player.REPEAT_MODE_OFF && left in 0..UP_NEXT_MS) left else null
         }
@@ -763,6 +770,7 @@ private const val HIGHLIGHT_TICK_MS = 250L
 private const val ACT_TICK_MS = 500L
 /** How far into a video before looking for a longer cut of it. */
 private const val LONGER_AT = 0.4
+private const val SHARPER_AT_MS = 8_000L
 private const val SCENES_AFTER_MS = 6_000L
 private const val CLIP_LEAD_MS = 6_000L
 /** "Up next" shows this long before a full scene ends. */

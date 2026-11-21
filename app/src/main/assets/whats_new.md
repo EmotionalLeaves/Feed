@@ -1,3 +1,9 @@
+## 6.9 — 2026-11-21
+Sharper copy
+
+- **Sharper copy:** when a video plays below 720p and another site has the same upload in HD, the app offers it, and it carries on from where you were.
+- **InPorn videos play** (its files want the site named as the page they're played from).
+
 ## 6.8 — 2026-11-21
 Six more sites
 
@@ -9,8 +15,3 @@ Six more sites
 Every site, A to Z
 
 - **Discover → Browse a site now ends with an "All 43 →" chip** that opens every site in one alphabetical list; tap any to open its own newest and top videos.
-
-## 6.6.1 — 2026-11-21
-DrTuber tags
-
-- **DrTuber videos now bring their categories and tags**, so For You learns from them and hidden tags apply to them like on other sites.

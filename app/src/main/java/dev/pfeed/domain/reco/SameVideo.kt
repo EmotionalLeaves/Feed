@@ -72,6 +72,23 @@ object SameVideo {
     private const val LONGER_OVERLAP = 0.8
     private const val LONGER_JACCARD = 0.5
 
+    /**
+     * A sharper copy of the same upload among [found]: same scene at the same length on another
+     * site, at 720p or better and clearly sharper than the [heightNow] playing (1080p preferred
+     * over 4K, which is heavy for a phone; ties go to the closest match).
+     */
+    fun sharper(item: MediaItem, found: List<MediaItem>, heightNow: Int): MediaItem? {
+        val want = max(SHARPER_MIN, heightNow + SHARPER_GAIN)
+        val site = item.id.substringBefore('/')
+        return copies(item, found).asSequence()
+            .filter { it.type == item.type && it.id.substringBefore('/') != site }
+            .mapNotNull { b -> b.extras["height"]?.toIntOrNull()?.takeIf { it >= want }?.let { b to minOf(it, 1080) } }
+            .maxByOrNull { it.second }?.first
+    }
+
+    private const val SHARPER_MIN = 720
+    private const val SHARPER_GAIN = 240
+
     /** The likeliest copies of [item] among [found], best first. */
     fun copies(item: MediaItem, found: List<MediaItem>): List<MediaItem> =
         found.map { it to score(item, it) }.filter { it.second >= MATCH }.sortedByDescending { it.second }.map { it.first }
