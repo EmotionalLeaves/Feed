@@ -83,13 +83,13 @@ class FeedApp : Application(), Configuration.Provider, ImageLoaderFactory {
             }
             override fun onStop(owner: androidx.lifecycle.LifecycleOwner) {
                 tasteEngine.flush()
-                Thread { relatedStore.save() }.start()
+                Thread { relatedStore.save(); dev.pfeed.domain.reco.CoStars.save() }.start()
                 dev.pfeed.data.repo.DataMeter.month()
                 updater.install(quiet = true)
             }
         })
         dev.pfeed.data.repo.DataMeter.init(this)
-        Thread { relatedStore.load() }.start()
+        Thread { relatedStore.load(); dev.pfeed.domain.reco.CoStars.load(filesDir) }.start()
         MaintenanceWorker.schedule(this)
         dev.pfeed.work.UpdateWorker.schedule(this)
         dev.pfeed.work.WeeklyMixWorker.schedule(this)

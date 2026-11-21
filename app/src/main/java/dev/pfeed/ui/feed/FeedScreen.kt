@@ -1891,7 +1891,9 @@ private fun Overlay(
                 )
             }
             // Performers the title names: tap one for everything with her, from every site.
-            val people = remember(item.key) { dev.pfeed.domain.reco.Mentions.inTitle(item).filter { !it.equals(creator, true) }.take(4) }
+            // Recounted when the video's page credits more people than its title names.
+            val pageVersion by dev.pfeed.domain.reco.PagePeople.version.collectAsStateWithLifecycle()
+            val people = remember(item.key, pageVersion) { dev.pfeed.domain.reco.Mentions.inTitle(item).filter { !it.equals(creator, true) }.take(4) }
             if (tags.isNotEmpty() || people.isNotEmpty()) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     people.forEach { name ->

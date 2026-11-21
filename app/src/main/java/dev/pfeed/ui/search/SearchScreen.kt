@@ -1523,6 +1523,27 @@ private fun ResultsPane(
                 if (on) androidx.compose.material3.OutlinedButton(onClick = { onFollowPerson(name) }) { Text("Following") }
                 else dev.pfeed.ui.common.BrandButton("Follow", onClick = { onFollowPerson(name) }, compact = true)
             }
+            // Who she's most often in videos with: one tap searches them.
+            val costars = remember(name, ui.results.size / 20) { dev.pfeed.domain.reco.CoStars.with(name) }
+            if (costars.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(
+                Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                item { Text("Often with", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f), modifier = Modifier.padding(end = 4.dp)) }
+                for (p in costars) item(key = "with:$p") {
+                    Row(
+                        Modifier.clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f))
+                            .clickable { onSearch(p) }.padding(start = 4.dp, end = 12.dp, top = 4.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        dev.pfeed.ui.common.InitialAvatar(p, size = 22.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(p, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
+            }
             // What she's in most here: one tap narrows to her in that.
             val hers = remember(name, ui.results.size / 20) { personTags(name, ui.results) }
             if (hers.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(

@@ -1,3 +1,9 @@
+## 6.12 — 2026-11-21
+Often with
+
+- **"Often with" on a performer's card:** search a name and see who she's most often in videos with. The app learns it from every listing that names two or more people. Tap one to go on to her.
+- **Pornhub's and XVideos' credited pornstars count:** once a video opens, the people its page credits show as chips on the post, can be followed, and For You learns them, even when the title doesn't name them.
+
 ## 6.11 — 2026-11-21
 New in Following
 
@@ -10,9 +16,3 @@ Credited performers
 
 - **Performers the site credits now count:** on InPorn, HotMovs and the rest of the TXXX network, the models a video is credited with show as chips you can tap or follow, and For You learns them, even when the title doesn't name them.
 - **Studios as creators:** those sites' videos now show the studio (Daughter Swap, AnalVids…) as the creator, and no longer the made-up uploader names the network posts under, which used to show up as "creators" to follow.
-
-## 6.9 — 2026-11-21
-Sharper copy
-
-- **Sharper copy:** when a video plays below 720p and another site has the same upload in HD, the app offers it, and it carries on from where you were.
-- **InPorn videos play** (its files want the site named as the page they're played from).

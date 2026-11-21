@@ -74,6 +74,9 @@ sealed class TubeSite(val host: String, val label: String) {
 
     /** Tags (and categories) named on a video page, for [checkTagsFirst] sites. */
     open fun pageTags(pageHtml: String): List<String> = emptyList()
+
+    /** The performers the video page credits (its own, not the site's menus), as the site writes them. */
+    open fun pagePeople(pageHtml: String): List<String> = emptyList()
     open fun streamFromIndex(indexJson: JsonElement): TubeStream? = null
 
     /**
@@ -274,6 +277,17 @@ sealed class TubeSite(val host: String, val label: String) {
             Regex("""\"video_tags\"\s*:\s*\[([^\]]*)\]""").find(pageHtml)?.groupValues?.get(1)
                 ?.split(',')?.map { it.trim().trim('"').replace('-', ' ') }?.filter { it.isNotEmpty() }?.take(30).orEmpty()
 
+        /** `"video_models":{"406077745":{"name":"Duncan Saint",…},…}` in the page's settings. */
+        override fun pagePeople(pageHtml: String): List<String> {
+            val i = pageHtml.indexOf("\"video_models\"").takeIf { it >= 0 } ?: return emptyList()
+            val block = pageHtml.substring(i, minOf(pageHtml.length, i + 3000)).substringBefore("}}")
+            return XV_MODEL.findAll(block).map { unicode(it.groupValues[1]).trim() }.filter { it.length in 3..40 }.distinct().take(6).toList()
+        }
+        private val XV_MODEL = Regex(""""name"\s*:\s*"((?:[^"\\]|\\.)*)"""")
+        /** A JSON string's escapes (\u00e9, \/) read. */
+        private fun unicode(s: String): String =
+            Regex("""\\u([0-9a-fA-F]{4})""").replace(s) { it.groupValues[1].toInt(16).toChar().toString() }.replace("\\/", "/").replace("\\\"", "\"")
+
         // Attribute order varies (data-id before or after class), hence the lookahead.
         private val BLOCK = Regex("""<div\b(?=[^>]*\bthumb-block)[^>]*\bdata-id="(\d+)"[^>]*>(.*?)<div[^>]*\bclass="thumb-under"[^>]*>(.*?)</div>""", RegexOption.DOT_MATCHES_ALL)
         private val HREF = Regex("""href="(/video[^"]+)"""")
@@ -368,6 +382,19 @@ sealed class TubeSite(val host: String, val label: String) {
                 author?.let { it.groupValues[1].trim() to text }?.takeIf { text.isNotBlank() }
             }.take(25).toList()
         }
+
+        /** The pornstars under the player ("Pornstars" row), not the site's menus. */
+        override fun pagePeople(pageHtml: String): List<String> {
+            val i = pageHtml.indexOf("pornstarsWrapper").takeIf { it >= 0 } ?: return emptyList()
+            // Up to the end of that row's own list of names.
+            val block = pageHtml.substring(i, minOf(pageHtml.length, i + 4000)).let { b ->
+                val list = b.indexOf("class=\"tags\"")
+                val end = if (list >= 0) b.indexOf("</div>", list) else -1
+                if (end > 0) b.substring(0, end) else b.substring(0, minOf(b.length, 1500))
+            }
+            return PH_STAR.findAll(block).map { unescape(it.groupValues[1]).trim() }.filter { it.length in 3..40 }.distinct().take(6).toList()
+        }
+        private val PH_STAR = Regex("""href="/pornstar/[^"]+"[^>]*>\s*(?:<img[^>]*>\s*)?([^<]+?)\s*<""")
 
         /** `'categories_in_video' : 'Amateur,Babe,MILF,…'` in the player setup. */
         override fun pageTags(pageHtml: String): List<String> =
@@ -1834,7 +1861,7 @@ internal fun TubeSite.items(videos: List<TubeVideo>, section: String, page: Int 
         val guessed = v.published == null && section == "new"
         item(v, section, v.published ?: if (guessed) now.minusSeconds(((page * 60L) + i) * 300L) else null)
             .let { if (guessed) it.copy(extras = it.extras + (MediaItem.APPROX_DATE to "1")) else it }
-    }
+    }.also { dev.pfeed.domain.reco.CoStars.seen(it) }
 }
 
 private fun TubeSite.item(v: TubeVideo, section: String, published: java.time.Instant?): MediaItem =

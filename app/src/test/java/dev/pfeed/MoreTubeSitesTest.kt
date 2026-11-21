@@ -7,6 +7,17 @@ import org.junit.Test
 
 /** 3Movs and AnySex, against their pages as served in November 2026. */
 class MoreTubeSitesTest {
+    private val XV_PEOPLE = """{"video_tags":["blonde","babe"],"video_models":{"406077745":{"name":"Duncan Saint","profile":"geronimo-1","uri":"\/pornstars\/geronimo-1"},"836635537":{"name":"Kayla Wild","profile":"kayla-wild-model","uri":"\/models\/kayla-wild-model"}},"other":{"name":"Not Her"}}"""
+    private val PH_PEOPLE = """<li><a href="/pornstar/someone-else" class="menu"><span>Someone Else</span></a></li><div class="categoryRow targetContainer clearfix positionRelative pornstarsWrapper js-pornstar-suggestions watchPageUpdated"> <p>Pornstars</p> <div class="tags"> <a class="gtm-event-video-underplayer" data-event="video_underplayer" data-label="pornstar" href="/pornstar/luke-cooper"> <img loading="lazy" class="avatar" src="https://ei.phncdn.com/pics/users/u/001/027/925/551/avatar1637255647/(m=ewILGCjadOf)(mh=gISht4SVQtkk9o2H)200x200.jpg" alt="Avatar" > Luke Cooper </a> </div> </div> </div> <div class="xbqy8jtgi7taa clearfix middleVideoAdContainer watchpageAd watchPageUpdated "> <ins class='adsbytrafficjunky' data-spot-id='4038' data-site-id='23' data-height='99px' data-width='305px' data-type='responsive' data-inbanlabel='true' data-r='' data-l='http%3A%2F"""
+
+    @Test
+    fun `performers credited on the video page`() {
+        assertEquals(listOf("Duncan Saint", "Kayla Wild"), TubeSite.Xvideos.pagePeople(XV_PEOPLE))
+        // The row under the player only, not the site's menu of pornstars.
+        assertEquals(listOf("Luke Cooper"), TubeSite.Pornhub.pagePeople(PH_PEOPLE))
+        assertEquals(emptyList<String>(), TubeSite.Pornhub.pagePeople("<html></html>"))
+    }
+
     @Test
     fun `3movs listing and stream`() {
         val list = TubeSite.ThreeMovs.parseList(THREE_LIST)

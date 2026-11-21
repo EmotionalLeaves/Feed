@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.12 — 2026-11-21
+
+Often with
+
+- **"Often with" on a performer's card:** search a name and see who she's most often in videos with. The app learns it from every listing that names two or more people. Tap one to go on to her.
+- **Pornhub's and XVideos' credited pornstars count:** once a video opens, the people its page credits show as chips on the post, can be followed, and For You learns them, even when the title doesn't name them.
+
 ## 6.11 — 2026-11-21
 
 New in Following

@@ -60,7 +60,7 @@ object Mentions {
 
     /** The performers the site or [item]'s title credits, plus any known person it names anywhere in its title or tags. */
     fun inTitle(item: MediaItem): List<String> {
-        val listed = item.extras[PERFORMERS]?.split(',')?.map { it.trim() }?.filter { personName(it) != null }.orEmpty()
+        val listed = (item.extras[PERFORMERS]?.split(',')?.map { it.trim() }.orEmpty() + PagePeople.of(item.key)).filter { personName(it) != null }
         val credited = (listed + performers(item.title)).distinctBy { it.lowercase() }
         val k = known
         if (k.isEmpty()) return credited

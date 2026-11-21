@@ -188,6 +188,12 @@ class TubeAdapter @Inject constructor(
             val html = http.getRaw(id, page)
             // The page names the video's tags: kept for what For You learns from watching it.
             if (page == item.pageUrl) site.pageTags(html).takeIf { it.isNotEmpty() }?.let { dev.pfeed.domain.reco.PageTags.put(item.key, it) }
+            // The performers it credits: shown with the post, followable, and learned like its tags.
+            if (page == item.pageUrl) site.pagePeople(html).takeIf { it.isNotEmpty() }?.let { people ->
+                dev.pfeed.domain.reco.PagePeople.put(item.key, people)
+                dev.pfeed.domain.reco.CoStars.record((people + dev.pfeed.domain.reco.Mentions.performers(item.title)).distinctBy { it.lowercase() })
+                dev.pfeed.domain.reco.PageTags.put(item.key, (dev.pfeed.domain.reco.PageTags.of(item.key) + people.map { it.lowercase() }).distinct())
+            }
             // What the site shows beside it (its own viewers' "watched together"), when the page lists them as cards.
             if (page == item.pageUrl) runCatching { site.items(site.parseList(html), "top").filter { it.key != item.key } }.getOrNull()
                 ?.filter(dev.pfeed.domain.filter.MinorsFilter::allows)
