@@ -69,9 +69,10 @@ class HttpJson @Inject constructor(
     }
 
     /** GET that returns raw text (for HTML pages). Same error handling as [get]. */
-    suspend fun getRaw(sourceId: String, url: String): String {
+    suspend fun getRaw(sourceId: String, url: String, headers: Map<String, String> = emptyMap()): String {
         val parsed = url.toHttpUrlOrNull() ?: throw SourceException(sourceId, "Invalid URL: $url")
         val builder = Request.Builder().url(parsed).header("Accept", "text/html")
+        headers.forEach { (k, v) -> builder.header(k, v) }
         val call = http.newCall(builder.build())
         val (code, body) = try {
             call.await()

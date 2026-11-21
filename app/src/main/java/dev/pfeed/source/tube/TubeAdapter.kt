@@ -229,7 +229,8 @@ class TubeAdapter @Inject constructor(
             val direct = site.stream(html) ?: site.streamIndexUrl(html)?.let { index ->
                 attempt { site.streamFromIndex(http.get(id, index, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.playerUrl(html)?.let { player ->
-                attempt { site.stream(http.getRaw(id, player)) }.getOrNull()
+                // Player pages framed by the video page (HQPorner's) answer only with it as the referrer.
+                attempt { site.stream(http.getRaw(id, player, mapOf("Referer" to page))) }.getOrNull()
             } ?: site.embedUrl(vid).takeIf { it != page }?.let { embed ->
                 // Some pages (a region notice, a "processing" placeholder) lack the player setup that
                 // the embed page still carries; read the stream from there before giving up.

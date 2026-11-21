@@ -1,3 +1,8 @@
+## 6.15.1 — 2026-11-21
+HQPorner plays in the app's player
+
+- **HQPorner videos play in the app's own player** (with all its gestures, speed and quality), no longer in the site's web player. Its player page only answers when the video page is named as where it was opened from.
+
 ## 6.15 — 2026-11-21
 Narrow a page by what they make
 
@@ -7,9 +12,3 @@ Narrow a page by what they make
 Faces appear as they're found
 
 - Avatars showing a performer's initial switch to her picture as soon as one is found, for example while her page is loading, without having to reopen it.
-
-## 6.14 — 2026-11-21
-Faces for performers
-
-- **Performers get a picture:** wherever a performer's round avatar shows (Often with, her page, your follows, captions), it's now a still from one of her own videos rather than just her initial. The still comes from the latest listing that names only her. With Blur previews on, the initial stays.
-- **Hiding a performer now also hides videos whose site credits her,** whoever uploaded them.
