@@ -138,12 +138,22 @@ class Spread(recent: List<MediaItem> = emptyList()) {
 
         /** A video's title words, when there are enough of them to tell one scene from another. */
         private fun sceneWords(item: MediaItem): Set<String>? =
-            if (item.type != dev.pfeed.domain.model.MediaType.VIDEO) null else SameVideo.words(item.title).takeIf { it.size >= SCENE_MIN_WORDS }
+            if (item.type != dev.pfeed.domain.model.MediaType.VIDEO) null
+            else SameVideo.words(item.title).takeIf { it.size >= SCENE_MIN_WORDS }
+                // Every number in it too, even one digit long: part 1 and part 2 are different videos.
+                ?.let { w -> w + DIGITS.findAll(item.title.orEmpty()).map { it.value }.toSet() }
 
-        /** Mostly the same words: the same scene, whatever the site added to its title. */
+        /**
+         * Mostly the same words: the same scene, whatever the site added to its title. Numbers
+         * tell parts and episodes apart ("Scene 12" isn't "Scene 13"), so differing ones never match.
+         */
         internal fun sameScene(a: Set<String>, b: Set<String>): Boolean {
-            val shared = a.count { it in b }
-            return shared >= SCENE_MIN_WORDS && shared.toDouble() / (a.size + b.size - shared) >= SCENE_JACCARD
+            val numsA = a.filter { w -> w.all(Char::isDigit) }.toSet()
+            val numsB = b.filter { w -> w.all(Char::isDigit) }.toSet()
+            if (numsA.isNotEmpty() && numsB.isNotEmpty() && numsA != numsB) return false
+            val wa = a - numsA; val wb = b - numsB
+            val shared = wa.count { it in wb }
+            return shared >= SCENE_MIN_WORDS && shared.toDouble() / (wa.size + wb.size - shared) >= SCENE_JACCARD
         }
 
         /** One performer fills at most this many slots per window (soft). */
@@ -151,7 +161,8 @@ class Spread(recent: List<MediaItem> = emptyList()) {
         /** The same scene isn't shown twice within this many posts. */
         const val SCENE_WINDOW = 40
         private const val SCENE_MIN_WORDS = 3
-        private const val SCENE_JACCARD = 0.6
+        private const val SCENE_JACCARD = 0.7
+        private val DIGITS = Regex("""\d+""")
 
         /** Items that came from one multi-image post share this. */
         fun postKey(item: MediaItem): String? = item.pageUrl.takeIf { it.isNotBlank() }

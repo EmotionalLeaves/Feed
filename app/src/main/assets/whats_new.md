@@ -1,3 +1,8 @@
+## 6.29.1 — 2026-11-21
+Less of the same (fixed)
+
+- **6.29's "same scene" check no longer mixes up numbered parts:** "Scene 12" and "Scene 13", or part 1 and part 2, count as different videos. It also needs more of a title in common before two count as the same scene. (6.29 didn't pass its checks and wasn't published; this release carries its changes.)
+
 ## 6.29 — 2026-11-21
 Less of the same
 
@@ -9,8 +14,3 @@ Less of the same
 Your week, by who
 
 - **Your week (top of History) now names the performer you watched most,** with her face, ahead of the uploader you watched most. Tap her for her page.
-
-## 6.27.4 — 2026-11-21
-Hold to follow, everywhere
-
-- **Holding a face follows them everywhere faces show:** Library → Following's "You watch them a lot", and the Often with and Similar creators rows on a creator's page.

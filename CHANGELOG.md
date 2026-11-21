@@ -1,5 +1,11 @@
 # Changelog
 
+## 6.29.1 — 2026-11-21
+
+Less of the same (fixed)
+
+- **6.29's "same scene" check no longer mixes up numbered parts:** "Scene 12" and "Scene 13", or part 1 and part 2, count as different videos. It also needs more of a title in common before two count as the same scene. (6.29 didn't pass its checks and wasn't published; this release carries its changes.)
+
 ## 6.29 — 2026-11-21
 
 Less of the same
