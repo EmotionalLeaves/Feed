@@ -29,6 +29,20 @@ class TxxxNetTest {
     }
 
     @Test
+    fun `studio as creator, made-up uploaders dropped, models credited`() {
+        val list = TubeSite.InPorn.parseList(CREDITS)
+        assertEquals(3, list.size)
+        assertEquals("Daughter Swap", list[0].creator)
+        assertEquals(listOf("CoCo Lovelock"), list[0].performers)
+        // The network's own account under a made-up name: no creator rather than a fake person.
+        assertEquals(null, list[1].creator)
+        assertEquals(listOf("Daphne Rosen", "Jaylene Rio"), list[1].performers)
+        assertEquals("hellsing2024", list[2].creator)
+        assertEquals(listOf("Ellie Nova", "Honey Moon"), list[2].performers)
+        assertEquals(emptyList<String>(), TubeSite.TxxxNet.modelNames(""))
+    }
+
+    @Test
     fun `file path decoded from base164`() {
         val s = TubeSite.Txxx.stream(FILES)!!
         assertEquals("https://txxx.com/get_file/25/f92f7dff724fd011229640246756341f18fadc1b67/21855000/21855859/21855859_hq.mp4/?d=912&br=207&ti=1795181579", s.url)
@@ -36,6 +50,11 @@ class TxxxNetTest {
         assertEquals("https://txxx.com/api/json/videos_related2/432000/50/21000000/21855000/21855859.all.1.json", TubeSite.Txxx.relatedUrl("21855859"))
     }
 
+    private val CREDITS = """{"videos": [
+{"video_id": "1", "dir": "breakthrough-session", "title": "Breakthrough Session", "duration": "12:00", "content_source_name": "Daughter Swap", "display_name": "Piper Morales", "username": "_psevdo_x185d14e42dc", "models_data": "coco-lovelock|2217|CoCo Lovelock|658|r333x393_1.jpg"},
+{"video_id": "2", "dir": "kanchan", "title": "Kanchan Aunty", "duration": "10:00", "content_source_name": "", "display_name": "Ruslan Martin", "username": "_psevdo_x176fa5d7edd_tc", "models": "Daphne Rosen,Jaylene Rio"},
+{"video_id": "3", "dir": "ellie", "title": "Ellie Nova-Missax Honey", "duration": "8:00", "display_name": "hellsing2024", "username": "hellsing2024", "models_data": "ellie-nova|129365|Ellie Nova|90|r333x393_1.jpg,honey-moon_122702|1125|Honey Moon|35|r333x393_1.jpg"}
+]}"""
     private val LIST = """{"params": {"cache_lifetime": 86400, "gender": "str", "sort": "latest-updates", "count": 60, "page": 1, "section": "", "object_id": "", "type": "all", "duration": "", "date": "", "sq": null, "filters": {"categories": "", "models": "", "source": "", "content_source": "", "content_source_group": "", "type": "all", "duration": "", "days": ""}}, "total_count": "3766624", "videos": [{"video_id": "21855859", "title": "roommate ass fetish fun", "dir": "roommate-ass-fetish-fun", "duration": "15:12", "post_date": "2026-11-20 03:36:37", "is_private": "0", "categories": "American,Belgian,Big Clit,Cumshot,Femdom,Swiss,Teacher", "scr": "https://tn.txxx.tube/contents/videos_screenshots/21855000/21855859/288x162/7.jpg", "pv": "vp2.txxx.com/c14/videos/21855000/21855859/21855859_tr.mp4", "username": "davidfs21", "display_name": "davidfs21", "file_formats": "||_hq.mp4|1280x720|912|125632412|31|30|0||_tr.mp4|384x216|7|184777|0|0|0"}, {"video_id": "21855837", "title": "Auhneesh Nicole, Taysha Sativa - Two Baddies Maids Have Threeway Sex For Extra Cash f", "dir": "auhneesh-nicole-taysha-sativa-two-baddies-maids-have-threeway-sex-for-extra-cash-f2", "duration": "10:59", "post_date": "2026-11-20 03:26:09", "is_private": "0", "categories": "Bangladeshi,Behind The Scenes,Cumshot,Estonian,Greek,High Heels,Nipples,Red Head,Smoking,Squirt", "scr": "https://tn.txxx.tube/contents/videos_screenshots/21855000/21855837/288x162/7.jpg", "pv": "vp2.txxx.com/c14/videos/21855000/21855837/21855837_tr.mp4", "username": "nepalo7747", "display_name": "nepalo7747", "file_formats": "||_hq.mp4|1280x720|659|137523969|22|30|0||_tr.mp4|384x216|7|193282|0|0|0"}]}"""
     private val FILES = """[{"format":"_hq.mp4","timelines_count":"31","timelines_interval":"30","video_url":"L2dldF9maWxlLzI1L2Y5\u041cmY3ZGZmNzI0ZmQw\u041cT\u0415y\u041cjk2ND\u0410yNDY3NTYzNDFm\u041cThmYWRj\u041cWI2Ny8y\u041cTg1NT\u0410w\u041c\u04218y\u041cTg1NTg1OS8y\u041cTg1NTg1OV9ocS5tcDQvP2Q9OT\u0415yJmJyPTIwNyZ0aT0xNzk1\u041cTgxNTc5","is_default":1,"c":"memc"}]"""
 }

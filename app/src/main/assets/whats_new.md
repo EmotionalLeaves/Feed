@@ -1,3 +1,9 @@
+## 6.10 — 2026-11-21
+Credited performers
+
+- **Performers the site credits now count:** on InPorn, HotMovs and the rest of the TXXX network, the models a video is credited with show as chips you can tap or follow, and For You learns them, even when the title doesn't name them.
+- **Studios as creators:** those sites' videos now show the studio (Daughter Swap, AnalVids…) as the creator, and no longer the made-up uploader names the network posts under, which used to show up as "creators" to follow.
+
 ## 6.9 — 2026-11-21
 Sharper copy
 
@@ -10,8 +16,3 @@ Six more sites
 - **Six more video sites:** HotMovs, InPorn, Fetish Shrine and Pornicom join the feeds and search (49 in all).
 - **TheGay and Shemalez** are there too, switched off to start: turn them on in Settings → Sources → Tube sites and they join your feeds, search and Discover.
 - Sites that only list tags in their player now bring those tags too, so For You learns from them.
-
-## 6.7 — 2026-11-21
-Every site, A to Z
-
-- **Discover → Browse a site now ends with an "All 43 →" chip** that opens every site in one alphabetical list; tap any to open its own newest and top videos.

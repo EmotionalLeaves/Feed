@@ -55,9 +55,13 @@ object Mentions {
         if (add.isNotEmpty()) known = (known + add).let { if (it.size > MAX_KNOWN) it.entries.toList().takeLast(MAX_KNOWN).associate { e -> e.key to e.value } else it }
     }
 
-    /** The performers [item]'s title credits, plus any known person it names anywhere in its title or tags. */
+    /** Extras key: the performers a site credits on the video, comma-separated. */
+    const val PERFORMERS = "performers"
+
+    /** The performers the site or [item]'s title credits, plus any known person it names anywhere in its title or tags. */
     fun inTitle(item: MediaItem): List<String> {
-        val credited = performers(item.title)
+        val listed = item.extras[PERFORMERS]?.split(',')?.map { it.trim() }?.filter { personName(it) != null }.orEmpty()
+        val credited = (listed + performers(item.title)).distinctBy { it.lowercase() }
         val k = known
         if (k.isEmpty()) return credited
         val more = named(item, k.keys).mapNotNull { k[it] }

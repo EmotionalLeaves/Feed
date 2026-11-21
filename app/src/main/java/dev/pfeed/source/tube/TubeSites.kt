@@ -28,6 +28,8 @@ data class TubeVideo(
     val preview: String? = null,
     /** The best height the listing says it comes in (720 for "HD"), if it says. */
     val height: Int? = null,
+    /** The performers the site credits (its own models list), if it does. */
+    val performers: List<String> = emptyList(),
 )
 
 /** What a video page gave us: a stream the player can open, or nothing (the embed is used then). */
@@ -1307,13 +1309,28 @@ sealed class TubeSite(val host: String, val label: String) {
                     durationSec = duration(v.str("duration")),
                     tags = cleanTags(v.str("categories")?.split(',')?.map { it.trim().lowercase() }?.filter { it.isNotEmpty() }.orEmpty()).take(MAX_TAGS),
                     published = v.str("post_date")?.let { runCatching { java.time.LocalDateTime.parse(it.replace(' ', 'T')).toInstant(java.time.ZoneOffset.UTC) }.getOrNull() },
-                    creator = v.str("display_name") ?: v.str("username"),
+                    creator = creator(v),
+                    performers = models(v),
                     preview = v.str("pv")?.let { if (it.startsWith("http")) it else "https://$it" },
                     height = v.str("file_dimensions")?.substringAfter('x')?.toIntOrNull()
                         ?: (v["props"] as? JsonObject)?.str("hd")?.takeIf { it == "1" }?.let { 720 },
                 )
             }
         }
+
+        /**
+         * The studio when the upload says which, else the uploader. Many uploads come from the
+         * network's own accounts ("_psevdo_…") under a made-up person's name: no creator then,
+         * rather than a name that would pass for a performer's.
+         */
+        private fun creator(v: JsonObject): String? {
+            v.str("content_source_name")?.let(::unescape)?.trim()?.ifEmpty { null }?.let { return it }
+            if (v.str("username")?.startsWith("_psevdo_") == true) return null
+            return v.str("display_name") ?: v.str("username")
+        }
+
+        /** Credited models: "Name One,Name Two", or "slug|id|Name|count|picture" entries. */
+        private fun models(v: JsonObject): List<String> = modelNames(v.str("models_data") ?: v.str("models"))
 
         override fun relatedUrl(id: String): String? = id.toLongOrNull()?.let { n ->
             "https://$host/api/json/videos_related2/432000/50/${n / 1_000_000 * 1_000_000}/${n / 1000 * 1000}/$id.all.1.json"
@@ -1357,6 +1374,14 @@ sealed class TubeSite(val host: String, val label: String) {
                 "russian", "scottish", "serbian", "slovak", "slovenian", "spanish", "swedish", "swiss", "thai", "turkish",
                 "ukrainian", "venezuelan", "vietnamese", "welsh",
             )
+
+            internal fun modelNames(raw: String?): List<String> {
+                val r = raw?.trim().orEmpty()
+                if (r.isEmpty()) return emptyList()
+                val names = if ('|' in r) PIPED.findAll(r).map { it.groupValues[1] }.toList() else r.split(',', ';')
+                return names.map { unescape(it).trim() }.filter { it.length in 3..40 }.distinct().take(6)
+            }
+            private val PIPED = Regex("""(?:^|[,;])\s*[^|,;]+\|\d+\|([^|]+)\|""")
 
             /** "base164" → the text it stands for, or null if it isn't that. */
             internal fun base164(e: String): String? = runCatching {
@@ -1824,7 +1849,8 @@ private fun TubeSite.item(v: TubeVideo, section: String, published: java.time.In
         thumbnailUrl = v.thumb,
         pageUrl = v.pageUrl,
         publishedAt = published,
-        extras = buildMap { put("resolve", "tube"); put("vid", v.id); v.preview?.let { put(PREVIEW, it) }; v.height?.let { put(HEIGHT, it.toString()) } },
+        extras = buildMap { put("resolve", "tube"); put("vid", v.id); v.preview?.let { put(PREVIEW, it) }; v.height?.let { put(HEIGHT, it.toString()) }
+            if (v.performers.isNotEmpty()) put(dev.pfeed.domain.reco.Mentions.PERFORMERS, v.performers.joinToString(",")) },
     )
 
 /** In a tube post's extras: its site's short preview clip. */

@@ -1,5 +1,12 @@
 # Changelog
 
+## 6.10 — 2026-11-21
+
+Credited performers
+
+- **Performers the site credits now count:** on InPorn, HotMovs and the rest of the TXXX network, the models a video is credited with show as chips you can tap or follow, and For You learns them, even when the title doesn't name them.
+- **Studios as creators:** those sites' videos now show the studio (Daughter Swap, AnalVids…) as the creator, and no longer the made-up uploader names the network posts under, which used to show up as "creators" to follow.
+
 ## 6.9 — 2026-11-21
 
 Sharper copy
