@@ -127,4 +127,21 @@ class SpreadAndRatingTest {
         // And the built-in filter applies even with an empty user blocklist.
         assertFalse(Blocklist.EMPTY.allows(rated("s")))
     }
+
+    @Test
+    fun `one performer and one scene don't keep coming back`() {
+        fun tube(id: String, site: String, title: String) = item("$site/$id", source = "tube", title = title)
+        // Six sites' newest, all Lena Paul first, then other people; and one scene twice.
+        val acts = listOf("Pool party fun", "Office romance late", "Gym session sweat", "Kitchen counter heat", "Hotel room service", "Garden picnic surprise")
+        val lena = acts.mapIndexed { i, a -> tube("l$i", "site$i.com", "Lena Paul - $a") }
+        val others = (1..12).map { tube("o$it", "other$it.com", "Clip $it") }
+        val twice = listOf(tube("d1", "dup1.com", "Stepsister helps with the laundry today"), tube("d2", "dup2.com", "Stepsister helps with the laundry today HD"))
+        val ordered = Spread.order(twice + lena + others, emptyList(), 12)
+        // Lena at most twice in the first twelve while others are there.
+        assertTrue(ordered.map { it.title }.toString(), ordered.count { it.title!!.startsWith("Lena Paul") } <= Spread.MAX_PER_PERSON)
+        // The same scene from another site only once.
+        assertEquals(1, ordered.count { it.title!!.startsWith("Stepsister") })
+        // On her own page (all of it her), she still flows.
+        assertEquals(6, Spread.order(lena, emptyList(), 6).size)
+    }
 }
